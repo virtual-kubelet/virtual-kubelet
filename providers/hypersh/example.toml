@@ -1,0 +1,8 @@
+# example configuration file for Hyper.sh virtual-kubelet
+
+AccessKey = ""
+SecretKey = ""
+Region = "us-west-1"
+CPU = 100
+Memory = 100Gi
+Pods = 50

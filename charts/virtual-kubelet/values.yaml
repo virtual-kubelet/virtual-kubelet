@@ -1,0 +1,11 @@
+image:
+  repository: virtual-kubelet/virtual-kubelet
+  tag: latest
+  pullPolicy: Always
+env:
+  azureClientId: 
+  azureClientKey: 
+  azureTenantId: 
+  azureSubscriptionId: 
+  aciResourceGroup: 
+  aciRegion: 

@@ -1,0 +1,43 @@
+project_name: virtual-kubelet
+release:
+  github:
+    owner: bketelsen
+    name: virtual-kubelet
+  name_template: '{{.Tag}}'
+brew:
+  commit_author:
+    name: virtual-kubelet
+    email: bketelsen@gmail.com
+  install: bin.install "virtual-kubelet"
+builds:
+- goos:
+  - linux
+  - darwin
+  - windows
+  goarch:
+  - amd64
+  - "386"
+  goarm:
+  - "6"
+  main: .
+  ldflags: -s -w -X main.Version={{.Version}}  -X main.BuildDate={{.Date}}
+  binary: newgo
+archive:
+  format: tar.gz
+  name_template: '{{.Binary}}_{{.Version}}_{{.Os}}_{{.Arch }}{{if .Arm}}v{{.Arm }}{{end }}'
+  files:
+  - licence*
+  - LICENCE*
+  - license*
+  - LICENSE*
+  - readme*
+  - README*
+  - changelog*
+  - CHANGELOG*
+fpm:
+  bindir: /usr/local/bin
+snapshot:
+  name_template: SNAPSHOT-{{.Commit }}
+checksum:
+  name_template: '{{.ProjectName }}_{{.Version }}_checksums.txt'
+

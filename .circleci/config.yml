@@ -1,0 +1,24 @@
+version: 2
+jobs:
+  build:
+    docker:
+      # specify the version
+      - image: circleci/golang:1.9
+
+    working_directory: /go/src/github.com/virtual-kubelet/virtual-kubelet
+    steps:
+      - checkout
+      - run:
+          name: Create the credentials file
+          command: sh scripts/createCredentials.sh
+      - run:
+          name: Build and deploy connector
+          command: sh scripts/envCreation.sh
+      - run: |
+          echo 'export AZURE_AUTH_LOCATION=${outputPathCredsfile}' >> $BASH_ENV
+      - run:
+          name: Dependencies
+          command: go get -v -t -d ./...
+      - run:
+          name: Tests
+          command: go test -v ./...

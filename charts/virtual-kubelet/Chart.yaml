@@ -1,0 +1,8 @@
+name: virtual-kubelet
+version: 0.1.0
+description: a Helm chart to install virtual kubelet inside a Kubernetes cluster.
+sources:
+  - https://github.com/virtual-kubelet/virtual-kubelet
+maintainers:
+  - name: Robbie Zhang
+    email: junjiez@microsoft.com
