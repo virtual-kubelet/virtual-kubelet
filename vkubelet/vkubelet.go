@@ -240,7 +240,7 @@ func (s *Server) reconcile() {
 	// Create any pods for k8s pods that don't exist in the provider
 	pods := s.resourceManager.GetPods()
 	for _, pod := range pods {
-		p, err := s.provider.GetPod(pod.Name)
+		p, err := s.provider.GetPod(pod.Namespace, pod.Name)
 		if err != nil {
 			log.Printf("Error retrieving pod '%s' from provider: %s\n", pod.Name, err)
 		}
@@ -296,6 +296,10 @@ func (s *Server) deletePod(pod *corev1.Pod) error {
 	if !errors.IsNotFound(delErr) {
 		var grace int64 = 0
 		if err := s.k8sClient.CoreV1().Pods(pod.Namespace).Delete(pod.Name, &metav1.DeleteOptions{GracePeriodSeconds: &grace}); err != nil && errors.IsNotFound(err) {
+			if errors.IsNotFound(err) {
+				return nil
+			}
+
 			return fmt.Errorf("Failed to delete kubernetes pod: %s", err)
 		}
 
@@ -314,7 +318,7 @@ func (s *Server) updatePodStatuses() {
 			continue
 		}
 
-		status, err := s.provider.GetPodStatus(pod.Name)
+		status, err := s.provider.GetPodStatus(pod.Namespace, pod.Name)
 		if err != nil {
 			log.Printf("Error retrieving pod '%s' status from provider: %s\n", pod.Name, err)
 			return
