@@ -115,8 +115,9 @@ func (s *Server) registerNode() error {
 		ObjectMeta: metav1.ObjectMeta{
 			Name: s.nodeName,
 			Labels: map[string]string{
-				"type":               "virtual-kubelet",
-				"kubernetes.io/role": "agent",
+				"type":				"virtual-kubelet",
+				"kubernetes.io/role":		"agent",
+				"beta.kubernetes.io/os":	strings.ToLower(s.provider.OperatingSystem()),
 			},
 			Annotations: map[string]string{
 				"alpha.service-controller.kubernetes.io/exclude-balancer": "true",
