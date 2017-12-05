@@ -148,10 +148,10 @@ type Provider interface {
 	DeletePod(pod *v1.Pod) error
 
 	// GetPod retrieves a pod by name from the provider (can be cached).
-	GetPod(name string) (*v1.Pod, error)
+	GetPod(namespace, name string) (*v1.Pod, error)
 
 	// GetPodStatus retrievesthe status of a pod by name from the provider.
-	GetPodStatus(name string) (*v1.PodStatus, error)
+	GetPodStatus(namespace, name string) (*v1.PodStatus, error)
 
 	// GetPods retrieves a list of all pods running on the provider (can be cached).
 	GetPods() ([]*v1.Pod, error)
