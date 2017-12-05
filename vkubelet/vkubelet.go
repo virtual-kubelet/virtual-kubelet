@@ -245,7 +245,7 @@ func (s *Server) reconcile() {
 			log.Printf("Error retrieving pod '%s' from provider: %s\n", pod.Name, err)
 		}
 
-		if pod.DeletionTimestamp == nil && p == nil {
+		if pod.DeletionTimestamp == nil && pod.Status.Phase != corev1.PodFailed && p == nil {
 			if err := s.createPod(pod); err != nil {
 				log.Printf("Error creating pod '%s': %s\n", pod.Name, err)
 				continue
