@@ -1,7 +1,5 @@
 IMPORT_PATH := github.com/virtual-kubelet/virtual-kubelet
 DOCKER_IMAGE := virtual-kubelet
-build_dir := $(CURDIR)/build
-dist_dir := $(CURDIR)/dist
 exec := $(DOCKER_IMAGE)
 github_repo := virtual-kubelet/virtual-kubelet
 binary := virtual-kubelet
@@ -32,7 +30,7 @@ tags:
 	$Q @git tag
 
 .PHONY: release
-release: clean-dist build $(GOPATH)/bin/goreleaser
+release: build $(GOPATH)/bin/goreleaser
 	goreleaser
 
 
@@ -56,19 +54,10 @@ docker:
 	@echo "Docker Build..."
 	$Q docker build -t $(DOCKER_IMAGE) .
 
-clean: clean-dist clean-build
+clean: clean-build
 	@echo "Clean..."
 	$Q rm -rf bin
 
-.PHONY: clean-build
-clean-build:
-	@echo "Removing cross-compilation files"
-	rm -rf $(build_dir)
-
-.PHONY: clean-dist
-clean-dist:
-	@echo "Removing distribution files"
-	rm -rf $(dist_dir)
 
 test:
 	@echo "Testing..."
@@ -125,12 +114,6 @@ setup: clean
 	@echo "Setup..."
 	if ! grep "/bin" .gitignore > /dev/null 2>&1; then \
         echo "/bin" >> .gitignore; \
-    fi
-	if ! grep "/dist" .gitignore > /dev/null 2>&1; then \
-        echo "/dist" >> .gitignore; \
-    fi
-	if ! grep "/build" .gitignore > /dev/null 2>&1; then \
-        echo "/build" >> .gitignore; \
     fi
 	if ! grep "/cover" .gitignore > /dev/null 2>&1; then \
         echo "/cover" >> .gitignore; \
