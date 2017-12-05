@@ -135,13 +135,13 @@ func (p *HyperProvider) DeletePod(pod *v1.Pod) error {
 
 // GetPod returns a pod by name that is running inside hyper.sh
 // returns nil if a pod by that name is not found.
-func (p *HyperProvider) GetPod(name string) (*v1.Pod, error) {
+func (p *HyperProvider) GetPod(namespace, name string) (*v1.Pod, error) {
 	return nil, nil
 }
 
 // GetPodStatus returns the status of a pod by name that is running inside hyper.sh
 // returns nil if a pod by that name is not found.
-func (p *HyperProvider) GetPodStatus(name string) (*v1.PodStatus, error) {
+func (p *HyperProvider) GetPodStatus(namespace, name string) (*v1.PodStatus, error) {
 	return nil, nil
 }
 
