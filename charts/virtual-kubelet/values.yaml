@@ -9,4 +9,6 @@ env:
   azureSubscriptionId: 
   aciResourceGroup: 
   aciRegion: 
-  aciOsType: 
+  nodeName: 
+  nodeTaint: 
+  nodeOsType: 
