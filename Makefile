@@ -5,7 +5,7 @@ github_repo := virtual-kubelet/virtual-kubelet
 binary := virtual-kubelet
 
 # comment this line out for quieter things
-V := 1 # When V is set, print commands and build progress.
+#V := 1 # When V is set, print commands and build progress.
 
 # Space separated patterns of packages to skip in list, test, format.
 IGNORED_PACKAGES := /vendor/
@@ -162,4 +162,8 @@ $(GOPATH)/bin/goreleaser:
 	go get -u github.com/goreleaser/goreleaser
 
 authors:
-	git log --all --format='%aN <%cE>' | sort -u  | sed -n '/github/!p' > AUTHORS
+	$Q git log --all --format='%aN <%cE>' | sort -u  | sed -n '/github/!p' > GITAUTHORS
+	$Q cat AUTHORS GITAUTHORS  | sort -u > NEWAUTHORS
+	$Q mv NEWAUTHORS AUTHORS
+	$Q rm -f NEWAUTHORS
+	$Q rm -f GITAUTHORS
