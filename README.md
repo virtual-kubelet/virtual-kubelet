@@ -120,7 +120,7 @@ on top with a pluggable interface.
 
 Create a new directory for your provider under `providers` and implement the
 following interface. Then add your new provider under the others in the
-[`virtual-kubelet/provider.go`](virtual-kubelet/provider.go) file.
+[`vkubelet/provider.go`](vkubelet/provider.go) file.
 
 ```go
 // Provider contains the methods required to implement a virtual-kubelet provider.
