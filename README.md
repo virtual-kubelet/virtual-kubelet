@@ -70,6 +70,19 @@ Flags:
 Use "virtual-kubelet [command] --help" for more information about a command.
 ```
 
+## Deploy as a Pod by Helm Chart
+
+Run these commands to deploy the virtual kubeletwhich connects your Kubernetes cluster to Azure Container Instances.
+If you want to run the connector from the Azure commandline check out this. 
+
+```bash
+RELEASE_NAME=virtual-kubelet
+CHART_URL=https://github.com/virtual-kubelet/virtual-kubelet/blob/master/charts/virtual-kubelet-0.1.0.tgz
+
+helm install "$CHART_URL" --name "$RELEASE_NAME" \
+    --set env.azureClientId=<YOUR-AZURECLIENTID-HERE>,env.azureClientKey=<YOUR-AZURECLIENTKEY-HERE>,env.azureTenantId=<YOUR-AZURETENANTID-HERE>,env.azureSubscriptionId=<YOUR-AZURESUBSCRIPTIONID-HERE>,env.aciResourceGroup=<YOUR-ACIRESOURCEGROUP-HERE>,ev.aciOsType=<Linux|Windows>
+```
+
 ## Providers
 
 This project features a pluggable provider interface developers can implement
