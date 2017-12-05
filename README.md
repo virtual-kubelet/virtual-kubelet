@@ -41,6 +41,35 @@ Run the binary with your chosen provider:
 Now that the virtual-kubelet is deployed run `kubectl get nodes` and you should see
 a `virtual-kubelet` node.
 
+## Command Line Usage
+
+```bash
+virtual-kubelet implements the Kubelet interface with a pluggable
+backend implementation allowing users to create kubernetes nodes without running the kubelet.
+This allows users to schedule kubernetes workloads on nodes that aren't running Kubernetes.
+
+Usage:
+  virtual-kubelet [flags]
+  virtual-kubelet [command]
+
+Available Commands:
+  help        Help about any command
+  version     A brief description of your command
+
+Flags:
+  -h, --help                     help for virtual-kubelet
+      --kubeconfig string        config file (default is $HOME/.kube/config)
+      --namespace string         kuberentes namespace (default is 'all')
+      --nodename string          kubernetes node name (default "virtual-kubelet")
+      --os string                Operating System (Linux/Windows) (default "Linux")
+      --provider string          cloud provider
+      --provider-config string   cloud provider configuration file
+      --taint string             apply taint to node, making scheduling explicit
+  -t, --toggle                   Help message for toggle
+
+Use "virtual-kubelet [command] --help" for more information about a command.
+```
+
 ## Providers
 
 This project features a pluggable provider interface developers can implement
@@ -49,6 +78,8 @@ that defines the actions of a typical kubelet.
 This enables on-demand and nearly instantaneous container compute, orchestrated
 by Kubernetes, without having VM infrastructure to manage and while still
 leveraging the portable Kubernetes API.
+
+Each provider may have its own configuration file, and required environmental variables.
 
 ### Azure Container Instances Provider
 
@@ -59,6 +90,18 @@ same Kubernetes cluster.
 ```bash
 ./bin/virtual-kubelet --provider azure
 ```
+
+#### Environment Variables
+
+`ACI_RESOURCE_GROUP` must be set to the name of a valid Azure resource group where your
+ACI workload will be run.
+
+`ACI_REGION` must be set to the name of the region your `ACI_RESOURCE_GROUP` was created.
+
+#### Configuration File
+
+The Azure connector can use a configuration file specified by the `--provider-config` flag.
+The config file is in TOML format, and an example lives in `providers/azure/example.toml`.
 
 ### Hyper.sh Provider
 
@@ -77,7 +120,7 @@ on top with a pluggable interface.
 
 Create a new directory for your provider under `providers` and implement the
 following interface. Then add your new provider under the others in the
-[`virtual-kubelet/provider.go`](virtual-kubelet/provider.go) file.
+[`vkubelet/provider.go`](vkubelet/provider.go) file.
 
 ```go
 // Provider contains the methods required to implement a virtual-kubelet provider.

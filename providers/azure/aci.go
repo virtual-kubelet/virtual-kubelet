@@ -124,6 +124,7 @@ func (p *ACIProvider) CreatePod(pod *v1.Pod) error {
 	podUID := string(pod.UID)
 	podCreationTimestamp := pod.CreationTimestamp.String()
 	containerGroup.Tags = map[string]string{
+		"PodName":           pod.Name,
 		"ClusterName":       pod.ClusterName,
 		"NodeName":          pod.Spec.NodeName,
 		"Namespace":         pod.Namespace,
@@ -134,7 +135,7 @@ func (p *ACIProvider) CreatePod(pod *v1.Pod) error {
 	// TODO(BJK) containergrouprestartpolicy??
 	_, err = p.aciClient.CreateContainerGroup(
 		p.resourceGroup,
-		pod.Name,
+		fmt.Sprintf("%s-%s", pod.Namespace, pod.Name),
 		containerGroup,
 	)
 
@@ -148,13 +149,13 @@ func (p *ACIProvider) UpdatePod(pod *v1.Pod) error {
 
 // DeletePod deletes the specified pod out of ACI.
 func (p *ACIProvider) DeletePod(pod *v1.Pod) error {
-	return p.aciClient.DeleteContainerGroup(p.resourceGroup, pod.Name)
+	return p.aciClient.DeleteContainerGroup(p.resourceGroup, fmt.Sprintf("%s-%s", pod.Namespace, pod.Name))
 }
 
 // GetPod returns a pod by name that is running inside ACI
 // returns nil if a pod by that name is not found.
-func (p *ACIProvider) GetPod(name string) (*v1.Pod, error) {
-	cg, err := p.aciClient.GetContainerGroup(p.resourceGroup, name)
+func (p *ACIProvider) GetPod(namespace, name string) (*v1.Pod, error) {
+	cg, err := p.aciClient.GetContainerGroup(p.resourceGroup, fmt.Sprintf("%s-%s", namespace, name))
 	if err != nil {
 		// Trap error for 404 and return gracefully
 		if strings.Contains(err.Error(), "ResourceNotFound") {
@@ -172,8 +173,8 @@ func (p *ACIProvider) GetPod(name string) (*v1.Pod, error) {
 
 // GetPodStatus returns the status of a pod by name that is running inside ACI
 // returns nil if a pod by that name is not found.
-func (p *ACIProvider) GetPodStatus(name string) (*v1.PodStatus, error) {
-	pod, err := p.GetPod(name)
+func (p *ACIProvider) GetPodStatus(namespace, name string) (*v1.PodStatus, error) {
+	pod, err := p.GetPod(namespace, name)
 	if err != nil {
 		return nil, err
 	}
@@ -323,7 +324,7 @@ func (p *ACIProvider) getContainers(pod *v1.Pod) ([]aci.Container, error) {
 
 		for _, p := range container.Ports {
 			c.Ports = append(c.Ports, aci.ContainerPort{
-				Port:     p.HostPort,
+				Port:     p.ContainerPort,
 				Protocol: getProtocol(p.Protocol),
 			})
 		}
@@ -553,7 +554,7 @@ func containerGroupToPod(cg *aci.ContainerGroup) (*v1.Pod, error) {
 			APIVersion: "v1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:              cg.Name,
+			Name:              cg.Tags["PodName"],
 			Namespace:         cg.Tags["Namespace"],
 			ClusterName:       cg.Tags["ClusterName"],
 			UID:               types.UID(cg.Tags["UID"]),
