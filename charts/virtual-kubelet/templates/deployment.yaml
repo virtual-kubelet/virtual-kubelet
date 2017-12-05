@@ -25,7 +25,7 @@ spec:
           mountPath: "/etc/virtual-kubelet"
           readOnly: true
         command: ["virtual-kubelet"]
-        args: ["--provider", "azure", "--os", {{ default "Linux" .Values.env.aciOsType | quote }}]
+        args: ["--provider", "azure", "--nodename", {{ default "aci-conn" .Values.env.nodeName | quote }} , "--os", {{ default "Linux" .Values.env.nodeOsType | quote }}, "--taint", {{ default "azure.com/aci" .Values.env.nodeTaint | quote }}]
       volumes:
       - name: credentials
         secret:
