@@ -121,6 +121,28 @@ func (p *ACIProvider) CreatePod(pod *v1.Pod) error {
 	containerGroup.ContainerGroupProperties.Volumes = volumes
 	containerGroup.ContainerGroupProperties.ImageRegistryCredentials = creds
 
+	// create ipaddress if containerPort is used
+	count := 0
+	for _, container := range containers {
+		count = count + len(container.Ports)
+	}
+	ports := make([]aci.Port, 0, count)
+	for _, container := range containers {
+		for _, containerPort := range container.Ports {
+
+			ports = append(ports, aci.Port{
+				Port:     containerPort.Port,
+				Protocol: aci.ContainerGroupNetworkProtocol("TCP"),
+			})
+		}
+	}
+	if len(ports) > 0 {
+		containerGroup.ContainerGroupProperties.IPAddress = &aci.IPAddress{
+			Ports: ports,
+			Type:  "Public",
+		}
+	}
+
 	podUID := string(pod.UID)
 	podCreationTimestamp := pod.CreationTimestamp.String()
 	containerGroup.Tags = map[string]string{
