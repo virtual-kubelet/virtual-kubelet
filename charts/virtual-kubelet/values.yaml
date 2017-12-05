@@ -9,3 +9,4 @@ env:
   azureSubscriptionId: 
   aciResourceGroup: 
   aciRegion: 
+  aciOsType: 
