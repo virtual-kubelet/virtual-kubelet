@@ -14,9 +14,11 @@ RUN set -x \
 		gcc \
 		libc-dev \
 		libgcc \
+        make \
 	&& cd /go/src/github.com/virtual-kubelet/virtual-kubelet \
-	&& CGO_ENABLED=0 go build -a -tags netgo -ldflags '-extldflags "-static"' -o /usr/bin/virtual-kubelet . \
+	&& make build \ 
 	&& apk del .build-deps \
+    && cp bin/virtual-kubelet /usr/bin/virtual-kubelet \
 	&& rm -rf /go \
 	&& echo "Build complete."
 
