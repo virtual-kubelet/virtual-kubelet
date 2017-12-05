@@ -27,5 +27,5 @@ FROM scratch
 COPY --from=builder /usr/bin/virtual-kubelet /usr/bin/virtual-kubelet
 COPY --from=builder /etc/ssl/certs/ /etc/ssl/certs
 
-ENTRYPOINT [ "virtual-kubelet" ]
+ENTRYPOINT [ "/usr/bin/virtual-kubelet" ]
 CMD [ "--help" ]

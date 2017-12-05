@@ -22,7 +22,7 @@ safebuild:
 .PHONY: build
 build: authors
 	@echo "Building..."
-	$Q go build -o bin/$(binary) $(if $V,-v) $(VERSION_FLAGS) $(IMPORT_PATH)
+	$Q CGO_ENABLED=0 go build -a -tags netgo -ldflags '-extldflags "-static"' -o bin/$(binary) $(if $V,-v) $(VERSION_FLAGS) $(IMPORT_PATH)
 
 .PHONY: tags
 tags:
