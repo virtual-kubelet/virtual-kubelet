@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: nginx
+spec:
+  containers:
+  - image: nginx
+    imagePullPolicy: Always
+    name: nginx
+    resources:
+      requests:
+        memory: 1G
+        cpu: 1
+  dnsPolicy: ClusterFirst
+  nodeName: virtual-kubelet

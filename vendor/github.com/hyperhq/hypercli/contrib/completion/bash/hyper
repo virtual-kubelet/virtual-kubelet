@@ -1,0 +1,1742 @@
+#!/bin/bash
+#
+# bash completion file for core hyper commands
+#
+# This script provides completion of:
+#  - commands and their options
+#  - container ids and names
+#  - image repos and tags
+#  - filepaths
+# To enable the completions:
+# - place this file in /etc/bash_completion.d
+#
+# Configuration:
+#
+# For several commands, the amount of completions can be configured by
+# setting environment variables.
+#
+# You can tailor completion for the "events", "history", "inspect", "run",
+# "rmi" and "save" commands by settings the following environment
+# variables:
+#
+# HYPER_COMPLETION_SHOW_IMAGE_IDS
+#   "none" - Show names only (default)
+#   "non-intermediate" - Show names and ids, but omit intermediate image IDs
+#   "all" - Show names and ids, including intermediate image IDs
+#
+# HYPER_COMPLETION_SHOW_TAGS
+#   "yes" - include tags in completion options (default)
+#   "no"  - don't include tags in completion options
+
+__hyper_previous_extglob_setting=$(shopt -p )
+shopt -s extglob
+
+__hyper_q() {
+	hyper ${host:+-H "$host"} ${config:+--config "$config"} 2>/dev/null "$@"
+}
+
+__hyper_complete_containers_all() {
+	local IFS=$'\n'
+	local containers=( $(__hyper_q ps -aq --no-trunc) )
+	if [ "$1" ]; then
+		containers=( $(__hyper_q inspect --format "{{if $1}}{{.Id}}{{end}}" "${containers[@]}") )
+	fi
+	local names=( $(__hyper_q inspect --format '{{.Name}}' "${containers[@]}") )
+	names=( "${names[@]#/}" ) # trim off the leading "/" from the container names
+	unset IFS
+	COMPREPLY=( $(compgen -W "${names[*]} ${containers[*]}" -- "$cur") )
+}
+
+__hyper_complete_containers_running() {
+	__hyper_complete_containers_all '.State.Running'
+}
+
+__hyper_complete_containers_stopped() {
+	__hyper_complete_containers_all 'not .State.Running'
+}
+
+__hyper_complete_containers_pauseable() {
+	__hyper_complete_containers_all 'and .State.Running (not .State.Paused)'
+}
+
+__hyper_complete_containers_unpauseable() {
+	__hyper_complete_containers_all '.State.Paused'
+}
+
+__hyper_complete_container_names() {
+	local containers=( $(__hyper_q ps -aq --no-trunc) )
+	local names=( $(__hyper_q inspect --format '{{.Name}}' "${containers[@]}") )
+	names=( "${names[@]#/}" ) # trim off the leading "/" from the container names
+	COMPREPLY=( $(compgen -W "${names[*]}" -- "$cur") )
+}
+
+__hyper_complete_container_ids() {
+	local containers=( $(__hyper_q ps -aq) )
+	COMPREPLY=( $(compgen -W "${containers[*]}" -- "$cur") )
+}
+
+__hyper_complete_images() {
+	local images_args=""
+
+	case "$HYPER_COMPLETION_SHOW_IMAGES_IDS" in
+		all)
+			images_args="--no-trunc -a"
+			;;
+		non-intermediate)
+			images_args="--no-trunc"
+			;;
+	esac
+
+	local repo_print_command
+	if [ "${HYPER_COMPLETION_SHOW_TAGS:-yes}" = "yes" ]; then
+		repo_print_command='print $1; print $1":"$2'
+	else
+		repo_print_command='print $1'
+	fi
+
+	local awk_script
+	case "$HYPER_COMPLETION_SHOW_IMAGE_IDS" in
+		all|non-intermediate)
+			awk_script='NR>1 { print $3; if ($1 != "<none>") { '"$repo_print_command"' } }'
+			;;
+		none|*)
+			awk_script='NR>1 && $1 != "<none>" { '"$repo_print_command"' }'
+			;;
+	esac
+
+	local images=$(__hyper_q images $images_args | awk "$awk_script")
+	COMPREPLY=( $(compgen -W "$images" -- "$cur") )
+	__ltrim_colon_completions "$cur"
+}
+
+__hyper_complete_image_repos() {
+	local repos="$(__hyper_q images | awk 'NR>1 && $1 != "<none>" { print $1 }')"
+	COMPREPLY=( $(compgen -W "$repos" -- "$cur") )
+}
+
+__hyper_complete_image_repos_and_tags() {
+	local reposAndTags="$(__hyper_q images | awk 'NR>1 && $1 != "<none>" { print $1; print $1":"$2 }')"
+	COMPREPLY=( $(compgen -W "$reposAndTags" -- "$cur") )
+	__ltrim_colon_completions "$cur"
+}
+
+__hyper_complete_containers_and_images() {
+	__hyper_complete_containers_all
+	local containers=( "${COMPREPLY[@]}" )
+	__hyper_complete_images
+	COMPREPLY+=( "${containers[@]}" )
+}
+
+__hyper_complete_volumes() {
+	COMPREPLY=( $(compgen -W "$(__hyper_q volume ls -q)" -- "$cur") )
+}
+
+__hyper_complete_snapshots() {
+	COMPREPLY=( $(compgen -W "$(__hyper_q snapshot ls -q)" -- "$cur") )
+}
+
+__hyper_complete_fips() {
+	local fips="$(__hyper_q fip ls | awk 'NR>1 {print $1}')"
+	COMPREPLY=( $(compgen -W "$fips" -- "$cur") )
+}
+
+__hyper_complete_crons() {
+	local crons="$(__hyper_q cron ls | awk 'NR>1 {print $1}')"
+	COMPREPLY=( $(compgen -W "$crons" -- "$cur") )
+}
+
+__hyper_complete_services() {
+	local crons="$(__hyper_q service ls | awk 'NR>1 {print $1}')"
+	COMPREPLY=( $(compgen -W "$crons" -- "$cur") )
+}
+
+__hyper_complete_sgs() {
+	local sgs="$(__hyper_q sg ls | awk 'NR>1 {print $1}')"
+	COMPREPLY=( $(compgen -W "$sgs" -- "$cur") )
+}
+
+__hyper_complete_log_levels() {
+	COMPREPLY=( $( compgen -W "debug info warn error fatal" -- "$cur" ) )
+}
+
+# a selection of the available signals that is most likely of interest in the
+# context of hyper containers.
+__hyper_complete_signals() {
+	local signals=(
+		SIGCONT
+		SIGHUP
+		SIGINT
+		SIGKILL
+		SIGQUIT
+		SIGSTOP
+		SIGTERM
+		SIGUSR1
+		SIGUSR2
+	)
+	COMPREPLY=( $( compgen -W "${signals[*]} ${signals[*]#SIG}" -- "$( echo $cur | tr '[:lower:]' '[:upper:]')" ) )
+}
+
+# Transforms a multiline list of strings into a single line string
+# with the words separated by "|".
+# This is used to prepare arguments to __hyper_pos_first_nonflag().
+__hyper_to_alternatives() {
+	local parts=( $1 )
+	local IFS='|'
+	echo "${parts[*]}"
+}
+
+# Transforms a multiline list of options into an extglob pattern
+# suitable for use in case statements
+__hyper_to_extglob() {
+	local extglob=$( __hyper_to_alternatives "$1" )
+	echo "@($extglob)"
+}
+
+# Finds the position of the first word that is neither option nor an option's argument.
+# If there are options that require arguments, you should pass a glob describing those
+# options, e.g. "--option1|-o|--option2"
+# Use this function to restrict completions to exact positions after the argument list
+__hyper_pos_first_nonflag() {
+	local argument_flags=$1
+
+	local counter=$((${subcommand_pos:-${command_pos}} + 1))
+	while [ $counter -le $cword ]; do
+		if [ -n "$argument_flags" ] && eval "case '${words[$counter]}' in $argument_flags) true ;; *) false ;; esac"; then
+			(( counter++ ))
+			# eat "=" in case of --option=arg syntax
+			[ "${words[$counter]}" = "=" ] && (( counter++ ))
+		else
+			case "${words[$counter]}" in
+				-*)
+					;;
+				*)
+					break
+					;;
+			esac
+		fi
+
+		# Bash splits words at "=", retaining "=" as a word, examples:
+		# "--debug=false" => 3 words, "--log-opt syslog-facility=daemon" => 4 words
+		while [ "${words[$counter + 1]}" = "=" ] ; do
+			counter=$(( counter + 2 ))
+		done
+
+		(( counter++ ))
+	done
+
+	echo $counter
+}
+
+# Returns the value of the first option matching option_glob.
+# Valid values for option_glob are option names like '--log-level' and
+# globs like '--log-level|-l'
+# Only positions between the command and the current word are considered.
+__hyper_value_of_option() {
+	local option_extglob=$(__hyper_to_extglob "$1")
+
+	local counter=$((command_pos + 1))
+	while [ $counter -lt $cword ]; do
+		case ${words[$counter]} in
+			$option_extglob )
+				echo ${words[$counter + 1]}
+				break
+				;;
+		esac
+		(( counter++ ))
+	done
+}
+
+# Subcommand processing.
+# Locates the first occurrence of any of the subcommands contained in the
+# first argument. In case of a match, calls the corresponding completion
+# function and returns 0.
+# If no match is found, 1 is returned. The calling function can then
+# continue processing its completion.
+#
+# TODO if the preceding command has options that accept arguments and an
+# argument is equal ot one of the subcommands, this is falsely detected as
+# a match.
+__hyper_subcommands() {
+	local subcommands="$1"
+
+	local counter=$(($command_pos + 1))
+	while [ $counter -lt $cword ]; do
+		case "${words[$counter]}" in
+			$(__hyper_to_extglob "$subcommands") )
+				subcommand_pos=$counter
+				local subcommand=${words[$counter]}
+				local completions_func=_hyper_${command}_${subcommand}
+				declare -F $completions_func >/dev/null && $completions_func
+				return 0
+				;;
+		esac
+		(( counter++ ))
+	done
+	return 1
+}
+
+# suppress trailing whitespace
+__hyper_nospace() {
+	# compopt is not available in ancient bash versions
+	type compopt &>/dev/null && compopt -o nospace
+}
+
+_hyper_attach() {
+	case "$cur" in
+		-*)
+			COMPREPLY=( $( compgen -W "--help --no-stdin" -- "$cur" ) )
+			;;
+		*)
+			__hyper_complete_containers_running
+			;;
+	esac
+}
+
+_hyper_config() {
+	COMPREPLY=( $( compgen -W "--accesskey --secretkey" -- "$cur" ) )
+}
+
+_hyper_exec() {
+	case "$cur" in
+		-*)
+			COMPREPLY=( $( compgen -W "--detach -d --help --interactive -i --tty -t" -- "$cur" ) )
+			;;
+		*)
+			__hyper_complete_containers_running
+			;;
+	esac
+}
+
+_hyper_history() {
+	case "$cur" in
+		-*)
+			COMPREPLY=( $( compgen -W "--help --no-trunc --quiet -q" -- "$cur" ) )
+			;;
+		*)
+			__hyper_complete_images
+			;;
+	esac
+}
+
+_hyper_images() {
+	case "$prev" in
+		--filter|-f)
+			COMPREPLY=( $( compgen -S = -W "dangling label" -- "$cur" ) )
+			__hyper_nospace
+			return
+			;;
+                --format)
+			return
+			;;
+	esac
+
+	case "${words[$cword-2]}$prev=" in
+		*dangling=*)
+			COMPREPLY=( $( compgen -W "true false" -- "${cur#=}" ) )
+			return
+			;;
+		*label=*)
+			return
+			;;
+	esac
+
+	case "$cur" in
+		-*)
+			COMPREPLY=( $( compgen -W "--all -a --digests --filter -f --format --help --no-trunc --quiet -q" -- "$cur" ) )
+			;;
+		=)
+			return
+			;;
+		*)
+			__hyper_complete_image_repos
+			;;
+	esac
+}
+
+_hyper_info() {
+	case "$cur" in
+		-*)
+			COMPREPLY=( $( compgen -W "--help" -- "$cur" ) )
+			;;
+	esac
+}
+
+_hyper_inspect() {
+	case "$prev" in
+		--format|-f)
+			return
+			;;
+		--type)
+            COMPREPLY=( $( compgen -W "image container" -- "$cur" ) )
+            return
+            ;;
+	esac
+
+	case "$cur" in
+		-*)
+			COMPREPLY=( $( compgen -W "--format -f --help --size -s --type" -- "$cur" ) )
+			;;
+		*)
+			case $(__hyper_value_of_option --type) in
+				'')
+					__hyper_complete_containers_and_images
+					;;
+				container)
+					__hyper_complete_containers_all
+					;;
+				image)
+					__hyper_complete_images
+					;;
+			esac
+	esac
+}
+
+_hyper_kill() {
+	case "$prev" in
+		--signal|-s)
+			__hyper_complete_signals
+			return
+			;;
+	esac
+
+	case "$cur" in
+		-*)
+			COMPREPLY=( $( compgen -W "--help --signal -s" -- "$cur" ) )
+			;;
+		*)
+			__hyper_complete_containers_running
+			;;
+	esac
+}
+
+_hyper_load() {
+#	case "$prev" in
+#		--input|-i)
+#			_filedir
+#			return
+#			;;
+#	esac
+
+	case "$cur" in
+		-* )
+			COMPREPLY=( $( compgen -W "--help --input -i --local -l --quiet -q" -- "$cur" ) )
+			;;
+	esac
+}
+
+_hyper_login() {
+	case "$prev" in
+		--email|-e|--password|-p|--username|-u)
+			return
+			;;
+	esac
+
+	case "$cur" in
+		-*)
+			COMPREPLY=( $( compgen -W "--email -e --help --password -p --username -u" -- "$cur" ) )
+			;;
+	esac
+}
+
+_hyper_logout() {
+	case "$cur" in
+		-*)
+			COMPREPLY=( $( compgen -W "--help" -- "$cur" ) )
+			;;
+	esac
+}
+
+_hyper_logs() {
+	case "$prev" in
+		--since|--tail)
+			return
+			;;
+	esac
+
+	case "$cur" in
+		-*)
+			COMPREPLY=( $( compgen -W "--follow -f --help --since --tail --timestamps -t" -- "$cur" ) )
+			;;
+		*)
+			local counter=$(__hyper_pos_first_nonflag '--tail')
+			if [ $cword -eq $counter ]; then
+				__hyper_complete_containers_all
+			fi
+			;;
+	esac
+}
+
+_hyper_port() {
+	case "$cur" in
+		-*)
+			COMPREPLY=( $( compgen -W "--help" -- "$cur" ) )
+			;;
+		*)
+			local counter=$(__hyper_pos_first_nonflag)
+			if [ $cword -eq $counter ]; then
+				__hyper_complete_containers_all
+			fi
+			;;
+	esac
+}
+
+_hyper_ps() {
+	case "$prev" in
+		--filter|-f)
+			COMPREPLY=( $( compgen -S = -W "ancestor exited id label name status" -- "$cur" ) )
+			__hyper_nospace
+			return
+			;;
+		--format|-n)
+			return
+			;;
+	esac
+
+	case "${words[$cword-2]}$prev=" in
+		*ancestor=*)
+			cur="${cur#=}"
+			__hyper_complete_images
+			return
+			;;
+		*id=*)
+			cur="${cur#=}"
+			__hyper_complete_container_ids
+			return
+			;;
+		*name=*)
+			cur="${cur#=}"
+			__hyper_complete_container_names
+			return
+			;;
+		*status=*)
+			COMPREPLY=( $( compgen -W "created dead exited paused restarting running" -- "${cur#=}" ) )
+			return
+			;;
+	esac
+
+	case "$cur" in
+		-*)
+			COMPREPLY=( $( compgen -W "--all -a --filter -f --format --help --latest -l -n --no-trunc --quiet -q --size -s " -- "$cur" ) )
+			;;
+	esac
+}
+
+_hyper_pull() {
+	case "$cur" in
+		-*)
+			COMPREPLY=( $( compgen -W "--disable-content-trust=false --help" -- "$cur" ) )
+			;;
+		*)
+			local counter=$(__hyper_pos_first_nonflag)
+			if [ $cword -eq $counter ]; then
+				__hyper_complete_image_repos_and_tags
+			fi
+			;;
+	esac
+}
+
+_hyper_rename() {
+	case "$cur" in
+		-*)
+			COMPREPLY=( $( compgen -W "--help" -- "$cur" ) )
+			;;
+		*)
+			local counter=$(__hyper_pos_first_nonflag)
+			if [ $cword -eq $counter ]; then
+				__hyper_complete_containers_all
+			fi
+			;;
+	esac
+}
+
+_hyper_restart() {
+	case "$prev" in
+		--time|-t)
+			return
+			;;
+	esac
+
+	case "$cur" in
+		-*)
+			COMPREPLY=( $( compgen -W "--help --time -t" -- "$cur" ) )
+			;;
+		*)
+			__hyper_complete_containers_all
+			;;
+	esac
+}
+
+_hyper_rm() {
+	case "$cur" in
+		-*)
+			COMPREPLY=( $( compgen -W "--force -f --help --link -l --volumes -v" -- "$cur" ) )
+			;;
+		*)
+			for arg in "${COMP_WORDS[@]}"; do
+				case "$arg" in
+					--force|-f)
+						__hyper_complete_containers_all
+						return
+						;;
+				esac
+			done
+			__hyper_complete_containers_stopped
+			;;
+	esac
+}
+
+_hyper_rmi() {
+	case "$cur" in
+		-*)
+			COMPREPLY=( $( compgen -W "--force -f --help " -- "$cur" ) )
+			;;
+		*)
+			__hyper_complete_images
+			;;
+	esac
+}
+
+_hyper_run() {
+	local options_with_args="
+		--attach -a
+		--cidfile
+		--env -e
+		--entrypoint
+		--env-file
+		--expose
+		--hostname -h
+		--label -l
+		--label-file
+		--link
+		--name
+		--publish -p
+		--protection
+		--restart
+		--sg
+		--size
+		--stop-signal
+		--volume -v
+		--workdir -w
+	"
+
+	local boolean_options="
+		--detach -d
+		--disable-content-trust=false
+		--help
+		--interactive -i
+		--noauto-volume
+		--publish-all -P
+		--tty -t
+	"
+
+	local all_options="$options_with_args $boolean_options"
+
+	case "$prev" in
+		$(__hyper_to_extglob "$options_with_args") )
+			return
+			;;
+	esac
+
+	case "$cur" in
+		-*)
+			COMPREPLY=( $( compgen -W "$all_options" -- "$cur" ) )
+			;;
+		*)
+			local counter=$( __hyper_pos_first_nonflag $( __hyper_to_alternatives "$options_with_args" ) )
+			if [ $cword -eq $counter ]; then
+				__hyper_complete_images
+			fi
+			;;
+	esac
+}
+
+_hyper_create() {
+	local options_with_args="
+		--attach -a
+		--cidfile
+		--env -e
+		--entrypoint
+		--env-file
+		--expose
+		--hostname -h
+		--label -l
+		--label-file
+		--link
+		--name
+		--publish -p
+		--protection
+		--restart
+		--sg
+		--size
+		--stop-signal
+		--volume -v
+		--workdir -w
+	"
+
+	local boolean_options="
+		--detach -d
+		--disable-content-trust=false
+		--help
+		--interactive -i
+		--noauto-volume
+		--publish-all -P
+		--tty -t
+	"
+
+	local all_options="$options_with_args $boolean_options"
+
+	case "$prev" in
+		$(__hyper_to_extglob "$options_with_args") )
+			return
+			;;
+	esac
+
+	case "$cur" in
+		-*)
+			COMPREPLY=( $( compgen -W "$all_options" -- "$cur" ) )
+			;;
+		*)
+			local counter=$( __hyper_pos_first_nonflag $( __hyper_to_alternatives "$options_with_args" ) )
+			if [ $cword -eq $counter ]; then
+				__hyper_complete_images
+			fi
+			;;
+	esac
+}
+
+_hyper_search() {
+	case "$prev" in
+		--stars|-s)
+			return
+			;;
+	esac
+
+	case "$cur" in
+		-*)
+			COMPREPLY=( $( compgen -W "--automated --help --no-trunc --stars -s" -- "$cur" ) )
+			;;
+	esac
+}
+
+_hyper_start() {
+	case "$cur" in
+		-*)
+			COMPREPLY=( $( compgen -W "--attach -a --help --interactive -i" -- "$cur" ) )
+			;;
+		*)
+			__hyper_complete_containers_stopped
+			;;
+	esac
+}
+
+_hyper_stats() {
+	case "$cur" in
+		-*)
+			COMPREPLY=( $( compgen -W "--all -a --help --no-stream" -- "$cur" ) )
+			;;
+		*)
+			__hyper_complete_containers_running
+			;;
+	esac
+}
+
+_hyper_stop() {
+	case "$prev" in
+		--time|-t)
+			return
+			;;
+	esac
+
+	case "$cur" in
+		-*)
+			COMPREPLY=( $( compgen -W "--help --time -t" -- "$cur" ) )
+			;;
+		*)
+			__hyper_complete_containers_running
+			;;
+	esac
+}
+
+_hyper_update() {
+	case "$prev" in
+		--sg-add|--sg-rm)
+			return
+			;;
+	esac
+
+	case "$cur" in
+		-*)
+			COMPREPLY=( $( compgen -W "--help --protection --sg-add --sg-rm" -- "$cur" ) )
+			;;
+		*)
+			__hyper_complete_containers_all
+			;;
+	esac
+}
+
+_hyper_version() {
+	case "$cur" in
+		-*)
+			COMPREPLY=( $( compgen -W "--help" -- "$cur" ) )
+			;;
+	esac
+}
+
+_hyper_volume_create() {
+	case "$prev" in
+		--name|--opt|-o|--size|--snapshot)
+			return
+			;;
+	esac
+
+	case "$cur" in
+		-*)
+			COMPREPLY=( $( compgen -W "--help --name --opt -o --size --snapshot " -- "$cur" ) )
+			;;
+	esac
+}
+
+_hyper_volume_inspect() {
+	case "$prev" in
+		--format|-f)
+			return
+			;;
+	esac
+
+	case "$cur" in
+		-*)
+			COMPREPLY=( $( compgen -W "--format -f --help" -- "$cur" ) )
+			;;
+		*)
+			__hyper_complete_volumes
+			;;
+	esac
+}
+
+_hyper_volume_ls() {
+	case "$prev" in
+		--filter|-f)
+			COMPREPLY=( $( compgen -S = -W "dangling" -- "$cur" ) )
+			__hyper_nospace
+			return
+			;;
+	esac
+
+	case "${words[$cword-2]}$prev=" in
+		*dangling=*)
+			COMPREPLY=( $( compgen -W "true false" -- "${cur#=}" ) )
+			return
+			;;
+	esac
+
+	case "$cur" in
+		-*)
+			COMPREPLY=( $( compgen -W "--filter -f --help --quiet -q" -- "$cur" ) )
+			;;
+	esac
+}
+
+_hyper_volume_rm() {
+	case "$cur" in
+		-*)
+			COMPREPLY=( $( compgen -W "--help" -- "$cur" ) )
+			;;
+		*)
+			__hyper_complete_volumes
+			;;
+	esac
+}
+
+_hyper_volume_init() {
+	case "$cur" in
+		-*)
+			COMPREPLY=( $( compgen -W "--help" -- "$cur" ) )
+			;;
+	esac
+}
+
+_hyper_volume() {
+	local subcommands="
+		create
+		inspect
+		ls
+		init
+		rm
+	"
+	__hyper_subcommands "$subcommands" && return
+
+	case "$cur" in
+		-*)
+			COMPREPLY=( $( compgen -W "--help" -- "$cur" ) )
+			;;
+		*)
+			COMPREPLY=( $( compgen -W "$subcommands" -- "$cur" ) )
+			;;
+	esac
+}
+
+_hyper_cron_create() {
+	local options_with_args="
+		--access-key
+		--container-name
+		--dom
+		--env -e
+		--entrypoint
+		--env-file
+		--expose
+		--hostname -h
+		--hour
+		--label -l
+		--label-file
+		--link
+		--mail
+		--mailto
+		--minute
+		--month
+		--name
+		--publish -p
+		--restart
+		--secret-key
+		--sg
+		--size
+		--stop-signal
+		--volume -v
+		--workdir -w
+		--week
+	"
+
+	local boolean_options="
+		--help
+		--noauto-volume
+	"
+
+	local all_options="$options_with_args $boolean_options"
+
+	case "$prev" in
+		$(__hyper_to_extglob "$options_with_args") )
+			return
+			;;
+	esac
+
+	case "$cur" in
+		-*)
+			COMPREPLY=( $( compgen -W "$all_options" -- "$cur" ) )
+			;;
+	esac
+}
+
+_hyper_cron_inspect() {
+	case "$prev" in
+		--format|-f)
+			return
+			;;
+	esac
+
+	case "$cur" in
+		-*)
+			COMPREPLY=( $( compgen -W "--format -f --help" -- "$cur" ) )
+			;;
+		*)
+			__hyper_complete_crons
+			;;
+	esac
+}
+
+_hyper_cron_ls() {
+	case "$prev" in
+		--filter|-f)
+			COMPREPLY=( $( compgen -S = -W "dangling" -- "$cur" ) )
+			__hyper_nospace
+			return
+			;;
+	esac
+
+	case "${words[$cword-2]}$prev=" in
+		*dangling=*)
+			COMPREPLY=( $( compgen -W "true false" -- "${cur#=}" ) )
+			return
+			;;
+	esac
+
+	case "$cur" in
+		-*)
+			COMPREPLY=( $( compgen -W "--filter -f --help" -- "$cur" ) )
+			;;
+	esac
+}
+
+_hyper_cron_history() {
+	case "$prev" in
+		--since|--tail)
+			return
+			;;
+	esac
+
+	case "$cur" in
+		-*)
+			COMPREPLY=( $( compgen -W "--help --since --tail " -- "$cur" ) )
+			;;
+		*)
+			__hyper_complete_crons
+			;;
+	esac
+}
+
+_hyper_cron_rm() {
+	case "$cur" in
+		-*)
+			COMPREPLY=( $( compgen -W "--help" -- "$cur" ) )
+			;;
+		*)
+			__hyper_complete_crons
+			;;
+	esac
+}
+
+_hyper_cron() {
+	local subcommands="
+		create
+		inspect
+		ls
+		history
+		rm
+	"
+	__hyper_subcommands "$subcommands" && return
+
+	case "$cur" in
+		-*)
+			COMPREPLY=( $( compgen -W "--help" -- "$cur" ) )
+			;;
+		*)
+			COMPREPLY=( $( compgen -W "$subcommands" -- "$cur" ) )
+			;;
+	esac
+}
+
+_hyper_service_create() {
+	local options_with_args="
+		--algorithm
+		--container-port
+		--env -e
+		--entrypoint
+		--env-file
+		--health-check-fall
+		--health-check-interval
+		--health-check-rise
+		--label -l
+		--label-file
+		--name
+		--protocol
+		--replicas
+		--service-port
+		--session-affinity
+		--sg
+		--size
+		--ssl-cert
+		--stop-signal
+		--volume -v
+		--workdir -w
+	"
+
+	local boolean_options="
+		--help
+		--interactive -i
+		--tty -t
+	"
+
+	local all_options="$options_with_args $boolean_options"
+
+	case "$prev" in
+		$(__hyper_to_extglob "$options_with_args") )
+			return
+			;;
+	esac
+
+	case "$cur" in
+		-*)
+			COMPREPLY=( $( compgen -W "$all_options" -- "$cur" ) )
+			;;
+	esac
+}
+
+_hyper_service_inspect() {
+	case "$prev" in
+		--format|-f)
+			return
+			;;
+	esac
+
+	case "$cur" in
+		-*)
+			COMPREPLY=( $( compgen -W "--format -f --help" -- "$cur" ) )
+			;;
+		*)
+			__hyper_complete_services
+			;;
+	esac
+}
+
+_hyper_service_ls() {
+	case "$prev" in
+		--filter|-f)
+			COMPREPLY=( $( compgen -S = -W "dangling" -- "$cur" ) )
+			__hyper_nospace
+			return
+			;;
+	esac
+
+	case "${words[$cword-2]}$prev=" in
+		*dangling=*)
+			COMPREPLY=( $( compgen -W "true false" -- "${cur#=}" ) )
+			return
+			;;
+	esac
+
+	case "$cur" in
+		-*)
+			COMPREPLY=( $( compgen -W "--filter -f --help" -- "$cur" ) )
+			;;
+	esac
+}
+
+_hyper_service_rm() {
+	case "$cur" in
+		-*)
+			COMPREPLY=( $( compgen -W "--help" -- "$cur" ) )
+			;;
+		*)
+			__hyper_complete_services
+			;;
+	esac
+}
+
+_hyper_service_scale() {
+	case "$cur" in
+		-*)
+			COMPREPLY=( $( compgen -W "--help" -- "$cur" ) )
+			;;
+	esac
+}
+
+_hyper_service_rolling-update() {
+	case "$prev" in
+		--image)
+			return
+			;;
+	esac
+
+	case "$cur" in
+		-*)
+			COMPREPLY=( $( compgen -W "--image --help" -- "$cur" ) )
+			;;
+		*)
+			__hyper_complete_services
+			;;
+	esac
+}
+
+_hyper_service_attach-fip() {
+	case "$prev" in
+		--fip)
+			return
+			;;
+	esac
+
+	case "$cur" in
+		-*)
+			COMPREPLY=( $( compgen -W "--fip --help" -- "$cur" ) )
+			;;
+		*)
+			__hyper_complete_services
+			;;
+	esac
+}
+
+_hyper_service_detach-fip() {
+	case "$cur" in
+		-*)
+			COMPREPLY=( $( compgen -W "--help" -- "$cur" ) )
+			;;
+	esac
+}
+
+_hyper_service() {
+	local subcommands="
+		create
+		inspect
+		ls
+		scale
+		rolling-update
+		attach-fip
+		detach-fip
+		rm
+	"
+	__hyper_subcommands "$subcommands" && return
+
+	case "$cur" in
+		-*)
+			COMPREPLY=( $( compgen -W "--help" -- "$cur" ) )
+			;;
+		*)
+			COMPREPLY=( $( compgen -W "$subcommands" -- "$cur" ) )
+			;;
+	esac
+}
+
+_hyper_snapshot_create() {
+	case "$prev" in
+		--name|-v|--volume)
+			return
+			;;
+	esac
+
+	case "$cur" in
+		-*)
+			COMPREPLY=( $( compgen -W "-f --force --help --name -v --volume" -- "$cur" ) )
+			;;
+	esac
+}
+
+_hyper_snapshot_inspect() {
+	case "$prev" in
+		-f|--format)
+			return
+			;;
+	esac
+
+	case "$cur" in
+		-*)
+			COMPREPLY=( $( compgen -W "--help -f --format" -- "$cur" ) )
+			;;
+		*)
+			__hyper_complete_snapshots
+			;;
+	esac
+}
+
+_hyper_snapshot_ls() {
+	case "$prev" in
+		--filter|-f)
+			COMPREPLY=( $( compgen -S = -W "dangling" -- "$cur" ) )
+			__hyper_nospace
+			return
+			;;
+	esac
+
+	case "${words[$cword-2]}$prev=" in
+		*dangling=*)
+			COMPREPLY=( $( compgen -W "true false" -- "${cur#=}" ) )
+			return
+			;;
+	esac
+
+	case "$cur" in
+		-*)
+			COMPREPLY=( $( compgen -W "--filter -f --help --quiet -q" -- "$cur" ) )
+			;;
+	esac
+}
+
+_hyper_snapshot_rm() {
+	case "$cur" in
+		-*)
+			COMPREPLY=( $( compgen -W "--help" -- "$cur" ) )
+			;;
+		*)
+			__hyper_complete_snapshots
+			;;
+	esac
+}
+
+_hyper_snapshot() {
+	local subcommands="
+		create
+		inspect
+		ls
+		rm
+	"
+	__hyper_subcommands "$subcommands" && return
+
+	case "$cur" in
+		-*)
+			COMPREPLY=( $( compgen -W "--help" -- "$cur" ) )
+			;;
+		*)
+			COMPREPLY=( $( compgen -W "$subcommands" -- "$cur" ) )
+			;;
+	esac
+}
+
+_hyper_sg_create() {
+	case "$prev" in
+		-f|--file)
+			return
+			;;
+	esac
+
+	case "$cur" in
+		-*)
+			COMPREPLY=( $( compgen -W "-f --file --help" -- "$cur" ) )
+			;;
+	esac
+}
+
+_hyper_sg_ls() {
+	case "$cur" in
+		-*)
+			COMPREPLY=( $( compgen -W "--help" -- "$cur" ) )
+			;;
+	esac
+}
+
+_hyper_sg_rm() {
+	case "$cur" in
+		-*)
+			COMPREPLY=( $( compgen -W "--help" -- "$cur" ) )
+			;;
+		*)
+			__hyper_complete_sgs
+			;;
+	esac
+}
+
+_hyper_sg_inspect() {
+	case "$prev" in
+		-o|--output)
+			return
+			;;
+	esac
+
+	case "$cur" in
+		-*)
+			COMPREPLY=( $( compgen -W "-o --output --help" -- "$cur" ) )
+			;;
+		*)
+			__hyper_complete_sgs
+			;;
+	esac
+}
+
+_hyper_sg_update() {
+	case "$prev" in
+		-f|--file)
+			return
+			;;
+	esac
+
+	case "$cur" in
+		-*)
+			COMPREPLY=( $( compgen -W "-f --file --help" -- "$cur" ) )
+			;;
+		*)
+			__hyper_complete_sgs
+			;;
+	esac
+}
+
+_hyper_sg() {
+	local subcommands="
+		create
+		ls
+		rm
+		inspect
+		update
+	"
+	__hyper_subcommands "$subcommands" && return
+
+	case "$cur" in
+		-*)
+			COMPREPLY=( $( compgen -W "--help" -- "$cur" ) )
+			;;
+		*)
+			COMPREPLY=( $( compgen -W "$subcommands" -- "$cur" ) )
+			;;
+	esac
+}
+
+_hyper_compose_create() {
+	case "$prev" in
+		--project-name|-p)
+			return
+			;;
+	esac
+
+	case "$cur" in
+		-*)
+			COMPREPLY=( $( compgen -W "-f --file --force-recreate --help --no-recreate -p --project-name" -- "$cur" ) )
+			;;
+	esac
+}
+
+_hyper_compose_down() {
+	case "$prev" in
+		--remove-orphans|--rmi|--volume|-v|--project-name|-p)
+			return
+			;;
+	esac
+
+	case "$cur" in
+		-*)
+			COMPREPLY=( $( compgen -W "--help -p --project-name --remove-orphans --rmi -v --volumes" -- "$cur" ) )
+			;;
+	esac
+}
+
+_hyper_compose_kill() {
+	case "$prev" in
+		--project-name|-p)
+			return
+			;;
+	esac
+
+	case "$cur" in
+		-*)
+			COMPREPLY=( $( compgen -W "--help -p --project-name" -- "$cur" ) )
+			;;
+	esac
+}
+
+_hyper_compose_ps() {
+	case "$prev" in
+		--project-name|-p|--file|-f)
+			return
+			;;
+	esac
+
+	case "$cur" in
+		-*)
+			COMPREPLY=( $( compgen -W "-f --file --help -p --project-name -q --quiet" -- "$cur" ) )
+			;;
+	esac
+}
+
+_hyper_compose_pull() {
+	case "$prev" in
+		--file|-f)
+			return
+			;;
+	esac
+
+	case "$cur" in
+		-*)
+			COMPREPLY=( $( compgen -W "-f --file --help" -- "$cur" ) )
+			;;
+	esac
+}
+
+_hyper_compose_rm() {
+	case "$prev" in
+		--project-name|-p|-v)
+			return
+			;;
+	esac
+
+	case "$cur" in
+		-*)
+			COMPREPLY=( $( compgen -W "--help -p --project-name -v" -- "$cur" ) )
+			;;
+	esac
+}
+
+_hyper_compose_run() {
+	case "$prev" in
+		--project-name|-p|--file|-f|--rm)
+			return
+			;;
+	esac
+
+	case "$cur" in
+		-*)
+			COMPREPLY=( $( compgen -W "-f --file --help -p --project-name --rm" -- "$cur" ) )
+			;;
+	esac
+}
+
+_hyper_compose_scale() {
+	case "$prev" in
+		--project-name|-p|--file|-f|-t|--timeout)
+			return
+			;;
+	esac
+
+	case "$cur" in
+		-*)
+			COMPREPLY=( $( compgen -W "-f --file --help -p --project-name -t --timeout" -- "$cur" ) )
+			;;
+	esac
+}
+
+_hyper_compose_start() {
+	case "$prev" in
+		--project-name|-p)
+			return
+			;;
+	esac
+
+	case "$cur" in
+		-*)
+			COMPREPLY=( $( compgen -W "--help -p --project-name" -- "$cur" ) )
+			;;
+	esac
+}
+
+_hyper_compose_stop() {
+	case "$prev" in
+		--project-name|-p|--timeout|-t)
+			return
+			;;
+	esac
+
+	case "$cur" in
+		-*)
+			COMPREPLY=( $( compgen -W "--help -p --project-name -t --timeout" -- "$cur" ) )
+			;;
+	esac
+}
+
+_hyper_compose_up() {
+	case "$prev" in
+		--project-name|-p|--file|-f)
+			return
+			;;
+	esac
+
+	case "$cur" in
+		-*)
+			COMPREPLY=( $( compgen -W "-d --detach -f --file --force-recreate --help --no-recreate -p --project-name" -- "$cur" ) )
+			;;
+	esac
+}
+
+_hyper_compose() {
+	local subcommands="
+		create
+		down
+		kill
+		ps
+		pull
+		rm
+		run
+		scale
+		start
+		stop
+		up
+	"
+	__hyper_subcommands "$subcommands" && return
+
+	case "$cur" in
+		-*)
+			COMPREPLY=( $( compgen -W "--help" -- "$cur" ) )
+			;;
+		*)
+			COMPREPLY=( $( compgen -W "$subcommands" -- "$cur" ) )
+			;;
+	esac
+}
+
+_hyper_fip_allocate() {
+	case "$cur" in
+		-*)
+			COMPREPLY=( $( compgen -W "--help -y --yes" -- "$cur" ) )
+			;;
+	esac
+}
+
+_hyper_fip_attach() {
+	case "$cur" in
+		-*)
+			COMPREPLY=( $( compgen -W "--help" -- "$cur" ) )
+			;;
+	esac
+}
+
+_hyper_fip_detach() {
+	case "$cur" in
+		-*)
+			COMPREPLY=( $( compgen -W "--help" -- "$cur" ) )
+			;;
+		*)
+			__hyper_complete_containers_all
+			;;
+	esac
+}
+
+_hyper_fip_ls() {
+	case "$prev" in
+		--filter|-f)
+			return
+			;;
+	esac
+
+	case "$cur" in
+		-*)
+			COMPREPLY=( $( compgen -W "--filter -f --help" -- "$cur" ) )
+			;;
+	esac
+}
+
+_hyper_fip_release() {
+	case "$cur" in
+		-*)
+			COMPREPLY=( $( compgen -W "--help" -- "$cur" ) )
+			;;
+		*)
+			__hyper_complete_fips
+			;;
+	esac
+}
+
+_hyper_fip() {
+	local subcommands="
+		allocate
+		attach
+		detach
+		ls
+		release
+	"
+	__hyper_subcommands "$subcommands" && return
+
+	case "$cur" in
+		-*)
+			COMPREPLY=( $( compgen -W "--help" -- "$cur" ) )
+			;;
+		*)
+			COMPREPLY=( $( compgen -W "$subcommands" -- "$cur" ) )
+			;;
+	esac
+}
+
+# global options that may appear after the hyper command
+_hyper_hyper() {
+	local boolean_options="
+		$global_boolean_options
+		--help
+		--version -v
+	"
+
+	case "$prev" in
+		--config)
+			_filedir -d
+			return
+			;;
+		--log-level|-l)
+			__hyper_complete_log_levels
+			return
+			;;
+		$(__hyper_to_extglob "$global_options_with_args") )
+			return
+			;;
+	esac
+
+	case "$cur" in
+		-*)
+			COMPREPLY=( $( compgen -W "$boolean_options $global_options_with_args" -- "$cur") )
+			;;
+		*)
+			local counter=$( __hyper_pos_first_nonflag $(__hyper_to_extglob "$global_options_with_args") )
+			if [ $cword -eq $counter ]; then
+				COMPREPLY=( $( compgen -W "${commands[*]} help" -- "$cur" ) )
+			fi
+			;;
+	esac
+}
+
+_hyper() {
+	local previous_extglob_setting=$(shopt -p extglob)
+	shopt -s extglob
+
+	local commands=(
+		attach
+		compose
+		config
+		create
+		cron
+		exec
+		fip
+		history
+		images
+		info
+		inspect
+		kill
+		load
+		login
+		logout
+		logs
+		port
+		ps
+		pull
+		rename
+		restart
+		rm
+		rmi
+		run
+		search
+		service
+		sg
+		snapshot
+		start
+		stats
+		stop
+		update
+		version
+		volume
+	)
+
+	local global_boolean_options="
+		--debug -D
+	"
+
+	local global_options_with_args="
+		--config
+		--host -H
+		--log-level -l
+	"
+
+	local host config
+
+	COMPREPLY=()
+	local cur prev words cword
+	_get_comp_words_by_ref -n : cur prev words cword
+
+	local command='hyper' command_pos=0 subcommand_pos
+	local counter=1
+	while [ $counter -lt $cword ]; do
+		case "${words[$counter]}" in
+			# save host so that completion can use custom daemon
+			--host|-H)
+				(( counter++ ))
+				host="${words[$counter]}"
+				;;
+			# save config so that completion can use custom configuration directories
+			--config)
+				(( counter++ ))
+				config="${words[$counter]}"
+				;;
+			$(__hyper_to_extglob "$global_options_with_args") )
+				(( counter++ ))
+				;;
+			-*)
+				;;
+			=)
+				(( counter++ ))
+				;;
+			*)
+				command="${words[$counter]}"
+				command_pos=$counter
+				break
+				;;
+		esac
+		(( counter++ ))
+	done
+
+	local completions_func=_hyper_${command}
+	declare -F $completions_func >/dev/null && $completions_func
+
+	eval "$previous_extglob_setting"
+	return 0
+}
+
+eval "$__hyper_previous_extglob_setting"
+unset __hyper_previous_extglob_setting
+
+complete -F _hyper hyper
