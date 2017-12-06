@@ -1,5 +1,5 @@
 image:
-  repository: virtual-kubelet/virtual-kubelet
+  repository: microsoft/virtual-kubelet
   tag: latest
   pullPolicy: Always
 env:
