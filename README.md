@@ -41,7 +41,7 @@ Run the binary with your chosen provider:
 Now that the virtual-kubelet is deployed run `kubectl get nodes` and you should see
 a `virtual-kubelet` node.
 
-## Command Line Usage
+## Command-Line Usage
 
 ```bash
 virtual-kubelet implements the Kubelet interface with a pluggable
@@ -72,8 +72,8 @@ Use "virtual-kubelet [command] --help" for more information about a command.
 
 ## Deploy as a Pod by Helm Chart
 
-Run these commands to deploy the virtual kubeletwhich connects your Kubernetes cluster to Azure Container Instances.
-If you want to run the connector from the Azure commandline check out this. 
+Run these commands to deploy the virtual kubelet which connects your Kubernetes cluster to Azure Container Instances.
+If you want to run the connector from the Azure command-line check out this. 
 
 ```bash
 RELEASE_NAME=virtual-kubelet
