@@ -5,9 +5,7 @@ accepted.
 
 ## Contributor License Agreements
 
-**Azure Specific**
-
-If you are providing provider support for Azure then we have to jump through some legal hurdles first.
+If you are providing provider support for the Virtual Kubelet then we have to jump through some legal hurdles first.
 
 The [Microsoft CLA](https://cla.microsoft.com/) must be signed by all
 contributors. Please fill out either the individual or corporate Contributor
@@ -22,7 +20,7 @@ signed the CLA can be accepted into the repository.
 Each provider is responsible for reviewing PRs. Each provider has a primary and secondary maintainer for the purposes of maintaining their own code.
 Here's the current list of maintainers.
 
-Otherwise for the primary Virtual Kubelet code, and overall project maintenance, these are the current maintainers. If you want to become a maintainer for the overall project please email ria.bhatia@microsoft.com.
+Otherwise for the primary Virtual Kubelet code, and overall project maintenance, these are the current maintainers. If you want to become a maintainer for the overall project, or be a provider for Virtual Kubelet, please email Ria Bhatia at ria.bhatia@microsoft.com.
 
 ### Overall Maintainers
 
