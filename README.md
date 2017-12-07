@@ -77,7 +77,7 @@ If you want to run the connector from the Azure command-line check out this.
 
 ```bash
 RELEASE_NAME=virtual-kubelet
-CHART_URL=https://github.com/virtual-kubelet/virtual-kubelet/blob/master/charts/virtual-kubelet-0.1.0.tgz
+CHART_URL=https://github.com/virtual-kubelet/virtual-kubelet/raw/master/charts/virtual-kubelet-0.1.0.tgz
 
 helm install "$CHART_URL" --name "$RELEASE_NAME" \
     --set env.azureClientId=<YOUR-AZURECLIENTID-HERE>,env.azureClientKey=<YOUR-AZURECLIENTKEY-HERE>,env.azureTenantId=<YOUR-AZURETENANTID-HERE>,env.azureSubscriptionId=<YOUR-AZURESUBSCRIPTIONID-HERE>,env.aciResourceGroup=<YOUR-ACIRESOURCEGROUP-HERE>,env.nodeName=<YOUR-NODE-NAME>, env.nodeOsType=<Linux|Windows>,env.nodeTaint=<YOUR-NODE-TAINT>
