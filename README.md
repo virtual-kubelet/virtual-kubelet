@@ -54,7 +54,7 @@ Usage:
 
 Available Commands:
   help        Help about any command
-  version     A brief description of your command
+  version     Show the version of the program
 
 Flags:
   -h, --help                     help for virtual-kubelet
@@ -65,7 +65,6 @@ Flags:
       --provider string          cloud provider
       --provider-config string   cloud provider configuration file
       --taint string             apply taint to node, making scheduling explicit
-  -t, --toggle                   Help message for toggle
 
 Use "virtual-kubelet [command] --help" for more information about a command.
 ```
