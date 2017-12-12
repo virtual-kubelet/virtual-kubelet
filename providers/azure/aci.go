@@ -472,7 +472,7 @@ func (p *ACIProvider) getVolumes(pod *v1.Pod) ([]aci.Volume, error) {
 		if v.ConfigMap != nil {
 			paths := make(map[string]string)
 			configMap, err := p.resourceManager.GetConfigMap(v.ConfigMap.Name, pod.Namespace)
-			if v.Secret.Optional != nil && !*v.Secret.Optional && k8serr.IsNotFound(err) {
+			if v.ConfigMap.Optional != nil && !*v.ConfigMap.Optional && k8serr.IsNotFound(err) {
 				return nil, fmt.Errorf("ConfigMap %s is required by Pod %s and does not exist", v.ConfigMap.Name, pod.Name)
 			}
 			if configMap == nil {
