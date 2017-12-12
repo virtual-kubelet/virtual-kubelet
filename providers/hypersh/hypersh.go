@@ -139,6 +139,11 @@ func (p *HyperProvider) GetPod(namespace, name string) (*v1.Pod, error) {
 	return nil, nil
 }
 
+// GetPodLogs returns the logs of a pod by name.
+func (p *HyperProvider) GetPodLogs(namespace, name string) (string, error) {
+	return "", nil
+}
+
 // GetPodStatus returns the status of a pod by name that is running inside hyper.sh
 // returns nil if a pod by that name is not found.
 func (p *HyperProvider) GetPodStatus(namespace, name string) (*v1.PodStatus, error) {
@@ -222,6 +227,12 @@ func (p *HyperProvider) NodeConditions() []v1.NodeCondition {
 		},
 	}
 
+}
+
+// NodeAddresses returns a list of addresses for the node status
+// within Kuberentes.
+func (p *HyperProvider) NodeAddresses() []v1.NodeAddress {
+	return nil
 }
 
 // OperatingSystem returns the operating system for this provider.

@@ -24,7 +24,10 @@ type Provider interface {
 	// GetPod retrieves a pod by name from the provider (can be cached).
 	GetPod(namespace, name string) (*v1.Pod, error)
 
-	// GetPodStatus retrievesthe status of a pod by name from the provider.
+	// GetPodLogs retrieves the logs of a pod by name from the provider.
+	GetPodLogs(namespace, name string) (string, error)
+
+	// GetPodStatus retrieves the status of a pod by name from the provider.
 	GetPodStatus(namespace, name string) (*v1.PodStatus, error)
 
 	// GetPods retrieves a list of all pods running on the provider (can be cached).
@@ -36,6 +39,10 @@ type Provider interface {
 	// NodeConditions returns a list of conditions (Ready, OutOfDisk, etc), which is polled periodically to update the node status
 	// within Kuberentes.
 	NodeConditions() []v1.NodeCondition
+
+	// NodeAddresses returns a list of addresses for the node status
+	// within Kuberentes.
+	NodeAddresses() []v1.NodeAddress
 
 	// OperatingSystem returns the operating system the provider is for.
 	OperatingSystem() string

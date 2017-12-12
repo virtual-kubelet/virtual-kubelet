@@ -60,11 +60,14 @@ func New(nodeName, operatingSystem, namespace, kubeConfig, taint, provider, prov
 	}
 
 	rm := manager.NewResourceManager(clientset)
+	go ApiServerStart()
+	log.Println("vkubelet apiserver started")
 
 	var p Provider
 	switch provider {
 	case "azure":
-		p, err = azure.NewACIProvider(providerConfig, rm, nodeName, operatingSystem)
+		internalIP := os.Getenv("VKUBELET_POD_IP")
+		p, err = azure.NewACIProvider(providerConfig, rm, nodeName, operatingSystem, internalIP)
 		if err != nil {
 			return nil, err
 		}
@@ -136,6 +139,7 @@ func (s *Server) registerNode() error {
 			Capacity:    s.provider.Capacity(),
 			Allocatable: s.provider.Capacity(),
 			Conditions:  s.provider.NodeConditions(),
+			Addresses:   s.provider.NodeAddresses(),
 		},
 	}
 

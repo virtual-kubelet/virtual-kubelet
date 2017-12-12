@@ -31,6 +31,7 @@ type ACIProvider struct {
 	cpu             string
 	memory          string
 	pods            string
+	internalIP   	string
 }
 
 // AuthConfig is the secret returned from an ImageRegistryCredential
@@ -45,7 +46,7 @@ type AuthConfig struct {
 }
 
 // NewACIProvider creates a new ACIProvider.
-func NewACIProvider(config string, rm *manager.ResourceManager, nodeName, operatingSystem string) (*ACIProvider, error) {
+func NewACIProvider(config string, rm *manager.ResourceManager, nodeName, operatingSystem string, internalIP string) (*ACIProvider, error) {
 	var p ACIProvider
 	var err error
 
@@ -89,6 +90,7 @@ func NewACIProvider(config string, rm *manager.ResourceManager, nodeName, operat
 
 	p.operatingSystem = operatingSystem
 	p.nodeName = nodeName
+	p.internalIP = internalIP
 
 	return &p, err
 }
@@ -193,6 +195,40 @@ func (p *ACIProvider) GetPod(namespace, name string) (*v1.Pod, error) {
 	return containerGroupToPod(cg)
 }
 
+// GetPodLogs returns the logs of a pod by name that is running inside ACI.
+func (p *ACIProvider) GetPodLogs(namespace, name string) (string, error) {
+	logContent := ""
+	cg, err := p.aciClient.GetContainerGroup(p.resourceGroup, name)
+	if err != nil {
+		// Trap error for 404 and return gracefully
+		if strings.Contains(err.Error(), "ResourceNotFound") {
+			return logContent, nil
+		}
+		return logContent, err
+	}
+
+	if cg.Tags["NodeName"] != p.nodeName {
+		return logContent, nil
+	}
+	// get logs from cg
+	retry := 10
+	for i := 0; i < retry; i++ {
+		cLogs, err := p.aciClient.GetContainerLogs(p.resourceGroup, cg.Name, name, 10)
+		
+		if err != nil {
+			log.Println(err)
+			time.Sleep(5000 * time.Millisecond)
+		} else {
+			break
+			logContent = cLogs.Content
+			return logContent, nil
+		}
+	}
+	// create pod logs
+
+	return logContent, err
+}
+
 // GetPodStatus returns the status of a pod by name that is running inside ACI
 // returns nil if a pod by that name is not found.
 func (p *ACIProvider) GetPodStatus(namespace, name string) (*v1.PodStatus, error) {
@@ -286,6 +322,18 @@ func (p *ACIProvider) NodeConditions() []v1.NodeCondition {
 			LastTransitionTime: metav1.Now(),
 			Reason:             "RouteCreated",
 			Message:            "RouteController created a route",
+		},
+	}
+}
+
+// NodeAddresses returns a list of addresses for the node status
+// within Kuberentes.
+func (p *ACIProvider) NodeAddresses() []v1.NodeAddress {
+	// TODO: Make these dynamic and augment with custom ACI specific conditions of interest
+	return []v1.NodeAddress{
+		{
+			Type:               "InternalIP",
+			Address:             p.internalIP,
 		},
 	}
 }
