@@ -20,12 +20,20 @@ spec:
           value: {{ .Values.env.aciResourceGroup }}
         - name: ACI_REGION
           value: {{ default "westus" .Values.env.aciRegion }}
+        - name: APISERVER_CERT
+          value: {{ .Values.env.apiserverCert | quote }}
+        - name: APISERVER_KEY
+          value: {{ .Values.env.apiserverKey | quote }}
+        - name: VKUBELET_POD_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
         volumeMounts:
         - name: credentials
           mountPath: "/etc/virtual-kubelet"
           readOnly: true
         command: ["virtual-kubelet"]
-        args: ["--provider", "azure", "--nodename", {{ default "aci-conn" .Values.env.nodeName | quote }} , "--os", {{ default "Linux" .Values.env.nodeOsType | quote }}, "--taint", {{ default "azure.com/aci" .Values.env.nodeTaint | quote }}]
+        args: ["--provider", "azure", "--namespace", "default", "--nodename", {{ default "aci-conn" .Values.env.nodeName | quote }} , "--os", {{ default "Linux" .Values.env.nodeOsType | quote }}, "--taint", {{ default "azure.com/aci" .Values.env.nodeTaint | quote }}]
       volumes:
       - name: credentials
         secret:
