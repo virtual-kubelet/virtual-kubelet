@@ -11,7 +11,7 @@ jobs:
       - run:
           name: Create the credentials file
           command: sh scripts/createCredentials.sh
-    - run:
+      - run:
           name: Get the kube config file
           command: sh scripts/getKubeConfig.sh
       - run:
