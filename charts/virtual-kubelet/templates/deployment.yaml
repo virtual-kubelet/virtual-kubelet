@@ -33,7 +33,7 @@ spec:
           mountPath: "/etc/virtual-kubelet"
           readOnly: true
         command: ["virtual-kubelet"]
-        args: ["--provider", "azure", "--namespace", "default", "--nodename", {{ default "aci-conn" .Values.env.nodeName | quote }} , "--os", {{ default "Linux" .Values.env.nodeOsType | quote }}, "--taint", {{ default "azure.com/aci" .Values.env.nodeTaint | quote }}]
+        args: ["--provider", "azure", "--namespace", "default", "--nodename", {{ default "virtual-kubelet" .Values.env.nodeName | quote }} , "--os", {{ default "Linux" .Values.env.nodeOsType | quote }}, "--taint", {{ default "azure.com/aci" .Values.env.nodeTaint | quote }}]
       volumes:
       - name: credentials
         secret:
