@@ -31,7 +31,7 @@ type ACIProvider struct {
 	cpu             string
 	memory          string
 	pods            string
-	internalIP   	string
+	internalIP      string
 }
 
 // AuthConfig is the secret returned from an ImageRegistryCredential
@@ -196,9 +196,9 @@ func (p *ACIProvider) GetPod(namespace, name string) (*v1.Pod, error) {
 }
 
 // GetPodLogs returns the logs of a pod by name that is running inside ACI.
-func (p *ACIProvider) GetPodLogs(namespace, name string) (string, error) {
+func (p *ACIProvider) GetContainerLogs(namespace, podName, containerName string) (string, error) {
 	logContent := ""
-	cg, err := p.aciClient.GetContainerGroup(p.resourceGroup, name)
+	cg, err := p.aciClient.GetContainerGroup(p.resourceGroup, fmt.Sprintf("%s-%s", namespace, podName))
 	if err != nil {
 		// Trap error for 404 and return gracefully
 		if strings.Contains(err.Error(), "ResourceNotFound") {
@@ -213,18 +213,15 @@ func (p *ACIProvider) GetPodLogs(namespace, name string) (string, error) {
 	// get logs from cg
 	retry := 10
 	for i := 0; i < retry; i++ {
-		cLogs, err := p.aciClient.GetContainerLogs(p.resourceGroup, cg.Name, name, 10)
-		
+		cLogs, err := p.aciClient.GetContainerLogs(p.resourceGroup, cg.Name, containerName, 10)
 		if err != nil {
 			log.Println(err)
 			time.Sleep(5000 * time.Millisecond)
 		} else {
-			break
 			logContent = cLogs.Content
-			return logContent, nil
+			break
 		}
 	}
-	// create pod logs
 
 	return logContent, err
 }
@@ -332,8 +329,8 @@ func (p *ACIProvider) NodeAddresses() []v1.NodeAddress {
 	// TODO: Make these dynamic and augment with custom ACI specific conditions of interest
 	return []v1.NodeAddress{
 		{
-			Type:               "InternalIP",
-			Address:             p.internalIP,
+			Type:    "InternalIP",
+			Address: p.internalIP,
 		},
 	}
 }

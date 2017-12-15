@@ -60,8 +60,6 @@ func New(nodeName, operatingSystem, namespace, kubeConfig, taint, provider, prov
 	}
 
 	rm := manager.NewResourceManager(clientset)
-	go ApiServerStart()
-	log.Println("vkubelet apiserver started")
 
 	var p Provider
 	switch provider {
@@ -92,6 +90,8 @@ func New(nodeName, operatingSystem, namespace, kubeConfig, taint, provider, prov
 	if err = s.registerNode(); err != nil {
 		return s, err
 	}
+
+	go ApiserverStart(p)
 
 	tick := time.Tick(5 * time.Second)
 	go func() {

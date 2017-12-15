@@ -2,16 +2,19 @@ package vkubelet
 
 import (
 	"encoding/base64"
+	"fmt"
 	"io/ioutil"
 	"io"
 	"log"
 	"net/http"
 	"os"
-	//"k8s.io/api/core/v1"
+	"strings"
 )
+var p Provider
 
-func ApiServerStart() error {
-	http.HandleFunc("/", HelloServer)
+func ApiserverStart(provider Provider) error {
+	p = provider
+	http.HandleFunc("/", ApiServerHandler)
 	certValue64 := os.Getenv("APISERVER_CERT")
 	keyValue64 := os.Getenv("APISERVER_KEY")
 	certValue, err := base64.StdEncoding.DecodeString(certValue64)
@@ -42,9 +45,23 @@ func ApiServerStart() error {
 	return nil
 }
 
-func HelloServer(w http.ResponseWriter, req *http.Request) {
-	log.Println("handler called")
-	///containerLogs/{namespace}/{pd}/{container}
-	log.Println(req)
-	io.WriteString(w, "ack!\n")
+func ApiServerHandler(w http.ResponseWriter, req *http.Request) {
+	if req.Method == "GET" {
+		if strings.ContainsAny(req.RequestURI, "containerLogs" ) {
+			reqParts := strings.Split(req.RequestURI, "/")
+			if len(reqParts) == 5 {
+				namespace := reqParts[2]
+				pod := reqParts[3]
+				container := reqParts[4]
+				podsLogs, err := p.GetContainerLogs(namespace, pod, container)
+				if err != nil {
+					fmt.Errorf("Error getting logs for pod '%s': %s", pod, err)
+					io.WriteString(w, err.Error())
+				} else {
+					io.WriteString(w, podsLogs)
+				}
+			}
+			
+		}
+	}
 }
