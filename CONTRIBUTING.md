@@ -3,18 +3,6 @@
 The Virtual Kubelet accepts contributions via GitHub pull requests. This document outlines the process to help get your contribution
 accepted.
 
-## Contributor License Agreements
-
-If you are providing provider support for the Virtual Kubelet then we have to jump through some legal hurdles first.
-
-The [Microsoft CLA](https://cla.microsoft.com/) must be signed by all
-contributors. Please fill out either the individual or corporate Contributor
-License Agreement (CLA). Once you are CLA'ed, we'll be able to accept your pull
-requests.
-
-***NOTE***: Only original source code from you and other people that have
-signed the CLA can be accepted into the repository.
-
 ## Maintainers
 
 Each provider is responsible for reviewing PRs. Each provider has a primary and secondary maintainer for the purposes of maintaining their own code.
@@ -98,8 +86,4 @@ Your pull request will be reviewed according to the process defined in
 ## Code of conduct
 
 This project has adopted the
-[Microsoft Open Source Code of Conduct](https://opensource.microsoft.com/codeofconduct/).
-For more information see the
-[Code of Conduct FAQ](https://opensource.microsoft.com/codeofconduct/faq) or
-contact [opencode@microsoft.com](mailto:opencode@microsoft.com) with any
-additional questions or comments.
+[CNCF Code of Conduct](https://github.com/cncf/foundation/blob/master/code-of-conduct.md).
