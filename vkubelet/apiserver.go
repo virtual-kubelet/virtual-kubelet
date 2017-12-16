@@ -2,7 +2,6 @@ package vkubelet
 
 import (
 	"encoding/base64"
-	"fmt"
 	"io/ioutil"
 	"io"
 	"log"
@@ -55,8 +54,8 @@ func ApiServerHandler(w http.ResponseWriter, req *http.Request) {
 				container := reqParts[4]
 				podsLogs, err := p.GetContainerLogs(namespace, pod, container)
 				if err != nil {
-					fmt.Errorf("Error getting logs for pod '%s': %s", pod, err)
 					io.WriteString(w, err.Error())
+					log.Fatal(err)
 				} else {
 					io.WriteString(w, podsLogs)
 				}
