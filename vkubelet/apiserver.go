@@ -1,8 +1,6 @@
 package vkubelet
 
 import (
-	"encoding/base64"
-	"io/ioutil"
 	"io"
 	"log"
 	"net/http"
@@ -14,34 +12,13 @@ var p Provider
 func ApiserverStart(provider Provider) error {
 	p = provider
 	http.HandleFunc("/", ApiServerHandler)
-	certValue64 := os.Getenv("APISERVER_CERT")
-	keyValue64 := os.Getenv("APISERVER_KEY")
-	certValue, err := base64.StdEncoding.DecodeString(certValue64)
+	certFilePath := os.Getenv("APISERVER_CERT_LOCATION")
+	keyFilePath := os.Getenv("APISERVER_KEY_LOCATION")
+	err := http.ListenAndServeTLS(":10250", certFilePath, keyFilePath, nil)
 	if err != nil {
 		log.Fatal(err)
 	}
-	keyValue, err := base64.StdEncoding.DecodeString(keyValue64)
-	if err != nil {
-		log.Fatal(err)
-	}
-	cert := []byte(certValue)
- 	key := []byte(keyValue)
- 	certFilePath := "cert.pem"
- 	keyFilePath := "key.pem"
- 	err = ioutil.WriteFile(certFilePath, cert, 0644)
- 	if err != nil {
-		log.Fatal(err)
-	}
-	err = ioutil.WriteFile(keyFilePath, key, 0644)
- 	if err != nil {
-		log.Fatal(err)
-	}
-
-	err = http.ListenAndServeTLS(":10250", certFilePath, keyFilePath, nil)
-	if err != nil {
-		log.Fatal(err)
-	}
-	return nil
+	return err
 }
 
 func ApiServerHandler(w http.ResponseWriter, req *http.Request) {
