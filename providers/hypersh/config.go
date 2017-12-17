@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/virtual-kubelet/virtual-kubelet/providers"
 	"github.com/BurntSushi/toml"
+	"github.com/virtual-kubelet/virtual-kubelet/providers"
 )
 
 type providerConfig struct {
@@ -15,6 +15,7 @@ type providerConfig struct {
 	OperatingSystem string
 	CPU             string
 	Memory          string
+	InstanceType    string
 	Pods            string
 }
 
@@ -26,6 +27,11 @@ func (p *HyperProvider) loadConfig(r io.Reader) error {
 	p.region = config.Region
 	p.accessKey = config.AccessKey
 	p.secretKey = config.SecretKey
+
+	p.instanceType = "s4"
+	if config.InstanceType != "" {
+		p.instanceType = config.InstanceType
+	}
 
 	// Default to 20 mcpu
 	p.cpu = "20"

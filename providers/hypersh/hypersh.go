@@ -6,8 +6,11 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"runtime"
 
 	"github.com/docker/go-connections/nat"
+	"github.com/docker/go-connections/sockets"
+	"github.com/docker/go-connections/tlsconfig"
 	hyper "github.com/hyperhq/hyper-api/client"
 	"github.com/hyperhq/hyper-api/types"
 	"github.com/hyperhq/hyper-api/types/container"
@@ -20,11 +23,13 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+var host = "tcp://*.hyper.sh:443"
+
 const (
-	host           = "https://us-west-1.hyper.sh"
-	verStr         = "v1.23"
-	containerLabel = "hyper-virtual-kubelet"
-	nodeLabel      = containerLabel + "-node"
+	verStr            = "v1.23"
+	containerLabel    = "hyper-virtual-kubelet"
+	nodeLabel         = containerLabel + "-node"
+	instanceTypeLabel = "sh_hyper_instancetype"
 )
 
 // HyperProvider implements the virtual-kubelet provider interface and communicates with hyper.sh APIs.
@@ -38,6 +43,7 @@ type HyperProvider struct {
 	secretKey       string
 	cpu             string
 	memory          string
+	instanceType    string
 	pods            string
 }
 
@@ -72,15 +78,51 @@ func NewHyperProvider(config string, rm *manager.ResourceManager, nodeName, oper
 		p.region = r
 	}
 
+	if it := os.Getenv("HYPERSH_INSTANCE_TYPE"); it != "" {
+		p.instanceType = it
+	}
+
+	host = fmt.Sprintf("tcp://%v.hyper.sh:443", p.region)
+	httpClient, err := newHTTPClient(host, &tlsconfig.Options{InsecureSkipVerify: false})
+
+	customHeaders := map[string]string{}
+	ver := "0.1"
+	customHeaders["User-Agent"] = fmt.Sprintf("Virtual-Kubelet-Client/%v (%v)", ver, runtime.GOOS)
+
 	p.operatingSystem = operatingSystem
 	p.nodeName = nodeName
 
-	p.hyperClient, err = hyper.NewClient(host, verStr, http.DefaultClient, nil, p.accessKey, p.secretKey, p.region)
+	p.hyperClient, err = hyper.NewClient(host, verStr, httpClient, customHeaders, p.accessKey, p.secretKey, p.region)
 	if err != nil {
 		return nil, err
 	}
 
 	return &p, nil
+}
+
+func newHTTPClient(host string, tlsOptions *tlsconfig.Options) (*http.Client, error) {
+	if tlsOptions == nil {
+		// let the api client configure the default transport.
+		return nil, nil
+	}
+
+	config, err := tlsconfig.Client(*tlsOptions)
+	if err != nil {
+		return nil, err
+	}
+	tr := &http.Transport{
+		TLSClientConfig: config,
+	}
+	proto, addr, _, err := hyper.ParseHost(host)
+	if err != nil {
+		return nil, err
+	}
+
+	sockets.ConfigureTransport(tr, proto, addr)
+
+	return &http.Client{
+		Transport: tr,
+	}, nil
 }
 
 // CreatePod accepts a Pod definition and creates
@@ -98,10 +140,12 @@ func (p *HyperProvider) CreatePod(pod *v1.Pod) error {
 	// Iterate over the containers to create and start them.
 	for k, ctr := range containers {
 		containerName := fmt.Sprintf("pod-%s-%s", pod.Name, pod.Spec.Containers[k].Name)
+
 		// Add labels to the pod containers.
 		ctr.Labels = map[string]string{
-			containerLabel: pod.Name,
-			nodeLabel:      p.nodeName,
+			containerLabel:    pod.Name,
+			nodeLabel:         p.nodeName,
+			instanceTypeLabel: p.instanceType,
 		}
 
 		// Create the container.
@@ -147,7 +191,7 @@ func (p *HyperProvider) GetPodStatus(namespace, name string) (*v1.PodStatus, err
 
 // GetPods returns a list of all pods known to be running within hyper.sh.
 func (p *HyperProvider) GetPods() ([]*v1.Pod, error) {
-	filter, err := filters.FromParam(nodeLabel + "=" + p.nodeName)
+	filter, err := filters.FromParam(fmt.Sprintf("{\"%v\":{\"%v\":true}}", nodeLabel, p.nodeName))
 	if err != nil {
 		return nil, fmt.Errorf("Creating filter to get containers by node name failed: %v", err)
 	}
