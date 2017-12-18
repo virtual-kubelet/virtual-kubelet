@@ -285,6 +285,10 @@ func getContainers(pod *v1.Pod) ([]container.Config, []container.HostConfig, err
 		ports := map[nat.Port]struct{}{}
 		portBindings := nat.PortMap{}
 		for _, p := range ctr.Ports {
+			//TODO: p.HostPort is 0 by default, but it's invalid in hyper.sh
+			if p.HostPort == 0 {
+				p.HostPort = p.ContainerPort
+			}
 			port, err := nat.NewPort(string(p.Protocol), fmt.Sprintf("%d", p.HostPort))
 			if err != nil {
 				return nil, nil, fmt.Errorf("creating new port in container conversion failed: %v", err)
