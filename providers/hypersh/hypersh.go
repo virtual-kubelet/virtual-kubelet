@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"net/url"
 	"os"
 	"runtime"
 	"strings"
@@ -18,6 +19,8 @@ import (
 	"github.com/hyperhq/hyper-api/types/container"
 	"github.com/hyperhq/hyper-api/types/filters"
 	"github.com/hyperhq/hyper-api/types/network"
+	"github.com/hyperhq/hypercli/cliconfig"
+	"github.com/hyperhq/hypercli/opts"
 	"github.com/virtual-kubelet/virtual-kubelet/manager"
 	"github.com/virtual-kubelet/virtual-kubelet/providers"
 	"k8s.io/api/core/v1"
@@ -37,10 +40,12 @@ const (
 // HyperProvider implements the virtual-kubelet provider interface and communicates with hyper.sh APIs.
 type HyperProvider struct {
 	hyperClient     *hyper.Client
+	configFile      *cliconfig.ConfigFile
 	resourceManager *manager.ResourceManager
 	nodeName        string
 	operatingSystem string
 	region          string
+	host            string
 	accessKey       string
 	secretKey       string
 	cpu             string
@@ -51,41 +56,102 @@ type HyperProvider struct {
 
 // NewHyperProvider creates a new HyperProvider
 func NewHyperProvider(config string, rm *manager.ResourceManager, nodeName, operatingSystem string) (*HyperProvider, error) {
-	var p HyperProvider
-	var err error
+	var (
+		p          HyperProvider
+		err        error
+		host       string
+		dft        bool
+		tlsOptions = &tlsconfig.Options{InsecureSkipVerify: false}
+	)
 
 	p.resourceManager = rm
 
-	if config != "" {
-		f, err := os.Open(config)
-		if err != nil {
-			return nil, err
-		}
-		defer f.Close()
-
-		if err := p.loadConfig(f); err != nil {
-			return nil, err
-		}
+	// Get config from environment variable
+	if h := os.Getenv("HYPER_HOST"); h != "" {
+		p.host = h
 	}
-
-	if ak := os.Getenv("HYPERSH_ACCESS_KEY"); ak != "" {
+	if ak := os.Getenv("HYPER_ACCESS_KEY"); ak != "" {
 		p.accessKey = ak
 	}
-
-	if sk := os.Getenv("HYPERSH_SECRET_KEY"); sk != "" {
+	if sk := os.Getenv("HYPER_SECRET_KEY"); sk != "" {
 		p.secretKey = sk
 	}
-
-	if r := os.Getenv("HYPERSH_REGION"); r != "" {
-		p.region = r
+	if p.host == "" {
+		// ignore HYPER_DEFAULT_REGION when HYPER_HOST was specified
+		if r := os.Getenv("HYPER_DEFAULT_REGION"); r != "" {
+			p.region = r
+		}
 	}
-
-	if it := os.Getenv("HYPERSH_INSTANCE_TYPE"); it != "" {
+	if it := os.Getenv("HYPER_INSTANCE_TYPE"); it != "" {
 		p.instanceType = it
+	} else {
+		p.instanceType = "s4"
 	}
 
-	host = fmt.Sprintf("tcp://%s.hyper.sh:443", p.region)
-	httpClient, err := newHTTPClient(host, &tlsconfig.Options{InsecureSkipVerify: false})
+	if p.accessKey != "" || p.secretKey != "" {
+		//use environment variable
+		if p.accessKey == "" || p.secretKey == "" {
+			return nil, fmt.Errorf("WARNING: Need to specify HYPER_ACCESS_KEY and HYPER_SECRET_KEY at the same time.")
+		}
+		log.Printf("Use AccessKey and SecretKey from HYPER_ACCESS_KEY and HYPER_SECRET_KEY")
+		if p.region == "" {
+			p.region = cliconfig.DefaultHyperRegion
+		}
+		if p.host == "" {
+			host, _, err = p.getServerHost(p.region, tlsOptions)
+			if err != nil {
+				return nil, err
+			}
+			p.host = host
+		}
+	} else {
+		// use config file, default path is ~/.hyper
+		if config == "" {
+			config = cliconfig.ConfigDir()
+		}
+		configFile, err := cliconfig.Load(config)
+		if err != nil {
+			return nil, fmt.Errorf("WARNING: Error loading config file %q: %v\n", config, err)
+		}
+		p.configFile = configFile
+		log.Printf("config file under %q was loaded\n", config)
+
+		if p.host == "" {
+			host, dft, err = p.getServerHost(p.region, tlsOptions)
+			if err != nil {
+				return nil, err
+			}
+			p.host = host
+		}
+		// Get Region, AccessKey and SecretKey from config file
+		cc, ok := configFile.CloudConfig[p.host]
+		if !ok {
+			cc, ok = configFile.CloudConfig[cliconfig.DefaultHyperFormat]
+		}
+		if ok {
+			p.accessKey = cc.AccessKey
+			p.secretKey = cc.SecretKey
+
+			if p.region == "" && dft {
+				if p.region = cc.Region; p.region == "" {
+					p.region = p.getDefaultRegion()
+				}
+			}
+			if !dft {
+				if p.region = cc.Region; p.region == "" {
+					p.region = cliconfig.DefaultHyperRegion
+				}
+			}
+		} else {
+			return nil, fmt.Errorf("WARNING: can not find entrypoint %q in config file", cliconfig.DefaultHyperFormat)
+		}
+		if p.accessKey == "" || p.secretKey == "" {
+			return nil, fmt.Errorf("WARNING: AccessKey or SecretKey is empty in config %q", config)
+		}
+	}
+
+	log.Printf("\n Host: %s\n AccessKey: %s**********\n SecretKey: %s**********\n InstanceType: %s\n", p.host, p.accessKey[0:1], p.secretKey[0:1], p.instanceType)
+	httpClient, err := newHTTPClient(p.host, tlsOptions)
 
 	customHeaders := map[string]string{}
 	ver := "0.1"
@@ -94,11 +160,15 @@ func NewHyperProvider(config string, rm *manager.ResourceManager, nodeName, oper
 	p.operatingSystem = operatingSystem
 	p.nodeName = nodeName
 
-	p.hyperClient, err = hyper.NewClient(host, verStr, httpClient, customHeaders, p.accessKey, p.secretKey, p.region)
+	p.hyperClient, err = hyper.NewClient(p.host, verStr, httpClient, customHeaders, p.accessKey, p.secretKey, p.region)
 	if err != nil {
 		return nil, err
 	}
-
+	//test connect to hyper.sh
+	_, err = p.hyperClient.Info(context.Background())
+	if err != nil {
+		return nil, err
+	}
 	return &p, nil
 }
 
@@ -201,7 +271,7 @@ func (p *HyperProvider) DeletePod(pod *v1.Pod) (err error) {
 	if v, ok := container.Config.Labels[containerLabel]; ok {
 		// Check value of label
 		if v != pod.Name {
-			return fmt.Errorf("the label %q of hyper container %q should be %q, but it's %q currently", pod.Name, containerLabel, container.Name, pod.Name, v)
+			return fmt.Errorf("the label %q of hyper container %q should be %q, but it's %q currently", containerLabel, container.Name, pod.Name, v)
 		}
 		rmOptions := types.ContainerRemoveOptions{
 			RemoveVolumes: true,
@@ -218,7 +288,7 @@ func (p *HyperProvider) DeletePod(pod *v1.Pod) (err error) {
 		}
 		log.Printf("container %q for pod %q was deleted\n", container.ID, pod.Name)
 	} else {
-		return fmt.Errorf("hyper container %q has no label %q", pod.Name, container.Name, containerLabel)
+		return fmt.Errorf("hyper container %q has no label %q", container.Name, containerLabel)
 	}
 	return nil
 }
@@ -275,7 +345,7 @@ func (p *HyperProvider) GetPods() ([]*v1.Pod, error) {
 	for _, container := range containers {
 		pod, err := containerToPod(&container)
 		if err != nil {
-			fmt.Errorf("convert container %q to pod error: %v\n", container.ID, err)
+			log.Printf("WARNING: convert container %q to pod error: %v\n", container.ID, err)
 			continue
 		}
 		pods = append(pods, pod)
@@ -540,4 +610,27 @@ func hyperStateToPodPhase(state string) v1.PodPhase {
 		return v1.PodFailed
 	}
 	return v1.PodUnknown
+}
+
+func (p *HyperProvider) getServerHost(region string, tlsOptions *tlsconfig.Options) (host string, dft bool, err error) {
+	dft = false
+	host = region
+	if host == "" {
+		host = os.Getenv("HYPER_DEFAULT_REGION")
+		region = p.getDefaultRegion()
+	}
+	if _, err := url.ParseRequestURI(host); err != nil {
+		host = "tcp://" + region + "." + cliconfig.DefaultHyperEndpoint
+		dft = true
+	}
+	host, err = opts.ParseHost(tlsOptions != nil, host)
+	return
+}
+
+func (p *HyperProvider) getDefaultRegion() string {
+	cc, ok := p.configFile.CloudConfig[cliconfig.DefaultHyperFormat]
+	if ok && cc.Region != "" {
+		return cc.Region
+	}
+	return cliconfig.DefaultHyperRegion
 }
