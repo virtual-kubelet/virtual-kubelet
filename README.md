@@ -41,6 +41,28 @@ Run the binary with your chosen provider:
 Now that the virtual-kubelet is deployed run `kubectl get nodes` and you should see
 a `virtual-kubelet` node.
 
+## Current features
+
+* Multiple containers per pod
+* Windows/Linux containers
+* Restart policies
+* Volumes
+  * Empty dir
+  * Git hub repo
+  * Azure files
+* Config maps
+* Secrets
+* Pod status
+* Resource limits (Mem and Cores)
+* Environment variables
+* Public IPs
+
+## Current Limitations
+
+* kubectl exec
+* kubectl logs
+* Metrics
+
 ## Command-Line Usage
 
 ```bash
@@ -72,7 +94,7 @@ Use "virtual-kubelet [command] --help" for more information about a command.
 ## Deploy as a Pod by Helm Chart
 
 Run these commands to deploy the virtual kubelet which connects your Kubernetes cluster to Azure Container Instances.
-If you want to run the connector from the Azure command-line check out this. 
+If you want to run the connector from the Azure command-line check out this.
 
 ```bash
 RELEASE_NAME=virtual-kubelet
