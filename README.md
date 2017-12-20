@@ -41,7 +41,7 @@ Run the binary with your chosen provider:
 Now that the virtual-kubelet is deployed run `kubectl get nodes` and you should see
 a `virtual-kubelet` node.
 
-## Current features
+## Current Features
 
 * Multiple containers per pod
 * Windows/Linux containers
