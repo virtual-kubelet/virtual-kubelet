@@ -235,6 +235,12 @@ func (p *HyperProvider) NodeAddresses() []v1.NodeAddress {
 	return nil
 }
 
+// NodeDaemonEndpoints returns NodeDaemonEndpoints for the node status
+// within Kuberentes.
+func (p *HyperProvider) NodeDaemonEndpoints() *v1.NodeDaemonEndpoints {
+	return nil
+}
+
 // OperatingSystem returns the operating system for this provider.
 // This is a noop to default to Linux for now.
 func (p *HyperProvider) OperatingSystem() string {

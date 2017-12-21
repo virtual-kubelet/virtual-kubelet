@@ -44,6 +44,10 @@ type Provider interface {
 	// within Kuberentes.
 	NodeAddresses() []v1.NodeAddress
 
+	// NodeDaemonEndpoints returns NodeDaemonEndpoints for the node status
+	// within Kuberentes.
+	NodeDaemonEndpoints() *v1.NodeDaemonEndpoints
+
 	// OperatingSystem returns the operating system the provider is for.
 	OperatingSystem() string
 }

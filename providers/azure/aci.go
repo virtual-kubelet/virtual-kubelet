@@ -32,6 +32,7 @@ type ACIProvider struct {
 	memory          string
 	pods            string
 	internalIP      string
+	daemonEndpointPort  int32
 }
 
 // AuthConfig is the secret returned from an ImageRegistryCredential
@@ -46,7 +47,7 @@ type AuthConfig struct {
 }
 
 // NewACIProvider creates a new ACIProvider.
-func NewACIProvider(config string, rm *manager.ResourceManager, nodeName, operatingSystem string, internalIP string) (*ACIProvider, error) {
+func NewACIProvider(config string, rm *manager.ResourceManager, nodeName, operatingSystem string, internalIP string, daemonEndpointPort int32) (*ACIProvider, error) {
 	var p ACIProvider
 	var err error
 
@@ -91,6 +92,7 @@ func NewACIProvider(config string, rm *manager.ResourceManager, nodeName, operat
 	p.operatingSystem = operatingSystem
 	p.nodeName = nodeName
 	p.internalIP = internalIP
+	p.daemonEndpointPort = daemonEndpointPort
 
 	return &p, err
 }
@@ -331,6 +333,16 @@ func (p *ACIProvider) NodeAddresses() []v1.NodeAddress {
 		{
 			Type:    "InternalIP",
 			Address: p.internalIP,
+		},
+	}
+}
+
+// NodeDaemonEndpoints returns NodeDaemonEndpoints for the node status
+// within Kuberentes.
+func (p *ACIProvider) NodeDaemonEndpoints() *v1.NodeDaemonEndpoints {
+	return &v1.NodeDaemonEndpoints{
+		KubeletEndpoint: v1.DaemonEndpoint{
+			Port: p.daemonEndpointPort,
 		},
 	}
 }
