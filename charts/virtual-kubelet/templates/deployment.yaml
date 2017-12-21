@@ -14,6 +14,8 @@ spec:
         image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
         imagePullPolicy: {{ .Values.image.pullPolicy }}
         env:
+        - name: KUBELET_PORT
+          value: "10250"
         - name: AZURE_AUTH_LOCATION
           value: /etc/virtual-kubelet/credentials.json
         - name: ACI_RESOURCE_GROUP

@@ -1,6 +1,7 @@
 package vkubelet
 
 import (
+	"fmt"
 	"io"
 	"log"
 	"net/http"
@@ -9,16 +10,17 @@ import (
 )
 var p Provider
 
-func ApiserverStart(provider Provider) error {
+func ApiserverStart(provider Provider) {
 	p = provider
 	http.HandleFunc("/", ApiServerHandler)
 	certFilePath := os.Getenv("APISERVER_CERT_LOCATION")
 	keyFilePath := os.Getenv("APISERVER_KEY_LOCATION")
-	err := http.ListenAndServeTLS(":10250", certFilePath, keyFilePath, nil)
+	port := os.Getenv("KUBELET_PORT")
+	addr := fmt.Sprintf(":%s", port)
+	err := http.ListenAndServeTLS(addr, certFilePath, keyFilePath, nil)
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err)
 	}
-	return err
 }
 
 func ApiServerHandler(w http.ResponseWriter, req *http.Request) {
@@ -32,7 +34,7 @@ func ApiServerHandler(w http.ResponseWriter, req *http.Request) {
 				podsLogs, err := p.GetContainerLogs(namespace, pod, container)
 				if err != nil {
 					io.WriteString(w, err.Error())
-					log.Fatal(err)
+					log.Println(err)
 				} else {
 					io.WriteString(w, podsLogs)
 				}
