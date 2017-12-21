@@ -15,29 +15,22 @@ spec:
         imagePullPolicy: {{ .Values.image.pullPolicy }}
         env:
         - name: AZURE_AUTH_LOCATION
-          value: /etc/virtual-kubelet/auth/credentials.json
+          value: /etc/virtual-kubelet/credentials.json
         - name: ACI_RESOURCE_GROUP
           value: {{ .Values.env.aciResourceGroup }}
         - name: ACI_REGION
           value: {{ default "westus" .Values.env.aciRegion }}
         - name: APISERVER_CERT_LOCATION
-          value: /etc/virtual-kubelet/apiservercert/cert.pem
+          value: /etc/virtual-kubelet/cert.pem
         - name: APISERVER_KEY_LOCATION
-          value: /etc/virtual-kubelet/apiserverkey/key.pem
+          value: /etc/virtual-kubelet/key.pem
         - name: VKUBELET_POD_IP
           valueFrom:
             fieldRef:
               fieldPath: status.podIP
         volumeMounts:
         - name: credentials
-          mountPath: "/etc/virtual-kubelet/auth"
-          readOnly: true
-        - name: apiservercert
-          mountPath: "/etc/virtual-kubelet/apiservercert"
-          readOnly: true
-        - name: apiserverkey
-          mountPath: "/etc/virtual-kubelet/apiserverkey"
-          readOnly: true
+          mountPath: "/etc/virtual-kubelet"
         command: ["virtual-kubelet"]
         args: ["--provider", "azure", "--namespace", "default", "--nodename", {{ default "virtual-kubelet" .Values.env.nodeName | quote }} , "--os", {{ default "Linux" .Values.env.nodeOsType | quote }}, "--taint", {{ default "azure.com/aci" .Values.env.nodeTaint | quote }}]
       volumes:
