@@ -39,9 +39,3 @@ spec:
       - name: credentials
         secret:
           secretName: {{ template "fullname" . }}
-      - name: apiservercert
-        secret:
-          secretName: {{ template "fullname" . }}
-      - name: apiserverkey
-        secret:
-          secretName: {{ template "fullname" . }}
