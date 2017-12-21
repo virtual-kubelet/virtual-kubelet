@@ -100,8 +100,8 @@ a0ae3d4112d5   nginx:latest   "nginx -g 'daemon off"   9 seconds ago   Up 4 seco
 ```
 $ export HYPER_DEFAULT_REGION=eu-central-1
 $ ./virtual-kubelet --provider=hyper --provider-config=$HOME/.hyper3
-/home/xjimmy/.kube/config
-2017/12/20 17:30:30 config file under "/home/xjimmy/.hyper3" was loaded
+/home/demo/.kube/config
+2017/12/20 17:30:30 config file under "/home/demo/.hyper3" was loaded
 2017/12/20 17:30:30 
  Host: tcp://eu-central-1.hyper.sh:443
  AccessKey: K**********
