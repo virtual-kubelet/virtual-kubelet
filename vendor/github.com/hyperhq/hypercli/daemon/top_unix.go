@@ -7,8 +7,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/hyperhq/hyper-api/types"
 	derr "github.com/hyperhq/hypercli/errors"
-	"github.com/docker/engine-api/types"
 )
 
 // ContainerTop lists the processes running inside of the given

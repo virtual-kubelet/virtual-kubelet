@@ -14,8 +14,8 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/docker/engine-api/types"
 	"github.com/docker/go-units"
+	"github.com/hyperhq/hyper-api/types"
 	"github.com/hyperhq/hypercli/api"
 	"github.com/hyperhq/hypercli/builder/dockerignore"
 	Cli "github.com/hyperhq/hypercli/cli"

@@ -8,8 +8,8 @@ import (
 	"strings"
 
 	"github.com/Sirupsen/logrus"
-	"github.com/docker/engine-api/types"
 	"github.com/docker/libnetwork/resolvconf/dns"
+	"github.com/hyperhq/hyper-api/types"
 	Cli "github.com/hyperhq/hypercli/cli"
 	derr "github.com/hyperhq/hypercli/errors"
 	"github.com/hyperhq/hypercli/opts"

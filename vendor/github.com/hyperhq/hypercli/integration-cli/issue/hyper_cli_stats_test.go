@@ -96,7 +96,6 @@ func (s *DockerSuite) TestStatsAllNoStream(c *check.C) {
 	}
 }
 
-
 // NEED TO BE FIXED
 func (s *DockerSuite) TestStatsAllNewContainersAdded(c *check.C) {
 	// Windows does not support stats

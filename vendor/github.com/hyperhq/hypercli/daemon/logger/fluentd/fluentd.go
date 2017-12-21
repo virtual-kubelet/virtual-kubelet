@@ -10,9 +10,9 @@ import (
 	"strings"
 
 	"github.com/Sirupsen/logrus"
+	"github.com/fluent/fluent-logger-golang/fluent"
 	"github.com/hyperhq/hypercli/daemon/logger"
 	"github.com/hyperhq/hypercli/daemon/logger/loggerutils"
-	"github.com/fluent/fluent-logger-golang/fluent"
 )
 
 type fluentd struct {

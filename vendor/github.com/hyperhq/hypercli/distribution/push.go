@@ -7,6 +7,8 @@ import (
 	"io"
 
 	"github.com/Sirupsen/logrus"
+	"github.com/docker/libtrust"
+	"github.com/hyperhq/hyper-api/types"
 	"github.com/hyperhq/hypercli/distribution/metadata"
 	"github.com/hyperhq/hypercli/distribution/xfer"
 	"github.com/hyperhq/hypercli/image"
@@ -14,8 +16,6 @@ import (
 	"github.com/hyperhq/hypercli/pkg/progress"
 	"github.com/hyperhq/hypercli/reference"
 	"github.com/hyperhq/hypercli/registry"
-	"github.com/docker/engine-api/types"
-	"github.com/docker/libtrust"
 	"golang.org/x/net/context"
 )
 

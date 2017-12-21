@@ -7,13 +7,13 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/hyperhq/hyper-api/types"
 	"github.com/hyperhq/hypercli/builder"
 	"github.com/hyperhq/hypercli/container"
 	"github.com/hyperhq/hypercli/pkg/archive"
 	"github.com/hyperhq/hypercli/pkg/chrootarchive"
 	"github.com/hyperhq/hypercli/pkg/idtools"
 	"github.com/hyperhq/hypercli/pkg/ioutils"
-	"github.com/docker/engine-api/types"
 )
 
 // ErrExtractPointNotDirectory is used to convey that the operation to extract

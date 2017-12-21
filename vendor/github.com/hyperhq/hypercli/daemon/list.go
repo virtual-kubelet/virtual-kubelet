@@ -7,12 +7,12 @@ import (
 	"strings"
 
 	"github.com/Sirupsen/logrus"
+	"github.com/docker/go-connections/nat"
+	"github.com/hyperhq/hyper-api/types"
+	"github.com/hyperhq/hyper-api/types/filters"
+	networktypes "github.com/hyperhq/hyper-api/types/network"
 	"github.com/hyperhq/hypercli/container"
 	"github.com/hyperhq/hypercli/image"
-	"github.com/docker/engine-api/types"
-	"github.com/docker/engine-api/types/filters"
-	networktypes "github.com/docker/engine-api/types/network"
-	"github.com/docker/go-connections/nat"
 )
 
 var acceptedVolumeFilterTags = map[string]bool{

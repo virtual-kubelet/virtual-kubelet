@@ -6,6 +6,8 @@ import (
 	"time"
 
 	"github.com/Sirupsen/logrus"
+	"github.com/hyperhq/hyper-api/types"
+	"github.com/hyperhq/hyper-api/types/strslice"
 	"github.com/hyperhq/hypercli/container"
 	"github.com/hyperhq/hypercli/daemon/exec"
 	"github.com/hyperhq/hypercli/daemon/execdriver"
@@ -13,8 +15,6 @@ import (
 	"github.com/hyperhq/hypercli/pkg/pools"
 	"github.com/hyperhq/hypercli/pkg/promise"
 	"github.com/hyperhq/hypercli/pkg/term"
-	"github.com/docker/engine-api/types"
-	"github.com/docker/engine-api/types/strslice"
 )
 
 func (d *Daemon) registerExecCommand(container *container.Container, config *exec.Config) {

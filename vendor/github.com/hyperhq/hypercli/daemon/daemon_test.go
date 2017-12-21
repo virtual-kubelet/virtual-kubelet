@@ -8,6 +8,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/docker/go-connections/nat"
+	containertypes "github.com/hyperhq/hyper-api/types/container"
 	"github.com/hyperhq/hypercli/container"
 	"github.com/hyperhq/hypercli/pkg/discovery"
 	_ "github.com/hyperhq/hypercli/pkg/discovery/memory"
@@ -17,8 +19,6 @@ import (
 	volumedrivers "github.com/hyperhq/hypercli/volume/drivers"
 	"github.com/hyperhq/hypercli/volume/local"
 	"github.com/hyperhq/hypercli/volume/store"
-	containertypes "github.com/docker/engine-api/types/container"
-	"github.com/docker/go-connections/nat"
 )
 
 //

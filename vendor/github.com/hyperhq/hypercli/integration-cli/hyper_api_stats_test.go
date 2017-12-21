@@ -11,8 +11,8 @@ import (
 
 	"github.com/docker/docker/pkg/integration/checker"
 	"github.com/docker/docker/pkg/version"
-	"github.com/docker/engine-api/types"
 	"github.com/go-check/check"
+	"github.com/hyperhq/hyper-api/types"
 )
 
 var expectedNetworkInterfaceStats = strings.Split("rx_bytes rx_dropped rx_errors rx_packets tx_bytes tx_dropped tx_errors tx_packets", " ")
@@ -41,7 +41,6 @@ func (s *DockerSuite) TestApiStatsNoStreamGetCpu(c *check.C) {
 
 	c.Assert(cpuPercent, check.Not(checker.Equals), 0.0, check.Commentf("docker stats with no-stream get cpu usage failed: was %v", cpuPercent))
 }
-
 
 func (s *DockerSuite) TestApiStatsNetworkStats(c *check.C) {
 	testRequires(c, SameHostDaemon)

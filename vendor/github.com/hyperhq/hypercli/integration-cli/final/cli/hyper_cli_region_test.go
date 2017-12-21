@@ -1,12 +1,12 @@
 package main
 
 import (
-	"time"
 	"os"
 	"os/exec"
+	"time"
 
-	"github.com/go-check/check"
 	"github.com/docker/docker/pkg/integration/checker"
+	"github.com/go-check/check"
 )
 
 func (s *DockerSuite) TestCliRegionBasic(c *check.C) {
@@ -16,7 +16,7 @@ func (s *DockerSuite) TestCliRegionBasic(c *check.C) {
 	var (
 		defaultRegion = os.Getenv("REGION")
 		anotherRegion = ""
-		err error
+		err           error
 	)
 	switch defaultRegion {
 	case "":

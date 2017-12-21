@@ -4,12 +4,12 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/hyperhq/hyper-api/types"
 	"github.com/hyperhq/hypercli/container"
 	derr "github.com/hyperhq/hypercli/errors"
 	"github.com/hyperhq/hypercli/image"
 	"github.com/hyperhq/hypercli/pkg/stringid"
 	"github.com/hyperhq/hypercli/reference"
-	"github.com/docker/engine-api/types"
 )
 
 type conflictType int

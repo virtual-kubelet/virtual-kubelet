@@ -5,10 +5,10 @@ package daemon
 import (
 	"net"
 
+	"github.com/docker/go-units"
 	"github.com/hyperhq/hypercli/opts"
 	flag "github.com/hyperhq/hypercli/pkg/mflag"
 	runconfigopts "github.com/hyperhq/hypercli/runconfig/opts"
-	"github.com/docker/go-units"
 )
 
 var (

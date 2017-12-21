@@ -56,16 +56,16 @@ func TestJSONMessageDisplay(t *testing.T) {
 	now := time.Now()
 	messages := map[JSONMessage][]string{
 		// Empty
-		JSONMessage{}: {"\n", "\n"},
+		{}: {"\n", "\n"},
 		// Status
-		JSONMessage{
+		{
 			Status: "status",
 		}: {
 			"status\n",
 			"status\n",
 		},
 		// General
-		JSONMessage{
+		{
 			Time:   now.Unix(),
 			ID:     "ID",
 			From:   "From",
@@ -75,7 +75,7 @@ func TestJSONMessageDisplay(t *testing.T) {
 			fmt.Sprintf("%v ID: (from From) status\n", time.Unix(now.Unix(), 0).Format(jsonlog.RFC3339NanoFixed)),
 		},
 		// General, with nano precision time
-		JSONMessage{
+		{
 			TimeNano: now.UnixNano(),
 			ID:       "ID",
 			From:     "From",
@@ -85,7 +85,7 @@ func TestJSONMessageDisplay(t *testing.T) {
 			fmt.Sprintf("%v ID: (from From) status\n", time.Unix(0, now.UnixNano()).Format(jsonlog.RFC3339NanoFixed)),
 		},
 		// General, with both times Nano is preferred
-		JSONMessage{
+		{
 			Time:     now.Unix(),
 			TimeNano: now.UnixNano(),
 			ID:       "ID",
@@ -96,7 +96,7 @@ func TestJSONMessageDisplay(t *testing.T) {
 			fmt.Sprintf("%v ID: (from From) status\n", time.Unix(0, now.UnixNano()).Format(jsonlog.RFC3339NanoFixed)),
 		},
 		// Stream over status
-		JSONMessage{
+		{
 			Status: "status",
 			Stream: "stream",
 		}: {
@@ -104,7 +104,7 @@ func TestJSONMessageDisplay(t *testing.T) {
 			"stream",
 		},
 		// With progress message
-		JSONMessage{
+		{
 			Status:          "status",
 			ProgressMessage: "progressMessage",
 		}: {
@@ -112,7 +112,7 @@ func TestJSONMessageDisplay(t *testing.T) {
 			"status progressMessage",
 		},
 		// With progress, stream empty
-		JSONMessage{
+		{
 			Status:   "status",
 			Stream:   "",
 			Progress: &JSONProgress{Current: 1},

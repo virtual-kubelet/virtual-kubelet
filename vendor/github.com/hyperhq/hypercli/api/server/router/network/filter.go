@@ -5,9 +5,9 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/hyperhq/hypercli/runconfig"
-	"github.com/docker/engine-api/types/filters"
 	"github.com/docker/libnetwork"
+	"github.com/hyperhq/hyper-api/types/filters"
+	"github.com/hyperhq/hypercli/runconfig"
 )
 
 type filterHandler func([]libnetwork.Network, string) ([]libnetwork.Network, error)

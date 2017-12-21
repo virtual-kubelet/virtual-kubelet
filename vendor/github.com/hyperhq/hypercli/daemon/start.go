@@ -5,10 +5,10 @@ import (
 	"runtime"
 
 	"github.com/Sirupsen/logrus"
+	containertypes "github.com/hyperhq/hyper-api/types/container"
 	"github.com/hyperhq/hypercli/container"
 	derr "github.com/hyperhq/hypercli/errors"
 	"github.com/hyperhq/hypercli/runconfig"
-	containertypes "github.com/docker/engine-api/types/container"
 )
 
 // ContainerStart starts a container.

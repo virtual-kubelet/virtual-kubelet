@@ -4,13 +4,13 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/hyperhq/hyper-api/types"
+	networktypes "github.com/hyperhq/hyper-api/types/network"
+	"github.com/hyperhq/hyper-api/types/versions/v1p20"
 	"github.com/hyperhq/hypercli/container"
 	"github.com/hyperhq/hypercli/daemon/exec"
 	"github.com/hyperhq/hypercli/daemon/network"
 	"github.com/hyperhq/hypercli/pkg/version"
-	"github.com/docker/engine-api/types"
-	networktypes "github.com/docker/engine-api/types/network"
-	"github.com/docker/engine-api/types/versions/v1p20"
 )
 
 // ContainerInspect returns low-level information about a

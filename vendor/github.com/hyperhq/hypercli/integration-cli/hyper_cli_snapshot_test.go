@@ -1,6 +1,7 @@
 package main
 
 import (
+	"os"
 	"os/exec"
 	"strings"
 	"time"
@@ -35,7 +36,7 @@ func (s *DockerSuite) TestCliSnapshotInspect(c *check.C) {
 	testRequires(c, DaemonIsLinux)
 
 	c.Assert(
-		exec.Command(dockerBinary, "snapshot", "inspect", "doesntexist").Run(),
+		exec.Command(dockerBinary, "--region", os.Getenv("DOCKER_HOST"), "snapshot", "inspect", "doesntexist").Run(),
 		check.Not(check.IsNil),
 		check.Commentf("snapshot inspect should error on non-existent volume"),
 	)
@@ -149,12 +150,12 @@ func (s *DockerSuite) TestCliSnapshotNoArgs(c *check.C) {
 	c.Assert(out, checker.Contains, usage)
 
 	// invalid arg should error and show the command on stderr
-	_, stderr, _, err := runCommandWithStdoutStderr(exec.Command(dockerBinary, "snapshot", "somearg"))
+	_, stderr, _, err := runCommandWithStdoutStderr(exec.Command(dockerBinary, "--region", os.Getenv("DOCKER_HOST"), "snapshot", "somearg"))
 	c.Assert(err, check.NotNil, check.Commentf(stderr))
 	c.Assert(stderr, checker.Contains, usage)
 
 	// invalid flag should error and show the flag error and cmd usage
-	_, stderr, _, err = runCommandWithStdoutStderr(exec.Command(dockerBinary, "snapshot", "--no-such-flag"))
+	_, stderr, _, err = runCommandWithStdoutStderr(exec.Command(dockerBinary, "--region", os.Getenv("DOCKER_HOST"), "snapshot", "--no-such-flag"))
 	c.Assert(err, check.NotNil, check.Commentf(stderr))
 	c.Assert(stderr, checker.Contains, usage)
 	c.Assert(stderr, checker.Contains, "flag provided but not defined: --no-such-flag")

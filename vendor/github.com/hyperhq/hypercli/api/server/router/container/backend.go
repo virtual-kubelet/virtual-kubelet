@@ -4,12 +4,12 @@ import (
 	"io"
 	"time"
 
+	"github.com/hyperhq/hyper-api/types"
+	"github.com/hyperhq/hyper-api/types/container"
 	"github.com/hyperhq/hypercli/daemon"
 	"github.com/hyperhq/hypercli/daemon/exec"
 	"github.com/hyperhq/hypercli/pkg/archive"
 	"github.com/hyperhq/hypercli/pkg/version"
-	"github.com/docker/engine-api/types"
-	"github.com/docker/engine-api/types/container"
 )
 
 // execBackend includes functions to implement to provide exec functionality.

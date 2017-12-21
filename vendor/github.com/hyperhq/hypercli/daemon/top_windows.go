@@ -1,8 +1,8 @@
 package daemon
 
 import (
+	"github.com/hyperhq/hyper-api/types"
 	derr "github.com/hyperhq/hypercli/errors"
-	"github.com/docker/engine-api/types"
 )
 
 // ContainerTop is not supported on Windows and returns an error.

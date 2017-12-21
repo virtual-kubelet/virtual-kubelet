@@ -31,11 +31,11 @@ import (
 	"github.com/docker/docker/pkg/integration/checker"
 	"github.com/docker/docker/pkg/ioutils"
 	"github.com/docker/docker/pkg/stringutils"
-	HyperCli "github.com/docker/engine-api/client"
-	"github.com/docker/engine-api/types"
 	"github.com/docker/go-connections/sockets"
 	"github.com/docker/go-connections/tlsconfig"
 	"github.com/go-check/check"
+	"github.com/hyperhq/hyper-api/signature"
+	"github.com/hyperhq/hyper-api/types"
 	"github.com/hyperhq/hypercli/cliconfig"
 )
 
@@ -642,7 +642,7 @@ func newRequestClient(method, endpoint string, data io.Reader, ct string) (*http
 		region = cliconfig.DefaultHyperRegion
 	}
 	//calculate sign4 for apirouter
-	req = HyperCli.Sign4(os.Getenv("ACCESS_KEY"), os.Getenv("SECRET_KEY"), req, region)
+	req = signature.Sign4(os.Getenv("ACCESS_KEY"), os.Getenv("SECRET_KEY"), req, region)
 
 	//for debug
 	if endpoint == debugEndpoint {
@@ -1771,7 +1771,7 @@ func appendBaseEnv(env []string) []string {
 	preserveList := []string{
 		// preserve remote test host
 		"DOCKER_HOST",
-
+		"HYPER_CONFIG",
 		// windows: requires preserving SystemRoot, otherwise dial tcp fails
 		// with "GetAddrInfoW: A non-recoverable error occurred during a database lookup."
 		"SystemRoot",

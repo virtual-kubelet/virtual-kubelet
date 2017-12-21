@@ -3,7 +3,7 @@ package client
 import (
 	"io"
 
-	"github.com/docker/engine-api/types"
+	"github.com/hyperhq/hyper-api/types"
 	Cli "github.com/hyperhq/hypercli/cli"
 	"github.com/hyperhq/hypercli/pkg/jsonmessage"
 	flag "github.com/hyperhq/hypercli/pkg/mflag"

@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"github.com/Sirupsen/logrus"
+	"github.com/hyperhq/hyper-api/types"
 	"github.com/hyperhq/hypercli/api"
 	"github.com/hyperhq/hypercli/distribution/metadata"
 	"github.com/hyperhq/hypercli/distribution/xfer"
@@ -12,7 +13,6 @@ import (
 	"github.com/hyperhq/hypercli/pkg/progress"
 	"github.com/hyperhq/hypercli/reference"
 	"github.com/hyperhq/hypercli/registry"
-	"github.com/docker/engine-api/types"
 	"golang.org/x/net/context"
 )
 

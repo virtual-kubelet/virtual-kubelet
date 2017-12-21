@@ -3,8 +3,8 @@ package daemon
 import (
 	"fmt"
 
+	"github.com/hyperhq/hyper-api/types/container"
 	derr "github.com/hyperhq/hypercli/errors"
-	"github.com/docker/engine-api/types/container"
 )
 
 // ContainerUpdate updates resources of the container

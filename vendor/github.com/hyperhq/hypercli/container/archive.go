@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 
 	"github.com/docker/docker/pkg/archive"
-	"github.com/docker/engine-api/types"
+	"github.com/hyperhq/hyper-api/types"
 )
 
 // ResolvePath resolves the given path in the container to a resource on the

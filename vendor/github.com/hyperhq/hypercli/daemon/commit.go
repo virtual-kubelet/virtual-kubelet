@@ -7,6 +7,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/docker/go-connections/nat"
+	"github.com/hyperhq/hyper-api/types"
+	containertypes "github.com/hyperhq/hyper-api/types/container"
 	"github.com/hyperhq/hypercli/container"
 	"github.com/hyperhq/hypercli/dockerversion"
 	"github.com/hyperhq/hypercli/image"
@@ -14,9 +17,6 @@ import (
 	"github.com/hyperhq/hypercli/pkg/archive"
 	"github.com/hyperhq/hypercli/pkg/ioutils"
 	"github.com/hyperhq/hypercli/reference"
-	"github.com/docker/engine-api/types"
-	containertypes "github.com/docker/engine-api/types/container"
-	"github.com/docker/go-connections/nat"
 )
 
 // merge merges two Config, the image container configuration (defaults values),

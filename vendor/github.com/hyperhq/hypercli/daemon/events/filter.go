@@ -1,9 +1,9 @@
 package events
 
 import (
+	"github.com/hyperhq/hyper-api/types/events"
+	"github.com/hyperhq/hyper-api/types/filters"
 	"github.com/hyperhq/hypercli/reference"
-	"github.com/docker/engine-api/types/events"
-	"github.com/docker/engine-api/types/filters"
 )
 
 // Filter can filter out docker events from a stream

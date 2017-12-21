@@ -8,7 +8,7 @@ import (
 	"io/ioutil"
 	"testing"
 
-	"github.com/docker/engine-api/types/container"
+	"github.com/hyperhq/hyper-api/types/container"
 )
 
 // TODO Windows: This will need addressing for a Windows daemon.
@@ -145,11 +145,11 @@ func TestPidModeTest(t *testing.T) {
 func TestRestartPolicy(t *testing.T) {
 	restartPolicies := map[container.RestartPolicy][]bool{
 		// none, always, failure
-		container.RestartPolicy{}:                {false, false, false},
-		container.RestartPolicy{"something", 0}:  {false, false, false},
-		container.RestartPolicy{"no", 0}:         {true, false, false},
-		container.RestartPolicy{"always", 0}:     {false, true, false},
-		container.RestartPolicy{"on-failure", 0}: {false, false, true},
+		{}:                {false, false, false},
+		{"something", 0}:  {false, false, false},
+		{"no", 0}:         {true, false, false},
+		{"always", 0}:     {false, true, false},
+		{"on-failure", 0}: {false, false, true},
 	}
 	for restartPolicy, state := range restartPolicies {
 		if restartPolicy.IsNone() != state[0] {

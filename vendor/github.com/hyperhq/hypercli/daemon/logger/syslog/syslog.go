@@ -17,10 +17,10 @@ import (
 	syslog "github.com/RackSec/srslog"
 
 	"github.com/Sirupsen/logrus"
+	"github.com/docker/go-connections/tlsconfig"
 	"github.com/hyperhq/hypercli/daemon/logger"
 	"github.com/hyperhq/hypercli/daemon/logger/loggerutils"
 	"github.com/hyperhq/hypercli/pkg/urlutil"
-	"github.com/docker/go-connections/tlsconfig"
 )
 
 const (

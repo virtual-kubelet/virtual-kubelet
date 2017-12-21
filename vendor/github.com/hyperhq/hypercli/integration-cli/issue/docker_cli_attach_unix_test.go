@@ -6,7 +6,7 @@ import (
 	//"bufio"
 	"os/exec"
 	//"strings"
-	"time"		
+	"time"
 	//"fmt"
 
 	"github.com/docker/docker/pkg/integration/checker"
@@ -84,6 +84,7 @@ func (s *DockerSuite) TestAttachAfterDetach(c *check.C) {
 	c.Assert(string(bytes[:nBytes]), checker.Contains, "/ #")
 
 }
+
 /*
 //FIXME:#issue77
 // TestAttachDetach checks that attach in tty mode can be detached using the long container ID

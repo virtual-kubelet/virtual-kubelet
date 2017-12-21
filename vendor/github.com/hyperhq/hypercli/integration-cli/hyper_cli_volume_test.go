@@ -1,6 +1,7 @@
 package main
 
 import (
+	"os"
 	"os/exec"
 	"strings"
 	"time"
@@ -14,7 +15,7 @@ func (s *DockerSuite) TestCliVolumeCreate(c *check.C) {
 	defer printTestDuration(time.Now())
 	dockerCmd(c, "volume", "create")
 
-	_, err := runCommand(exec.Command(dockerBinary, "volume", "create", "-d", "nosuchdriver"))
+	_, err := runCommand(exec.Command(dockerBinary, "--region", os.Getenv("DOCKER_HOST"), "volume", "create", "-d", "nosuchdriver"))
 	c.Assert(err, check.Not(check.IsNil))
 
 	out, _ := dockerCmd(c, "volume", "create", "--name=test")
@@ -27,7 +28,7 @@ func (s *DockerSuite) TestCliVolumeInspect(c *check.C) {
 	defer printTestDuration(time.Now())
 
 	c.Assert(
-		exec.Command(dockerBinary, "volume", "inspect", "doesntexist").Run(),
+		exec.Command(dockerBinary, "--region", os.Getenv("DOCKER_HOST"), "volume", "inspect", "doesntexist").Run(),
 		check.Not(check.IsNil),
 		check.Commentf("volume inspect should error on non-existent volume"),
 	)
@@ -153,7 +154,7 @@ func (s *DockerSuite) TestCliVolumeRmBasic(c *check.C) {
 
 	volumeID := "testing"
 	dockerCmd(c, "run", "-v", volumeID+":"+prefix+"/foo", "--name=test", "busybox", "sh", "-c", "echo hello > /foo/bar")
-	out, _, err := runCommandWithOutput(exec.Command(dockerBinary, "volume", "rm", "testing"))
+	out, _, err := runCommandWithOutput(exec.Command(dockerBinary, "--region", os.Getenv("DOCKER_HOST"), "volume", "rm", "testing"))
 	c.Assert(
 		err,
 		check.Not(check.IsNil),
@@ -193,12 +194,12 @@ func (s *DockerSuite) TestCliVolumeNoArgs(c *check.C) {
 	c.Assert(out, checker.Contains, usage)
 
 	// invalid arg should error and show the command usage on stderr
-	_, stderr, _, err := runCommandWithStdoutStderr(exec.Command(dockerBinary, "volume", "somearg"))
+	_, stderr, _, err := runCommandWithStdoutStderr(exec.Command(dockerBinary, "--region", os.Getenv("DOCKER_HOST"), "volume", "somearg"))
 	c.Assert(err, check.NotNil, check.Commentf(stderr))
 	c.Assert(stderr, checker.Contains, usage)
 
 	// invalid flag should error and show the flag error and cmd usage
-	_, stderr, _, err = runCommandWithStdoutStderr(exec.Command(dockerBinary, "volume", "--no-such-flag"))
+	_, stderr, _, err = runCommandWithStdoutStderr(exec.Command(dockerBinary, "--region", os.Getenv("DOCKER_HOST"), "volume", "--no-such-flag"))
 	c.Assert(err, check.NotNil, check.Commentf(stderr))
 	c.Assert(stderr, checker.Contains, usage)
 	c.Assert(stderr, checker.Contains, "flag provided but not defined: --no-such-flag")

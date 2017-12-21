@@ -5,13 +5,13 @@ package daemon
 import (
 	"strings"
 
+	"github.com/docker/libnetwork"
+	networktypes "github.com/hyperhq/hyper-api/types/network"
 	"github.com/hyperhq/hypercli/container"
 	"github.com/hyperhq/hypercli/daemon/execdriver"
 	"github.com/hyperhq/hypercli/daemon/execdriver/windows"
 	derr "github.com/hyperhq/hypercli/errors"
 	"github.com/hyperhq/hypercli/layer"
-	networktypes "github.com/docker/engine-api/types/network"
-	"github.com/docker/libnetwork"
 )
 
 func (daemon *Daemon) setupLinkedContainers(container *container.Container) ([]string, error) {

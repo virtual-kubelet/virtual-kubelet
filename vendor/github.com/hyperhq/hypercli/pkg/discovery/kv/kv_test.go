@@ -8,9 +8,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hyperhq/hypercli/pkg/discovery"
 	"github.com/docker/libkv"
 	"github.com/docker/libkv/store"
+	"github.com/hyperhq/hypercli/pkg/discovery"
 
 	"github.com/go-check/check"
 )

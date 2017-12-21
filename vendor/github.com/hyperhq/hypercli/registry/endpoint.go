@@ -13,7 +13,7 @@ import (
 	"github.com/Sirupsen/logrus"
 	"github.com/docker/distribution/registry/api/v2"
 	"github.com/docker/distribution/registry/client/transport"
-	registrytypes "github.com/docker/engine-api/types/registry"
+	registrytypes "github.com/hyperhq/hyper-api/types/registry"
 )
 
 // for mocking in unit tests

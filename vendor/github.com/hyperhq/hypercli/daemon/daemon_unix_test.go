@@ -7,8 +7,8 @@ import (
 	"os"
 	"testing"
 
+	containertypes "github.com/hyperhq/hyper-api/types/container"
 	"github.com/hyperhq/hypercli/container"
-	containertypes "github.com/docker/engine-api/types/container"
 )
 
 // Unix test as uses settings which are not available on Windows

@@ -8,11 +8,11 @@ import (
 	"testing"
 
 	"github.com/Sirupsen/logrus"
+	"github.com/docker/go-connections/tlsconfig"
 	"github.com/hyperhq/hypercli/cli"
 	"github.com/hyperhq/hypercli/daemon"
 	"github.com/hyperhq/hypercli/opts"
 	"github.com/hyperhq/hypercli/pkg/mflag"
-	"github.com/docker/go-connections/tlsconfig"
 )
 
 func TestLoadDaemonCliConfigWithoutOverriding(t *testing.T) {

@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"github.com/hyperhq/hyper-api/types"
 	"github.com/hyperhq/hypercli/api/server/httputils"
-	"github.com/docker/engine-api/types"
 	"golang.org/x/net/context"
 )
 

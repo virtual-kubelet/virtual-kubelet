@@ -7,6 +7,8 @@ import (
 	"strings"
 
 	"github.com/Sirupsen/logrus"
+	"github.com/docker/go-connections/sockets"
+	"github.com/gorilla/mux"
 	"github.com/hyperhq/hypercli/api/server/httputils"
 	"github.com/hyperhq/hypercli/api/server/router"
 	"github.com/hyperhq/hypercli/api/server/router/build"
@@ -19,8 +21,6 @@ import (
 	"github.com/hyperhq/hypercli/daemon"
 	"github.com/hyperhq/hypercli/pkg/authorization"
 	"github.com/hyperhq/hypercli/utils"
-	"github.com/docker/go-connections/sockets"
-	"github.com/gorilla/mux"
 	"golang.org/x/net/context"
 )
 

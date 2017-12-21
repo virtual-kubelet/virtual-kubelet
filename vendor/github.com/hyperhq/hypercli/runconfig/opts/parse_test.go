@@ -10,11 +10,11 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/docker/go-connections/nat"
+	"github.com/hyperhq/hyper-api/types/container"
+	networktypes "github.com/hyperhq/hyper-api/types/network"
 	flag "github.com/hyperhq/hypercli/pkg/mflag"
 	"github.com/hyperhq/hypercli/runconfig"
-	"github.com/docker/engine-api/types/container"
-	networktypes "github.com/docker/engine-api/types/network"
-	"github.com/docker/go-connections/nat"
 )
 
 func parseRun(args []string) (*container.Config, *container.HostConfig, *networktypes.NetworkingConfig, *flag.FlagSet, error) {

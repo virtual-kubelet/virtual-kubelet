@@ -9,9 +9,9 @@ import (
 	"os"
 	"runtime"
 
-	"github.com/docker/engine-api/client"
 	"github.com/docker/go-connections/sockets"
 	"github.com/docker/go-connections/tlsconfig"
+	"github.com/hyperhq/hyper-api/client"
 	"github.com/hyperhq/hypercli/api"
 	"github.com/hyperhq/hypercli/cli"
 	"github.com/hyperhq/hypercli/cliconfig"

@@ -7,7 +7,7 @@ import (
 
 	"golang.org/x/net/context"
 
-	"github.com/docker/engine-api/client"
+	"github.com/hyperhq/hyper-api/client"
 	"github.com/hyperhq/hypercli/api/client/inspect"
 	Cli "github.com/hyperhq/hypercli/cli"
 	flag "github.com/hyperhq/hypercli/pkg/mflag"

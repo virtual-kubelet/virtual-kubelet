@@ -4,8 +4,8 @@ import (
 	"sync"
 	"time"
 
+	eventtypes "github.com/hyperhq/hyper-api/types/events"
 	"github.com/hyperhq/hypercli/pkg/pubsub"
-	eventtypes "github.com/docker/engine-api/types/events"
 )
 
 const (

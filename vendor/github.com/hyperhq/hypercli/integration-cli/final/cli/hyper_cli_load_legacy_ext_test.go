@@ -1,10 +1,10 @@
 package main
 
 import (
-	"time"
 	"github.com/docker/docker/pkg/integration/checker"
 	"github.com/go-check/check"
 	"strings"
+	"time"
 
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
@@ -13,13 +13,13 @@ import (
 )
 
 func (s *DockerSuite) TestCliLoadFromUrlLegacyImageArchiveFileWithQuota(c *check.C) {
-	printTestCaseName(); defer printTestDuration(time.Now())
+	printTestCaseName()
+	defer printTestDuration(time.Now())
 	testRequires(c, DaemonIsLinux)
 
-	imageName := "ubuntu";
+	imageName := "ubuntu"
 	legacyImageUrl := "http://image-tarball.s3.amazonaws.com/test/public/old/ubuntu_1.8.tar.gz"
 	imageUrl := "http://image-tarball.s3.amazonaws.com/test/public/ubuntu.tar.gz"
-
 
 	/////////////////////////////////////////////////////////////////////
 	checkImageQuota(c, 2)
@@ -34,7 +34,6 @@ func (s *DockerSuite) TestCliLoadFromUrlLegacyImageArchiveFileWithQuota(c *check
 	c.Assert(output, checker.Contains, imageName)
 	c.Assert(len(strings.Split(output, "\n")), checker.Equals, 3)
 
-
 	/////////////////////////////////////////////////////////////////////
 	checkImageQuota(c, 1)
 	//load new format image(saved by docker 1.10)
@@ -47,7 +46,6 @@ func (s *DockerSuite) TestCliLoadFromUrlLegacyImageArchiveFileWithQuota(c *check
 	output, _ = dockerCmd(c, "images")
 	c.Assert(output, checker.Contains, imageName)
 	c.Assert(len(strings.Split(output, "\n")), checker.Equals, 3)
-
 
 	/////////////////////////////////////////////////////////////////////
 	checkImageQuota(c, 1)
@@ -71,7 +69,6 @@ func (s *DockerSuite) TestCliLoadFromUrlLegacyImageArchiveFileWithQuota(c *check
 	c.Assert(output, checker.Contains, "<none>")
 	c.Assert(len(strings.Split(output, "\n")), checker.Equals, 6)
 
-
 	/////////////////////////////////////////////////////////////////////
 	checkImageQuota(c, 1)
 	//delete all rest layer
@@ -90,7 +87,6 @@ func (s *DockerSuite) TestCliLoadFromUrlLegacyImageArchiveFileWithQuota(c *check
 	output, _ = dockerCmd(c, "images", "-a")
 	c.Assert(len(strings.Split(output, "\n")), checker.Equals, 2)
 }
-
 
 //func (s *DockerSuite) TestCliLoadFromUrlLegacyCheckImageQuota(c *check.C) {
 //	printTestCaseName(); defer printTestDuration(time.Now())
@@ -113,13 +109,12 @@ func checkImageQuota(c *check.C, expected int) {
 		Images int `bson:"images"`
 	}
 	type Resourceinfo struct {
-		Total   Total `bson:"total"`
+		Total   Total   `bson:"total"`
 		Balance Balance `bson:"balance"`
 	}
 	type Tenant struct {
 		Resourceinfo Resourceinfo `bson:"resourceinfo"`
 	}
-
 
 	///////////////////////////////////////////
 	//init connection to mongodb
@@ -143,7 +138,6 @@ func checkImageQuota(c *check.C, expected int) {
 	collection.Find(bson.M{"accessKey": os.Getenv("ACCESS_KEY")}).Select(bson.M{"tenantId": 1}).One(&resultCred)
 	c.Assert(resultCred.TenantId, checker.NotNil)
 	tenantId := resultCred.TenantId
-
 
 	///////////////////////////////////////////
 	// query image quota by tenant

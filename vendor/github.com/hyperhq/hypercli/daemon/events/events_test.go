@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/docker/engine-api/types/events"
+	"github.com/hyperhq/hyper-api/types/events"
 )
 
 func TestEventsLog(t *testing.T) {

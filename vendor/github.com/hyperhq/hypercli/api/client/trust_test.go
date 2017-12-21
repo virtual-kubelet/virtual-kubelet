@@ -4,8 +4,8 @@ import (
 	"os"
 	"testing"
 
+	registrytypes "github.com/hyperhq/hyper-api/types/registry"
 	"github.com/hyperhq/hypercli/registry"
-	registrytypes "github.com/docker/engine-api/types/registry"
 )
 
 func unsetENV() {

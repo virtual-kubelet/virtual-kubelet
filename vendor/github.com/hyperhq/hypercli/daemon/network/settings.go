@@ -1,8 +1,8 @@
 package network
 
 import (
-	networktypes "github.com/docker/engine-api/types/network"
 	"github.com/docker/go-connections/nat"
+	networktypes "github.com/hyperhq/hyper-api/types/network"
 )
 
 // Settings stores configuration details about the daemon network config

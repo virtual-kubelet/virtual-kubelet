@@ -4,8 +4,8 @@ import (
 	"io"
 
 	"github.com/Sirupsen/logrus"
+	"github.com/hyperhq/hyper-api/types"
 	"github.com/hyperhq/hypercli/pkg/stdcopy"
-	"github.com/docker/engine-api/types"
 )
 
 func (cli *DockerCli) holdHijackedConnection(tty bool, inputStream io.ReadCloser, outputStream, errorStream io.Writer, resp types.HijackedResponse) error {

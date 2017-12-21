@@ -3,9 +3,9 @@ package daemon
 import (
 	"strings"
 
-	"github.com/hyperhq/hypercli/container"
-	"github.com/docker/engine-api/types/events"
 	"github.com/docker/libnetwork"
+	"github.com/hyperhq/hyper-api/types/events"
+	"github.com/hyperhq/hypercli/container"
 )
 
 // LogContainerEvent generates an event related to a container with only the default attributes.

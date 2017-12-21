@@ -14,10 +14,10 @@ import (
 	"time"
 
 	"github.com/Sirupsen/logrus"
-	"github.com/docker/engine-api/client"
-	"github.com/docker/engine-api/types"
-	registrytypes "github.com/docker/engine-api/types/registry"
 	"github.com/dutchcoders/goftp"
+	"github.com/hyperhq/hyper-api/client"
+	"github.com/hyperhq/hyper-api/types"
+	registrytypes "github.com/hyperhq/hyper-api/types/registry"
 	"github.com/hyperhq/hypercli/pkg/signal"
 	"github.com/hyperhq/hypercli/pkg/term"
 	"github.com/hyperhq/hypercli/registry"

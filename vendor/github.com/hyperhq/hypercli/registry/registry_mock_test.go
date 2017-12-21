@@ -15,10 +15,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/gorilla/mux"
+	registrytypes "github.com/hyperhq/hyper-api/types/registry"
 	"github.com/hyperhq/hypercli/opts"
 	"github.com/hyperhq/hypercli/reference"
-	registrytypes "github.com/docker/engine-api/types/registry"
-	"github.com/gorilla/mux"
 
 	"github.com/Sirupsen/logrus"
 )

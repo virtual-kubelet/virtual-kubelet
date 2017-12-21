@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hyperhq/hyper-api/types"
 	"github.com/hyperhq/hypercli/pkg/stringid"
-	"github.com/docker/engine-api/types"
 )
 
 func TestContainerPsContext(t *testing.T) {

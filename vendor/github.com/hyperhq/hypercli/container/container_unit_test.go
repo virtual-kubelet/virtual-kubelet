@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/docker/docker/pkg/signal"
-	"github.com/docker/engine-api/types/container"
+	"github.com/hyperhq/hyper-api/types/container"
 )
 
 func TestContainerStopSignal(t *testing.T) {

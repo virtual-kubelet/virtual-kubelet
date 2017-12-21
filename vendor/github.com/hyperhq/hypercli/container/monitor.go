@@ -14,7 +14,7 @@ import (
 	"github.com/docker/docker/pkg/promise"
 	"github.com/docker/docker/pkg/stringid"
 	"github.com/docker/docker/utils"
-	"github.com/docker/engine-api/types/container"
+	"github.com/hyperhq/hyper-api/types/container"
 )
 
 const (

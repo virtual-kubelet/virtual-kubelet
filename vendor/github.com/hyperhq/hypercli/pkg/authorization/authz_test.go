@@ -12,9 +12,9 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/hyperhq/hypercli/pkg/plugins"
 	"github.com/docker/go-connections/tlsconfig"
 	"github.com/gorilla/mux"
+	"github.com/hyperhq/hypercli/pkg/plugins"
 )
 
 const pluginAddress = "authzplugin.sock"

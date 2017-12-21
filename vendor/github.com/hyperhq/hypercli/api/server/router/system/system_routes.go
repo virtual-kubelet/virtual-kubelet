@@ -6,13 +6,13 @@ import (
 	"time"
 
 	"github.com/Sirupsen/logrus"
+	"github.com/hyperhq/hyper-api/types"
+	"github.com/hyperhq/hyper-api/types/events"
+	"github.com/hyperhq/hyper-api/types/filters"
+	timetypes "github.com/hyperhq/hyper-api/types/time"
 	"github.com/hyperhq/hypercli/api"
 	"github.com/hyperhq/hypercli/api/server/httputils"
 	"github.com/hyperhq/hypercli/pkg/ioutils"
-	"github.com/docker/engine-api/types"
-	"github.com/docker/engine-api/types/events"
-	"github.com/docker/engine-api/types/filters"
-	timetypes "github.com/docker/engine-api/types/time"
 	"golang.org/x/net/context"
 )
 
