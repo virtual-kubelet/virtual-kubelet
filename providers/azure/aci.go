@@ -198,7 +198,7 @@ func (p *ACIProvider) GetPod(namespace, name string) (*v1.Pod, error) {
 }
 
 // GetPodLogs returns the logs of a pod by name that is running inside ACI.
-func (p *ACIProvider) GetContainerLogs(namespace, podName, containerName string) (string, error) {
+func (p *ACIProvider) GetContainerLogs(namespace, podName, containerName string, tail int) (string, error) {
 	logContent := ""
 	cg, err := p.aciClient.GetContainerGroup(p.resourceGroup, fmt.Sprintf("%s-%s", namespace, podName))
 	if err != nil {
@@ -215,7 +215,7 @@ func (p *ACIProvider) GetContainerLogs(namespace, podName, containerName string)
 	// get logs from cg
 	retry := 10
 	for i := 0; i < retry; i++ {
-		cLogs, err := p.aciClient.GetContainerLogs(p.resourceGroup, cg.Name, containerName, 10)
+		cLogs, err := p.aciClient.GetContainerLogs(p.resourceGroup, cg.Name, containerName, tail)
 		if err != nil {
 			log.Println(err)
 			time.Sleep(5000 * time.Millisecond)

@@ -25,7 +25,7 @@ type Provider interface {
 	GetPod(namespace, name string) (*v1.Pod, error)
 
 	// GetContainerLogs retrieves the logs of a container by name from the provider.
-	GetContainerLogs(namespace, podName, containerName string) (string, error)
+	GetContainerLogs(namespace, podName, containerName string, tail int) (string, error)
 
 	// GetPodStatus retrieves the status of a pod by name from the provider.
 	GetPodStatus(namespace, name string) (*v1.PodStatus, error)

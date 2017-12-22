@@ -140,7 +140,7 @@ func (p *HyperProvider) GetPod(namespace, name string) (*v1.Pod, error) {
 }
 
 // GetContainerLogs retrieves the logs of a container by name from the provider.
-func (p *HyperProvider) GetContainerLogs(namespace, podName, containerName string) (string, error) {
+func (p *HyperProvider) GetContainerLogs(namespace, podName, containerName string, tail int) (string, error) {
 	return "", nil
 }
 
