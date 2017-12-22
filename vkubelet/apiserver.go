@@ -37,7 +37,6 @@ func ApiserverStart(provider Provider) {
 
 func ApiServerHandler(w http.ResponseWriter, req *http.Request) {
 	vars := mux.Vars(req)
-
 	if len(vars) == 3 {
 		namespace := vars["namespace"]
 		pod := vars["pod"]
@@ -54,16 +53,14 @@ func ApiServerHandler(w http.ResponseWriter, req *http.Request) {
 				tail = t
 			}
 		}
-		log.Println(tail)
 		podsLogs, err := p.GetContainerLogs(namespace, pod, container, tail)
 		if err != nil {
 			log.Println(err)
-			io.WriteString(w, err.Error())
+			io.WriteString(w, err.Error()) 
 		} else {
 			io.WriteString(w, podsLogs)
 		}
 	} else {
-		log.Println("404 request pattern not found")
 		NotFound(w, req)
 	}
 }

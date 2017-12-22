@@ -7,8 +7,8 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"net/http"
 	"os"
-	"strings"
 	"time"
 
 	"github.com/virtual-kubelet/virtual-kubelet/manager"
@@ -181,10 +181,9 @@ func (p *ACIProvider) DeletePod(pod *v1.Pod) error {
 // GetPod returns a pod by name that is running inside ACI
 // returns nil if a pod by that name is not found.
 func (p *ACIProvider) GetPod(namespace, name string) (*v1.Pod, error) {
-	cg, err := p.aciClient.GetContainerGroup(p.resourceGroup, fmt.Sprintf("%s-%s", namespace, name))
+	cg, err, status := p.aciClient.GetContainerGroup(p.resourceGroup, fmt.Sprintf("%s-%s", namespace, name))
 	if err != nil {
-		// Trap error for 404 and return gracefully
-		if strings.Contains(err.Error(), "ResourceNotFound") {
+		if *status == http.StatusNotFound {
 			return nil, nil
 		}
 		return nil, err
@@ -200,12 +199,8 @@ func (p *ACIProvider) GetPod(namespace, name string) (*v1.Pod, error) {
 // GetPodLogs returns the logs of a pod by name that is running inside ACI.
 func (p *ACIProvider) GetContainerLogs(namespace, podName, containerName string, tail int) (string, error) {
 	logContent := ""
-	cg, err := p.aciClient.GetContainerGroup(p.resourceGroup, fmt.Sprintf("%s-%s", namespace, podName))
+	cg, err, _ := p.aciClient.GetContainerGroup(p.resourceGroup, fmt.Sprintf("%s-%s", namespace, podName))
 	if err != nil {
-		// Trap error for 404 and return gracefully
-		if strings.Contains(err.Error(), "ResourceNotFound") {
-			return logContent, nil
-		}
 		return logContent, err
 	}
 
