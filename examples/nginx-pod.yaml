@@ -19,3 +19,6 @@ spec:
       name: https
   dnsPolicy: ClusterFirst
   nodeName: virtual-kubelet
+  tolerations:
+  - key: azure.com/aci
+    effect: NoSchedule
