@@ -163,7 +163,7 @@ func TestCreateContainerGroup(t *testing.T) {
 }
 
 func TestGetContainerGroup(t *testing.T) {
-	cg, err := client.GetContainerGroup(resourceGroup, containerGroup)
+	cg, err, _ := client.GetContainerGroup(resourceGroup, containerGroup)
 	if err != nil {
 		t.Fatal(err)
 	}
