@@ -22,3 +22,6 @@ bin/
 
 # Test credentials file
 credentials.json
+
+# VS Code files
+.vscode/

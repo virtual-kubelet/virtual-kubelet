@@ -13,6 +13,7 @@ import (
 	"github.com/virtual-kubelet/virtual-kubelet/manager"
 	"github.com/virtual-kubelet/virtual-kubelet/providers/azure"
 	"github.com/virtual-kubelet/virtual-kubelet/providers/hypersh"
+	"github.com/virtual-kubelet/virtual-kubelet/providers/web"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -62,13 +63,14 @@ func New(nodeName, operatingSystem, namespace, kubeConfig, taint, provider, prov
 
 	rm := manager.NewResourceManager(clientset)
 
+	daemonEndpointPortEnv := os.Getenv("KUBELET_PORT")
+	i64value, err := strconv.ParseInt(daemonEndpointPortEnv, 10, 32)
+	daemonEndpointPort := int32(i64value)
+
 	var p Provider
 	switch provider {
 	case "azure":
 		internalIP := os.Getenv("VKUBELET_POD_IP")
-		daemonEndpointPortEnv := os.Getenv("KUBELET_PORT")
-		i64value, err := strconv.ParseInt(daemonEndpointPortEnv, 10, 32)
-		daemonEndpointPort := int32(i64value)
 		if err != nil {
 			return nil, err
 		}
@@ -78,6 +80,11 @@ func New(nodeName, operatingSystem, namespace, kubeConfig, taint, provider, prov
 		}
 	case "hyper":
 		p, err = hypersh.NewHyperProvider(providerConfig, rm, nodeName, operatingSystem)
+		if err != nil {
+			return nil, err
+		}
+	case "web":
+		p, err = web.NewBrokerProvider(nodeName, operatingSystem, daemonEndpointPort)
 		if err != nil {
 			return nil, err
 		}
@@ -126,9 +133,9 @@ func (s *Server) registerNode() error {
 		ObjectMeta: metav1.ObjectMeta{
 			Name: s.nodeName,
 			Labels: map[string]string{
-				"type":				"virtual-kubelet",
-				"kubernetes.io/role":		"agent",
-				"beta.kubernetes.io/os":	strings.ToLower(s.provider.OperatingSystem()),
+				"type":                  "virtual-kubelet",
+				"kubernetes.io/role":    "agent",
+				"beta.kubernetes.io/os": strings.ToLower(s.provider.OperatingSystem()),
 			},
 			Annotations: map[string]string{
 				"alpha.service-controller.kubernetes.io/exclude-balancer": "true",
@@ -143,10 +150,10 @@ func (s *Server) registerNode() error {
 				Architecture:    "amd64",
 				KubeletVersion:  "v1.8.3",
 			},
-			Capacity:    s.provider.Capacity(),
-			Allocatable: s.provider.Capacity(),
-			Conditions:  s.provider.NodeConditions(),
-			Addresses:   s.provider.NodeAddresses(),
+			Capacity:        s.provider.Capacity(),
+			Allocatable:     s.provider.Capacity(),
+			Conditions:      s.provider.NodeConditions(),
+			Addresses:       s.provider.NodeAddresses(),
 			DaemonEndpoints: *s.provider.NodeDaemonEndpoints(),
 		},
 	}

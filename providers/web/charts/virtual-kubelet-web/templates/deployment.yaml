@@ -1,0 +1,42 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: {{ template "virtual-kubelet-web.fullname" . }}
+  labels:
+    app: {{ template "virtual-kubelet-web.name" . }}
+    chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
+    release: {{ .Release.Name }}
+    heritage: {{ .Release.Service }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: {{ template "virtual-kubelet-web.name" . }}
+  template:
+    metadata:
+      labels:
+        app: {{ template "virtual-kubelet-web.name" . }}
+        release: {{ .Release.Name }}
+    spec:
+      containers:
+        - name: rustwebprovider
+          image: "{{ .Values.rustwebimage.repository }}:{{ .Values.rustwebimage.tag }}"
+          imagePullPolicy: {{ .Values.rustwebimage.pullPolicy }}
+          ports:
+            - containerPort: {{ .Values.rustwebimage.port }}
+          livenessProbe:
+            httpGet:
+              path: /
+              port: {{ .Values.rustwebimage.port }}
+          readinessProbe:
+            httpGet:
+              path: /
+              port: {{ .Values.rustwebimage.port }}
+        - name: virtualkubelet
+          image: "{{ .Values.vkimage.repository }}:{{ .Values.vkimage.tag }}"
+          imagePullPolicy: {{ .Values.vkimage.pullPolicy }}
+          env:
+            - name: WEB_ENDPOINT_URL
+              value: http://localhost:{{ .Values.rustwebimage.port }}
+          command: ["virtual-kubelet"]
+          args: ["--provider", "web", "--nodename", {{ default "web-provider" .Values.env.nodeName | quote }}]
