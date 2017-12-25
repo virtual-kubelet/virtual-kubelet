@@ -9,10 +9,10 @@ import (
 	"strings"
 
 	"github.com/docker/docker/pkg/integration/checker"
-	"github.com/docker/engine-api/types"
-	"github.com/docker/engine-api/types/filters"
-	"github.com/docker/engine-api/types/network"
 	"github.com/go-check/check"
+	"github.com/hyperhq/hyper-api/types"
+	"github.com/hyperhq/hyper-api/types/filters"
+	"github.com/hyperhq/hyper-api/types/network"
 )
 
 func (s *DockerSuite) TestApiNetworkGetDefaults(c *check.C) {

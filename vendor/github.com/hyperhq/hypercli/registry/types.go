@@ -1,8 +1,8 @@
 package registry
 
 import (
+	registrytypes "github.com/hyperhq/hyper-api/types/registry"
 	"github.com/hyperhq/hypercli/reference"
-	registrytypes "github.com/docker/engine-api/types/registry"
 )
 
 // RepositoryData tracks the image list, list of endpoints, and list of tokens

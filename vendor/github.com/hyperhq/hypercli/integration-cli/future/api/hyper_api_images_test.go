@@ -7,8 +7,8 @@ import (
 	"strings"
 
 	"github.com/docker/docker/pkg/integration/checker"
-	"github.com/docker/engine-api/types"
 	"github.com/go-check/check"
+	"github.com/hyperhq/hyper-api/types"
 )
 
 func (s *DockerSuite) TestApiImagesFilter(c *check.C) {

@@ -1,8 +1,8 @@
 package network
 
 import (
-	"github.com/docker/engine-api/types/network"
 	"github.com/docker/libnetwork"
+	"github.com/hyperhq/hyper-api/types/network"
 )
 
 // Backend is all the methods that need to be implemented to provide

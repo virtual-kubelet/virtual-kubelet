@@ -12,7 +12,6 @@ import (
 	"github.com/go-check/check"
 )
 
-
 // regression gh14320
 func (s *DockerSuite) TestPostContainersAttachContainerNotFound(c *check.C) {
 	status, body, err := sockRequest("POST", "/containers/doesnotexist/attach", nil)

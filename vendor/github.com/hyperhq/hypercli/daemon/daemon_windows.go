@@ -10,18 +10,18 @@ import (
 	"strings"
 
 	"github.com/Sirupsen/logrus"
+	containertypes "github.com/hyperhq/hyper-api/types/container"
 	"github.com/hyperhq/hypercli/container"
 	"github.com/hyperhq/hypercli/daemon/graphdriver"
 	"github.com/hyperhq/hypercli/dockerversion"
 	"github.com/hyperhq/hypercli/image"
 	"github.com/hyperhq/hypercli/layer"
 	"github.com/hyperhq/hypercli/reference"
-	containertypes "github.com/docker/engine-api/types/container"
 	// register the windows graph driver
+	"github.com/docker/libnetwork"
 	"github.com/hyperhq/hypercli/daemon/graphdriver/windows"
 	"github.com/hyperhq/hypercli/pkg/idtools"
 	"github.com/hyperhq/hypercli/pkg/system"
-	"github.com/docker/libnetwork"
 	blkiodev "github.com/opencontainers/runc/libcontainer/configs"
 )
 

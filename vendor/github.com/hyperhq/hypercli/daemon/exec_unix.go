@@ -3,9 +3,9 @@
 package daemon
 
 import (
+	"github.com/hyperhq/hyper-api/types"
 	"github.com/hyperhq/hypercli/container"
 	"github.com/hyperhq/hypercli/daemon/execdriver"
-	"github.com/docker/engine-api/types"
 )
 
 // setPlatformSpecificExecProcessConfig sets platform-specific fields in the

@@ -40,9 +40,9 @@ func newDockerHubPullSuite() *DockerHubPullSuite {
 // SetUpSuite starts the suite daemon.
 func (s *DockerHubPullSuite) SetUpSuite(c *check.C) {
 	/*
-	testRequires(c, DaemonIsLinux)
-	err := s.d.Start()
-	c.Assert(err, checker.IsNil, check.Commentf("starting push/pull test daemon: %v", err))
+		testRequires(c, DaemonIsLinux)
+		err := s.d.Start()
+		c.Assert(err, checker.IsNil, check.Commentf("starting push/pull test daemon: %v", err))
 	*/
 }
 

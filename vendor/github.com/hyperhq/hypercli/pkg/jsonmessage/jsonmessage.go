@@ -7,9 +7,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/docker/go-units"
 	"github.com/hyperhq/hypercli/pkg/jsonlog"
 	"github.com/hyperhq/hypercli/pkg/term"
-	"github.com/docker/go-units"
 )
 
 // JSONError wraps a concrete Code and Message, `Code` is

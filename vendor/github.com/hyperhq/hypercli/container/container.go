@@ -24,8 +24,8 @@ import (
 	"github.com/docker/docker/pkg/symlink"
 	"github.com/docker/docker/runconfig"
 	"github.com/docker/docker/volume"
-	containertypes "github.com/docker/engine-api/types/container"
 	"github.com/docker/go-connections/nat"
+	containertypes "github.com/hyperhq/hyper-api/types/container"
 	"github.com/opencontainers/runc/libcontainer/label"
 )
 

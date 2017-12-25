@@ -8,8 +8,8 @@ import (
 	"time"
 
 	"github.com/docker/docker/pkg/integration/checker"
-	"github.com/docker/engine-api/types/container"
 	"github.com/go-check/check"
+	"github.com/hyperhq/hyper-api/types/container"
 )
 
 func checkValidGraphDriver(c *check.C, name string) {

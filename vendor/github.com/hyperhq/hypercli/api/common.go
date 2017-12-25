@@ -9,10 +9,10 @@ import (
 	"strings"
 
 	"github.com/Sirupsen/logrus"
+	"github.com/docker/libtrust"
+	"github.com/hyperhq/hyper-api/types"
 	"github.com/hyperhq/hypercli/pkg/system"
 	"github.com/hyperhq/hypercli/pkg/version"
-	"github.com/docker/engine-api/types"
-	"github.com/docker/libtrust"
 )
 
 // Common constants for daemon and client.

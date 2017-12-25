@@ -5,8 +5,8 @@ import (
 	"io/ioutil"
 	"testing"
 
+	"github.com/hyperhq/hyper-api/types"
 	flag "github.com/hyperhq/hypercli/pkg/mflag"
-	"github.com/docker/engine-api/types"
 )
 
 type arguments struct {
@@ -15,12 +15,12 @@ type arguments struct {
 
 func TestParseExec(t *testing.T) {
 	invalids := map[*arguments]error{
-		&arguments{[]string{"-unknown"}}: fmt.Errorf("flag provided but not defined: -unknown"),
-		&arguments{[]string{"-u"}}:       fmt.Errorf("flag needs an argument: -u"),
-		&arguments{[]string{"--user"}}:   fmt.Errorf("flag needs an argument: --user"),
+		{[]string{"-unknown"}}: fmt.Errorf("flag provided but not defined: -unknown"),
+		{[]string{"-u"}}:       fmt.Errorf("flag needs an argument: -u"),
+		{[]string{"--user"}}:   fmt.Errorf("flag needs an argument: --user"),
 	}
 	valids := map[*arguments]*types.ExecConfig{
-		&arguments{
+		{
 			[]string{"container", "command"},
 		}: {
 			Container:    "container",
@@ -28,7 +28,7 @@ func TestParseExec(t *testing.T) {
 			AttachStdout: true,
 			AttachStderr: true,
 		},
-		&arguments{
+		{
 			[]string{"container", "command1", "command2"},
 		}: {
 			Container:    "container",
@@ -36,7 +36,7 @@ func TestParseExec(t *testing.T) {
 			AttachStdout: true,
 			AttachStderr: true,
 		},
-		&arguments{
+		{
 			[]string{"-i", "-t", "-u", "uid", "container", "command"},
 		}: {
 			User:         "uid",
@@ -47,7 +47,7 @@ func TestParseExec(t *testing.T) {
 			Container:    "container",
 			Cmd:          []string{"command"},
 		},
-		&arguments{
+		{
 			[]string{"-d", "container", "command"},
 		}: {
 			AttachStdin:  false,
@@ -57,7 +57,7 @@ func TestParseExec(t *testing.T) {
 			Container:    "container",
 			Cmd:          []string{"command"},
 		},
-		&arguments{
+		{
 			[]string{"-t", "-i", "-d", "container", "command"},
 		}: {
 			AttachStdin:  false,

@@ -7,7 +7,7 @@ import (
 
 	"golang.org/x/net/context"
 
-	"github.com/docker/engine-api/types"
+	"github.com/hyperhq/hyper-api/types"
 	Cli "github.com/hyperhq/hypercli/cli"
 	"github.com/hyperhq/hypercli/dockerversion"
 	flag "github.com/hyperhq/hypercli/pkg/mflag"

@@ -6,10 +6,10 @@ import (
 	"io"
 	"runtime"
 
+	"github.com/hyperhq/hyper-api/types"
+	"github.com/hyperhq/hyper-api/types/versions/v1p20"
 	"github.com/hyperhq/hypercli/daemon/execdriver"
 	"github.com/hyperhq/hypercli/pkg/version"
-	"github.com/docker/engine-api/types"
-	"github.com/docker/engine-api/types/versions/v1p20"
 )
 
 // ContainerStatsConfig holds information for configuring the runtime

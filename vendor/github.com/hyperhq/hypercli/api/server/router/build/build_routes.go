@@ -12,15 +12,15 @@ import (
 	"strings"
 
 	"github.com/Sirupsen/logrus"
+	"github.com/docker/go-units"
+	"github.com/hyperhq/hyper-api/types"
+	"github.com/hyperhq/hyper-api/types/container"
 	"github.com/hyperhq/hypercli/api/server/httputils"
 	"github.com/hyperhq/hypercli/builder"
 	"github.com/hyperhq/hypercli/pkg/ioutils"
 	"github.com/hyperhq/hypercli/pkg/progress"
 	"github.com/hyperhq/hypercli/pkg/streamformatter"
 	"github.com/hyperhq/hypercli/utils"
-	"github.com/docker/engine-api/types"
-	"github.com/docker/engine-api/types/container"
-	"github.com/docker/go-units"
 	"golang.org/x/net/context"
 )
 

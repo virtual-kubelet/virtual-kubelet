@@ -3,10 +3,10 @@ package daemon
 import (
 	"fmt"
 
+	containertypes "github.com/hyperhq/hyper-api/types/container"
 	"github.com/hyperhq/hypercli/container"
 	"github.com/hyperhq/hypercli/pkg/stringid"
 	"github.com/hyperhq/hypercli/volume"
-	containertypes "github.com/docker/engine-api/types/container"
 )
 
 // createContainerPlatformSpecificSettings performs platform specific container create functionality

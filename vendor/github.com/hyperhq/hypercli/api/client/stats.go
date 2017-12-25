@@ -7,8 +7,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/docker/engine-api/types"
-	"github.com/docker/engine-api/types/events"
+	"github.com/hyperhq/hyper-api/types"
+	"github.com/hyperhq/hyper-api/types/events"
 	Cli "github.com/hyperhq/hypercli/cli"
 	"github.com/hyperhq/hypercli/cli/command"
 	"github.com/hyperhq/hypercli/cli/command/formatter"

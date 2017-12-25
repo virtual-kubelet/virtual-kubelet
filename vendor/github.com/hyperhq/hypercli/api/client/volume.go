@@ -16,8 +16,8 @@ import (
 	flag "github.com/hyperhq/hypercli/pkg/mflag"
 
 	"github.com/cheggaaa/pb"
-	"github.com/docker/engine-api/types"
-	"github.com/docker/engine-api/types/filters"
+	"github.com/hyperhq/hyper-api/types"
+	"github.com/hyperhq/hyper-api/types/filters"
 	"golang.org/x/net/context"
 )
 

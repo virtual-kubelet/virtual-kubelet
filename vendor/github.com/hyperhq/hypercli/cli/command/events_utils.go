@@ -3,7 +3,7 @@ package command
 import (
 	"sync"
 
-	eventtypes "github.com/docker/engine-api/types/events"
+	eventtypes "github.com/hyperhq/hyper-api/types/events"
 )
 
 type eventProcessor func(eventtypes.Message, error) error

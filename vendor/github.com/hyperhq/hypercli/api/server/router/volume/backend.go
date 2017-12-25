@@ -2,7 +2,7 @@ package volume
 
 import (
 	// TODO return types need to be refactored into pkg
-	"github.com/docker/engine-api/types"
+	"github.com/hyperhq/hyper-api/types"
 )
 
 // Backend is the methods that need to be implemented to provide

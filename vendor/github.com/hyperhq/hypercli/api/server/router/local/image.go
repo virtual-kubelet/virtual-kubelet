@@ -12,6 +12,8 @@ import (
 
 	"github.com/docker/distribution/digest"
 	"github.com/docker/distribution/registry/api/errcode"
+	"github.com/hyperhq/hyper-api/types"
+	"github.com/hyperhq/hyper-api/types/container"
 	"github.com/hyperhq/hypercli/api/server/httputils"
 	"github.com/hyperhq/hypercli/builder/dockerfile"
 	derr "github.com/hyperhq/hypercli/errors"
@@ -19,8 +21,6 @@ import (
 	"github.com/hyperhq/hypercli/pkg/streamformatter"
 	"github.com/hyperhq/hypercli/reference"
 	"github.com/hyperhq/hypercli/runconfig"
-	"github.com/docker/engine-api/types"
-	"github.com/docker/engine-api/types/container"
 	"golang.org/x/net/context"
 )
 

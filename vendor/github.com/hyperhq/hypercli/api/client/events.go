@@ -8,8 +8,8 @@ import (
 	"net/http"
 	"net/url"
 
-	"github.com/docker/engine-api/types/events"
 	"github.com/gorilla/websocket"
+	"github.com/hyperhq/hyper-api/types/events"
 	signutil "github.com/hyperhq/websocket-client/go/util"
 	"golang.org/x/net/context"
 )

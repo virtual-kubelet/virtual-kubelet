@@ -9,9 +9,9 @@ import (
 	"testing"
 
 	"github.com/docker/distribution/registry/client/transport"
+	"github.com/hyperhq/hyper-api/types"
+	registrytypes "github.com/hyperhq/hyper-api/types/registry"
 	"github.com/hyperhq/hypercli/reference"
-	"github.com/docker/engine-api/types"
-	registrytypes "github.com/docker/engine-api/types/registry"
 )
 
 var (

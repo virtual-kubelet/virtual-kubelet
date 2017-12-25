@@ -1,8 +1,8 @@
 package main
 
 import (
-	"os"
 	"fmt"
+	"os"
 	"testing"
 
 	"github.com/docker/docker/pkg/reexec"
@@ -13,7 +13,7 @@ func Test(t *testing.T) {
 	reexec.Init() // This is required for external graphdriver tests
 
 	if !isLocalDaemon {
-		fmt.Printf("INFO: Testing against a remote daemon(%v)\n",os.Getenv("DOCKER_HOST"))
+		fmt.Printf("INFO: Testing against a remote daemon(%v)\n", os.Getenv("DOCKER_HOST"))
 	} else {
 		fmt.Println("INFO: Testing against a local daemon")
 	}

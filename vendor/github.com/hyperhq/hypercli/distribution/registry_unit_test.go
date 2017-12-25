@@ -8,11 +8,11 @@ import (
 	"testing"
 
 	"github.com/Sirupsen/logrus"
+	"github.com/hyperhq/hyper-api/types"
+	registrytypes "github.com/hyperhq/hyper-api/types/registry"
 	"github.com/hyperhq/hypercli/reference"
 	"github.com/hyperhq/hypercli/registry"
 	"github.com/hyperhq/hypercli/utils"
-	"github.com/docker/engine-api/types"
-	registrytypes "github.com/docker/engine-api/types/registry"
 	"golang.org/x/net/context"
 )
 

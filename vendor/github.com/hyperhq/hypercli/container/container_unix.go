@@ -21,13 +21,13 @@ import (
 	runconfigopts "github.com/docker/docker/runconfig/opts"
 	"github.com/docker/docker/utils"
 	"github.com/docker/docker/volume"
-	containertypes "github.com/docker/engine-api/types/container"
-	"github.com/docker/engine-api/types/network"
 	"github.com/docker/go-connections/nat"
 	"github.com/docker/libnetwork"
 	"github.com/docker/libnetwork/netlabel"
 	"github.com/docker/libnetwork/options"
 	"github.com/docker/libnetwork/types"
+	containertypes "github.com/hyperhq/hyper-api/types/container"
+	"github.com/hyperhq/hyper-api/types/network"
 	"github.com/opencontainers/runc/libcontainer/label"
 )
 

@@ -3,8 +3,8 @@ package memory
 import (
 	"testing"
 
-	"github.com/hyperhq/hypercli/pkg/discovery"
 	"github.com/go-check/check"
+	"github.com/hyperhq/hypercli/pkg/discovery"
 )
 
 // Hook up gocheck into the "go test" runner.

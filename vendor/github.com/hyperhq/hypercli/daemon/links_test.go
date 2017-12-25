@@ -8,10 +8,10 @@ import (
 	"path/filepath"
 	"testing"
 
+	containertypes "github.com/hyperhq/hyper-api/types/container"
 	"github.com/hyperhq/hypercli/container"
 	"github.com/hyperhq/hypercli/pkg/graphdb"
 	"github.com/hyperhq/hypercli/pkg/stringid"
-	containertypes "github.com/docker/engine-api/types/container"
 )
 
 func TestMigrateLegacySqliteLinks(t *testing.T) {

@@ -7,10 +7,10 @@ import (
 	"net/url"
 	"strings"
 
+	registrytypes "github.com/hyperhq/hyper-api/types/registry"
 	"github.com/hyperhq/hypercli/opts"
 	flag "github.com/hyperhq/hypercli/pkg/mflag"
 	"github.com/hyperhq/hypercli/reference"
-	registrytypes "github.com/docker/engine-api/types/registry"
 )
 
 // Options holds command line options.

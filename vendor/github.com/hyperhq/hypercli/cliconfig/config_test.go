@@ -7,8 +7,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/hyperhq/hyper-api/types"
 	"github.com/hyperhq/hypercli/pkg/homedir"
-	"github.com/docker/engine-api/types"
 )
 
 func TestEmptyConfigDir(t *testing.T) {

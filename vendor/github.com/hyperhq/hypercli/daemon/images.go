@@ -5,11 +5,11 @@ import (
 	"path"
 	"sort"
 
+	"github.com/hyperhq/hyper-api/types"
+	"github.com/hyperhq/hyper-api/types/filters"
 	"github.com/hyperhq/hypercli/image"
 	"github.com/hyperhq/hypercli/layer"
 	"github.com/hyperhq/hypercli/reference"
-	"github.com/docker/engine-api/types"
-	"github.com/docker/engine-api/types/filters"
 )
 
 var acceptedImageFilterTags = map[string]bool{

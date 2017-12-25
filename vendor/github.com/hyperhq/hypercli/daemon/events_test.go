@@ -4,10 +4,10 @@ import (
 	"testing"
 	"time"
 
+	containertypes "github.com/hyperhq/hyper-api/types/container"
+	eventtypes "github.com/hyperhq/hyper-api/types/events"
 	"github.com/hyperhq/hypercli/container"
 	"github.com/hyperhq/hypercli/daemon/events"
-	containertypes "github.com/docker/engine-api/types/container"
-	eventtypes "github.com/docker/engine-api/types/events"
 )
 
 func TestLogContainerEventCopyLabels(t *testing.T) {

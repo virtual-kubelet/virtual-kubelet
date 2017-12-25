@@ -38,19 +38,19 @@ func init() {
 
 func newTLSConfig(hostname string, isSecure bool) (*tls.Config, error) {
 	// PreferredServerCipherSuites should have no effect
-	tlsConfig := tlsconfig.ServerDefault
+	tlsConfig := tlsconfig.ServerDefault()
 
 	tlsConfig.InsecureSkipVerify = !isSecure
 
 	if isSecure && CertsDir != "" {
 		hostDir := filepath.Join(CertsDir, cleanPath(hostname))
 		logrus.Debugf("hostDir: %s", hostDir)
-		if err := ReadCertsDirectory(&tlsConfig, hostDir); err != nil {
+		if err := ReadCertsDirectory(tlsConfig, hostDir); err != nil {
 			return nil, err
 		}
 	}
 
-	return &tlsConfig, nil
+	return tlsConfig, nil
 }
 
 func hasFile(files []os.FileInfo, name string) bool {
@@ -218,8 +218,8 @@ func ContinueOnError(err error) bool {
 // default TLS configuration.
 func NewTransport(tlsConfig *tls.Config) *http.Transport {
 	if tlsConfig == nil {
-		var cfg = tlsconfig.ServerDefault
-		tlsConfig = &cfg
+		var cfg = tlsconfig.ServerDefault()
+		tlsConfig = cfg
 	}
 	return &http.Transport{
 		Proxy: http.ProxyFromEnvironment,

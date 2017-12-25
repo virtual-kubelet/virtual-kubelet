@@ -15,7 +15,6 @@ import (
 
 const attachWait = 5 * time.Second
 
-
 //FIXME: attach initialize unproperly? and return empty string?
 func (s *DockerSuite) TestAttachMultipleAndRestart(c *check.C) {
 	testRequires(c, DaemonIsLinux)

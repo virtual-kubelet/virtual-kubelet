@@ -8,6 +8,7 @@ import (
 	"runtime"
 	"time"
 
+	"github.com/hyperhq/hyper-api/types/container"
 	"github.com/hyperhq/hypercli/dockerversion"
 	"github.com/hyperhq/hypercli/image"
 	"github.com/hyperhq/hypercli/layer"
@@ -15,7 +16,6 @@ import (
 	"github.com/hyperhq/hypercli/pkg/progress"
 	"github.com/hyperhq/hypercli/pkg/streamformatter"
 	"github.com/hyperhq/hypercli/reference"
-	"github.com/docker/engine-api/types/container"
 )
 
 // ImportImage imports an image, getting the archived layer data either from

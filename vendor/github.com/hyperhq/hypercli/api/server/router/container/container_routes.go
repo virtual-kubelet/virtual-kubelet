@@ -12,9 +12,9 @@ import (
 
 	"github.com/Sirupsen/logrus"
 	"github.com/docker/distribution/registry/api/errcode"
-	"github.com/docker/engine-api/types"
-	"github.com/docker/engine-api/types/container"
-	timetypes "github.com/docker/engine-api/types/time"
+	"github.com/hyperhq/hyper-api/types"
+	"github.com/hyperhq/hyper-api/types/container"
+	timetypes "github.com/hyperhq/hyper-api/types/time"
 	"github.com/hyperhq/hypercli/api/server/httputils"
 	"github.com/hyperhq/hypercli/daemon"
 	derr "github.com/hyperhq/hypercli/errors"

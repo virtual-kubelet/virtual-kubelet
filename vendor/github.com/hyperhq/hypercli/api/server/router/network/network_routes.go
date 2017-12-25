@@ -7,13 +7,13 @@ import (
 
 	"golang.org/x/net/context"
 
+	"github.com/docker/libnetwork"
+	"github.com/hyperhq/hyper-api/types"
+	"github.com/hyperhq/hyper-api/types/filters"
+	"github.com/hyperhq/hyper-api/types/network"
 	"github.com/hyperhq/hypercli/api/server/httputils"
 	"github.com/hyperhq/hypercli/daemon"
 	"github.com/hyperhq/hypercli/runconfig"
-	"github.com/docker/engine-api/types"
-	"github.com/docker/engine-api/types/filters"
-	"github.com/docker/engine-api/types/network"
-	"github.com/docker/libnetwork"
 )
 
 func (n *networkRouter) getNetworksList(ctx context.Context, w http.ResponseWriter, r *http.Request, vars map[string]string) error {

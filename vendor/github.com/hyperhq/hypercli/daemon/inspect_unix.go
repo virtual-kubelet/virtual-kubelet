@@ -3,9 +3,9 @@
 package daemon
 
 import (
+	"github.com/hyperhq/hyper-api/types"
+	"github.com/hyperhq/hyper-api/types/versions/v1p19"
 	"github.com/hyperhq/hypercli/container"
-	"github.com/docker/engine-api/types"
-	"github.com/docker/engine-api/types/versions/v1p19"
 )
 
 // This sets platform-specific fields

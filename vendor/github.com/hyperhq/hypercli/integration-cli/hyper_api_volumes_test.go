@@ -5,8 +5,8 @@ import (
 	"net/http"
 
 	"github.com/docker/docker/pkg/integration/checker"
-	"github.com/docker/engine-api/types"
 	"github.com/go-check/check"
+	"github.com/hyperhq/hyper-api/types"
 )
 
 func (s *DockerSuite) TestApiVolumesList(c *check.C) {
@@ -25,7 +25,7 @@ func (s *DockerSuite) TestApiVolumesList(c *check.C) {
 
 func (s *DockerSuite) TestApiVolumesCreate(c *check.C) {
 	config := types.VolumeCreateRequest{
-		Name: "test",
+		Name:   "test",
 		Driver: "hyper",
 	}
 	status, b, err := sockRequest("POST", "/volumes/create", config)
@@ -64,7 +64,7 @@ func (s *DockerSuite) TestApiVolumesRemove(c *check.C) {
 
 func (s *DockerSuite) TestApiVolumesInspect(c *check.C) {
 	config := types.VolumeCreateRequest{
-		Name: "test",
+		Name:   "test",
 		Driver: "hyper",
 	}
 	status, b, err := sockRequest("POST", "/volumes/create", config)

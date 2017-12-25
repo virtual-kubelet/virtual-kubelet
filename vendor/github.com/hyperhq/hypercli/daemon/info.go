@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/Sirupsen/logrus"
+	"github.com/hyperhq/hyper-api/types"
 	"github.com/hyperhq/hypercli/container"
 	"github.com/hyperhq/hypercli/dockerversion"
 	"github.com/hyperhq/hypercli/pkg/fileutils"
@@ -19,7 +20,6 @@ import (
 	"github.com/hyperhq/hypercli/registry"
 	"github.com/hyperhq/hypercli/utils"
 	"github.com/hyperhq/hypercli/volume/drivers"
-	"github.com/docker/engine-api/types"
 )
 
 // SystemInfo returns information about the host server the daemon is running on.

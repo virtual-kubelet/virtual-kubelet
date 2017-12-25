@@ -3,8 +3,8 @@
 package runconfig
 
 import (
-	"github.com/docker/engine-api/types/container"
-	networktypes "github.com/docker/engine-api/types/network"
+	"github.com/hyperhq/hyper-api/types/container"
+	networktypes "github.com/hyperhq/hyper-api/types/network"
 )
 
 // ContainerConfigWrapper is a Config wrapper that hold the container Config (portable)

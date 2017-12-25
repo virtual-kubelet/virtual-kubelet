@@ -6,8 +6,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/docker/engine-api/types"
 	"github.com/docker/go-units"
+	"github.com/hyperhq/hyper-api/types"
 	"github.com/hyperhq/hypercli/api"
 	"github.com/hyperhq/hypercli/pkg/stringid"
 	"github.com/hyperhq/hypercli/pkg/stringutils"

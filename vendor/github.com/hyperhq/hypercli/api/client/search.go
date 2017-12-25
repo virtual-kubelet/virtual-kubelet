@@ -9,8 +9,8 @@ import (
 
 	"golang.org/x/net/context"
 
-	"github.com/docker/engine-api/types"
-	registrytypes "github.com/docker/engine-api/types/registry"
+	"github.com/hyperhq/hyper-api/types"
+	registrytypes "github.com/hyperhq/hyper-api/types/registry"
 	Cli "github.com/hyperhq/hypercli/cli"
 	flag "github.com/hyperhq/hypercli/pkg/mflag"
 	"github.com/hyperhq/hypercli/pkg/stringutils"

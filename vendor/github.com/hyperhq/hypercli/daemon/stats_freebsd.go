@@ -1,7 +1,7 @@
 package daemon
 
 import (
-	"github.com/docker/engine-api/types"
+	"github.com/hyperhq/hyper-api/types"
 	"github.com/opencontainers/runc/libcontainer"
 )
 

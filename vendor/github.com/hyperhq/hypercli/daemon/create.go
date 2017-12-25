@@ -2,6 +2,9 @@ package daemon
 
 import (
 	"github.com/Sirupsen/logrus"
+	"github.com/hyperhq/hyper-api/types"
+	containertypes "github.com/hyperhq/hyper-api/types/container"
+	networktypes "github.com/hyperhq/hyper-api/types/network"
 	"github.com/hyperhq/hypercli/container"
 	derr "github.com/hyperhq/hypercli/errors"
 	"github.com/hyperhq/hypercli/image"
@@ -9,9 +12,6 @@ import (
 	"github.com/hyperhq/hypercli/pkg/idtools"
 	"github.com/hyperhq/hypercli/pkg/stringid"
 	volumestore "github.com/hyperhq/hypercli/volume/store"
-	"github.com/docker/engine-api/types"
-	containertypes "github.com/docker/engine-api/types/container"
-	networktypes "github.com/docker/engine-api/types/network"
 	"github.com/opencontainers/runc/libcontainer/label"
 )
 

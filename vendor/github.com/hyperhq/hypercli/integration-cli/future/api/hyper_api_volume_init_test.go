@@ -3,8 +3,8 @@ package main
 import (
 	"net/http"
 
-	"github.com/docker/engine-api/types"
 	"github.com/go-check/check"
+	"github.com/hyperhq/hyper-api/types"
 )
 
 func (s *DockerSuite) TestApiVolumeInit(c *check.C) {

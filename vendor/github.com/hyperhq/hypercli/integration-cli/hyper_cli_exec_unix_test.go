@@ -45,7 +45,7 @@ func (s *DockerSuite) TestCliExecInteractiveStdinClose(c *check.C) {
 	}
 }
 
-func (s *DockerSuite) TestCliExecTTY(c *check.C) {
+func (s *DockerSuite) TestCliExecTTYBasic(c *check.C) {
 	printTestCaseName()
 	defer printTestDuration(time.Now())
 

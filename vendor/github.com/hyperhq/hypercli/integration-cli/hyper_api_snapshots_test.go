@@ -5,8 +5,8 @@ import (
 	"net/http"
 
 	"github.com/docker/docker/pkg/integration/checker"
-	"github.com/docker/engine-api/types"
 	"github.com/go-check/check"
+	"github.com/hyperhq/hyper-api/types"
 )
 
 func (s *DockerSuite) TestApiSnapshotsCreate(c *check.C) {
@@ -16,7 +16,7 @@ func (s *DockerSuite) TestApiSnapshotsCreate(c *check.C) {
 	c.Assert(err, check.IsNil)
 	c.Assert(status, check.Equals, http.StatusCreated, check.Commentf(string(b)))
 
-	var snap 	types.Snapshot
+	var snap types.Snapshot
 	err = json.Unmarshal(b, &snap)
 	c.Assert(err, checker.IsNil)
 }

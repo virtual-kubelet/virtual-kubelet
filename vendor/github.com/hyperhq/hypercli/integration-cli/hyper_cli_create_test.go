@@ -176,7 +176,7 @@ func (s *DockerTrustSuite) TestCliCreateTrustedCreate(c *check.C) {
 	repoName := s.setupTrustedImage(c, "trusted-create")
 
 	// Try create
-	createCmd := exec.Command(dockerBinary, "create", repoName)
+	createCmd := exec.Command(dockerBinary, "--region", os.Getenv("DOCKER_HOST"), "create", repoName)
 	s.trustedCmd(createCmd)
 	out, _, err := runCommandWithOutput(createCmd)
 	c.Assert(err, check.IsNil)
@@ -185,7 +185,7 @@ func (s *DockerTrustSuite) TestCliCreateTrustedCreate(c *check.C) {
 	dockerCmd(c, "rmi", repoName)
 
 	// Try untrusted create to ensure we pushed the tag to the registry
-	createCmd = exec.Command(dockerBinary, "create", "--disable-content-trust=true", repoName)
+	createCmd = exec.Command(dockerBinary, "--region", os.Getenv("DOCKER_HOST"), "create", "--disable-content-trust=true", repoName)
 	s.trustedCmd(createCmd)
 	out, _, err = runCommandWithOutput(createCmd)
 	c.Assert(err, check.IsNil)
@@ -203,7 +203,7 @@ func (s *DockerTrustSuite) TestCliCreateUntrustedCreate(c *check.C) {
 	dockerCmd(c, "rmi", withTagName)
 
 	// Try trusted create on untrusted tag
-	createCmd := exec.Command(dockerBinary, "create", withTagName)
+	createCmd := exec.Command(dockerBinary, "--region", os.Getenv("DOCKER_HOST"), "create", withTagName)
 	s.trustedCmd(createCmd)
 	out, _, err := runCommandWithOutput(createCmd)
 	c.Assert(err, check.Not(check.IsNil))
@@ -216,7 +216,7 @@ func (s *DockerTrustSuite) TestCliCreateTrustedIsolatedCreate(c *check.C) {
 	repoName := s.setupTrustedImage(c, "trusted-isolated-create")
 
 	// Try create
-	createCmd := exec.Command(dockerBinary, "--config", "/tmp/docker-isolated-create", "create", repoName)
+	createCmd := exec.Command(dockerBinary, "--region", os.Getenv("DOCKER_HOST"), "--config", "/tmp/docker-isolated-create", "create", repoName)
 	s.trustedCmd(createCmd)
 	out, _, err := runCommandWithOutput(createCmd)
 	c.Assert(err, check.IsNil)
@@ -235,7 +235,7 @@ func (s *DockerTrustSuite) TestCliCreateWhenCertExpired(c *check.C) {
 
 	runAtDifferentDate(elevenYearsFromNow, func() {
 		// Try create
-		createCmd := exec.Command(dockerBinary, "create", repoName)
+		createCmd := exec.Command(dockerBinary, "--region", os.Getenv("DOCKER_HOST"), "create", repoName)
 		s.trustedCmd(createCmd)
 		out, _, err := runCommandWithOutput(createCmd)
 		c.Assert(err, check.Not(check.IsNil))
@@ -244,7 +244,7 @@ func (s *DockerTrustSuite) TestCliCreateWhenCertExpired(c *check.C) {
 
 	runAtDifferentDate(elevenYearsFromNow, func() {
 		// Try create
-		createCmd := exec.Command(dockerBinary, "create", "--disable-content-trust", repoName)
+		createCmd := exec.Command(dockerBinary, "--region", os.Getenv("DOCKER_HOST"), "create", "--disable-content-trust", repoName)
 		s.trustedCmd(createCmd)
 		out, _, err := runCommandWithOutput(createCmd)
 		c.Assert(err, check.Not(check.IsNil))
@@ -262,7 +262,7 @@ func (s *DockerTrustSuite) TestCliCreateTrustedCreateFromBadTrustServer(c *check
 	// tag the image and upload it to the private registry
 	dockerCmd(c, "tag", "busybox", repoName)
 
-	pushCmd := exec.Command(dockerBinary, "push", repoName)
+	pushCmd := exec.Command(dockerBinary, "--region", os.Getenv("DOCKER_HOST"), "push", repoName)
 	s.trustedCmd(pushCmd)
 	out, _, err := runCommandWithOutput(pushCmd)
 	c.Assert(err, check.IsNil)
@@ -271,7 +271,7 @@ func (s *DockerTrustSuite) TestCliCreateTrustedCreateFromBadTrustServer(c *check
 	dockerCmd(c, "rmi", repoName)
 
 	// Try create
-	createCmd := exec.Command(dockerBinary, "create", repoName)
+	createCmd := exec.Command(dockerBinary, "--region", os.Getenv("DOCKER_HOST"), "create", repoName)
 	s.trustedCmd(createCmd)
 	out, _, err = runCommandWithOutput(createCmd)
 	c.Assert(err, check.IsNil)
@@ -289,14 +289,14 @@ func (s *DockerTrustSuite) TestCliCreateTrustedCreateFromBadTrustServer(c *check
 	dockerCmd(c, "--config", evilLocalConfigDir, "tag", "busybox", repoName)
 
 	// Push up to the new server
-	pushCmd = exec.Command(dockerBinary, "--config", evilLocalConfigDir, "push", repoName)
+	pushCmd = exec.Command(dockerBinary, "--region", os.Getenv("DOCKER_HOST"), "--config", evilLocalConfigDir, "push", repoName)
 	s.trustedCmd(pushCmd)
 	out, _, err = runCommandWithOutput(pushCmd)
 	c.Assert(err, check.IsNil)
 	c.Assert(string(out), checker.Contains, "Signing and pushing trust metadata", check.Commentf("Missing expected output on trusted push:\n%s", out))
 
 	// Now, try creating with the original client from this new trust server. This should fail.
-	createCmd = exec.Command(dockerBinary, "create", repoName)
+	createCmd = exec.Command(dockerBinary, "--region", os.Getenv("DOCKER_HOST"), "create", repoName)
 	s.trustedCmd(createCmd)
 	out, _, err = runCommandWithOutput(createCmd)
 	c.Assert(err, check.Not(check.IsNil))

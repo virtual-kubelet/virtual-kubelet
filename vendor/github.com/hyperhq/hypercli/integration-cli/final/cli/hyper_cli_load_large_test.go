@@ -1,18 +1,19 @@
 package main
 
 import (
-	"time"
 	"github.com/docker/docker/pkg/integration/checker"
 	"github.com/go-check/check"
 	"strings"
+	"time"
 )
 
 func (s *DockerSuite) TestCliLoadFromUrlLargeImageArchiveFile(c *check.C) {
-	printTestCaseName(); defer printTestDuration(time.Now())
+	printTestCaseName()
+	defer printTestDuration(time.Now())
 	testRequires(c, DaemonIsLinux)
 
-	imageName := "consol/centos-xfce-vnc";
-	imageUrl := "http://image-tarball.s3.amazonaws.com/test/public/consol_centos-xfce-vnc.tar"; //1.53GB
+	imageName := "consol/centos-xfce-vnc"
+	imageUrl := "http://image-tarball.s3.amazonaws.com/test/public/consol_centos-xfce-vnc.tar" //1.53GB
 
 	output, exitCode, err := dockerCmdWithError("load", "-i", imageUrl)
 	c.Assert(output, checker.Contains, "Starting to download and load the image archive, please wait...\n")

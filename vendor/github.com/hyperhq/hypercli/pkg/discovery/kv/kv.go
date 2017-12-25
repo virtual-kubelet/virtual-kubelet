@@ -7,13 +7,13 @@ import (
 	"time"
 
 	log "github.com/Sirupsen/logrus"
-	"github.com/hyperhq/hypercli/pkg/discovery"
 	"github.com/docker/go-connections/tlsconfig"
 	"github.com/docker/libkv"
 	"github.com/docker/libkv/store"
 	"github.com/docker/libkv/store/consul"
 	"github.com/docker/libkv/store/etcd"
 	"github.com/docker/libkv/store/zookeeper"
+	"github.com/hyperhq/hypercli/pkg/discovery"
 )
 
 const (

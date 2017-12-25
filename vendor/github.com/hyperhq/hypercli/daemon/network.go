@@ -6,10 +6,10 @@ import (
 	"net"
 	"strings"
 
+	"github.com/docker/libnetwork"
+	"github.com/hyperhq/hyper-api/types/network"
 	derr "github.com/hyperhq/hypercli/errors"
 	"github.com/hyperhq/hypercli/runconfig"
-	"github.com/docker/engine-api/types/network"
-	"github.com/docker/libnetwork"
 )
 
 const (

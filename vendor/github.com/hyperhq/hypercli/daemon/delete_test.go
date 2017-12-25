@@ -5,9 +5,9 @@ import (
 	"os"
 	"testing"
 
+	"github.com/hyperhq/hyper-api/types"
+	containertypes "github.com/hyperhq/hyper-api/types/container"
 	"github.com/hyperhq/hypercli/container"
-	"github.com/docker/engine-api/types"
-	containertypes "github.com/docker/engine-api/types/container"
 )
 
 func TestContainerDoubleDelete(t *testing.T) {

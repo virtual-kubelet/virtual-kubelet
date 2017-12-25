@@ -7,11 +7,11 @@ import (
 	"strings"
 
 	"github.com/Sirupsen/logrus"
+	"github.com/hyperhq/hyper-api/types"
 	"github.com/hyperhq/hypercli/container"
 	derr "github.com/hyperhq/hypercli/errors"
 	"github.com/hyperhq/hypercli/layer"
 	volumestore "github.com/hyperhq/hypercli/volume/store"
-	"github.com/docker/engine-api/types"
 )
 
 // ContainerRm removes the container id from the filesystem. An error

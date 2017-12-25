@@ -27,8 +27,8 @@ func (s *DockerSuite) TestApiImagesLoad(c *check.C) {
 	defer printTestDuration(time.Now())
 
 	postData := map[string]interface{}{
-		"fromSrc":   "http://image-tarball.s3.amazonaws.com/test/public/helloworld.tar.gz",
-		"quiet": false,
+		"fromSrc": "http://image-tarball.s3.amazonaws.com/test/public/helloworld.tar.gz",
+		"quiet":   false,
 	}
 	//debugEndpoint = "/images/load"
 

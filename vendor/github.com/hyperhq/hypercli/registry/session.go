@@ -20,13 +20,13 @@ import (
 
 	"github.com/Sirupsen/logrus"
 	"github.com/docker/distribution/registry/api/errcode"
+	"github.com/hyperhq/hyper-api/types"
+	registrytypes "github.com/hyperhq/hyper-api/types/registry"
 	"github.com/hyperhq/hypercli/pkg/httputils"
 	"github.com/hyperhq/hypercli/pkg/ioutils"
 	"github.com/hyperhq/hypercli/pkg/stringid"
 	"github.com/hyperhq/hypercli/pkg/tarsum"
 	"github.com/hyperhq/hypercli/reference"
-	"github.com/docker/engine-api/types"
-	registrytypes "github.com/docker/engine-api/types/registry"
 )
 
 var (
