@@ -1,0 +1,25 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: iis
+spec:
+  containers:
+  - image: microsoft/iis
+    imagePullPolicy: Always
+    name: iis
+    resources:
+      requests:
+        memory: 4G
+        cpu: 2
+    ports:
+    - containerPort: 80
+      name: http
+      protocol: TCP
+    - containerPort: 443
+      name: https
+  dnsPolicy: Default
+  nodeName: virtual-kubelet-aciconnector-win
+  automountServiceAccountToken: false
+  tolerations:
+  - key: azure.com/aci
+    effect: NoSchedule
