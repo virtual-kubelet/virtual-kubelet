@@ -333,8 +333,10 @@ func (p *HyperProvider) ensureImage(image string) error {
 
 	// Resolve the Repository name from fqn to RepositoryInfo
 	repoInfo, err := registry.ParseRepositoryInfo(distributionRef)
-
-	authConfig := p.resolveAuthConfig(p.configFile.AuthConfigs, repoInfo.Index)
+	var authConfig types.AuthConfig
+	if p.configFile != nil {
+		authConfig = p.resolveAuthConfig(p.configFile.AuthConfigs, repoInfo.Index)
+	}
 	encodedAuth, err := p.encodeAuthToBase64(authConfig)
 	if err != nil {
 		return err
