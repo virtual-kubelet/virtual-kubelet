@@ -72,7 +72,7 @@ func init() {
 	// will be global for your application.
 	//RootCmd.PersistentFlags().StringVar(&kubeletConfig, "config", "", "config file (default is $HOME/.virtual-kubelet.yaml)")
 	RootCmd.PersistentFlags().StringVar(&kubeConfig, "kubeconfig", "", "config file (default is $HOME/.kube/config)")
-	RootCmd.PersistentFlags().StringVar(&kubeNamespace, "namespace", "", "kuberentes namespace (default is 'all')")
+	RootCmd.PersistentFlags().StringVar(&kubeNamespace, "namespace", "", "kubernetes namespace (default is 'all')")
 	RootCmd.PersistentFlags().StringVar(&nodeName, "nodename", "virtual-kubelet", "kubernetes node name")
 	RootCmd.PersistentFlags().StringVar(&operatingSystem, "os", "Linux", "Operating System (Linux/Windows)")
 	RootCmd.PersistentFlags().StringVar(&provider, "provider", "", "cloud provider")
