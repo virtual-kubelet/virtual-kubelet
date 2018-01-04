@@ -1,0 +1,5 @@
+#!/bin/bash
+# Generate cert and key for chart
+openssl req -newkey rsa:4096 -new -nodes -x509 -days 3650 -keyout key.pem -out cert.pem -subj "/C=US/ST=CA/L=virtualkubelet/O=virtualkubelet/OU=virtualkubelet/CN=virtualkubelet"
+cert=$(base64 cert.pem)
+key=$(base64 key.pem)

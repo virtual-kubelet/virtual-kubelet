@@ -7,8 +7,8 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"net/http"
 	"os"
-	"strings"
 	"time"
 
 	"github.com/virtual-kubelet/virtual-kubelet/manager"
@@ -31,6 +31,8 @@ type ACIProvider struct {
 	cpu             string
 	memory          string
 	pods            string
+	internalIP      string
+	daemonEndpointPort  int32
 }
 
 // AuthConfig is the secret returned from an ImageRegistryCredential
@@ -45,7 +47,7 @@ type AuthConfig struct {
 }
 
 // NewACIProvider creates a new ACIProvider.
-func NewACIProvider(config string, rm *manager.ResourceManager, nodeName, operatingSystem string) (*ACIProvider, error) {
+func NewACIProvider(config string, rm *manager.ResourceManager, nodeName, operatingSystem string, internalIP string, daemonEndpointPort int32) (*ACIProvider, error) {
 	var p ACIProvider
 	var err error
 
@@ -89,6 +91,8 @@ func NewACIProvider(config string, rm *manager.ResourceManager, nodeName, operat
 
 	p.operatingSystem = operatingSystem
 	p.nodeName = nodeName
+	p.internalIP = internalIP
+	p.daemonEndpointPort = daemonEndpointPort
 
 	return &p, err
 }
@@ -177,10 +181,9 @@ func (p *ACIProvider) DeletePod(pod *v1.Pod) error {
 // GetPod returns a pod by name that is running inside ACI
 // returns nil if a pod by that name is not found.
 func (p *ACIProvider) GetPod(namespace, name string) (*v1.Pod, error) {
-	cg, err := p.aciClient.GetContainerGroup(p.resourceGroup, fmt.Sprintf("%s-%s", namespace, name))
+	cg, err, status := p.aciClient.GetContainerGroup(p.resourceGroup, fmt.Sprintf("%s-%s", namespace, name))
 	if err != nil {
-		// Trap error for 404 and return gracefully
-		if strings.Contains(err.Error(), "ResourceNotFound") {
+		if *status == http.StatusNotFound {
 			return nil, nil
 		}
 		return nil, err
@@ -191,6 +194,33 @@ func (p *ACIProvider) GetPod(namespace, name string) (*v1.Pod, error) {
 	}
 
 	return containerGroupToPod(cg)
+}
+
+// GetPodLogs returns the logs of a pod by name that is running inside ACI.
+func (p *ACIProvider) GetContainerLogs(namespace, podName, containerName string, tail int) (string, error) {
+	logContent := ""
+	cg, err, _ := p.aciClient.GetContainerGroup(p.resourceGroup, fmt.Sprintf("%s-%s", namespace, podName))
+	if err != nil {
+		return logContent, err
+	}
+
+	if cg.Tags["NodeName"] != p.nodeName {
+		return logContent, nil
+	}
+	// get logs from cg
+	retry := 10
+	for i := 0; i < retry; i++ {
+		cLogs, err := p.aciClient.GetContainerLogs(p.resourceGroup, cg.Name, containerName, tail)
+		if err != nil {
+			log.Println(err)
+			time.Sleep(5000 * time.Millisecond)
+		} else {
+			logContent = cLogs.Content
+			break
+		}
+	}
+
+	return logContent, err
 }
 
 // GetPodStatus returns the status of a pod by name that is running inside ACI
@@ -286,6 +316,28 @@ func (p *ACIProvider) NodeConditions() []v1.NodeCondition {
 			LastTransitionTime: metav1.Now(),
 			Reason:             "RouteCreated",
 			Message:            "RouteController created a route",
+		},
+	}
+}
+
+// NodeAddresses returns a list of addresses for the node status
+// within Kuberentes.
+func (p *ACIProvider) NodeAddresses() []v1.NodeAddress {
+	// TODO: Make these dynamic and augment with custom ACI specific conditions of interest
+	return []v1.NodeAddress{
+		{
+			Type:    "InternalIP",
+			Address: p.internalIP,
+		},
+	}
+}
+
+// NodeDaemonEndpoints returns NodeDaemonEndpoints for the node status
+// within Kuberentes.
+func (p *ACIProvider) NodeDaemonEndpoints() *v1.NodeDaemonEndpoints {
+	return &v1.NodeDaemonEndpoints{
+		KubeletEndpoint: v1.DaemonEndpoint{
+			Port: p.daemonEndpointPort,
 		},
 	}
 }

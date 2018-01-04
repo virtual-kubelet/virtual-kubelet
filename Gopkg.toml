@@ -48,3 +48,7 @@
 [[constraint]]
   name = "github.com/xeipuuv/gojsonschema"
   revision = "0c8571ac0ce161a5feb57375a9cdf148c98c0f70"
+
+[[constraint]]
+  name = "github.com/gorilla/mux"
+  version = "1.6.0"

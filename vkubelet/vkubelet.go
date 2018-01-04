@@ -1,11 +1,12 @@
 package vkubelet
 
 import (
-	"strings"
 	"fmt"
 	"log"
 	"os"
 	"os/signal"
+	"strconv"
+	"strings"
 	"syscall"
 	"time"
 
@@ -64,7 +65,14 @@ func New(nodeName, operatingSystem, namespace, kubeConfig, taint, provider, prov
 	var p Provider
 	switch provider {
 	case "azure":
-		p, err = azure.NewACIProvider(providerConfig, rm, nodeName, operatingSystem)
+		internalIP := os.Getenv("VKUBELET_POD_IP")
+		daemonEndpointPortEnv := os.Getenv("KUBELET_PORT")
+		i64value, err := strconv.ParseInt(daemonEndpointPortEnv, 10, 32)
+		daemonEndpointPort := int32(i64value)
+		if err != nil {
+			return nil, err
+		}
+		p, err = azure.NewACIProvider(providerConfig, rm, nodeName, operatingSystem, internalIP, daemonEndpointPort)
 		if err != nil {
 			return nil, err
 		}
@@ -89,6 +97,8 @@ func New(nodeName, operatingSystem, namespace, kubeConfig, taint, provider, prov
 	if err = s.registerNode(); err != nil {
 		return s, err
 	}
+
+	go ApiserverStart(p)
 
 	tick := time.Tick(5 * time.Second)
 	go func() {
@@ -136,6 +146,8 @@ func (s *Server) registerNode() error {
 			Capacity:    s.provider.Capacity(),
 			Allocatable: s.provider.Capacity(),
 			Conditions:  s.provider.NodeConditions(),
+			Addresses:   s.provider.NodeAddresses(),
+			DaemonEndpoints: *s.provider.NodeDaemonEndpoints(),
 		},
 	}
 
