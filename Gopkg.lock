@@ -2,6 +2,12 @@
 
 
 [[projects]]
+  branch = "master"
+  name = "github.com/Azure/go-ansiterm"
+  packages = [".","winterm"]
+  revision = "d6e3b3328b783f23731bc4d058875b0371ff8109"
+
+[[projects]]
   name = "github.com/Azure/go-autorest"
   packages = ["autorest/adal","autorest/date"]
   revision = "c67b24a8e30d876542a85022ebbdecf0e5a935e8"
@@ -63,7 +69,7 @@
 
 [[projects]]
   name = "github.com/docker/distribution"
-  packages = ["digest","reference"]
+  packages = [".","context","digest","reference","registry/api/errcode","registry/api/v2","registry/client","registry/client/auth/challenge","registry/client/transport","registry/storage/cache","registry/storage/cache/memory","uuid"]
   revision = "48294d928ced5dd9b378f7fd7c6f5da3ff3f2c89"
   version = "v2.6.2"
 
@@ -182,6 +188,18 @@
   version = "v0.1.0"
 
 [[projects]]
+  name = "github.com/gorilla/context"
+  packages = ["."]
+  revision = "1ea25387ff6f684839d82767c1733ff4d4d15d0a"
+  version = "v1.1"
+
+[[projects]]
+  name = "github.com/gorilla/mux"
+  packages = ["."]
+  revision = "7f08801859139f86dfafd1c296e2cba9a80d292e"
+  version = "v1.6.0"
+
+[[projects]]
   branch = "master"
   name = "github.com/gregjones/httpcache"
   packages = [".","diskcache"]
@@ -206,9 +224,8 @@
 
 [[projects]]
   name = "github.com/hyperhq/hypercli"
-  packages = ["pkg/urlutil"]
-  revision = "860cca29de31268664bf04bd7a87c3ca2c1d675e"
-  version = "v1.10.16"
+  packages = ["cliconfig","daemon/graphdriver","image","image/v1","layer","opts","pkg/archive","pkg/chrootarchive","pkg/fileutils","pkg/homedir","pkg/httputils","pkg/idtools","pkg/ioutils","pkg/jsonlog","pkg/jsonmessage","pkg/longpath","pkg/mflag","pkg/plugins","pkg/pools","pkg/promise","pkg/random","pkg/reexec","pkg/stringid","pkg/system","pkg/tarsum","pkg/term","pkg/term/windows","pkg/urlutil","pkg/version","reference","registry"]
+  revision = "3e4e4fa373cbf8672bded67688b4821cd30b37f9"
 
 [[projects]]
   name = "github.com/hyperhq/libcompose"
@@ -262,6 +279,12 @@
   name = "github.com/mitchellh/mapstructure"
   packages = ["."]
   revision = "06020f85339e21b2478f756a78e295255ffa4d6a"
+
+[[projects]]
+  name = "github.com/opencontainers/runc"
+  packages = ["libcontainer/user"]
+  revision = "baf6536d6259209c3edfa2b22237af82942d3dfa"
+  version = "v0.1.1"
 
 [[projects]]
   name = "github.com/pelletier/go-toml"
@@ -322,6 +345,12 @@
   packages = ["."]
   revision = "25b30aa063fc18e48662b86996252eabdcf2f0c7"
   version = "v1.0.0"
+
+[[projects]]
+  name = "github.com/vbatts/tar-split"
+  packages = ["archive/tar","tar/asm","tar/storage"]
+  revision = "38ec4ddb06dedbea0a895c4848b248eb38af221b"
+  version = "v0.10.2"
 
 [[projects]]
   branch = "master"
@@ -403,6 +432,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "db2f3e11453c573c43ded9e17f9e23e76111609d4936482d19a7d18930e1dcce"
+  inputs-digest = "dfaa92ef7d6d4569afb59e36336ce6e33207abb5b926be8d694bf653e05a22b8"
   solver-name = "gps-cdcl"
   solver-version = 1
