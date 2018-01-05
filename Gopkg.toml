@@ -52,3 +52,7 @@
 [[constraint]]
   name = "github.com/gorilla/mux"
   version = "1.6.0"
+
+[[constraint]]
+  name = "github.com/hyperhq/hypercli"
+  revision = "3e4e4fa373cbf8672bded67688b4821cd30b37f9"
