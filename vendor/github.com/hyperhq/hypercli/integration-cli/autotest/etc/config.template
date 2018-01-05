@@ -1,0 +1,17 @@
+TARGET_REGION="us-west-1"
+BRANCH="master"
+TEST_CASE_REG="TestCli.*Basic"
+TIMEOUT="90m"
+
+# hyper credentrial for test
+ACCESS_KEY=""
+SECRET_KEY=""
+
+################################
+# slack token
+#   https://api.slack.com/methods/workspace-tokens
+#   https://api.slack.com/docs/token-types
+#   https://api.slack.com/custom-integrations/legacy-tokens
+################################
+SLACK_TOKEN="xoxp-xxxxxxxxxxx"
+SLACK_CHANNEL_ID="C7AB6M1NJ"     #hykins-monitor
