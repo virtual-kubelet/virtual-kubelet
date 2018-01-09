@@ -56,11 +56,11 @@ a `virtual-kubelet` node.
 * Resource limits (Mem and Cores)
 * Environment variables
 * Public IPs
+* kubectl logs
 
 ## Current Limitations
 
 * kubectl exec
-* kubectl logs
 * Metrics
 
 ## Command-Line Usage
