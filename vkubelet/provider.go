@@ -39,15 +39,15 @@ type Provider interface {
 	Capacity() v1.ResourceList
 
 	// NodeConditions returns a list of conditions (Ready, OutOfDisk, etc), which is polled periodically to update the node status
-	// within Kuberentes.
+	// within Kubernetes.
 	NodeConditions() []v1.NodeCondition
 
 	// NodeAddresses returns a list of addresses for the node status
-	// within Kuberentes.
+	// within Kubernetes.
 	NodeAddresses() []v1.NodeAddress
 
 	// NodeDaemonEndpoints returns NodeDaemonEndpoints for the node status
-	// within Kuberentes.
+	// within Kubernetes.
 	NodeDaemonEndpoints() *v1.NodeDaemonEndpoints
 
 	// OperatingSystem returns the operating system the provider is for.

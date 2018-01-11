@@ -273,7 +273,7 @@ func (p *ACIProvider) Capacity() v1.ResourceList {
 }
 
 // NodeConditions returns a list of conditions (Ready, OutOfDisk, etc), for updates to the node status
-// within Kuberentes.
+// within Kubernetes.
 func (p *ACIProvider) NodeConditions() []v1.NodeCondition {
 	// TODO: Make these dynamic and augment with custom ACI specific conditions of interest
 	return []v1.NodeCondition{
@@ -321,7 +321,7 @@ func (p *ACIProvider) NodeConditions() []v1.NodeCondition {
 }
 
 // NodeAddresses returns a list of addresses for the node status
-// within Kuberentes.
+// within Kubernetes.
 func (p *ACIProvider) NodeAddresses() []v1.NodeAddress {
 	// TODO: Make these dynamic and augment with custom ACI specific conditions of interest
 	return []v1.NodeAddress{
@@ -333,7 +333,7 @@ func (p *ACIProvider) NodeAddresses() []v1.NodeAddress {
 }
 
 // NodeDaemonEndpoints returns NodeDaemonEndpoints for the node status
-// within Kuberentes.
+// within Kubernetes.
 func (p *ACIProvider) NodeDaemonEndpoints() *v1.NodeDaemonEndpoints {
 	return &v1.NodeDaemonEndpoints{
 		KubeletEndpoint: v1.DaemonEndpoint{
