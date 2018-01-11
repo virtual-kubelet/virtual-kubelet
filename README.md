@@ -81,7 +81,7 @@ Available Commands:
 Flags:
   -h, --help                     help for virtual-kubelet
       --kubeconfig string        config file (default is $HOME/.kube/config)
-      --namespace string         kuberentes namespace (default is 'all')
+      --namespace string         kubernetes namespace (default is 'all')
       --nodename string          kubernetes node name (default "virtual-kubelet")
       --os string                Operating System (Linux/Windows) (default "Linux")
       --provider string          cloud provider
@@ -184,7 +184,7 @@ type Provider interface {
 	Capacity() v1.ResourceList
 
 	// NodeConditions returns a list of conditions (Ready, OutOfDisk, etc), which is polled periodically to update the node status
-	// within Kuberentes.
+	// within Kubernetes.
 	NodeConditions() []v1.NodeCondition
 
 	// OperatingSystem returns the operating system the provider is for.

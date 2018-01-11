@@ -368,7 +368,7 @@ func (p *HyperProvider) Capacity() v1.ResourceList {
 }
 
 // NodeConditions returns a list of conditions (Ready, OutOfDisk, etc), for updates to the node status
-// within Kuberentes.
+// within Kubernetes.
 func (p *HyperProvider) NodeConditions() []v1.NodeCondition {
 	// TODO: Make these dynamic and augment with custom hyper.sh specific conditions of interest
 	return []v1.NodeCondition{
@@ -417,13 +417,13 @@ func (p *HyperProvider) NodeConditions() []v1.NodeCondition {
 }
 
 // NodeAddresses returns a list of addresses for the node status
-// within Kuberentes.
+// within Kubernetes.
 func (p *HyperProvider) NodeAddresses() []v1.NodeAddress {
 	return nil
 }
 
 // NodeDaemonEndpoints returns NodeDaemonEndpoints for the node status
-// within Kuberentes.
+// within Kubernetes.
 func (p *HyperProvider) NodeDaemonEndpoints() *v1.NodeDaemonEndpoints {
 	return nil
 }

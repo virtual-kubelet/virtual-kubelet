@@ -176,7 +176,7 @@ func (p *BrokerProvider) NodeConditions() []v1.NodeCondition {
 }
 
 // NodeAddresses returns a list of addresses for the node status
-// within Kuberentes.
+// within Kubernetes.
 func (p *BrokerProvider) NodeAddresses() []v1.NodeAddress {
 	var nodeAddresses []v1.NodeAddress
 	err := p.doGetRequest("/nodeAddresses", &nodeAddresses)
@@ -190,7 +190,7 @@ func (p *BrokerProvider) NodeAddresses() []v1.NodeAddress {
 }
 
 // NodeDaemonEndpoints returns NodeDaemonEndpoints for the node status
-// within Kuberentes.
+// within Kubernetes.
 func (p *BrokerProvider) NodeDaemonEndpoints() *v1.NodeDaemonEndpoints {
 	return &v1.NodeDaemonEndpoints{
 		KubeletEndpoint: v1.DaemonEndpoint{
