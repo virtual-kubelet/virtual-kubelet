@@ -56,3 +56,7 @@
 [[constraint]]
   name = "github.com/hyperhq/hypercli"
   revision = "3e4e4fa373cbf8672bded67688b4821cd30b37f9"
+
+[[constraint]]
+  branch = "master"
+  name = "golang.org/x/oauth2"

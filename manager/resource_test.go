@@ -9,6 +9,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
+	_ "k8s.io/client-go/plugin/pkg/client/auth/oidc"
 )
 
 var (
@@ -25,11 +26,11 @@ func init() {
 	kubeConfig := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(loadingRules, configOverrides)
 	config, err := kubeConfig.ClientConfig()
 	if err != nil {
-		log.Fatal("unable to create client config")
+		log.Fatalf("unable to create client config: %s\n", err.Error())
 	}
 	fakeClient, err = kubernetes.NewForConfig(config)
 	if err != nil {
-		log.Fatal("unable to create new clientset")
+		log.Fatalf("unable to create new clientset: %s\n", err.Error())
 	}
 }
 

@@ -25,3 +25,6 @@ credentials.json
 
 # VS Code files
 .vscode/
+
+# Idea/GoLand files
+.idea/

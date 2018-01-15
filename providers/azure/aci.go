@@ -354,6 +354,13 @@ func (p *ACIProvider) OperatingSystem() string {
 	return p.operatingSystem
 }
 
+// Stop is called on shutdown, but should not stop any pods assigned to this node
+func (p *ACIProvider) Stop() {
+	// Stop is a noop for ACIProvider as there's no cleanup to be done
+	return
+}
+
+
 func (p *ACIProvider) getImagePullSecrets(pod *v1.Pod) ([]aci.ImageRegistryCredential, error) {
 	ips := make([]aci.ImageRegistryCredential, 0, len(pod.Spec.ImagePullSecrets))
 	for _, ref := range pod.Spec.ImagePullSecrets {

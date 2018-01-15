@@ -15,6 +15,7 @@ import (
 	"github.com/virtual-kubelet/virtual-kubelet/providers/hypersh"
 	"github.com/virtual-kubelet/virtual-kubelet/providers/mock"
 	"github.com/virtual-kubelet/virtual-kubelet/providers/web"
+	"github.com/virtual-kubelet/virtual-kubelet/providers/exec"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -23,6 +24,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
+	_ "k8s.io/client-go/plugin/pkg/client/auth/oidc"
 )
 
 // Server masquarades itself as a kubelet and allows for the virtual node to be backed by non-vm/node providers.
@@ -87,6 +89,8 @@ func New(nodeName, operatingSystem, namespace, kubeConfig, taint, provider, prov
 		}
 	case "web":
 		p, err = web.NewBrokerProvider(nodeName, operatingSystem, daemonEndpointPort)
+	case "exec":
+		p, err = exec.NewExecProvider(providerConfig, rm, nodeName, operatingSystem, daemonEndpointPort)
 		if err != nil {
 			return nil, err
 		}
@@ -224,6 +228,9 @@ func (s *Server) Run() error {
 func (s *Server) Stop() {
 	if s.podWatcher != nil {
 		s.podWatcher.Stop()
+	}
+	if s.provider != nil {
+		s.provider.Stop()
 	}
 }
 

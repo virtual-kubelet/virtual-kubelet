@@ -21,6 +21,8 @@ import (
 	"k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"github.com/hyperhq/hyper-api/types/container"
+	"github.com/docker/go-connections/nat"
 )
 
 var host = "tcp://*.hyper.sh:443"
@@ -432,4 +434,61 @@ func (p *HyperProvider) NodeDaemonEndpoints() *v1.NodeDaemonEndpoints {
 // This is a noop to default to Linux for now.
 func (p *HyperProvider) OperatingSystem() string {
 	return providers.OperatingSystemLinux
+}
+
+// Stop is called on shutdown, but should not stop any pods assigned to this node
+func (p *HyperProvider) Stop() {
+	// Stop is a noop for HyperProvider as there's no cleanup to be done
+	return
+}
+
+func getContainers(pod *v1.Pod) ([]container.Config, []container.HostConfig, error) {
+	containers := make([]container.Config, len(pod.Spec.Containers))
+	hostConfigs := make([]container.HostConfig, len(pod.Spec.Containers))
+	for x, ctr := range pod.Spec.Containers {
+		// Do container.Config
+		var c container.Config
+		c.Image = ctr.Image
+		c.Cmd = ctr.Command
+		ports := map[nat.Port]struct{}{}
+		portBindings := nat.PortMap{}
+		for _, p := range ctr.Ports {
+			port, err := nat.NewPort(string(p.Protocol), fmt.Sprintf("%d", p.HostPort))
+			if err != nil {
+				return nil, nil, fmt.Errorf("creating new port in container conversion failed: %v", err)
+			}
+			ports[port] = struct{}{}
+
+			portBindings[port] = []nat.PortBinding{
+				{
+					HostPort: fmt.Sprintf("%d", p.HostPort),
+				},
+			}
+		}
+		c.ExposedPorts = ports
+
+		// TODO: do volumes
+
+		envs := make([]string, len(ctr.Env))
+		for z, e := range ctr.Env {
+			envs[z] = fmt.Sprintf("%s=%s", e.Name, e.Value)
+		}
+		c.Env = envs
+
+		// Do container.HostConfig
+		var hc container.HostConfig
+		cpuLimit := ctr.Resources.Limits.Cpu().Value()
+		memoryLimit := ctr.Resources.Limits.Memory().Value()
+
+		hc.Resources = container.Resources{
+			CPUShares: cpuLimit,
+			Memory:    memoryLimit,
+		}
+
+		hc.PortBindings = portBindings
+
+		containers[x] = c
+		hostConfigs[x] = hc
+	}
+	return containers, hostConfigs, nil
 }

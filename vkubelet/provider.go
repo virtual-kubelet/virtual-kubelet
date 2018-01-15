@@ -4,6 +4,7 @@ import (
 	"github.com/virtual-kubelet/virtual-kubelet/providers/azure"
 	"github.com/virtual-kubelet/virtual-kubelet/providers/hypersh"
 	"github.com/virtual-kubelet/virtual-kubelet/providers/web"
+	"github.com/virtual-kubelet/virtual-kubelet/providers/exec"
 	"k8s.io/api/core/v1"
 )
 
@@ -11,6 +12,7 @@ import (
 var _ Provider = (*azure.ACIProvider)(nil)
 var _ Provider = (*hypersh.HyperProvider)(nil)
 var _ Provider = (*web.BrokerProvider)(nil)
+var _ Provider = (*exec.ExecProvider)(nil)
 
 // Provider contains the methods required to implement a virtual-kubelet provider.
 type Provider interface {
@@ -52,4 +54,7 @@ type Provider interface {
 
 	// OperatingSystem returns the operating system the provider is for.
 	OperatingSystem() string
+
+	// Stop is called on shutdown, but should not stop any pods assigned to this node
+	Stop()
 }
