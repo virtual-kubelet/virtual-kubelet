@@ -3,6 +3,6 @@
 Region = "westus"
 ResourceGroup = "virtual-kubeletrg"
 OperatingSystem = "Linux"
-CPU = 100
-Memory = 100Gi
-Pods = 50
+CPU = "100"
+Memory = "100Gi"
+Pods = "50"
