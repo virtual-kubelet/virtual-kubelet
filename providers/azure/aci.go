@@ -9,6 +9,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/virtual-kubelet/virtual-kubelet/manager"
@@ -20,19 +21,22 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 )
 
+// The service account secret mount path.
+const serviceAccountSecretMountPath = "/var/run/secrets/kubernetes.io/serviceaccount"
+
 // ACIProvider implements the virtual-kubelet provider interface and communicates with Azure's ACI APIs.
 type ACIProvider struct {
-	aciClient       *aci.Client
-	resourceManager *manager.ResourceManager
-	resourceGroup   string
-	region          string
-	nodeName        string
-	operatingSystem string
-	cpu             string
-	memory          string
-	pods            string
-	internalIP      string
-	daemonEndpointPort  int32
+	aciClient          *aci.Client
+	resourceManager    *manager.ResourceManager
+	resourceGroup      string
+	region             string
+	nodeName           string
+	operatingSystem    string
+	cpu                string
+	memory             string
+	pods               string
+	internalIP         string
+	daemonEndpointPort int32
 }
 
 // AuthConfig is the secret returned from an ImageRegistryCredential
@@ -125,6 +129,8 @@ func (p *ACIProvider) CreatePod(pod *v1.Pod) error {
 	containerGroup.ContainerGroupProperties.Volumes = volumes
 	containerGroup.ContainerGroupProperties.ImageRegistryCredentials = creds
 
+	filterServiceAccountSecretVolume(p.operatingSystem, &containerGroup)
+
 	// create ipaddress if containerPort is used
 	count := 0
 	for _, container := range containers {
@@ -196,7 +202,7 @@ func (p *ACIProvider) GetPod(namespace, name string) (*v1.Pod, error) {
 	return containerGroupToPod(cg)
 }
 
-// GetPodLogs returns the logs of a pod by name that is running inside ACI.
+// GetContainerLogs returns the logs of a pod by name that is running inside ACI.
 func (p *ACIProvider) GetContainerLogs(namespace, podName, containerName string, tail int) (string, error) {
 	logContent := ""
 	cg, err, _ := p.aciClient.GetContainerGroup(p.resourceGroup, fmt.Sprintf("%s-%s", namespace, podName))
@@ -711,5 +717,39 @@ func aciContainerStateToContainerState(cs aci.ContainerState) v1.ContainerState 
 			Reason:  cs.State,
 			Message: cs.DetailStatus,
 		},
+	}
+}
+
+// Filters service account secret volumes for Windows.
+func filterServiceAccountSecretVolume(osType string, containerGroup *aci.ContainerGroup) {
+	if strings.EqualFold(osType, "Windows") {
+		serviceAccountSecretVolumeName := ""
+
+		for index, container := range containerGroup.ContainerGroupProperties.Containers {
+			volumeMounts := make([]aci.VolumeMount, 0, len(container.VolumeMounts))
+			for _, volumeMount := range container.VolumeMounts {
+				if !strings.EqualFold(serviceAccountSecretMountPath, volumeMount.MountPath) {
+					volumeMounts = append(volumeMounts, volumeMount)
+				} else {
+					serviceAccountSecretVolumeName = volumeMount.Name
+				}
+			}
+			containerGroup.ContainerGroupProperties.Containers[index].VolumeMounts = volumeMounts
+		}
+
+		if serviceAccountSecretVolumeName == "" {
+			return
+		}
+
+		log.Printf("Ignoring secret volume '%v' for Windows", serviceAccountSecretVolumeName)
+
+		volumes := make([]aci.Volume, 0, len(containerGroup.ContainerGroupProperties.Volumes))
+		for _, volume := range containerGroup.ContainerGroupProperties.Volumes {
+			if !strings.EqualFold(serviceAccountSecretVolumeName, volume.Name) {
+				volumes = append(volumes, volume)
+			}
+		}
+
+		containerGroup.ContainerGroupProperties.Volumes = volumes
 	}
 }
