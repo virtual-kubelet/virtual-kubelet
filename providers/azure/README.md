@@ -21,37 +21,38 @@ To install the ACI connector for an AKS cluster, run the following  Azure CLI co
 - connector-name - the name given to the ACI connector.
 
 ```azurecli-interactive
-az aks install-connector --resource-group myResourceGroup --name myAKSCluster --connector-name myaciconnector 
+az aks install-connector --resource-group myResourceGroup --name myAKSCluster --connector-name myaciconnector
 ```
 
 Output:
 
 ```
-NAME:   myaciconnector
-LAST DEPLOYED: Tue Dec  5 21:12:33 2017
+NAME:   myaciconnector-linux
+LAST DEPLOYED: Thu Jan 18 13:58:05 2018
 NAMESPACE: default
 STATUS: DEPLOYED
 
 RESOURCES:
 ==> v1/Secret
-NAME                          TYPE    DATA  AGE
-myaciconnector-aci-connector  Opaque  4     1s
+NAME                                  TYPE    DATA  AGE
+myaciconnector-linux-virtual-kubelet  Opaque  1     0s
 
 ==> v1beta1/Deployment
-NAME                          DESIRED  CURRENT  UP-TO-DATE  AVAILABLE  AGE
-myaciconnector-aci-connector  1        1        1           0          1s
+NAME                                  DESIRED  CURRENT  UP-TO-DATE  AVAILABLE  AGE
+myaciconnector-linux-virtual-kubelet  1        1        1           0          0s
 
 ==> v1/Pod(related)
-NAME                                           READY  STATUS             RESTARTS  AGE
-myaciconnector-aci-connector-1218204046-cn81d  0/1    ContainerCreating  0         1s
+NAME                                                   READY  STATUS             RESTARTS  AGE
+myaciconnector-linux-virtual-kubelet-4187386653-t01x3  0/1    ContainerCreating  0         0s
 
 
 NOTES:
-The aci-connector is getting deployed on your cluster.
+The virtual kubelet is getting deployed on your cluster.
 
-To verify that aci-connector has started, run:
+To verify that virtual kubelet has started, run:
 
-  kubectl --namespace=default get pods -l "app=myaciconnector-aci-connector"
+  kubectl --namespace=default get pods -l "app=myaciconnector-linux-virtual-kubelet"
+
 ```
 
 ## Validate the ACI connector
@@ -65,11 +66,11 @@ kubectl get nodes
 Output:
 
 ```console
-NAME                       STATUS    ROLES     AGE       VERSION
-aci-connector              Ready     <none>    2m        v1.6.6
-aks-nodepool1-39289454-0   Ready     agent     22h       v1.7.7
-aks-nodepool1-39289454-1   Ready     agent     22h       v1.7.7
-aks-nodepool1-39289454-2   Ready     agent     22h       v1.7.7
+NAME                                        STATUS    ROLES     AGE       VERSION
+virtual-kubelet-myaciconnector-linux        Ready     <none>    2m        v1.8.3
+aks-nodepool1-39289454-0                    Ready     agent     22h       v1.7.7
+aks-nodepool1-39289454-1                    Ready     agent     22h       v1.7.7
+aks-nodepool1-39289454-2                    Ready     agent     22h       v1.7.7
 ```
 
 ## Schedule a pod in ACI
@@ -77,23 +78,31 @@ aks-nodepool1-39289454-2   Ready     agent     22h       v1.7.7
 Create a file named `aci-connector-test.yaml` and copy in the following YAML. Replace the `nodeName` value with the name given to the ACI connector.
 
 ```yaml
-apiVersion: apps/v1beta1
-kind: Deployment
+apiVersion: v1
+kind: Pod
 metadata:
-  name: aci-helloworld
+  name: helloworld
 spec:
-  replicas: 1
-  template:
-    metadata:
-      labels:
-        app: aci-helloworld
-    spec:
-      containers:
-      - name: aci-helloworld
-        image: microsoft/aci-helloworld
-        ports:
-        - containerPort: 80
-      nodeName: aci-connector
+  containers:
+  - image: microsoft/aci-helloworld
+    imagePullPolicy: Always
+    name: helloworld
+    resources:
+      requests:
+        memory: 1G
+        cpu: 1
+    ports:
+    - containerPort: 80
+      name: http
+      protocol: TCP
+    - containerPort: 443
+      name: https
+  dnsPolicy: ClusterFirst
+  nodeName: virtual-kubelet-myaciconnector-linux
+  tolerations:
+  - key: azure.com/aci
+    effect: NoSchedule
+
 ```
 
 Run the application with the [kubectl create][kubectl-create] command.
@@ -112,7 +121,8 @@ Notice that the `kube-aci-demo` pod is running on the `myACIConnector` node.
 
 ```console
 NAME                                            READY     STATUS    RESTARTS   AGE       IP             NODE
-aci-helloworld-2559879000-8vmjw                 1/1       Running   0          39s       52.179.3.180   aci-connector
+aci-helloworld-2559879000-8vmjw                 1/1       Running   0          39s       52.179.3.180   virtual-kubelet-myaciconnector-linux
+
 ```
 
 To validate that the container is running in an Azure Container Instance, use the [az container list][az-container-list] Azure CLI command.
@@ -126,7 +136,7 @@ Output:
 ```console
 Name                             ResourceGroup    ProvisioningState    Image                     IP:ports         CPU/Memory       OsType    Location
 -------------------------------  ---------------  -------------------  ------------------------  ---------------  ---------------  --------  ----------
-aci-helloworld-2559879000-8vmjw  myAKSCluster2    Succeeded            microsoft/aci-helloworld  52.179.3.180:80  1.0 core/1.5 gb  Linux     eastus
+aci-helloworld-2559879000-8vmjw  myResourceGroup    Succeeded            microsoft/aci-helloworld  52.179.3.180:80  1.0 core/1.5 gb  Linux     eastus
 ```
 
 ## Remove the ACI connector
@@ -134,7 +144,7 @@ aci-helloworld-2559879000-8vmjw  myAKSCluster2    Succeeded            microsoft
 To remove the ACI connector, run the following command. Replace the argument values with the name of the connector, AKS cluster, and the AKS cluster resource group.
 
 ```azurecli-interactive
-az aks remove-connector --resource-group myResourceGroup --name myAKSCluster --connector-name myaciconnector 
+az aks remove-connector --resource-group myResourceGroup --name myAKSCluster --connector-name myaciconnector
 ```
 
 <!-- LINKS -->
