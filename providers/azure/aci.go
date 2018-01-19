@@ -748,7 +748,7 @@ func filterServiceAccountSecretVolume(osType string, containerGroup *aci.Contain
 
 		volumes := make([]aci.Volume, 0, len(containerGroup.ContainerGroupProperties.Volumes))
 		for _, volume := range containerGroup.ContainerGroupProperties.Volumes {
-			if !serviceAccountSecretVolumeName[volume.Name] {
+			if _, ok := serviceAccountSecretVolumeName[volume.Name]; !ok {
 				volumes = append(volumes, volume)
 			}
 		}
