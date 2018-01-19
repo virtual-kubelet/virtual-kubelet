@@ -138,7 +138,21 @@ Name                             ResourceGroup    ProvisioningState    Image    
 -------------------------------  ---------------  -------------------  ------------------------  ---------------  ---------------  --------  ----------
 aci-helloworld-2559879000-8vmjw  myResourceGroup    Succeeded            microsoft/aci-helloworld  52.179.3.180:80  1.0 core/1.5 gb  Linux     eastus
 ```
+## Updating the ACI Connector version
+We are currently running v1beta but to run v2beta follow these steps.
+Run the following command on the ACI Connector deployment.
 
+``` kubectl edit deploy myaciconnector-linux-virtual-kubelet ```
+
+Update the pod spec to add an env variable.
+``` 
+       - name: KUBELET_PORT
+         value: "10250"
+ ```
+Also, edit the image tag to represent the latest version. 
+ ```
+       image: microsoft/virtual-kubelet:0.2-beta
+```
 ## Remove the ACI connector
 
 To remove the ACI connector, run the following command. Replace the argument values with the name of the connector, AKS cluster, and the AKS cluster resource group.
