@@ -9,6 +9,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"reflect"
 	"strings"
 	"time"
 
@@ -720,10 +721,12 @@ func aciContainerStateToContainerState(cs aci.ContainerState) v1.ContainerState 
 	}
 }
 
-// Filters service account secret volumes for Windows.
+// Filters service account secret volume for Windows.
+// Service account secret volume gets automatically turned on if not specified otherwise.
+// ACI doesn't support secret volume for Windows, so we need to filter it.
 func filterServiceAccountSecretVolume(osType string, containerGroup *aci.ContainerGroup) {
 	if strings.EqualFold(osType, "Windows") {
-		serviceAccountSecretVolumeName := ""
+		serviceAccountSecretVolumeName := make(map[string]bool)
 
 		for index, container := range containerGroup.ContainerGroupProperties.Containers {
 			volumeMounts := make([]aci.VolumeMount, 0, len(container.VolumeMounts))
@@ -731,21 +734,21 @@ func filterServiceAccountSecretVolume(osType string, containerGroup *aci.Contain
 				if !strings.EqualFold(serviceAccountSecretMountPath, volumeMount.MountPath) {
 					volumeMounts = append(volumeMounts, volumeMount)
 				} else {
-					serviceAccountSecretVolumeName = volumeMount.Name
+					serviceAccountSecretVolumeName[volumeMount.Name] = true
 				}
 			}
 			containerGroup.ContainerGroupProperties.Containers[index].VolumeMounts = volumeMounts
 		}
 
-		if serviceAccountSecretVolumeName == "" {
+		if len(serviceAccountSecretVolumeName) == 0 {
 			return
 		}
 
-		log.Printf("Ignoring secret volume '%v' for Windows", serviceAccountSecretVolumeName)
+		log.Printf("Ignoring service account secret volumes '%v' for Windows", reflect.ValueOf(serviceAccountSecretVolumeName).MapKeys())
 
 		volumes := make([]aci.Volume, 0, len(containerGroup.ContainerGroupProperties.Volumes))
 		for _, volume := range containerGroup.ContainerGroupProperties.Volumes {
-			if !strings.EqualFold(serviceAccountSecretVolumeName, volume.Name) {
+			if !serviceAccountSecretVolumeName[volume.Name] {
 				volumes = append(volumes, volume)
 			}
 		}
