@@ -153,6 +153,8 @@ Also, edit the image tag to represent the latest version.
  ```
        image: microsoft/virtual-kubelet:0.2-beta
 ```
+This will deploy a new connector but be aware that the ACI pods deployed on your previous connector will be deleted. 
+
 ## Remove the ACI connector
 
 To remove the ACI connector, run the following command. Replace the argument values with the name of the connector, AKS cluster, and the AKS cluster resource group.
