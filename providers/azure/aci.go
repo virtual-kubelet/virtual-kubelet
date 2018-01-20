@@ -471,10 +471,7 @@ func (p *ACIProvider) getVolumes(pod *v1.Pod) ([]aci.Volume, error) {
 		if v.EmptyDir != nil {
 			volumes = append(volumes, aci.Volume{
 				Name: v.Name,
-				EmptyDir: map[string]interface{}{
-					"medium":    v.EmptyDir.Medium,
-					"sizeLimit": v.EmptyDir.SizeLimit,
-				},
+				EmptyDir: map[string]interface{}{},
 			})
 			continue
 		}
