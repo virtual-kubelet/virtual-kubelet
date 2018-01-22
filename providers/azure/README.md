@@ -151,7 +151,7 @@ Update the pod spec to add an env variable.
  ```
 Also, edit the image tag to represent the latest version. 
  ```
-       image: microsoft/virtual-kubelet:0.2-beta
+       image: microsoft/virtual-kubelet:0.2-beta-3
 ```
 This will deploy a new connector but be aware that the ACI pods deployed on your previous connector will be deleted. 
 
