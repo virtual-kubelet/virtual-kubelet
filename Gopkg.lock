@@ -44,6 +44,12 @@
   version = "v1.0.3"
 
 [[projects]]
+  name = "github.com/cenkalti/backoff"
+  packages = ["."]
+  revision = "61153c768f31ee5f130071d08fc82b85208528de"
+  version = "v1.1.0"
+
+[[projects]]
   branch = "master"
   name = "github.com/cloudfoundry-incubator/candiedyaml"
   packages = ["."]
@@ -432,6 +438,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "dfaa92ef7d6d4569afb59e36336ce6e33207abb5b926be8d694bf653e05a22b8"
+  inputs-digest = "febdb92c3131da3213797c6f20b297c751e9bddf5938064989494a21c3017333"
   solver-name = "gps-cdcl"
   solver-version = 1
