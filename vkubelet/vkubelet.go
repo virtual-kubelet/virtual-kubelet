@@ -64,6 +64,9 @@ func New(nodeName, operatingSystem, namespace, kubeConfig, taint, provider, prov
 	rm := manager.NewResourceManager(clientset)
 
 	daemonEndpointPortEnv := os.Getenv("KUBELET_PORT")
+	if daemonEndpointPortEnv == "" {
+		daemonEndpointPortEnv = "10250"
+	}
 	i64value, err := strconv.ParseInt(daemonEndpointPortEnv, 10, 32)
 	daemonEndpointPort := int32(i64value)
 
