@@ -1,6 +1,6 @@
 image:
   repository: microsoft/virtual-kubelet
-  tag: 0.2-beta-3
+  tag: latest
   pullPolicy: Always
 env:
   azureClientId: 
