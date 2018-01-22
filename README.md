@@ -3,7 +3,7 @@
 Virtual Kubelet is an open source [Kubernetes kubelet](https://kubernetes.io/docs/reference/generated/kubelet/) implementation that masquerades as a kubelet for the purposes of connecting Kubernetes to other APIs. This allows the nodes to be backed by other services like ACI, Hyper.sh, AWS, etc.  This connector features a pluggable architecture and direct use of Kubernetes primitives, making it much easier to build on.
 
 We invite the Kubernetes ecosystem to join us in empowering developers to build
-upon our base.
+upon our base. Join our slack channel named, wg-virtual-kubelet, within the [Kubernetes slack group](https://kubernetes.slack.com/).
 
 Please note this software is experimental and should not be used for anything
 resembling a production workload.
