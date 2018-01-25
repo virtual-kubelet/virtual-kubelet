@@ -13,6 +13,7 @@ import (
 	"github.com/virtual-kubelet/virtual-kubelet/manager"
 	"github.com/virtual-kubelet/virtual-kubelet/providers/azure"
 	"github.com/virtual-kubelet/virtual-kubelet/providers/hypersh"
+	"github.com/virtual-kubelet/virtual-kubelet/providers/mock"
 	"github.com/virtual-kubelet/virtual-kubelet/providers/web"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -88,6 +89,11 @@ func New(nodeName, operatingSystem, namespace, kubeConfig, taint, provider, prov
 		}
 	case "web":
 		p, err = web.NewBrokerProvider(nodeName, operatingSystem, daemonEndpointPort)
+		if err != nil {
+			return nil, err
+		}
+	case "mock":
+		p, err = mock.NewMockProvider(nodeName, operatingSystem, daemonEndpointPort)
 		if err != nil {
 			return nil, err
 		}
