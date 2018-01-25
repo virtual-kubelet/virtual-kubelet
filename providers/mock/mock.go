@@ -80,6 +80,20 @@ func (p *MockProvider) GetPodStatus(namespace, name string) (*v1.PodStatus, erro
 		HostIP:    "1.2.3.4",
 		PodIP:     "5.6.7.8",
 		StartTime: &now,
+		Conditions: []v1.PodCondition{
+			{
+				Type:   v1.PodInitialized,
+				Status: v1.ConditionTrue,
+			},
+			{
+				Type:   v1.PodReady,
+				Status: v1.ConditionTrue,
+			},
+			{
+				Type:   v1.PodScheduled,
+				Status: v1.ConditionTrue,
+			},
+		},
 	}
 
 	pod, err := p.GetPod(namespace, name)
