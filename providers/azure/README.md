@@ -144,14 +144,10 @@ Run the following command on the ACI Connector deployment.
 
 ``` kubectl edit deploy myaciconnector-linux-virtual-kubelet ```
 
-Update the pod spec to add an env variable.
-``` 
-       - name: KUBELET_PORT
-         value: "10250"
+
+Edit the image tag to represent the latest version. 
  ```
-Also, edit the image tag to represent the latest version. 
- ```
-       image: microsoft/virtual-kubelet:0.2-beta-3
+       image: microsoft/virtual-kubelet:0.2-beta-4
 ```
 This will deploy a new connector but be aware that the ACI pods deployed on your previous connector will be deleted. 
 
@@ -162,6 +158,13 @@ To remove the ACI connector, run the following command. Replace the argument val
 ```azurecli-interactive
 az aks remove-connector --resource-group myResourceGroup --name myAKSCluster --connector-name myaciconnector
 ```
+## ACI Connector Release notes 
+microsoft/virtual-kubelet:0.2-beta-4 
+- ImagePullSecrets for ACR is supported
+microsoft/virtual-kubelet:0.2-beta-3
+
+microsoft/virtual-kubelet:latest
+
 
 <!-- LINKS -->
 [aks-quick-start]: https://docs.microsoft.com/en-us/azure/aks/kubernetes-walkthrough
