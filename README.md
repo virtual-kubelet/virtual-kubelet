@@ -20,6 +20,7 @@ The best description is "Kubernetes API on top, programmable back."
     + [Adding a New Provider via the Provider Interface](#adding-a-new-provider-via-the-provider-interface)
 * [Testing](#testing)
     + [Testing the Azure Provider Client](#testing-the-azure-provider-client)
+* [Known quirks and workarounds](#known-quirks-and-workaroundss)
 * [Contributing](#contributing)
 
 ## How It Works
@@ -205,6 +206,19 @@ set to a credentials file.
 You can generate this file by following the instructions listed in the
 [README](providers/azure/client/README.md) for that package.
 
+## Known quirks and workarounds
+
+### Missing Load Balancer IP addresses for services
+
+#### When Virtual Kubelet is installed on a cluster, I cannot create external-IPs for a Service
+
+Kubernetes 1.9 introduces a new flag, `ServiceNodeExclusion`, for the control plane's Controller Manager. Enabling this flag in the Controller Manager's manifest allows Kubernetes to exclude Virtual Kubelet nodes from being added to Load Balancer pools, allowing you to create public facing services with external IPs without issue.
+
+#### Workaround
+
+Cluster requirements: Kubernetes 1.9 or above
+
+Enable the ServiceNodeExclusion flag, by modifying the Controller Manager manifest and adding `--feature-gates=ServiceNodeExclusion=true` to the command line arguments.
 
 ## Contributing
 
