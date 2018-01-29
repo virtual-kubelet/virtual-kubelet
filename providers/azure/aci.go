@@ -367,26 +367,24 @@ func (p *ACIProvider) getImagePullSecrets(pod *v1.Pod) ([]aci.ImageRegistryCrede
 		// TODO: Check if secret type is v1.SecretTypeDockercfg and use DockerConfigKey instead of hardcoded value
 		// TODO: Check if secret type is v1.SecretTypeDockerConfigJson and use DockerConfigJsonKey to determine if it's in json format
 		// TODO: Return error if it's not one of these two types
-		repoDataB64, ok := secret.Data[".dockercfg"]
+		repoData, ok := secret.Data[".dockercfg"]
 		if !ok {
 			return ips, fmt.Errorf("no dockercfg present in secret")
 		}
-		repoData, err := base64.StdEncoding.DecodeString(string(repoDataB64))
+
+		var authConfigs map[string]AuthConfig
+		err = json.Unmarshal(repoData, &authConfigs)
 		if err != nil {
 			return ips, err
 		}
 
-		var ac AuthConfig
-		err = json.Unmarshal(repoData, &ac)
-		if err != nil {
-			return ips, err
+		for server, authConfig := range authConfigs {
+			ips = append(ips, aci.ImageRegistryCredential{
+				Password: authConfig.Password,
+				Server:   server,
+				Username: authConfig.Username,
+			})
 		}
-
-		ips = append(ips, aci.ImageRegistryCredential{
-			Password: ac.Password,
-			Server:   ac.ServerAddress,
-			Username: ac.Username,
-		})
 	}
 	return ips, nil
 }
