@@ -10,7 +10,13 @@ This document details configuring the ACI connector for Kubernetes on an Azure C
 
 The steps detailed in this document assume that you have created an AKS Kubernetes cluster and have established a kubectl connection with the cluster. If you need these items see, the [Azure Container Service (AKS) quickstart][aks-quick-start].
 
-You also need the Azure CLI version **2.0.22** or later. Run `az --version` to find the version. If you need to install or upgrade, see [Install Azure CLI](/cli/azure/install-azure-cli).
+You also need the Azure CLI version **2.0.22** or later. Run `az --version` to find the version. If you need to install or upgrade, see [Install Azure CLI](/cli/azure/install-azure-cli). 
+
+The ACI connector command uses Helm in the background so run the following command to install Helm on your AKS cluster.
+
+```azurecli-interactive
+helm init
+```
 
 ## Installation
 
@@ -161,9 +167,6 @@ az aks remove-connector --resource-group myResourceGroup --name myAKSCluster --c
 ## ACI Connector Release notes 
 microsoft/virtual-kubelet:0.2-beta-4 
 - ImagePullSecrets for ACR is supported
-microsoft/virtual-kubelet:0.2-beta-3
-
-microsoft/virtual-kubelet:latest
 
 
 <!-- LINKS -->
