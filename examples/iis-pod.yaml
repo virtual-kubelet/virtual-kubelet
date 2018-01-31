@@ -18,7 +18,6 @@ spec:
     - containerPort: 443
       name: https
   dnsPolicy: Default
-  nodeName: virtual-kubelet-aciconnector-win
   automountServiceAccountToken: false
   tolerations:
   - key: azure.com/aci
