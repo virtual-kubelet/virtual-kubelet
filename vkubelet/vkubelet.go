@@ -71,13 +71,11 @@ func New(nodeName, operatingSystem, namespace, kubeConfig, taint, provider, prov
 	i64value, err := strconv.ParseInt(daemonEndpointPortEnv, 10, 32)
 	daemonEndpointPort := int32(i64value)
 
+	internalIP := os.Getenv("VKUBELET_POD_IP")
+
 	var p Provider
 	switch provider {
 	case "azure":
-		internalIP := os.Getenv("VKUBELET_POD_IP")
-		if err != nil {
-			return nil, err
-		}
 		p, err = azure.NewACIProvider(providerConfig, rm, nodeName, operatingSystem, internalIP, daemonEndpointPort)
 		if err != nil {
 			return nil, err
@@ -93,7 +91,7 @@ func New(nodeName, operatingSystem, namespace, kubeConfig, taint, provider, prov
 			return nil, err
 		}
 	case "mock":
-		p, err = mock.NewMockProvider(nodeName, operatingSystem, daemonEndpointPort)
+		p, err = mock.NewMockProvider(nodeName, operatingSystem, internalIP, daemonEndpointPort)
 		if err != nil {
 			return nil, err
 		}

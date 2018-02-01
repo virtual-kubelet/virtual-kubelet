@@ -4,6 +4,7 @@ import (
 	"log"
 	"time"
 
+	"fmt"
 	"github.com/virtual-kubelet/virtual-kubelet/providers"
 	"k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -14,16 +15,19 @@ import (
 type MockProvider struct {
 	nodeName           string
 	operatingSystem    string
+	internalIP         string
 	daemonEndpointPort int32
-	pods               []*v1.Pod
+	pods               map[string]*v1.Pod
 }
 
 // NewMockProvider creates a new MockProvider
-func NewMockProvider(nodeName, operatingSystem string, daemonEndpointPort int32) (*MockProvider, error) {
+func NewMockProvider(nodeName, operatingSystem string, internalIP string, daemonEndpointPort int32) (*MockProvider, error) {
 	provider := MockProvider{
 		nodeName:           nodeName,
 		operatingSystem:    operatingSystem,
+		internalIP:         internalIP,
 		daemonEndpointPort: daemonEndpointPort,
+		pods:               make(map[string]*v1.Pod),
 	}
 
 	return &provider, nil
@@ -32,17 +36,27 @@ func NewMockProvider(nodeName, operatingSystem string, daemonEndpointPort int32)
 // CreatePod accepts a Pod definition and stores it in memory.
 func (p *MockProvider) CreatePod(pod *v1.Pod) error {
 	log.Printf("receive CreatePod %q\n", pod.Name)
-	p.pods = append(p.pods, pod)
+
+	key, err := buildKey(pod)
+	if err != nil {
+		return err
+	}
+
+	p.pods[key] = pod
+
 	return nil
 }
 
 // UpdatePod accepts a Pod definition and updates its reference.
-func (p *MockProvider) UpdatePod(update *v1.Pod) error {
-	for delta, pod := range p.pods {
-		if pod.Namespace == update.Namespace && pod.Name == update.Name {
-			p.pods[delta] = update
-		}
+func (p *MockProvider) UpdatePod(pod *v1.Pod) error {
+	log.Printf("receive UpdatePod %q\n", pod.Name)
+
+	key, err := buildKey(pod)
+	if err != nil {
+		return err
 	}
+
+	p.pods[key] = pod
 
 	return nil
 }
@@ -50,16 +64,28 @@ func (p *MockProvider) UpdatePod(update *v1.Pod) error {
 // DeletePod deletes the specified pod out of memory.
 func (p *MockProvider) DeletePod(pod *v1.Pod) (err error) {
 	log.Printf("receive DeletePod %q\n", pod.Name)
-	// @todo, Remove from pods.
+
+	key, err := buildKey(pod)
+	if err != nil {
+		return err
+	}
+
+	delete(p.pods, key)
+
 	return nil
 }
 
 // GetPod returns a pod by name that is stored in memory.
 func (p *MockProvider) GetPod(namespace, name string) (pod *v1.Pod, err error) {
-	for _, pod := range p.pods {
-		if pod.Namespace == namespace && pod.Name == name {
-			return pod, nil
-		}
+	log.Printf("receive GetPod %q\n", pod.Name)
+
+	key, err := buildKey(pod)
+	if err != nil {
+		return nil, err
+	}
+
+	if pod, ok := p.pods[key]; ok {
+		return pod, nil
 	}
 
 	return nil, nil
@@ -67,12 +93,15 @@ func (p *MockProvider) GetPod(namespace, name string) (pod *v1.Pod, err error) {
 
 // GetContainerLogs retrieves the logs of a container by name from the provider.
 func (p *MockProvider) GetContainerLogs(namespace, podName, containerName string, tail int) (string, error) {
+	log.Printf("receive GetContainerLogs %q\n", podName)
 	return "", nil
 }
 
 // GetPodStatus returns the status of a pod by name that is "running".
 // returns nil if a pod by that name is not found.
 func (p *MockProvider) GetPodStatus(namespace, name string) (*v1.PodStatus, error) {
+	log.Printf("receive GetPodStatus %q\n", name)
+
 	now := metav1.NewTime(time.Now())
 
 	status := &v1.PodStatus{
@@ -121,7 +150,14 @@ func (p *MockProvider) GetPodStatus(namespace, name string) (*v1.PodStatus, erro
 // GetPods returns a list of all pods known to be "running".
 func (p *MockProvider) GetPods() ([]*v1.Pod, error) {
 	log.Printf("receive GetPods\n")
-	return p.pods, nil
+
+	var pods []*v1.Pod
+
+	for _, pod := range p.pods {
+		pods = append(pods, pod)
+	}
+
+	return pods, nil
 }
 
 // Capacity returns a resource list containing the capacity limits.
@@ -186,7 +222,12 @@ func (p *MockProvider) NodeConditions() []v1.NodeCondition {
 // NodeAddresses returns a list of addresses for the node status
 // within Kubernetes.
 func (p *MockProvider) NodeAddresses() []v1.NodeAddress {
-	return nil
+	return []v1.NodeAddress{
+		{
+			Type:    "InternalIP",
+			Address: p.internalIP,
+		},
+	}
 }
 
 // NodeDaemonEndpoints returns NodeDaemonEndpoints for the node status
@@ -203,4 +244,17 @@ func (p *MockProvider) NodeDaemonEndpoints() *v1.NodeDaemonEndpoints {
 // This is a noop to default to Linux for now.
 func (p *MockProvider) OperatingSystem() string {
 	return providers.OperatingSystemLinux
+}
+
+// buildKey is a helper for building the "key" for the providers pod store.
+func buildKey(pod *v1.Pod) (string, error) {
+	if pod.ObjectMeta.Namespace == "" {
+		return "", fmt.Errorf("pod namespace not found")
+	}
+
+	if pod.ObjectMeta.Name == "" {
+		return "", fmt.Errorf("pod name not found")
+	}
+
+	return fmt.Sprintf("%s-%s", pod.ObjectMeta.Namespace, pod.ObjectMeta.Name), nil
 }
