@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/virtual-kubelet/virtual-kubelet/manager"
+	client "github.com/virtual-kubelet/virtual-kubelet/providers/azure/client"
 	"github.com/virtual-kubelet/virtual-kubelet/providers/azure/client/aci"
 	"k8s.io/api/core/v1"
 	k8serr "k8s.io/apimachinery/pkg/api/errors"
@@ -58,11 +59,6 @@ func NewACIProvider(config string, rm *manager.ResourceManager, nodeName, operat
 
 	p.resourceManager = rm
 
-	p.aciClient, err = aci.NewClient()
-	if err != nil {
-		return nil, err
-	}
-
 	if config != "" {
 		f, err := os.Open(config)
 		if err != nil {
@@ -73,6 +69,28 @@ func NewACIProvider(config string, rm *manager.ResourceManager, nodeName, operat
 		if err := p.loadConfig(f); err != nil {
 			return nil, err
 		}
+	}
+
+	acsCredential, err := NewAcsCredential()
+	if err != nil {
+		return nil, err
+	}
+
+	var azAuth *client.Authentication
+	if acsCredential != nil {
+		auth, err := acsCredential.ToAzureAuth()
+		if err != nil {
+			return nil, err
+		}
+
+		azAuth = auth
+		p.resourceGroup = acsCredential.ResourceGroup
+		p.region = acsCredential.Region
+	}
+
+	p.aciClient, err = aci.NewClient(azAuth)
+	if err != nil {
+		return nil, err
 	}
 
 	if rg := os.Getenv("ACI_RESOURCE_GROUP"); rg != "" {
@@ -475,7 +493,7 @@ func (p *ACIProvider) getVolumes(pod *v1.Pod) ([]aci.Volume, error) {
 		// Handle the case for the EmptyDir.
 		if v.EmptyDir != nil {
 			volumes = append(volumes, aci.Volume{
-				Name: v.Name,
+				Name:     v.Name,
 				EmptyDir: map[string]interface{}{},
 			})
 			continue
