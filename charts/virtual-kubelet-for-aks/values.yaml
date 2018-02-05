@@ -1,0 +1,10 @@
+image:
+  repository: microsoft/virtual-kubelet
+  tag: 0.2-beta-5
+  pullPolicy: Always
+env:
+  nodeName: 
+  nodeTaint: 
+  nodeOsType: 
+  apiserverCert: 
+  apiserverKey: 
