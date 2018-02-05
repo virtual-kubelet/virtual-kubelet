@@ -86,6 +86,10 @@ func TestAcsCred(t *testing.T) {
 }
 
 func TestAcsCredEnvVarNotSet(t *testing.T) {
+	if err := os.Unsetenv(AcsCredentialFilepathName); err != nil {
+		t.Error(err)
+	}
+
 	file, err := ioutil.TempFile("", "acs_test")
 	if err != nil {
 		t.Error(err)

@@ -85,7 +85,7 @@ func TestMain(m *testing.M) {
 
 func TestNewClient(t *testing.T) {
 	var err error
-	client, err = NewClient()
+	client, err = NewClient(nil)
 	if err != nil {
 		t.Fatal(err)
 	}
