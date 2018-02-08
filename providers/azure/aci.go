@@ -396,7 +396,7 @@ func (p *ACIProvider) getContainers(pod *v1.Pod) ([]aci.Container, error) {
 			Name: container.Name,
 			ContainerProperties: aci.ContainerProperties{
 				Image:   container.Image,
-				Command: container.Command,
+				Command: append(container.Command, container.Args...),
 				Ports:   make([]aci.ContainerPort, 0, len(container.Ports)),
 			},
 		}
@@ -475,7 +475,7 @@ func (p *ACIProvider) getVolumes(pod *v1.Pod) ([]aci.Volume, error) {
 		// Handle the case for the EmptyDir.
 		if v.EmptyDir != nil {
 			volumes = append(volumes, aci.Volume{
-				Name: v.Name,
+				Name:     v.Name,
 				EmptyDir: map[string]interface{}{},
 			})
 			continue
