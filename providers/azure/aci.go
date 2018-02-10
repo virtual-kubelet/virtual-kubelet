@@ -51,6 +51,28 @@ type AuthConfig struct {
 	RegistryToken string `json:"registrytoken,omitempty"`
 }
 
+// See https://docs.microsoft.com/en-us/azure/container-instances/container-instances-quotas for valid regions.
+var validAciRegions = []string{
+	"westeurope",
+	"westus",
+	"eastus",
+	"southeastasia",
+}
+
+// isValidACIRegion checks to make sure we're using a valid ACI region
+func isValidACIRegion(region string) bool {
+	regionLower := strings.ToLower(region)
+	regionTrimmed := strings.Replace(regionLower, " ", "", -1)
+
+	for _, validRegion := range validAciRegions {
+		if regionTrimmed == validRegion {
+			return true
+		}
+	}
+
+	return false
+}
+
 // NewACIProvider creates a new ACIProvider.
 func NewACIProvider(config string, rm *manager.ResourceManager, nodeName, operatingSystem string, internalIP string, daemonEndpointPort int32) (*ACIProvider, error) {
 	var p ACIProvider
@@ -87,6 +109,12 @@ func NewACIProvider(config string, rm *manager.ResourceManager, nodeName, operat
 	}
 	if p.region == "" {
 		return nil, errors.New("Region can not be empty please set ACI_REGION")
+	}
+	if r := p.region; !isValidACIRegion(r) {
+		unsupportedRegionMessage := fmt.Sprintf("Region %s is invalid. Current supported regions are: %s",
+			r, strings.Join(validAciRegions, ", "))
+
+		return nil, errors.New(unsupportedRegionMessage)
 	}
 
 	// Set sane defaults for Capacity in case config is not supplied
@@ -457,7 +485,7 @@ func (p *ACIProvider) getVolumes(pod *v1.Pod) ([]aci.Volume, error) {
 			}
 
 			if secret == nil {
-				return nil, fmt.Errorf("Getting secret for AzureFile volume returned an empty secret.")
+				return nil, fmt.Errorf("Getting secret for AzureFile volume returned an empty secret")
 			}
 
 			volumes = append(volumes, aci.Volume{

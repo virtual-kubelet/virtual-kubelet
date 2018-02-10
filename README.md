@@ -20,7 +20,7 @@ The best description is "Kubernetes API on top, programmable back."
     + [Adding a New Provider via the Provider Interface](#adding-a-new-provider-via-the-provider-interface)
 * [Testing](#testing)
     + [Testing the Azure Provider Client](#testing-the-azure-provider-client)
-* [Known quirks and workarounds](#known-quirks-and-workaroundss)
+* [Known quirks and workarounds](#known-quirks-and-workarounds)
 * [Contributing](#contributing)
 
 ## How It Works
