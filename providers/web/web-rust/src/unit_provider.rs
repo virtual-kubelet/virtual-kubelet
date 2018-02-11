@@ -74,7 +74,7 @@ impl Provider for UnitProvider {
         info!("Getting pod: {}", name);
         self.pods_map
             .get(name)
-            .filter(|pod| {
+            .xfilter(|pod| {
                 let empty = String::from("");
                 let ns = pod.metadata()
                     .map(|m| m.namespace())
