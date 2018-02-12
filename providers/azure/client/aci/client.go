@@ -31,18 +31,12 @@ type Client struct {
 // NewClient creates a new Azure Container Instances client.
 func NewClient(auth *azure.Authentication) (*Client, error) {
 	if auth == nil {
-		// Get authentication credentials from file.
-		authFromFile, err := azure.NewAuthenticationFromFile()
-		if err != nil {
-			return nil, fmt.Errorf("Creating azure authentication from file failed: %v", err)
-		}
-
-		auth = authFromFile
+		return nil, fmt.Errorf("Authentication is not supplied for the Azure client")
 	}
 
 	client, err := azure.NewClient(auth, BaseURI, userAgent)
 	if err != nil {
-		return nil, fmt.Errorf("Creating azure client failed: %v", err)
+		return nil, fmt.Errorf("Creating Azure client failed: %v", err)
 	}
 
 	return &Client{hc: client.HTTPClient, auth: auth}, nil

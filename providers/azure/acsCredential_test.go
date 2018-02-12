@@ -42,11 +42,7 @@ func TestAcsCred(t *testing.T) {
 		t.Error(err)
 	}
 
-	if err := os.Setenv(AcsCredentialFilepathName, file.Name()); err != nil {
-		t.Error(err)
-	}
-
-	cred, err := NewAcsCredential()
+	cred, err := NewAcsCredential(file.Name())
 	if err != nil {
 		t.Error(err)
 	}
@@ -85,33 +81,6 @@ func TestAcsCred(t *testing.T) {
 	}
 }
 
-func TestAcsCredEnvVarNotSet(t *testing.T) {
-	if err := os.Unsetenv(AcsCredentialFilepathName); err != nil {
-		t.Error(err)
-	}
-
-	file, err := ioutil.TempFile("", "acs_test")
-	if err != nil {
-		t.Error(err)
-	}
-
-	defer os.Remove(file.Name())
-
-	if _, err := file.Write([]byte(cred)); err != nil {
-		t.Error(err)
-	}
-
-	cred, err := NewAcsCredential()
-
-	if err != nil {
-		t.Error(err)
-	}
-
-	if cred != nil {
-		t.Errorf("Wanted cred to be nil, got %v", cred)
-	}
-}
-
 func TestAcsCredFileNotFound(t *testing.T) {
 	file, err := ioutil.TempFile("", "acs_test")
 	if err != nil {
@@ -126,11 +95,7 @@ func TestAcsCredFileNotFound(t *testing.T) {
 
 	os.Remove(fileName)
 
-	if err := os.Setenv(AcsCredentialFilepathName, fileName); err != nil {
-		t.Error(err)
-	}
-
-	if _, err := NewAcsCredential(); err == nil {
+	if _, err := NewAcsCredential(fileName); err == nil {
 		t.Fatal("expected to fail with bad json")
 	}
 }
@@ -158,11 +123,7 @@ func TestAcsCredBadJson(t *testing.T) {
 		t.Error(err)
 	}
 
-	if err := os.Setenv(AcsCredentialFilepathName, file.Name()); err != nil {
-		t.Error(err)
-	}
-
-	if _, err := NewAcsCredential(); err == nil {
+	if _, err := NewAcsCredential(file.Name()); err == nil {
 		t.Fatal("expected to fail with bad json")
 	}
 }

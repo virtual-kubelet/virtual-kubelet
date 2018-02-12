@@ -5,15 +5,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
-	"os"
-
-	azure "github.com/virtual-kubelet/virtual-kubelet/providers/azure/client"
-)
-
-const (
-	// AcsCredentialFilepathName defines the name of the environment variable
-	// containing the path to the file which contains the ACS credential
-	AcsCredentialFilepathName = "ACS_CREDENTIAL_LOCATION"
 )
 
 // AcsCredential represents the credential file for ACS
@@ -27,19 +18,13 @@ type AcsCredential struct {
 	Region         string `json:"location"`
 }
 
-// NewAcsCredential returns an AcsCredential struct from file located
-// at ACS_CREDENTIAL.
-func NewAcsCredential() (*AcsCredential, error) {
-	file := os.Getenv(AcsCredentialFilepathName)
-	if file == "" {
-		return nil, nil
-	}
+// NewAcsCredential returns an AcsCredential struct from file path
+func NewAcsCredential(filepath string) (*AcsCredential, error) {
+	log.Printf("Reading ACS credential file %q", filepath)
 
-	log.Printf("Reading ACS credential file %q", file)
-
-	b, err := ioutil.ReadFile(file)
+	b, err := ioutil.ReadFile(filepath)
 	if err != nil {
-		return nil, fmt.Errorf("Reading ACS credential file %q failed: %v", file, err)
+		return nil, fmt.Errorf("Reading ACS credential file %q failed: %v", filepath, err)
 	}
 
 	// Unmarshal the authentication file.
@@ -48,31 +33,6 @@ func NewAcsCredential() (*AcsCredential, error) {
 		return nil, err
 	}
 
-	log.Printf("Load ACS credential file %q successfully", file)
+	log.Printf("Load ACS credential file %q successfully", filepath)
 	return &cred, nil
-}
-
-// ToAzureAuth converts the ACS credential to Azure Authentication class
-func (cred *AcsCredential) ToAzureAuth() (*azure.Authentication, error) {
-	if cred == nil {
-		return nil, nil
-	}
-
-	switch cred.Cloud {
-	case azure.PublicCloud.Name:
-		return &azure.Authentication{
-			ClientID:                   cred.ClientID,
-			ClientSecret:               cred.ClientSecret,
-			SubscriptionID:             cred.SubscriptionID,
-			TenantID:                   cred.TenantID,
-			ActiveDirectoryEndpoint:    azure.PublicCloud.ActiveDirectoryEndpoint,
-			ResourceManagerEndpoint:    azure.PublicCloud.ResourceManagerEndpoint,
-			GraphResourceID:            azure.PublicCloud.GraphEndpoint,
-			SQLManagementEndpoint:      azure.PublicCloud.SQLDatabaseDNSSuffix,
-			GalleryEndpoint:            azure.PublicCloud.GalleryEndpoint,
-			ManagementEndpoint:         azure.PublicCloud.ServiceManagementEndpoint,
-		}, nil
-	default:
-		return nil, fmt.Errorf("ACI only supports Public Azure. '%v' is not supported", cred.Cloud)
-	}
 }
