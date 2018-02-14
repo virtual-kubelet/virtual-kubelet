@@ -89,22 +89,22 @@ func NewACIProvider(config string, rm *manager.ResourceManager, nodeName, operat
 		}
 
 		if acsCredential != nil {
-			if acsCredential.ClientSecret != client.PublicCloud.Name {
+			if acsCredential.Cloud != client.PublicCloud.Name {
 				return nil, fmt.Errorf("ACI only supports Public Azure. '%v' is not supported", acsCredential.Cloud)
 			}
-	
+
 			azAuth = client.NewAuthentication(
-				acsCredential.Cloud, 
-				acsCredential.ClientID, 
-				acsCredential.ClientSecret, 
-				acsCredential.SubscriptionID, 
+				acsCredential.Cloud,
+				acsCredential.ClientID,
+				acsCredential.ClientSecret,
+				acsCredential.SubscriptionID,
 				acsCredential.TenantID)
-	
+
 			p.resourceGroup = acsCredential.ResourceGroup
 			p.region = acsCredential.Region
 		}
 	}
-	
+
 	if clientID := os.Getenv("AZURE_CLIENT_ID"); clientID != "" {
 		azAuth.ClientID = clientID
 	}
