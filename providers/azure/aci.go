@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/virtual-kubelet/virtual-kubelet/manager"
+	client "github.com/virtual-kubelet/virtual-kubelet/providers/azure/client"
 	"github.com/virtual-kubelet/virtual-kubelet/providers/azure/client/aci"
 	"k8s.io/api/core/v1"
 	k8serr "k8s.io/apimachinery/pkg/api/errors"
@@ -58,11 +59,6 @@ func NewACIProvider(config string, rm *manager.ResourceManager, nodeName, operat
 
 	p.resourceManager = rm
 
-	p.aciClient, err = aci.NewClient()
-	if err != nil {
-		return nil, err
-	}
-
 	if config != "" {
 		f, err := os.Open(config)
 		if err != nil {
@@ -73,6 +69,61 @@ func NewACIProvider(config string, rm *manager.ResourceManager, nodeName, operat
 		if err := p.loadConfig(f); err != nil {
 			return nil, err
 		}
+	}
+
+	var azAuth *client.Authentication
+
+	if authFilepath := os.Getenv("AZURE_AUTH_LOCATION"); authFilepath != "" {
+		auth, err := client.NewAuthenticationFromFile(authFilepath)
+		if err != nil {
+			return nil, err
+		}
+
+		azAuth = auth
+	}
+
+	if acsFilepath := os.Getenv("ACS_CREDENTIAL_LOCATION"); acsFilepath != "" {
+		acsCredential, err := NewAcsCredential(acsFilepath)
+		if err != nil {
+			return nil, err
+		}
+
+		if acsCredential != nil {
+			if acsCredential.Cloud != client.PublicCloud.Name {
+				return nil, fmt.Errorf("ACI only supports Public Azure. '%v' is not supported", acsCredential.Cloud)
+			}
+
+			azAuth = client.NewAuthentication(
+				acsCredential.Cloud,
+				acsCredential.ClientID,
+				acsCredential.ClientSecret,
+				acsCredential.SubscriptionID,
+				acsCredential.TenantID)
+
+			p.resourceGroup = acsCredential.ResourceGroup
+			p.region = acsCredential.Region
+		}
+	}
+
+	if clientID := os.Getenv("AZURE_CLIENT_ID"); clientID != "" {
+		azAuth.ClientID = clientID
+	}
+
+	if clientSecret := os.Getenv("AZURE_CLIENT_SECRET"); clientSecret != "" {
+		azAuth.ClientSecret = clientSecret
+	}
+
+	if tenantID := os.Getenv("AZURE_TENANT_ID"); tenantID != "" {
+		azAuth.TenantID = tenantID
+	}
+
+	if subscriptionID := os.Getenv("AZURE_SUBSCRIPTION_ID"); subscriptionID != "" {
+		azAuth.SubscriptionID = subscriptionID
+	}
+
+	p.aciClient, err = aci.NewClient(azAuth)
+	if err != nil {
+		return nil, err
 	}
 
 	if rg := os.Getenv("ACI_RESOURCE_GROUP"); rg != "" {

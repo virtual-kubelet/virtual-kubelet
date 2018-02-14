@@ -1,13 +1,10 @@
 package resourcegroups
 
 import (
-	"log"
-	"os"
-	"path/filepath"
-	"runtime"
 	"testing"
 
 	"github.com/google/uuid"
+	azure "github.com/virtual-kubelet/virtual-kubelet/providers/azure/client"
 )
 
 var (
@@ -17,34 +14,23 @@ var (
 )
 
 func init() {
-	// Check if the AZURE_AUTH_LOCATION variable is already set.
-	// If it is not set, set it to the root of this project in a credentials.json file.
-	if os.Getenv("AZURE_AUTH_LOCATION") == "" {
-		// Check if the credentials.json file exists in the root of this project.
-		_, filename, _, _ := runtime.Caller(0)
-		dir := filepath.Dir(filename)
-		file := filepath.Join(dir, "../../../../credentials.json")
-
-		// Check if the file exists.
-		if _, err := os.Stat(file); os.IsNotExist(err) {
-			log.Fatalf("Either set AZURE_AUTH_LOCATION or add a credentials.json file to the root of this project.")
-		}
-
-		// Set the environment variable for the authentication file.
-		os.Setenv("AZURE_AUTH_LOCATION", file)
-	}
-
 	// Create a resource group name with uuid.
 	uid := uuid.New()
 	resourceGroup += "-" + uid.String()[0:6]
 }
 
 func TestNewClient(t *testing.T) {
-	var err error
-	client, err = NewClient()
+	auth, err := azure.NewAuthenticationFromFile("../../../../credentials.json")
+	if err != nil {
+		t.Fatalf("Failed to load Azure authentication file: %v", err)
+	}
+
+	c, err := NewClient(auth)
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	client = c
 }
 
 func TestResourceGroupDoesNotExist(t *testing.T) {

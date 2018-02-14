@@ -6,17 +6,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"os"
 	"unicode/utf16"
 
 	"github.com/dimchansky/utfbom"
-)
-
-const (
-	// AuthenticationFilepathName defines the name of the environment variable
-	// containing the path to the file to be used to populate Authentication
-	// for Azure.
-	AuthenticationFilepathName = "AZURE_AUTH_LOCATION"
 )
 
 // Authentication represents the authentication file for Azure.
@@ -35,32 +27,49 @@ type Authentication struct {
 
 // NewAuthentication returns an authentication struct from user provided
 // credentials.
-func NewAuthentication(clientID, clientSecret, subscriptionID, tenantID string) *Authentication {
+func NewAuthentication(azureCloud, clientID, clientSecret, subscriptionID, tenantID string) *Authentication {
+	environment := PublicCloud
+		
+	switch azureCloud {
+	case PublicCloud.Name:
+		environment = PublicCloud
+		break;
+	case USGovernmentCloud.Name:
+		environment = USGovernmentCloud
+		break;
+	case ChinaCloud.Name:
+		environment = ChinaCloud
+		break;
+	case GermanCloud.Name:
+		environment = GermanCloud
+		break;
+	}
+
 	return &Authentication{
-		ClientID:       clientID,
-		ClientSecret:   clientSecret,
-		SubscriptionID: subscriptionID,
-		TenantID:       tenantID,
+		ClientID:      	            clientID,
+		ClientSecret:               clientSecret,
+		SubscriptionID:             subscriptionID,
+		TenantID:                   tenantID,
+		ActiveDirectoryEndpoint:    environment.ActiveDirectoryEndpoint,
+		ResourceManagerEndpoint:    environment.ResourceManagerEndpoint,
+		GraphResourceID:            environment.GraphEndpoint,
+		SQLManagementEndpoint:      environment.SQLDatabaseDNSSuffix,
+		GalleryEndpoint:            environment.GalleryEndpoint,
+		ManagementEndpoint:         environment.ServiceManagementEndpoint,
 	}
 }
 
-// NewAuthenticationFromFile returns an authentication struct from file located
-// at AZURE_AUTH_LOCATION.
-func NewAuthenticationFromFile() (*Authentication, error) {
-	file := os.Getenv(AuthenticationFilepathName)
-	if file == "" {
-		return nil, fmt.Errorf("Authentication file not found, environment variable %s is not set", AuthenticationFilepathName)
-	}
-
-	b, err := ioutil.ReadFile(file)
+// NewAuthenticationFromFile returns an authentication struct from file path
+func NewAuthenticationFromFile(filepath string) (*Authentication, error) {
+	b, err := ioutil.ReadFile(filepath)
 	if err != nil {
-		return nil, fmt.Errorf("Reading authentication file %q failed: %v", file, err)
+		return nil, fmt.Errorf("Reading authentication file %q failed: %v", filepath, err)
 	}
 
 	// Authentication file might be encoded.
 	decoded, err := decode(b)
 	if err != nil {
-		return nil, fmt.Errorf("Decoding authentication file %q failed: %v", file, err)
+		return nil, fmt.Errorf("Decoding authentication file %q failed: %v", filepath, err)
 	}
 
 	// Unmarshal the authentication file.

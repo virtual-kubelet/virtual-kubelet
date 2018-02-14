@@ -1,0 +1,8 @@
+name: virtual-kubelet-for-aks
+version: 0.1.3
+description: a Helm chart to install virtual kubelet in an AKS or ACS cluster.
+sources:
+  - https://github.com/virtual-kubelet/virtual-kubelet
+maintainers:
+  - name: Robbie Zhang
+    email: junjiez@microsoft.com
