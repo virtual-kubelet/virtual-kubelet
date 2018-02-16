@@ -26,6 +26,8 @@ import (
 // The service account secret mount path.
 const serviceAccountSecretMountPath = "/var/run/secrets/kubernetes.io/serviceaccount"
 
+const virtualKubeletDNSNameLabel = "virtualkubelet.io/dnsnamelabel"
+
 // ACIProvider implements the virtual-kubelet provider interface and communicates with Azure's ACI APIs.
 type ACIProvider struct {
 	aciClient          *aci.Client
@@ -230,6 +232,10 @@ func (p *ACIProvider) CreatePod(pod *v1.Pod) error {
 		containerGroup.ContainerGroupProperties.IPAddress = &aci.IPAddress{
 			Ports: ports,
 			Type:  "Public",
+		}
+
+		if dnsNameLabel := pod.Annotations[virtualKubeletDNSNameLabel]; dnsNameLabel != "" {
+			containerGroup.ContainerGroupProperties.IPAddress.DNSNameLabel = dnsNameLabel
 		}
 	}
 

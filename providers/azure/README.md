@@ -284,15 +284,60 @@ Name                             ResourceGroup    ProvisioningState    Image    
 helloworld-2559879000-8vmjw  myResourceGroup    Succeeded            microsoft/aci-helloworld  52.179.3.180:80  1.0 core/1.5 gb  Linux     eastus
 ```
 
+### Schedule an ACI pod with a DNS Name label
+
+Add an annotation to your Pod manifest, `virtualkubelet.io/dnsnamelabel` keyed to what you'd like the Azure Container Instance to receive as a DNS Name, and deploy it.
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: helloworld
+  annotations:
+    virtualkubelet.io/dnsnamelabel: "helloworld-aci"
+spec:
+  containers:
+  - image: microsoft/aci-helloworld
+    imagePullPolicy: Always
+    name: helloworld
+    resources:
+      requests:
+        memory: 1G
+        cpu: 1
+    ports:
+    - containerPort: 80
+      name: http
+      protocol: TCP
+    - containerPort: 443
+      name: https
+  dnsPolicy: ClusterFirst
+  nodeName: virtual-kubelet
+```
+
+To confirm the Azure Container Instance received and bound the DNS Name specified, use the [az container show][az-container-show] Azure CLI command. Virtual Kubelet's naming
+convention will affect how you use this query, with the argument to `-n` broken down as: nameSpace-podName. Unless specified, Kubernetes will assume
+the namespace is `default`.
+
+```azurecli-interactive
+az container show -g myResourceGroup -n default-helloworld --query ipAddress.fqdn
+```
+
+Output:
+
+```console
+"helloworld-aci.westus.azurecontainer.io"
+```
+
 ## Remove the Virtual Kubelet
 
-You can remove your Virtual Kubelet node, you can delete the Helm deployment, by running the following command:
+You can remove your Virtual Kubelet node by deleting the Helm deployment. Run the following command:
 
 ```
 helm delete virtual-kubelet --purge
-``` 
+```
 
 <!-- LINKS -->
 [kubectl-create]: https://kubernetes.io/docs/user-guide/kubectl/v1.6/#create
 [kubectl-get]: https://kubernetes.io/docs/user-guide/kubectl/v1.8/#get
-[az-container-list]: https://docs.microsoft.com/en-us/cli/azure/aks?view=azure-cli-latest#az_aks_list
+[az-container-list]: https://docs.microsoft.com/en-us/cli/azure/container?view=azure-cli-latest#az_container_list
+[az-container-show]: https://docs.microsoft.com/en-us/cli/azure/container?view=azure-cli-latest#az_container_show
