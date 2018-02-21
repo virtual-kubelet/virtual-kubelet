@@ -92,22 +92,6 @@ Flags:
 Use "virtual-kubelet [command] --help" for more information about a command.
 ```
 
-## Deploy as a Pod by Helm Chart
-
-Run these commands to deploy the virtual kubelet which connects your Kubernetes cluster to Azure Container Instances.
-If you want to run the connector from the Azure command-line check out this.
-
-```bash
-RELEASE_NAME=virtual-kubelet
-CHART_URL=https://github.com/virtual-kubelet/virtual-kubelet/raw/master/charts/virtual-kubelet-0.1.0.tgz
-
-curl https://raw.githubusercontent.com/virtual-kubelet/virtual-kubelet/master/scripts/createCertAndKey.sh > createCertAndKey.sh
-. createCertAndKey.sh
-
-helm install "$CHART_URL" --name "$RELEASE_NAME" \
-    --set env.azureClientId=<YOUR-AZURECLIENTID-HERE>,env.azureClientKey=<YOUR-AZURECLIENTKEY-HERE>,env.azureTenantId=<YOUR-AZURETENANTID-HERE>,env.azureSubscriptionId=<YOUR-AZURESUBSCRIPTIONID-HERE>,env.aciResourceGroup=<YOUR-ACIRESOURCEGROUP-HERE>,env.nodeName=<YOUR-NODE-NAME>,env.nodeOsType=<Linux|Windows>,env.nodeTaint=<YOUR-NODE-TAINT>,env.apiserverCert=$cert,env.apiserverKey=$key
-```
-
 ## Providers
 
 This project features a pluggable provider interface developers can implement
@@ -125,16 +109,7 @@ The Azure Container Instances Provider allows you to utilize both
 typical pods on VMs and Azure Container instances simultaneously in the
 same Kubernetes cluster.
 
-```bash
-./bin/virtual-kubelet --provider azure
-```
-
-#### Environment Variables
-
-`ACI_RESOURCE_GROUP` must be set to the name of a valid Azure resource group where your
-ACI workload will be run.
-
-`ACI_REGION` must be set to the name of the region your `ACI_RESOURCE_GROUP` was created.
+You can find detailed instructions on how to set it up and how to test it in the [Azure Container Instances Provider documentation](./providers/azure/README.md).
 
 #### Configuration File
 

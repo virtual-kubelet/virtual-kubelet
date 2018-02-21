@@ -1,55 +1,199 @@
-# Kubernetes ACI connector with AKS
+# Kubernetes virtual-kubelet with ACI
 
 Azure Container Instances (ACI) provide a hosted environment for running containers in Azure. When using ACI, there is no need to manage the underlying compute infrastructure, Azure handles this management for you. When running containers in ACI, you are charged by the second for each running container.
 
-The Azure Container Instances connector for Kubernetes configures an ACI instance as a node in any Kubernetes cluster. When using the ACI connector for Kubernetes, pods can be scheduled on an ACI instance as if the ACI instance is a standard Kubernetes node. This configuration allows you to take advantage of both the capabilities of Kubernetes and the management value and cost benefit of ACI.
+The Azure Container Instances provider for the Virtual Kubelet configures an ACI instance as a node in any Kubernetes cluster. When using the Virtual Kubelet ACI provider, pods can be scheduled on an ACI instance as if the ACI instance is a standard Kubernetes node. This configuration allows you to take advantage of both the capabilities of Kubernetes and the management value and cost benefit of ACI.
 
-This document details configuring the ACI connector for Kubernetes on an Azure Container Service (AKS) cluster.
+This document details configuring the Virtual Kubelet ACI provider.
 
 ## Prerequisite
 
-The steps detailed in this document assume that you have created an AKS Kubernetes cluster and have established a kubectl connection with the cluster. If you need these items see, the [Azure Container Service (AKS) quickstart][aks-quick-start].
+This guide assumes that you have a Kubernetes cluster up and running (can be `minikube`) and that `kubectl` is already configured to talk to it.
 
-You also need the Azure CLI version **2.0.22** or later. Run `az --version` to find the version. If you need to install or upgrade, see [Install Azure CLI](/cli/azure/install-azure-cli). 
+Other pre-requesites are:
 
-The ACI connector command uses Helm in the background so run the following command to install Helm on your AKS cluster.
+* A [Microsoft Azure account](https://azure.microsoft.com/en-us/free/).
+* Install the [Azure CLI](#install-the-azure-cli).
+* Install the [Kubernetes CLI](#install-the-kubernetes-cli).
+* Install the [Helm CLI](#install-the-helm-cli).
 
-```azurecli-interactive
-helm init
+### Install the Azure CLI
+
+Install `az` by following the instructions for your operating system.
+See the [full installation instructions](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli?view=azure-cli-latest) if yours isn't listed below.
+
+#### MacOS
+
+```console
+brew install azure-cli
 ```
 
-## Installation
+#### Windows
 
-To install the ACI connector for an AKS cluster, run the following  Azure CLI command. Replace the values for the following arguments:
+Download and run the [Azure CLI Installer (MSI)](https://aka.ms/InstallAzureCliWindows).
 
-- resource-group - the resource group of the AKS cluster.
-- name - the name of the AKS cluster.
-- connector-name - the name given to the ACI connector.
+#### Ubuntu 64-bit
 
-```azurecli-interactive
-az aks install-connector --resource-group myResourceGroup --name myAKSCluster --connector-name myaciconnector
+1. Add the azure-cli repo to your sources:
+    ```console
+    echo "deb [arch=amd64] https://packages.microsoft.com/repos/azure-cli/ wheezy main" | \
+         sudo tee /etc/apt/sources.list.d/azure-cli.list
+    ```
+1. Run the following commands to install the Azure CLI and its dependencies:
+    ```console
+    sudo apt-key adv --keyserver packages.microsoft.com --recv-keys 52E16F86FEE04B979B07E28DB02C46DF417A0893
+    sudo apt-get install apt-transport-https
+    sudo apt-get update && sudo apt-get install azure-cli
+    ```
+
+### Install the Kubernetes CLI
+
+Install `kubectl` by running the following command:
+
+```console
+az aks install-cli
+```
+
+### Install the Helm CLI
+
+[Helm](https://github.com/kubernetes/helm) is a tool for installing pre-configured applications on Kubernetes.
+Install `helm` by running the following command:
+
+#### MacOS
+
+```console
+brew install kubernetes-helm
+```
+
+#### Windows
+
+1. Download the latest [Helm release](https://storage.googleapis.com/kubernetes-helm/helm-v2.7.2-windows-amd64.tar.gz).
+1. Decompress the tar file.
+1. Copy **helm.exe** to a directory on your PATH.
+
+#### Linux
+
+```console
+curl https://raw.githubusercontent.com/kubernetes/helm/master/scripts/get | bash
+```
+---
+
+## Cluster and Azure Account Setup
+
+Now that we have all the tools, we will set up your Azure account to work with ACI.
+
+### Configure your Azure account
+
+First let's identify your Azure subscription and save it for use later on in the quickstart.
+
+1. Run `az login` and follow the instructions in the command output to authorize `az` to use your account
+1. List your Azure subscriptions:
+    ```console
+    az account list -o table
+    ```
+1. Copy your subscription ID and save it in an environment variable:
+
+    **Bash**
+    ```console
+    export AZURE_SUBSCRIPTION_ID="<SubscriptionId>"
+    ```
+
+    **PowerShell**
+    ```console
+    $env:AZURE_SUBSCRIPTION_ID = "<SubscriptionId>"
+    ```
+
+### Create a Resource Group for ACI
+
+To use Azure Container Instances, you must provide a resource group. Create one with the az cli using the following command.
+
+```console
+export ACI_REGION=eastus
+az group create --name aci-group --location "$ACI_REGION"
+export AZURE_RG=aci-group
+```
+
+### Create a service principal
+
+This creates an identity for the Virtual Kubelet ACI provider to use when provisioning
+resources on your account on behalf of Kubernetes.
+
+1. Create a service principal with RBAC enabled for the quickstart:
+    ```console
+    az ad sp create-for-rbac --name virtual-kubelet-quickstart -o table
+    ```
+1. Save the values from the command output in environment variables:
+
+    **Bash**
+    ```console
+    export AZURE_TENANT_ID=<Tenant>
+    export AZURE_CLIENT_ID=<AppId>
+    export AZURE_CLIENT_SECRET=<Password>
+    ```
+
+    **PowerShell**
+    ```console
+    $env:AZURE_TENANT_ID = "<Tenant>"
+    $env:AZURE_CLIENT_ID = "<AppId>"
+    $env:AZURE_CLIENT_SECRET = "<Password>"
+    ```
+
+### Setting up your Azure account to use ACI
+
+You will need to enable ACI in your subscription:
+
+    ```console
+    az provider register -n Microsoft.ContainerInstance
+    ```
+
+## Deployment of the ACI provider in your cluster
+
+Run these commands to deploy the virtual kubelet which connects your Kubernetes cluster to Azure Container Instances.
+
+If your cluster is an AKS cluster:
+
+```console
+export VK_RELEASE=virtual-kubelet-for-aks-0.1.3
+````
+
+For any other type of Kubernetes cluster:
+
+```console
+export VK_RELEASE=virtual-kubelet-0.1.0
+```
+
+```console
+RELEASE_NAME=virtual-kubelet
+NODE_NAME=virtual-kubelet
+CHART_URL=https://github.com/virtual-kubelet/virtual-kubelet/raw/master/charts/$VK_RELEASE.tgz
+
+curl https://raw.githubusercontent.com/virtual-kubelet/virtual-kubelet/master/scripts/createCertAndKey.sh > createCertAndKey.sh
+. createCertAndKey.sh
+
+helm install "$CHART_URL" --name "$RELEASE_NAME" \
+    --set env.azureClientId="$AZURE_CLIENT_ID",env.azureClientKey="$AZURE_CLIENT_SECRET",env.azureTenantId="$AZURE_TENANT_ID",env.azureSubscriptionId="$AZURE_SUBSCRIPTION_ID",env.aciResourceGroup="$AZURE_RG",env.nodeName="$NODE_NAME",env.nodeOsType=<Linux|Windows>,env.apiserverCert=$cert,env.apiserverKey=$key
 ```
 
 Output:
 
-```
-NAME:   myaciconnector-linux
-LAST DEPLOYED: Thu Jan 18 13:58:05 2018
+```console
+NAME:   virtual-kubelet
+LAST DEPLOYED: Thu Feb 15 13:17:01 2018
 NAMESPACE: default
 STATUS: DEPLOYED
 
 RESOURCES:
 ==> v1/Secret
-NAME                                  TYPE    DATA  AGE
-myaciconnector-linux-virtual-kubelet  Opaque  1     0s
+NAME                             TYPE    DATA  AGE
+virtual-kubelet-virtual-kubelet  Opaque  3     1s
 
 ==> v1beta1/Deployment
-NAME                                  DESIRED  CURRENT  UP-TO-DATE  AVAILABLE  AGE
-myaciconnector-linux-virtual-kubelet  1        1        1           0          0s
+NAME                             DESIRED  CURRENT  UP-TO-DATE  AVAILABLE  AGE
+virtual-kubelet-virtual-kubelet  1        1        1           0          1s
 
 ==> v1/Pod(related)
-NAME                                                   READY  STATUS             RESTARTS  AGE
-myaciconnector-linux-virtual-kubelet-4187386653-t01x3  0/1    ContainerCreating  0         0s
+NAME                                              READY  STATUS             RESTARTS  AGE
+virtual-kubelet-virtual-kubelet-7bcf5dc749-6mvgp  0/1    ContainerCreating  0         1s
 
 
 NOTES:
@@ -57,13 +201,12 @@ The virtual kubelet is getting deployed on your cluster.
 
 To verify that virtual kubelet has started, run:
 
-  kubectl --namespace=default get pods -l "app=myaciconnector-linux-virtual-kubelet"
-
+  kubectl --namespace=default get pods -l "app=virtual-kubelet-virtual-kubelet"
 ```
 
-## Validate the ACI connector
+## Validate the Virtual Kubelet ACI provider
 
-To validate that the ACI connector has been installed, return a list of Kubernetes nodes using the [kubectl get nodes][kubectl-get] command. You should see a node that matches the name given to the ACI connector.
+To validate that the Virtual Kubelet has been installed, return a list of Kubernetes nodes using the [kubectl get nodes][kubectl-get] command. You should see a node that matches the name given to the ACI connector.
 
 ```azurecli-interactive
 kubectl get nodes
@@ -73,7 +216,7 @@ Output:
 
 ```console
 NAME                                        STATUS    ROLES     AGE       VERSION
-virtual-kubelet-myaciconnector-linux        Ready     <none>    2m        v1.8.3
+virtual-kubelet                             Ready     <none>    2m        v1.8.3
 aks-nodepool1-39289454-0                    Ready     agent     22h       v1.7.7
 aks-nodepool1-39289454-1                    Ready     agent     22h       v1.7.7
 aks-nodepool1-39289454-2                    Ready     agent     22h       v1.7.7
@@ -81,7 +224,7 @@ aks-nodepool1-39289454-2                    Ready     agent     22h       v1.7.7
 
 ## Schedule a pod in ACI
 
-Create a file named `aci-connector-test.yaml` and copy in the following YAML. Replace the `nodeName` value with the name given to the ACI connector.
+Create a file named `virtual-kubelet-test.yaml` and copy in the following YAML. Replace the `nodeName` value with the name given to the virtual kubelet node.
 
 ```yaml
 apiVersion: v1
@@ -104,36 +247,32 @@ spec:
     - containerPort: 443
       name: https
   dnsPolicy: ClusterFirst
-  nodeName: virtual-kubelet-myaciconnector-linux
-  tolerations:
-  - key: azure.com/aci
-    effect: NoSchedule
-
+  nodeName: virtual-kubelet
 ```
 
 Run the application with the [kubectl create][kubectl-create] command.
 
-```azurecli-interactive
-kubectl create -f aci-connector-test.yml
+```console
+kubectl create -f virtual-kubelet-test.yml
 ```
 
 Use the [kubectl get pods][kubectl-get] command with the `-o wide` argument to output a list of pods with the scheduled node.
 
-```azurecli-interactive
+```console
 kubectl get pods -o wide
 ```
 
-Notice that the `kube-aci-demo` pod is running on the `myACIConnector` node.
+Notice that the `helloworld` pod is running on the `virtual-kubelet` node.
 
 ```console
 NAME                                            READY     STATUS    RESTARTS   AGE       IP             NODE
-aci-helloworld-2559879000-8vmjw                 1/1       Running   0          39s       52.179.3.180   virtual-kubelet-myaciconnector-linux
+aci-helloworld-2559879000-8vmjw                 1/1       Running   0          39s       52.179.3.180   virtual-kubelet
 
 ```
 
 To validate that the container is running in an Azure Container Instance, use the [az container list][az-container-list] Azure CLI command.
 
-```azurecli-interactive
+```cli
 az container list -o table
 ```
 
@@ -142,35 +281,18 @@ Output:
 ```console
 Name                             ResourceGroup    ProvisioningState    Image                     IP:ports         CPU/Memory       OsType    Location
 -------------------------------  ---------------  -------------------  ------------------------  ---------------  ---------------  --------  ----------
-aci-helloworld-2559879000-8vmjw  myResourceGroup    Succeeded            microsoft/aci-helloworld  52.179.3.180:80  1.0 core/1.5 gb  Linux     eastus
+helloworld-2559879000-8vmjw  myResourceGroup    Succeeded            microsoft/aci-helloworld  52.179.3.180:80  1.0 core/1.5 gb  Linux     eastus
 ```
-## Updating the ACI Connector version
-We are currently running v1beta but to run v2beta follow these steps.
-Run the following command on the ACI Connector deployment.
 
-``` kubectl edit deploy myaciconnector-linux-virtual-kubelet ```
+## Remove the Virtual Kubelet
 
+You can remove your Virtual Kubelet node, you can delete the Helm deployment, by running the following command:
 
-Edit the image tag to represent the latest version. 
- ```
-       image: microsoft/virtual-kubelet:0.2-beta-4
 ```
-This will deploy a new connector but be aware that the ACI pods deployed on your previous connector will be deleted. 
-
-## Remove the ACI connector
-
-To remove the ACI connector, run the following command. Replace the argument values with the name of the connector, AKS cluster, and the AKS cluster resource group.
-
-```azurecli-interactive
-az aks remove-connector --resource-group myResourceGroup --name myAKSCluster --connector-name myaciconnector
-```
-## ACI Connector Release notes 
-microsoft/virtual-kubelet:0.2-beta-4 
-- ImagePullSecrets for ACR is supported
-
+helm delete virtual-kubelet --purge
+``` 
 
 <!-- LINKS -->
-[aks-quick-start]: https://docs.microsoft.com/en-us/azure/aks/kubernetes-walkthrough
 [kubectl-create]: https://kubernetes.io/docs/user-guide/kubectl/v1.6/#create
 [kubectl-get]: https://kubernetes.io/docs/user-guide/kubectl/v1.8/#get
 [az-container-list]: https://docs.microsoft.com/en-us/cli/azure/aks?view=azure-cli-latest#az_aks_list
