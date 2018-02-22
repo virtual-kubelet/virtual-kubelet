@@ -275,3 +275,9 @@ func (p *BrokerProvider) doRequest(method string, urlPath *url.URL, body []byte,
 
 	return nil, nil
 }
+
+
+func (p *BrokerProvider) Stop() {
+	// Stop is a noop for BrokerProvider as there's no cleanup to be done
+	return
+}

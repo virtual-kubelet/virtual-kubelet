@@ -133,7 +133,8 @@ on top with a pluggable interface.
 
 Create a new directory for your provider under `providers` and implement the
 following interface. Then add your new provider under the others in the
-[`vkubelet/provider.go`](vkubelet/provider.go) file.
+[`vkubelet/provider.go`](vkubelet/provider.go) file. Finally, add your new provider to the `switch` statement in the
+[`vkubelet/vkubelet.go`](vkubelet/vkubelet.go) file.
 
 ```go
 // Provider contains the methods required to implement a virtual-kubelet provider.
@@ -150,7 +151,10 @@ type Provider interface {
 	// GetPod retrieves a pod by name from the provider (can be cached).
 	GetPod(namespace, name string) (*v1.Pod, error)
 
-	// GetPodStatus retrievesthe status of a pod by name from the provider.
+	// GetContainerLogs retrieves the logs of a container by name from the provider.
+	GetContainerLogs(namespace, podName, containerName string, tail int) (string, error)
+
+	// GetPodStatus retrieves the status of a pod by name from the provider.
 	GetPodStatus(namespace, name string) (*v1.PodStatus, error)
 
 	// GetPods retrieves a list of all pods running on the provider (can be cached).
@@ -163,8 +167,19 @@ type Provider interface {
 	// within Kubernetes.
 	NodeConditions() []v1.NodeCondition
 
+	// NodeAddresses returns a list of addresses for the node status
+	// within Kubernetes.
+	NodeAddresses() []v1.NodeAddress
+
+	// NodeDaemonEndpoints returns NodeDaemonEndpoints for the node status
+	// within Kubernetes.
+	NodeDaemonEndpoints() *v1.NodeDaemonEndpoints
+
 	// OperatingSystem returns the operating system the provider is for.
 	OperatingSystem() string
+
+	// Stop is called on shutdown, but should not stop any pods assigned to this node
+	Stop()
 }
 ```
 

@@ -1,0 +1,4 @@
+# example configuration file for Exec virtual-kubelet
+Pods = "20"
+StateDir = "/tmp"
+LogDir = "/tmp"

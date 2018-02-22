@@ -246,6 +246,12 @@ func (p *MockProvider) OperatingSystem() string {
 	return providers.OperatingSystemLinux
 }
 
+// Stop is called on shutdown, but should not stop any pods assigned to this node
+func (p *MockProvider) Stop() {
+	// Stop is a noop for MockProvider as there's no cleanup to be done
+	return
+}
+
 // buildKey is a helper for building the "key" for the providers pod store.
 func buildKey(pod *v1.Pod) (string, error) {
 	if pod.ObjectMeta.Namespace == "" {
