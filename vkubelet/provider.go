@@ -11,6 +11,7 @@ import (
 var _ Provider = (*azure.ACIProvider)(nil)
 var _ Provider = (*hypersh.HyperProvider)(nil)
 var _ Provider = (*web.BrokerProvider)(nil)
+var _ Provider = (*azure.BatchProvider)(nil)
 
 // Provider contains the methods required to implement a virtual-kubelet provider.
 type Provider interface {

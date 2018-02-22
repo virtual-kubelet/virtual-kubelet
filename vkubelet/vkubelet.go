@@ -80,6 +80,11 @@ func New(nodeName, operatingSystem, namespace, kubeConfig, taint, provider, prov
 		if err != nil {
 			return nil, err
 		}
+	case "azurebatch":
+		p, err = azure.NewBatchProvider(providerConfig, rm, nodeName, operatingSystem, internalIP, daemonEndpointPort)
+		if err != nil {
+			return nil, err
+		}
 	case "hyper":
 		p, err = hypersh.NewHyperProvider(providerConfig, rm, nodeName, operatingSystem)
 		if err != nil {
@@ -140,9 +145,9 @@ func (s *Server) registerNode() error {
 		ObjectMeta: metav1.ObjectMeta{
 			Name: s.nodeName,
 			Labels: map[string]string{
-				"type":                  "virtual-kubelet",
-				"kubernetes.io/role":    "agent",
-				"beta.kubernetes.io/os": strings.ToLower(s.provider.OperatingSystem()),
+				"type":                                                    "virtual-kubelet",
+				"kubernetes.io/role":                                      "agent",
+				"beta.kubernetes.io/os":                                   strings.ToLower(s.provider.OperatingSystem()),
 				"alpha.service-controller.kubernetes.io/exclude-balancer": "true",
 			},
 		},
