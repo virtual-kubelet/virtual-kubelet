@@ -3,6 +3,8 @@ package azure
 import (
 	"context"
 	"encoding/json"
+	"fmt"
+	"io/ioutil"
 	"log"
 
 	"github.com/Azure/azure-sdk-for-go/services/batch/2017-09-01.6.0/batch"
@@ -10,7 +12,6 @@ import (
 	"github.com/golang/glog"
 	"github.com/google/uuid"
 	"github.com/virtual-kubelet/virtual-kubelet/manager"
-	azure "github.com/virtual-kubelet/virtual-kubelet/providers/azure/client"
 	"k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -18,6 +19,7 @@ import (
 
 type BatchProvider struct {
 	ctx                context.Context
+	cancelOps          context.CancelFunc
 	poolClient         *batch.PoolClient
 	jobClient          *batch.JobClient
 	taskClient         *batch.TaskClient
@@ -45,18 +47,20 @@ type BatchConfig struct {
 	PoolId         string
 }
 
-// NewBatchProvider Creates a
+// NewBatchProvider Creates a batch provider
 func NewBatchProvider(config string, rm *manager.ResourceManager, nodeName, operatingSystem string, internalIP string, daemonEndpointPort int32) (*BatchProvider, error) {
-	var p *BatchProvider
+	fmt.Println("Starting create provider")
 
-	p.ctx, _ = context.WithCancel(context.Background())
+	p := BatchProvider{}
+
+	p.ctx = context.Background()
 
 	batchConfig, err := getAzureConfigFromEnv()
 	if err != nil {
 		panic("Failed to get auth information")
 	}
 
-	spt, err := newServicePrincipalTokenFromCredentials(batchConfig, azure.PublicCloud.ResourceManagerEndpoint)
+	spt, err := newServicePrincipalTokenFromCredentials(batchConfig, "https://batch.core.windows.net/")
 
 	if err != nil {
 		glog.Fatalf("Failed creating service principal: %v", err)
@@ -64,10 +68,11 @@ func NewBatchProvider(config string, rm *manager.ResourceManager, nodeName, oper
 
 	auth := autorest.NewBearerAuthorizer(spt)
 
-	poolClient := batch.NewPoolClient()
+	poolClient := batch.NewPoolClientWithBaseURI("https://lgtest.northeurope.batch.azure.com")
 	poolClient.Authorizer = auth
+	poolClient.RetryAttempts = 0
 
-	pool, err := poolClient.Get(p.ctx, batchConfig.PoolId, "", "", nil, nil, nil, nil, "", "", nil, nil)
+	pool, err := poolClient.Get(p.ctx, batchConfig.PoolId, "*", "", nil, nil, nil, nil, "", "", nil, nil)
 	if err != nil {
 		panic(err)
 	}
@@ -76,7 +81,7 @@ func NewBatchProvider(config string, rm *manager.ResourceManager, nodeName, oper
 		panic("Pool isn't in an active state")
 	}
 
-	p.poolClient = &poolClient
+	log.Println("returned...")
 
 	jobClient := batch.NewJobClient()
 	jobClient.Authorizer = auth
@@ -107,10 +112,10 @@ func NewBatchProvider(config string, rm *manager.ResourceManager, nodeName, oper
 	p.nodeName = nodeName
 	p.internalIP = internalIP
 	p.daemonEndpointPort = daemonEndpointPort
-	return p, nil
+	return &p, nil
 }
 
-// CreatePod accepts a Pod definition and forwards the call to the web endpoint
+// CreatePod accepts a Pod definition
 func (p *BatchProvider) CreatePod(pod *v1.Pod) error {
 	ips := make([]batch.ContainerRegistry, 0, len(pod.Spec.ImagePullSecrets))
 	for _, ref := range pod.Spec.ImagePullSecrets {
@@ -148,34 +153,57 @@ func (p *BatchProvider) CreatePod(pod *v1.Pod) error {
 		log.Println("Pod has more than one image pull secret. Skipping all but the 1st")
 	}
 
+	if len(pod.Spec.Containers) > 1 {
+		log.Println("Pod contains more than 1 container currently not supported.")
+	}
+
 	for _, container := range pod.Spec.Containers {
 
 		task := batch.TaskAddParameter{
-			ID: StringPointer(uuid.New().String()),
+			DisplayName: StringPointer(string(pod.UID)),
+			ID:          StringPointer(getTaskIdForPod(pod)),
 			ContainerSettings: &batch.TaskContainerSettings{
 				ImageName: StringPointer(container.Image),
 				Registry:  &ips[0],
 			},
 		}
 		p.taskClient.Add(p.ctx, p.batchJobId, task, nil, nil, nil, nil)
+
+		// Todo: Look at using a task wrapper to coschedule containers in a single task.
+		break
 	}
 
 	return nil
 }
 
-// UpdatePod accepts a Pod definition and forwards the call to the web endpoint
+// UpdatePod accepts a Pod definition
 func (p *BatchProvider) UpdatePod(pod *v1.Pod) error {
-	panic("not implimented")
+	log.Println("NOOP: Pod update not supported")
+	return nil
 }
 
-// DeletePod accepts a Pod definition and forwards the call to the web endpoint
+// DeletePod accepts a Pod definition
 func (p *BatchProvider) DeletePod(pod *v1.Pod) error {
-	panic("not implimented")
+	task, err := p.taskClient.Delete(p.ctx, p.batchJobId, getTaskIdForPod(pod), nil, nil, nil, nil, "", "", nil, nil)
+	if err != nil {
+		log.Println(err)
+		panic(err)
+	}
+
+	log.Println(task)
+	return nil
 }
 
-// GetPod returns a pod by name that is being managed by the web server
+// GetPod returns a pod by name
 func (p *BatchProvider) GetPod(namespace, name string) (*v1.Pod, error) {
-	panic("not implimented")
+	pod := p.resourceManager.GetPod(name)
+	// task, err := p.taskClient.Get(p.ctx, p.batchJobId, getTaskIdForPod(pod), "", "", nil, nil, nil, nil, "", "", nil, nil)
+	// if err != nil {
+	// 	log.Println(err)
+	// 	panic(err)
+	// }
+
+	return pod, nil
 }
 
 // GetContainerLogs returns the logs of a container running in a pod by name.
@@ -185,7 +213,32 @@ func (p *BatchProvider) GetContainerLogs(namespace, podName, containerName strin
 
 // GetPodStatus retrieves the status of a given pod by name.
 func (p *BatchProvider) GetPodStatus(namespace, name string) (*v1.PodStatus, error) {
-	panic("not implimented")
+	pod := p.resourceManager.GetPod(name)
+	task, err := p.taskClient.Get(p.ctx, p.batchJobId, getTaskIdForPod(pod), "", "", nil, nil, nil, nil, "", "", nil, nil)
+	if err != nil {
+		log.Println(err)
+		panic(err)
+	}
+
+	responseBody, _ := ioutil.ReadAll(task.Response.Body)
+
+	log.Println(responseBody)
+
+	startTime := metav1.Time{
+		Time: task.ExecutionInfo.StartTime.Time,
+	}
+
+	return &v1.PodStatus{
+		Phase:     convertTaskStatusToPodPhase(task.State),
+		StartTime: &startTime,
+		ContainerStatuses: []v1.ContainerStatus{
+			v1.ContainerStatus{
+				Name:         pod.Spec.Containers[0].Name,
+				Ready:        task.State == batch.TaskStateRunning,
+				RestartCount: *task.ExecutionInfo.RetryCount,
+			},
+		},
+	}, nil
 }
 
 // GetPods retrieves a list of all pods scheduled to run.

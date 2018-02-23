@@ -2,11 +2,15 @@ package azure
 
 // NewServicePrincipalTokenFromCredentials creates a new ServicePrincipalToken using values of the
 import (
+	"crypto/md5"
 	"encoding/json"
+	"fmt"
 	"os"
 
+	"github.com/Azure/azure-sdk-for-go/services/batch/2017-09-01.6.0/batch"
 	"github.com/Azure/go-autorest/autorest/adal"
 	azure "github.com/virtual-kubelet/virtual-kubelet/providers/azure/client"
+	"k8s.io/api/core/v1"
 )
 
 // passed credentials map.
@@ -58,4 +62,23 @@ func getAzureConfigFromEnv() (BatchConfig, error) {
 	}
 
 	return config, nil
+}
+
+func getTaskIdForPod(pod *v1.Pod) string {
+	ID := []byte(fmt.Sprintf("%s-%s", pod.Namespace, pod.Name))
+	return string(fmt.Sprintf("%x", md5.Sum(ID)))
+}
+
+func convertTaskStatusToPodPhase(t batch.TaskState) (podPhase v1.PodPhase) {
+	switch t {
+	case batch.TaskStatePreparing:
+		podPhase = v1.PodPending
+	case batch.TaskStateActive:
+		podPhase = v1.PodPending
+	case batch.TaskStateRunning:
+		podPhase = v1.PodRunning
+	case batch.TaskStateCompleted:
+		podPhase = v1.PodSucceeded
+	}
+	return
 }
