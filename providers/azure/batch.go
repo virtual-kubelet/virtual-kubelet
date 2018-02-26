@@ -6,11 +6,12 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"net/http"
+	"net/http/httputil"
 
 	"github.com/Azure/azure-sdk-for-go/services/batch/2017-09-01.6.0/batch"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/golang/glog"
-	"github.com/google/uuid"
 	"github.com/virtual-kubelet/virtual-kubelet/manager"
 	"k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -39,12 +40,37 @@ type BatchProvider struct {
 
 // ARMConfig - Basic azure config used to interact with ARM resources.
 type BatchConfig struct {
-	ClientID       string
-	ClientSecret   string
-	SubscriptionID string
-	TenantID       string
-	ResourceGroup  string
-	PoolId         string
+	ClientID        string
+	ClientSecret    string
+	SubscriptionID  string
+	TenantID        string
+	ResourceGroup   string
+	PoolId          string
+	AccountName     string
+	AccountLocation string
+}
+
+const batchManagementEndpoint = "https://batch.core.windows.net/"
+
+func LogRequest() autorest.PrepareDecorator {
+	return func(p autorest.Preparer) autorest.Preparer {
+		return autorest.PreparerFunc(func(r *http.Request) (*http.Request, error) {
+			r.Header.Set("Content-Type", "application/json; odata=minimalmetadata")
+			dump, _ := httputil.DumpRequestOut(r, true)
+			log.Println(string(dump))
+			return r, nil
+		})
+	}
+}
+
+func LogResponse() autorest.RespondDecorator {
+	return func(p autorest.Responder) autorest.Responder {
+		return autorest.ResponderFunc(func(r *http.Response) error {
+			dump, _ := httputil.DumpResponse(r, true)
+			log.Println(string(dump))
+			return nil
+		})
+	}
 }
 
 // NewBatchProvider Creates a batch provider
@@ -57,10 +83,10 @@ func NewBatchProvider(config string, rm *manager.ResourceManager, nodeName, oper
 
 	batchConfig, err := getAzureConfigFromEnv()
 	if err != nil {
-		panic("Failed to get auth information")
+		log.Println("Failed to get auth information")
 	}
 
-	spt, err := newServicePrincipalTokenFromCredentials(batchConfig, "https://batch.core.windows.net/")
+	spt, err := newServicePrincipalTokenFromCredentials(batchConfig, batchManagementEndpoint)
 
 	if err != nil {
 		glog.Fatalf("Failed creating service principal: %v", err)
@@ -68,7 +94,7 @@ func NewBatchProvider(config string, rm *manager.ResourceManager, nodeName, oper
 
 	auth := autorest.NewBearerAuthorizer(spt)
 
-	poolClient := batch.NewPoolClientWithBaseURI("https://lgtest.northeurope.batch.azure.com")
+	poolClient := batch.NewPoolClientWithBaseURI(getBatchBaseUrl(batchConfig))
 	poolClient.Authorizer = auth
 	poolClient.RetryAttempts = 0
 
@@ -78,25 +104,36 @@ func NewBatchProvider(config string, rm *manager.ResourceManager, nodeName, oper
 	}
 
 	if pool.State != batch.PoolStateActive {
-		panic("Pool isn't in an active state")
+		log.Println("Pool isn't in an active state")
 	}
 
 	log.Println("returned...")
 
-	jobClient := batch.NewJobClient()
+	jobClient := batch.NewJobClientWithBaseURI(getBatchBaseUrl(batchConfig))
+	jobClient.RequestInspector = LogRequest()
+	jobClient.ResponseInspector = LogResponse()
+
+	// jobClient.RequestInspector = autorest.CreatePreparer(loggingPreparer)
+
 	jobClient.Authorizer = auth
-	jobID := uuid.New().String()
+	jobID := "virtualkubeletjob2"
 	wrapperJob := batch.JobAddParameter{
 		ID: &jobID,
 		PoolInfo: &batch.PoolInformation{
 			PoolID: pool.ID,
 		},
 	}
-	jobClient.Add(p.ctx, wrapperJob, nil, nil, nil, nil)
-	p.batchJobId = jobID
-	p.jobClient = &jobClient
+	// reqID := uuid.NewV4()
+	res, err := jobClient.Add(p.ctx, wrapperJob, nil, nil, nil, nil)
 
-	taskclient := batch.NewTaskClient()
+	if err != nil {
+		panic(err)
+	}
+	log.Println(res)
+	p.jobClient = &jobClient
+	p.batchJobId = jobID
+
+	taskclient := batch.NewTaskClientWithBaseURI(getBatchBaseUrl(batchConfig))
 	taskclient.Authorizer = auth
 	p.taskClient = &taskclient
 
@@ -121,23 +158,23 @@ func (p *BatchProvider) CreatePod(pod *v1.Pod) error {
 	for _, ref := range pod.Spec.ImagePullSecrets {
 		secret, err := p.resourceManager.GetSecret(ref.Name, pod.Namespace)
 		if err != nil {
-			panic("Failed to get secret")
+			log.Println("Failed to get secret")
 		}
 		if secret == nil {
-			panic("Failed to get secret: nil")
+			log.Println("Failed to get secret: nil")
 		}
 		// TODO: Check if secret type is v1.SecretTypeDockercfg and use DockerConfigKey instead of hardcoded value
 		// TODO: Check if secret type is v1.SecretTypeDockerConfigJson and use DockerConfigJsonKey to determine if it's in json format
 		// TODO: Return error if it's not one of these two types
 		repoData, ok := secret.Data[".dockercfg"]
 		if !ok {
-			panic("no dockercfg present in secret")
+			log.Println("no dockercfg present in secret")
 		}
 
 		var authConfigs map[string]AuthConfig
 		err = json.Unmarshal(repoData, &authConfigs)
 		if err != nil {
-			panic("failed to unmarshal dockercfg")
+			log.Println("failed to unmarshal dockercfg")
 		}
 
 		for server, authConfig := range authConfigs {
@@ -208,7 +245,8 @@ func (p *BatchProvider) GetPod(namespace, name string) (*v1.Pod, error) {
 
 // GetContainerLogs returns the logs of a container running in a pod by name.
 func (p *BatchProvider) GetContainerLogs(namespace, podName, containerName string, tail int) (string, error) {
-	panic("not implimented")
+	log.Println("not implimented")
+	return "no logs yet", nil
 }
 
 // GetPodStatus retrieves the status of a given pod by name.
@@ -217,7 +255,7 @@ func (p *BatchProvider) GetPodStatus(namespace, name string) (*v1.PodStatus, err
 	task, err := p.taskClient.Get(p.ctx, p.batchJobId, getTaskIdForPod(pod), "", "", nil, nil, nil, nil, "", "", nil, nil)
 	if err != nil {
 		log.Println(err)
-		panic(err)
+		// panic(err)
 	}
 
 	responseBody, _ := ioutil.ReadAll(task.Response.Body)
@@ -243,7 +281,8 @@ func (p *BatchProvider) GetPodStatus(namespace, name string) (*v1.PodStatus, err
 
 // GetPods retrieves a list of all pods scheduled to run.
 func (p *BatchProvider) GetPods() ([]*v1.Pod, error) {
-	panic("not implimented")
+	log.Println("not implimented")
+	return make([]*v1.Pod, 0), nil
 }
 
 // Capacity returns a resource list containing the capacity limits

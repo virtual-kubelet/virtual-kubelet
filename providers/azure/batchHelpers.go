@@ -41,15 +41,21 @@ func (e *ConfigError) Error() string {
 	return e.ErrorDetails + ": " + string(configJSON)
 }
 
+func getBatchBaseUrl(config BatchConfig) string {
+	return fmt.Sprintf("https://%s.%s.batch.azure.com", config.AccountName, config.AccountLocation)
+}
+
 // GetConfigFromEnv - Retreives the azure configuration from environment variables.
 func getAzureConfigFromEnv() (BatchConfig, error) {
 	config := BatchConfig{
-		ClientID:       os.Getenv("AZURE_CLIENT_ID"),
-		ClientSecret:   os.Getenv("AZURE_CLIENT_SECRET"),
-		ResourceGroup:  os.Getenv("AZURE_RESOURCE_GROUP"),
-		SubscriptionID: os.Getenv("AZURE_SUBSCRIPTION_ID"),
-		TenantID:       os.Getenv("AZURE_TENANT_ID"),
-		PoolId:         os.Getenv("AZURE_BATCH_POOLID"),
+		ClientID:        os.Getenv("AZURE_CLIENT_ID"),
+		ClientSecret:    os.Getenv("AZURE_CLIENT_SECRET"),
+		ResourceGroup:   os.Getenv("AZURE_RESOURCE_GROUP"),
+		SubscriptionID:  os.Getenv("AZURE_SUBSCRIPTION_ID"),
+		TenantID:        os.Getenv("AZURE_TENANT_ID"),
+		PoolId:          os.Getenv("AZURE_BATCH_POOLID"),
+		AccountLocation: os.Getenv("AZURE_BATCH_ACCOUNT_LOCATION"),
+		AccountName:     os.Getenv("AZURE_BATCH_ACCOUNT_NAME"),
 	}
 
 	if config.ClientID == "" ||
