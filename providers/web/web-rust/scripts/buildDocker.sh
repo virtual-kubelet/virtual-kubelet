@@ -6,8 +6,8 @@ SCRIPT_NAME=$(basename "$0")
 DIR=$(cd "$(dirname "$0")" && pwd)
 ROOT_FOLDER="$DIR/.."
 PUBLISH_DIR=$ROOT_FOLDER/target/publish
-TARGET_NAME=rust-web-provider
-IMAGE_NAME=rust-web-provider
+TARGET_NAME=web-rust
+IMAGE_NAME=web-rust
 IMAGE_VERSION=latest
 BUILD_RELEASE=true
 SOURCE_RELEASE_DIR=$ROOT_FOLDER/target/release
@@ -20,7 +20,7 @@ usage()
     echo "Note: You might have to run this as root or sudo."
     echo ""
     echo "options"
-    echo " -i, --image-name     Image name (default: rust-web-provider)"
+    echo " -i, --image-name     Image name (default: web-rust)"
     echo " -v, --image-version  Docker Image Version (default: latest)"
     echo " -r, --build-release  Build release configuration - true|false (default: true)"
     exit 1;

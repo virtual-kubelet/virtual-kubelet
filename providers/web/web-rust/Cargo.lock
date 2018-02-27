@@ -559,17 +559,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "rust-web-provider"
-version = "0.1.0"
-dependencies = [
- "env_logger 0.4.3 (registry+https://github.com/rust-lang/crates.io-index)",
- "kube_rust 1.0.0 (git+https://github.com/avranju/kube-rust?rev=058de6366d0d75cb60b2d0fd5ba1abd2e7d83fff)",
- "log 0.4.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "time 0.1.38 (registry+https://github.com/rust-lang/crates.io-index)",
- "virtual-kubelet-adapter 0.1.0 (git+https://github.com/avranju/rust-virtual-kubelet-adapter?rev=4250103d31e2864725e47bdd23295e79ee12b6d0)",
-]
-
-[[package]]
 name = "rustc-serialize"
 version = "0.3.24"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -851,6 +840,17 @@ dependencies = [
 name = "void"
 version = "1.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
+
+[[package]]
+name = "web-rust"
+version = "0.1.0"
+dependencies = [
+ "env_logger 0.4.3 (registry+https://github.com/rust-lang/crates.io-index)",
+ "kube_rust 1.0.0 (git+https://github.com/avranju/kube-rust?rev=058de6366d0d75cb60b2d0fd5ba1abd2e7d83fff)",
+ "log 0.4.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "time 0.1.38 (registry+https://github.com/rust-lang/crates.io-index)",
+ "virtual-kubelet-adapter 0.1.0 (git+https://github.com/avranju/rust-virtual-kubelet-adapter?rev=4250103d31e2864725e47bdd23295e79ee12b6d0)",
+]
 
 [[package]]
 name = "winapi"

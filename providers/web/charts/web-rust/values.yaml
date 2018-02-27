@@ -1,5 +1,5 @@
 rustwebimage:
-  repository: avranju/rust-web-provider
+  repository: avranju/web-rust
   tag: latest
   pullPolicy: Always
   port: 3000

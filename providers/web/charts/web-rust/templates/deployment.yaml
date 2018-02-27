@@ -19,7 +19,7 @@ spec:
         release: {{ .Release.Name }}
     spec:
       containers:
-        - name: rustwebprovider
+        - name: webrust
           image: "{{ .Values.rustwebimage.repository }}:{{ .Values.rustwebimage.tag }}"
           imagePullPolicy: {{ .Values.rustwebimage.pullPolicy }}
           ports:
