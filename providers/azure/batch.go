@@ -8,10 +8,12 @@ import (
 	"log"
 	"net/http"
 	"net/http/httputil"
+	"time"
 
 	"github.com/Azure/azure-sdk-for-go/services/batch/2017-09-01.6.0/batch"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/golang/glog"
+	"github.com/google/uuid"
 	"github.com/virtual-kubelet/virtual-kubelet/manager"
 	"k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -52,7 +54,7 @@ type BatchConfig struct {
 
 const batchManagementEndpoint = "https://batch.core.windows.net/"
 
-func LogRequest() autorest.PrepareDecorator {
+func FixContentTypeInspector() autorest.PrepareDecorator {
 	return func(p autorest.Preparer) autorest.Preparer {
 		return autorest.PreparerFunc(func(r *http.Request) (*http.Request, error) {
 			r.Header.Set("Content-Type", "application/json; odata=minimalmetadata")
@@ -77,68 +79,12 @@ func LogResponse() autorest.RespondDecorator {
 func NewBatchProvider(config string, rm *manager.ResourceManager, nodeName, operatingSystem string, internalIP string, daemonEndpointPort int32) (*BatchProvider, error) {
 	fmt.Println("Starting create provider")
 
-	p := BatchProvider{}
-
-	p.ctx = context.Background()
-
 	batchConfig, err := getAzureConfigFromEnv()
 	if err != nil {
 		log.Println("Failed to get auth information")
 	}
-
-	spt, err := newServicePrincipalTokenFromCredentials(batchConfig, batchManagementEndpoint)
-
-	if err != nil {
-		glog.Fatalf("Failed creating service principal: %v", err)
-	}
-
-	auth := autorest.NewBearerAuthorizer(spt)
-
-	poolClient := batch.NewPoolClientWithBaseURI(getBatchBaseUrl(batchConfig))
-	poolClient.Authorizer = auth
-	poolClient.RetryAttempts = 0
-
-	pool, err := poolClient.Get(p.ctx, batchConfig.PoolId, "*", "", nil, nil, nil, nil, "", "", nil, nil)
-	if err != nil {
-		panic(err)
-	}
-
-	if pool.State != batch.PoolStateActive {
-		log.Println("Pool isn't in an active state")
-	}
-
-	log.Println("returned...")
-
-	jobClient := batch.NewJobClientWithBaseURI(getBatchBaseUrl(batchConfig))
-	jobClient.RequestInspector = LogRequest()
-	jobClient.ResponseInspector = LogResponse()
-
-	// jobClient.RequestInspector = autorest.CreatePreparer(loggingPreparer)
-
-	jobClient.Authorizer = auth
-	jobID := "virtualkubeletjob2"
-	wrapperJob := batch.JobAddParameter{
-		ID: &jobID,
-		PoolInfo: &batch.PoolInformation{
-			PoolID: pool.ID,
-		},
-	}
-	// reqID := uuid.NewV4()
-	res, err := jobClient.Add(p.ctx, wrapperJob, nil, nil, nil, nil)
-
-	if err != nil {
-		panic(err)
-	}
-	log.Println(res)
-	p.jobClient = &jobClient
-	p.batchJobId = jobID
-
-	taskclient := batch.NewTaskClientWithBaseURI(getBatchBaseUrl(batchConfig))
-	taskclient.Authorizer = auth
-	p.taskClient = &taskclient
-
-	//Todo: Parse provider config string
-
+	p := BatchProvider{}
+	p.batchPoolId = batchConfig.PoolId
 	// Set sane defaults for Capacity in case config is not supplied
 	p.cpu = "20"
 	p.memory = "100Gi"
@@ -149,6 +95,166 @@ func NewBatchProvider(config string, rm *manager.ResourceManager, nodeName, oper
 	p.nodeName = nodeName
 	p.internalIP = internalIP
 	p.daemonEndpointPort = daemonEndpointPort
+
+	p.ctx = context.Background()
+
+	spt, err := newServicePrincipalTokenFromCredentials(batchConfig, batchManagementEndpoint)
+
+	if err != nil {
+		glog.Fatalf("Failed creating service principal: %v", err)
+	}
+
+	auth := autorest.NewBearerAuthorizer(spt)
+
+	accountClient := batch.NewAccountClientWithBaseURI(getBatchBaseUrl(batchConfig))
+	accountClient.Authorizer = auth
+	res, err := accountClient.ListNodeAgentSkus(p.ctx, "", nil, nil, nil, nil, nil)
+	log.Println(res.Values())
+	for res.NotDone() {
+		res.Next()
+		log.Println(res.Values())
+	}
+
+	poolClient := batch.NewPoolClientWithBaseURI(getBatchBaseUrl(batchConfig))
+	poolClient.Authorizer = auth
+	poolClient.RetryAttempts = 0
+	poolClient.RequestInspector = FixContentTypeInspector()
+	poolClient.ResponseInspector = LogResponse()
+
+	pool, err := poolClient.Get(p.ctx, batchConfig.PoolId, "*", "", nil, nil, nil, nil, "", "", nil, nil)
+
+	// If we observe an error which isn't related to the pool not existing panic.
+	// 404 is expected if this is first run.
+	if err != nil && pool.StatusCode != 404 {
+		panic(err)
+	}
+
+	if err != nil && pool.State == batch.PoolStateActive {
+		log.Println("Pool active and running...")
+	}
+
+	if pool.Response.StatusCode == 404 {
+		// Todo: Fixup pool create currently return error stating SKU not supported
+		toCreate := batch.PoolAddParameter{
+			ID: &p.batchPoolId,
+			VirtualMachineConfiguration: &batch.VirtualMachineConfiguration{
+				ImageReference: &batch.ImageReference{
+					Publisher: StringPointer("Canonical"),
+					Sku:       StringPointer("16.04-LTS"),
+					Offer:     StringPointer("UbuntuServer"),
+					Version:   StringPointer("latest"),
+				},
+				NodeAgentSKUID: StringPointer("batch.node.ubuntu 16.04"),
+			},
+			MaxTasksPerNode:      IntPointer(1),
+			TargetDedicatedNodes: IntPointer(1),
+			StartTask: &batch.StartTask{
+				ResourceFiles: &[]batch.ResourceFile{
+					batch.ResourceFile{
+						BlobSource: StringPointer("https://raw.githubusercontent.com/Azure/batch-shipyard/b40a812d3df7df1d283cc30344ca2a69a1d97f95/contrib/packer/ubuntu-16.04-GPU%2BIB/bootstrap.sh"),
+						FilePath:   StringPointer("bootstrap.sh"),
+						FileMode:   StringPointer("777"),
+					},
+				},
+				CommandLine:    StringPointer("bash -f /mnt/batch/tasks/startup/wd/bootstrap.sh 17.12.0~ce-0~ubuntu NVIDIA-Linux-x86_64-384.111.run"),
+				WaitForSuccess: boolPointer(true),
+				UserIdentity: &batch.UserIdentity{
+					AutoUser: &batch.AutoUserSpecification{
+						ElevationLevel: batch.Admin,
+						Scope:          batch.Task,
+					},
+				},
+			},
+			// TaskSchedulingPolicy: &batch.TaskSchedulingPolicy{
+			// 	NodeFillType: "spread",
+			// },
+			VMSize: StringPointer("standard_a1"),
+		}
+		poolCreate, err := poolClient.Add(p.ctx, toCreate, nil, nil, nil, nil)
+
+		if err != nil {
+			panic(err)
+		}
+
+		if poolCreate.StatusCode != 201 {
+			panic(poolCreate)
+		}
+
+		log.Println("Pool Created")
+
+	}
+
+	for {
+		pool, _ := poolClient.Get(p.ctx, batchConfig.PoolId, "*", "", nil, nil, nil, nil, "", "", nil, nil)
+
+		if pool.State != "" && pool.State == batch.PoolStateActive {
+			log.Println("Created pool... State is Active!")
+			break
+		} else {
+			log.Println("Pool not created yet... sleeping")
+			log.Println(pool)
+			time.Sleep(time.Second * 20)
+		}
+	}
+
+	jobClient := batch.NewJobClientWithBaseURI(getBatchBaseUrl(batchConfig))
+	jobClient.RequestInspector = FixContentTypeInspector()
+	jobClient.ResponseInspector = LogResponse()
+
+	jobClient.Authorizer = auth
+	jobID := "virtualkubeletjob3"
+	p.batchJobId = jobID
+
+	// check if job exists already
+	currentJob, err := jobClient.Get(p.ctx, jobID, "", "", nil, nil, nil, nil, "", "", nil, nil)
+	if err == nil && currentJob.State == batch.JobStateActive {
+		log.Println("Wrapper job already exists...")
+	} else {
+		log.Println("Wrapper job missing... creating...")
+		wrapperJob := batch.JobAddParameter{
+			ID: &jobID,
+			PoolInfo: &batch.PoolInformation{
+				PoolID: pool.ID,
+			},
+		}
+		// reqID := uuid.NewV4()
+		res, err := jobClient.Add(p.ctx, wrapperJob, nil, nil, nil, nil)
+
+		if err != nil {
+			panic(err)
+		}
+		log.Println(res)
+		p.jobClient = &jobClient
+		p.batchJobId = jobID
+	}
+
+	taskclient := batch.NewTaskClientWithBaseURI(getBatchBaseUrl(batchConfig))
+	taskclient.Authorizer = auth
+	taskclient.RequestInspector = FixContentTypeInspector()
+	p.taskClient = &taskclient
+	taskToAdd := batch.TaskAddParameter{
+		ID: StringPointer(uuid.New().String()),
+		// ContainerSettings: &batch.TaskContainerSettings{
+		// 	ContainerRunOptions: StringPointer("--rm"),
+		// 	ImageName:           StringPointer("busybox"),
+		// },
+		CommandLine: StringPointer("sudo docker run busybox sleep 5"),
+		UserIdentity: &batch.UserIdentity{
+			AutoUser: &batch.AutoUserSpecification{
+				ElevationLevel: batch.Admin,
+				Scope:          batch.Task,
+			},
+		},
+	}
+	taskRes, err := taskclient.Add(p.ctx, p.batchJobId, taskToAdd, nil, nil, nil, nil)
+
+	if err != nil {
+		panic(err)
+	}
+
+	log.Println(taskRes)
+	//Todo: Parse provider config string
+
 	return &p, nil
 }
 
@@ -255,7 +361,7 @@ func (p *BatchProvider) GetPodStatus(namespace, name string) (*v1.PodStatus, err
 	task, err := p.taskClient.Get(p.ctx, p.batchJobId, getTaskIdForPod(pod), "", "", nil, nil, nil, nil, "", "", nil, nil)
 	if err != nil {
 		log.Println(err)
-		// panic(err)
+		return nil, err
 	}
 
 	responseBody, _ := ioutil.ReadAll(task.Response.Body)

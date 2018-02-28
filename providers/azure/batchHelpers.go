@@ -26,6 +26,14 @@ func StringPointer(s string) *string {
 	return &s
 }
 
+func IntPointer(s int32) *int32 {
+	return &s
+}
+
+func boolPointer(s bool) *bool {
+	return &s
+}
+
 // ConfigError - Error when reading configuration values.
 type ConfigError struct {
 	CurrentConfig BatchConfig
