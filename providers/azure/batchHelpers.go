@@ -5,13 +5,140 @@ import (
 	"crypto/md5"
 	"encoding/json"
 	"fmt"
+	"log"
 	"os"
+	"time"
+
+	"github.com/Azure/go-autorest/autorest"
 
 	"github.com/Azure/azure-sdk-for-go/services/batch/2017-09-01.6.0/batch"
 	"github.com/Azure/go-autorest/autorest/adal"
+	"github.com/Azure/go-autorest/autorest/to"
 	azure "github.com/virtual-kubelet/virtual-kubelet/providers/azure/client"
 	"k8s.io/api/core/v1"
 )
+
+func createOrGetPool(p *BatchProvider, auth *autorest.BearerAuthorizer) {
+
+	poolClient := batch.NewPoolClientWithBaseURI(getBatchBaseURL(p.batchConfig))
+	poolClient.Authorizer = auth
+	poolClient.RetryAttempts = 0
+	poolClient.RequestInspector = FixContentTypeInspector()
+	poolClient.ResponseInspector = LogResponse()
+
+	pool, err := poolClient.Get(p.ctx, p.batchConfig.PoolID, "*", "", nil, nil, nil, nil, "", "", nil, nil)
+
+	// If we observe an error which isn't related to the pool not existing panic.
+	// 404 is expected if this is first run.
+	if err != nil && pool.StatusCode != 404 {
+		panic(err)
+	}
+
+	if err != nil && pool.State == batch.PoolStateActive {
+		log.Println("Pool active and running...")
+	}
+
+	if pool.Response.StatusCode == 404 {
+		// Todo: Fixup pool create currently return error stating SKU not supported
+		toCreate := batch.PoolAddParameter{
+			ID: &p.batchConfig.PoolID,
+			VirtualMachineConfiguration: &batch.VirtualMachineConfiguration{
+				ImageReference: &batch.ImageReference{
+					Publisher: to.StringPtr("Canonical"),
+					Sku:       to.StringPtr("16.04-LTS"),
+					Offer:     to.StringPtr("UbuntuServer"),
+					Version:   to.StringPtr("latest"),
+				},
+				NodeAgentSKUID: to.StringPtr("batch.node.ubuntu 16.04"),
+			},
+			MaxTasksPerNode:      to.Int32Ptr(1),
+			TargetDedicatedNodes: to.Int32Ptr(1),
+			StartTask: &batch.StartTask{
+				ResourceFiles: &[]batch.ResourceFile{
+					batch.ResourceFile{
+						BlobSource: to.StringPtr("https://raw.githubusercontent.com/Azure/batch-shipyard/b40a812d3df7df1d283cc30344ca2a69a1d97f95/contrib/packer/ubuntu-16.04-GPU%2BIB/bootstrap.sh"),
+						FilePath:   to.StringPtr("bootstrap.sh"),
+						FileMode:   to.StringPtr("777"),
+					},
+				},
+				CommandLine:    to.StringPtr("bash -f /mnt/batch/tasks/startup/wd/bootstrap.sh 17.12.0~ce-0~ubuntu NVIDIA-Linux-x86_64-384.111.run"),
+				WaitForSuccess: to.BoolPtr(true),
+				UserIdentity: &batch.UserIdentity{
+					AutoUser: &batch.AutoUserSpecification{
+						ElevationLevel: batch.Admin,
+						Scope:          batch.Task,
+					},
+				},
+			},
+			VMSize: to.StringPtr("standard_a1"),
+		}
+		poolCreate, err := poolClient.Add(p.ctx, toCreate, nil, nil, nil, nil)
+
+		if err != nil {
+			panic(err)
+		}
+
+		if poolCreate.StatusCode != 201 {
+			panic(poolCreate)
+		}
+
+		log.Println("Pool Created")
+
+	}
+
+	for {
+		pool, _ := poolClient.Get(p.ctx, p.batchConfig.PoolID, "*", "", nil, nil, nil, nil, "", "", nil, nil)
+
+		if pool.State != "" && pool.State == batch.PoolStateActive {
+			log.Println("Created pool... State is Active!")
+			break
+		} else {
+			log.Println("Pool not created yet... sleeping")
+			log.Println(pool)
+			time.Sleep(time.Second * 20)
+		}
+	}
+}
+
+func createOrGetJob(p *BatchProvider, auth *autorest.BearerAuthorizer) {
+	jobClient := batch.NewJobClientWithBaseURI(getBatchBaseURL(p.batchConfig))
+	jobClient.RequestInspector = FixContentTypeInspector()
+	jobClient.ResponseInspector = LogResponse()
+
+	jobClient.Authorizer = auth
+	jobID := p.batchConfig.JobID
+
+	// check if job exists already
+	currentJob, err := jobClient.Get(p.ctx, jobID, "", "", nil, nil, nil, nil, "", "", nil, nil)
+
+	if err == nil && currentJob.State == batch.JobStateActive {
+
+		log.Println("Wrapper job already exists...")
+
+	} else if currentJob.Response.StatusCode == 404 {
+
+		log.Println("Wrapper job missing... creating...")
+		wrapperJob := batch.JobAddParameter{
+			ID: &jobID,
+			PoolInfo: &batch.PoolInformation{
+				PoolID: &p.batchConfig.PoolID,
+			},
+		}
+
+		res, err := jobClient.Add(p.ctx, wrapperJob, nil, nil, nil, nil)
+
+		if err != nil {
+			panic(err)
+		}
+
+		log.Println(res)
+
+		p.jobClient = &jobClient
+	} else {
+		// unknown case...
+		panic(err)
+	}
+}
 
 // passed credentials map.
 func newServicePrincipalTokenFromCredentials(c BatchConfig, scope string) (*adal.ServicePrincipalToken, error) {
@@ -20,18 +147,6 @@ func newServicePrincipalTokenFromCredentials(c BatchConfig, scope string) (*adal
 		panic(err)
 	}
 	return adal.NewServicePrincipalToken(*oauthConfig, c.ClientID, c.ClientSecret, scope)
-}
-
-func StringPointer(s string) *string {
-	return &s
-}
-
-func IntPointer(s int32) *int32 {
-	return &s
-}
-
-func boolPointer(s bool) *bool {
-	return &s
 }
 
 // ConfigError - Error when reading configuration values.
@@ -49,7 +164,7 @@ func (e *ConfigError) Error() string {
 	return e.ErrorDetails + ": " + string(configJSON)
 }
 
-func getBatchBaseUrl(config BatchConfig) string {
+func getBatchBaseURL(config BatchConfig) string {
 	return fmt.Sprintf("https://%s.%s.batch.azure.com", config.AccountName, config.AccountLocation)
 }
 
@@ -61,7 +176,8 @@ func getAzureConfigFromEnv() (BatchConfig, error) {
 		ResourceGroup:   os.Getenv("AZURE_RESOURCE_GROUP"),
 		SubscriptionID:  os.Getenv("AZURE_SUBSCRIPTION_ID"),
 		TenantID:        os.Getenv("AZURE_TENANT_ID"),
-		PoolId:          os.Getenv("AZURE_BATCH_POOLID"),
+		PoolID:          os.Getenv("AZURE_BATCH_POOLID"),
+		JobID:           os.Getenv("AZURE_BATCH_JOBID"),
 		AccountLocation: os.Getenv("AZURE_BATCH_ACCOUNT_LOCATION"),
 		AccountName:     os.Getenv("AZURE_BATCH_ACCOUNT_NAME"),
 	}
@@ -70,7 +186,8 @@ func getAzureConfigFromEnv() (BatchConfig, error) {
 		config.ClientSecret == "" ||
 		config.ResourceGroup == "" ||
 		config.SubscriptionID == "" ||
-		config.PoolId == "" ||
+		config.PoolID == "" ||
+		config.JobID == "" ||
 		config.TenantID == "" {
 		return config, &ConfigError{CurrentConfig: config, ErrorDetails: "Missing configuration"}
 	}
@@ -78,7 +195,7 @@ func getAzureConfigFromEnv() (BatchConfig, error) {
 	return config, nil
 }
 
-func getTaskIdForPod(pod *v1.Pod) string {
+func getTaskIDForPod(pod *v1.Pod) string {
 	ID := []byte(fmt.Sprintf("%s-%s", pod.Namespace, pod.Name))
 	return string(fmt.Sprintf("%x", md5.Sum(ID)))
 }
