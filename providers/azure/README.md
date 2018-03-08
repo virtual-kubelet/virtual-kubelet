@@ -168,7 +168,8 @@ NODE_NAME=virtual-kubelet
 CHART_URL=https://github.com/virtual-kubelet/virtual-kubelet/raw/master/charts/$VK_RELEASE.tgz
 
 curl https://raw.githubusercontent.com/virtual-kubelet/virtual-kubelet/master/scripts/createCertAndKey.sh > createCertAndKey.sh
-. createCertAndKey.sh
+chmod +x createCertAndKey.sh
+. ./createCertAndKey.sh
 
 helm install "$CHART_URL" --name "$RELEASE_NAME" \
     --set env.azureClientId="$AZURE_CLIENT_ID",env.azureClientKey="$AZURE_CLIENT_SECRET",env.azureTenantId="$AZURE_TENANT_ID",env.azureSubscriptionId="$AZURE_SUBSCRIPTION_ID",env.aciResourceGroup="$AZURE_RG",env.nodeName="$NODE_NAME",env.nodeOsType=<Linux|Windows>,env.apiserverCert=$cert,env.apiserverKey=$key
@@ -283,7 +284,7 @@ Name                             ResourceGroup    ProvisioningState    Image    
 -------------------------------  ---------------  -------------------  ------------------------  ---------------  ---------------  --------  ----------
 helloworld-2559879000-8vmjw  myResourceGroup    Succeeded            microsoft/aci-helloworld  52.179.3.180:80  1.0 core/1.5 gb  Linux     eastus
 ```
-
+<!--
 ### Schedule an ACI pod with a DNS Name label
 
 Add an annotation to your Pod manifest, `virtualkubelet.io/dnsnamelabel` keyed to what you'd like the Azure Container Instance to receive as a DNS Name, and deploy it.
@@ -327,7 +328,7 @@ Output:
 ```console
 "helloworld-aci.westus.azurecontainer.io"
 ```
-
+-->
 ## Remove the Virtual Kubelet
 
 You can remove your Virtual Kubelet node by deleting the Helm deployment. Run the following command:
