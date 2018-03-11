@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/Azure/go-autorest/autorest"
@@ -210,6 +211,19 @@ func convertTaskStatusToPodPhase(t batch.TaskState) (podPhase v1.PodPhase) {
 		podPhase = v1.PodRunning
 	case batch.TaskStateCompleted:
 		podPhase = v1.PodSucceeded
+	}
+	return
+}
+
+func getLaunchCommand(container v1.Container) (cmd string) {
+	if len(container.Command) > 0 {
+		cmd += strings.Join(container.Command, " ")
+	}
+	if len(cmd) > 0 {
+		cmd += " "
+	}
+	if len(container.Args) > 0 {
+		cmd += strings.Join(container.Args, " ")
 	}
 	return
 }

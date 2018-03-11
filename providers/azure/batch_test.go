@@ -11,14 +11,16 @@ import (
 )
 
 func TestBatchBashGenerator(t *testing.T) {
-	fileBytes, err := ioutil.ReadFile("/home/lawrence/go/src/github.com/virtual-kubelet/virtual-kubelet/providers/azure/batchrunner/run.py.tmpl")
+	fileBytes, err := ioutil.ReadFile("/home/lawrence/go/src/github.com/virtual-kubelet/virtual-kubelet/providers/azure/batchrunner/run.sh.tmpl")
 	if err != nil {
 		t.Error(err)
 		t.FailNow()
 	}
 
 	fileContent := string(fileBytes)
-	template := template.New("run.sh.tmpl").Option("missingkey=error")
+	template := template.New("run.sh.tmpl").Option("missingkey=error").Funcs(template.FuncMap{
+		"getLaunchCommand": getLaunchCommand,
+	})
 
 	template, err = template.Parse(fileContent)
 	if err != nil {
@@ -29,6 +31,7 @@ func TestBatchBashGenerator(t *testing.T) {
 	templateVars := BatchPodComponents{
 		Containers: []*v1.Container{
 			&v1.Container{
+				Name:  "testName",
 				Image: "busybox",
 				Env: []v1.EnvVar{
 					v1.EnvVar{
@@ -39,6 +42,12 @@ func TestBatchBashGenerator(t *testing.T) {
 						Name:  "2",
 						Value: "2",
 					},
+				},
+				Command: []string{
+					"sleep",
+				},
+				Args: []string{
+					"5 && echo 'done'",
 				},
 			},
 		},
