@@ -16,6 +16,7 @@ import (
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/golang/glog"
 	"github.com/virtual-kubelet/virtual-kubelet/manager"
+	"github.com/virtual-kubelet/virtual-kubelet/providers/azure/client/aci"
 	"k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -57,6 +58,13 @@ type BatchConfig struct {
 	JobID           string
 	AccountName     string
 	AccountLocation string
+}
+
+type BatchPodComponents struct {
+	PullCredentials []aci.ImageRegistryCredential
+	Containers      []*v1.Container
+	PodName         string
+	TaskID          string
 }
 
 const batchManagementEndpoint = "https://batch.core.windows.net/"
