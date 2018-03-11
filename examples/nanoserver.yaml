@@ -1,12 +1,12 @@
 apiVersion: v1
 kind: Pod
 metadata:
-  name: iis
+  name: nano
 spec:
   containers:
-  - image: microsoft/iis
+  - image: microsoft/nanoserver
     imagePullPolicy: Always
-    name: iis
+    name: nanoserver
     resources:
       requests:
         memory: 4G
@@ -18,7 +18,7 @@ spec:
     - containerPort: 443
       name: https
   dnsPolicy: Default
-  nodeName: virtual-kubelet-aciconnector-win
+  nodeName: virtual-kubelet-connector-win
   automountServiceAccountToken: false
   tolerations:
   - key: azure.com/aci
