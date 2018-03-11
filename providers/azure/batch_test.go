@@ -47,7 +47,7 @@ func TestBatchBashGenerator(t *testing.T) {
 					"sleep",
 				},
 				Args: []string{
-					"5 && echo 'done'",
+					`15`,
 				},
 			},
 		},
