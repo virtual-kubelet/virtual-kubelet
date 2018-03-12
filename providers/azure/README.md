@@ -378,6 +378,11 @@ You can remove your Virtual Kubelet node by deleting the Helm deployment. Run th
 ```
 helm delete virtual-kubelet --purge
 ```
+If you used the ACI Connector installation then use the following command to remove the the ACI Connector from your cluster.
+
+```
+az aks remove-connector --resource-group <aks cluster rg> --name <aks cluster name> --connector-name myconnector --os-type linux
+```
 
 <!-- LINKS -->
 [kubectl-create]: https://kubernetes.io/docs/user-guide/kubectl/v1.6/#create
