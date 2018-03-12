@@ -18,10 +18,7 @@ spec:
     - containerPort: 443
       name: https
   dnsPolicy: Default
-<<<<<<< HEAD:examples/iis-pod.yaml
-=======
   nodeName: virtual-kubelet-connector-win
->>>>>>> azureReadMe:examples/nanoserver.yaml
   automountServiceAccountToken: false
   tolerations:
   - key: azure.com/aci
