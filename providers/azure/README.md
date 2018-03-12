@@ -1,4 +1,4 @@
-# Kubernetes virtual-kubelet with ACI
+# Kubernetes Virtual Kubelet with ACI
 
 Azure Container Instances (ACI) provide a hosted environment for running containers in Azure. When using ACI, there is no need to manage the underlying compute infrastructure, Azure handles this management for you. When running containers in ACI, you are charged by the second for each running container.
 
