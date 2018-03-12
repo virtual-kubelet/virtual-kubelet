@@ -8,7 +8,6 @@ import (
 	"log"
 	"net/http"
 	"net/http/httputil"
-	"strings"
 
 	"github.com/Azure/go-autorest/autorest/to"
 
@@ -62,7 +61,7 @@ type BatchConfig struct {
 
 type BatchPodComponents struct {
 	PullCredentials []aci.ImageRegistryCredential
-	Containers      []*v1.Container
+	Containers      []v1.Container
 	PodName         string
 	TaskID          string
 }
@@ -143,23 +142,26 @@ func (p *BatchProvider) CreatePod(pod *v1.Pod) error {
 		log.Println("Pod contains more than 1 container currently not supported.")
 	}
 
-	for _, container := range pod.Spec.Containers {
-
-		task := batch.TaskAddParameter{
-			DisplayName: to.StringPtr(string(pod.UID)),
-			ID:          to.StringPtr(getTaskIDForPod(pod)),
-			CommandLine: to.StringPtr(fmt.Sprintf("sudo docker run --name %s --rm -d %s %s > dockerlog.txt", container.Name, container.Image, strings.Join(container.Args, " "))),
-			UserIdentity: &batch.UserIdentity{
-				AutoUser: &batch.AutoUserSpecification{
-					ElevationLevel: batch.Admin,
-					Scope:          batch.Task,
-				},
-			},
-		}
-		p.taskClient.Add(p.ctx, p.batchConfig.JobID, task, nil, nil, nil, nil)
-
-		break
+	podCommand, err := getPodCommand(BatchPodComponents{
+		Containers: pod.Spec.Containers,
+		PodName:    pod.Name,
+		TaskID:     string(pod.UID),
+	})
+	if err != nil {
+		return err
 	}
+	task := batch.TaskAddParameter{
+		DisplayName: to.StringPtr(string(pod.UID)),
+		ID:          to.StringPtr(getTaskIDForPod(pod)),
+		CommandLine: to.StringPtr(fmt.Sprintf(`/bin/bash -c "%s"`, podCommand)),
+		UserIdentity: &batch.UserIdentity{
+			AutoUser: &batch.AutoUserSpecification{
+				ElevationLevel: batch.Admin,
+				Scope:          batch.Task,
+			},
+		},
+	}
+	p.taskClient.Add(p.ctx, p.batchConfig.JobID, task, nil, nil, nil, nil)
 
 	return nil
 }
@@ -206,7 +208,9 @@ func (p *BatchProvider) GetPod(namespace, name string) (*v1.Pod, error) {
 func (p *BatchProvider) GetContainerLogs(namespace, podName, containerName string, tail int) (string, error) {
 	pod := p.resourceManager.GetPod(podName)
 
-	reader, err := p.fileClient.GetFromTask(p.ctx, p.batchConfig.JobID, getTaskIDForPod(pod), stdoutFile, nil, nil, nil, nil, "", nil, nil)
+	logFileLocation := fmt.Sprintf("wd/%s", containerName)
+	// todo: Log file is the json log from docker - deserialise and form at it before returning it.
+	reader, err := p.fileClient.GetFromTask(p.ctx, p.batchConfig.JobID, getTaskIDForPod(pod), logFileLocation, nil, nil, nil, nil, "", nil, nil)
 
 	if err != nil {
 		return "", err

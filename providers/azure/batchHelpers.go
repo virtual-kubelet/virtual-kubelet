@@ -2,9 +2,11 @@ package azure
 
 // NewServicePrincipalTokenFromCredentials creates a new ServicePrincipalToken using values of the
 import (
+	"bytes"
 	"crypto/md5"
 	"encoding/json"
 	"fmt"
+	"html/template"
 	"log"
 	"os"
 	"strings"
@@ -226,4 +228,18 @@ func getLaunchCommand(container v1.Container) (cmd string) {
 		cmd += strings.Join(container.Args, " ")
 	}
 	return
+}
+
+func getPodCommand(p BatchPodComponents) (string, error) {
+	template := template.New("run.sh.tmpl").Option("missingkey=error").Funcs(template.FuncMap{
+		"getLaunchCommand": getLaunchCommand,
+	})
+
+	template, err := template.Parse(azureBatchPodTemplate)
+	if err != nil {
+		return "", err
+	}
+	var output bytes.Buffer
+	err = template.Execute(&output, p)
+	return output.String(), err
 }

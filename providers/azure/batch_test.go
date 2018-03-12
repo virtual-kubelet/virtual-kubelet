@@ -2,7 +2,6 @@ package azure
 
 import (
 	"bytes"
-	"io/ioutil"
 	"testing"
 	"text/template"
 
@@ -11,26 +10,19 @@ import (
 )
 
 func TestBatchBashGenerator(t *testing.T) {
-	fileBytes, err := ioutil.ReadFile("/home/lawrence/go/src/github.com/virtual-kubelet/virtual-kubelet/providers/azure/batchrunner/run.sh.tmpl")
-	if err != nil {
-		t.Error(err)
-		t.FailNow()
-	}
-
-	fileContent := string(fileBytes)
 	template := template.New("run.sh.tmpl").Option("missingkey=error").Funcs(template.FuncMap{
 		"getLaunchCommand": getLaunchCommand,
 	})
 
-	template, err = template.Parse(fileContent)
+	template, err := template.Parse(azureBatchPodTemplate)
 	if err != nil {
 		t.Error(err)
 		t.FailNow()
 	}
 
 	templateVars := BatchPodComponents{
-		Containers: []*v1.Container{
-			&v1.Container{
+		Containers: []v1.Container{
+			v1.Container{
 				Name:  "testName",
 				Image: "busybox",
 				Env: []v1.EnvVar{
