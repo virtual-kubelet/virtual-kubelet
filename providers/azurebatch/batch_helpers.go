@@ -1,4 +1,4 @@
-package azure
+package azurebatch
 
 // NewServicePrincipalTokenFromCredentials creates a new ServicePrincipalToken using values of the
 import (
@@ -26,8 +26,7 @@ func createOrGetPool(p *BatchProvider, auth *autorest.BearerAuthorizer) {
 	poolClient := batch.NewPoolClientWithBaseURI(getBatchBaseURL(p.batchConfig))
 	poolClient.Authorizer = auth
 	poolClient.RetryAttempts = 0
-	poolClient.RequestInspector = FixContentTypeInspector()
-	poolClient.ResponseInspector = LogResponse()
+	poolClient.RequestInspector = fixContentTypeInspector()
 
 	pool, err := poolClient.Get(p.ctx, p.batchConfig.PoolID, "*", "", nil, nil, nil, nil, "", "", nil, nil)
 
@@ -105,8 +104,7 @@ func createOrGetPool(p *BatchProvider, auth *autorest.BearerAuthorizer) {
 
 func createOrGetJob(p *BatchProvider, auth *autorest.BearerAuthorizer) {
 	jobClient := batch.NewJobClientWithBaseURI(getBatchBaseURL(p.batchConfig))
-	jobClient.RequestInspector = FixContentTypeInspector()
-	jobClient.ResponseInspector = LogResponse()
+	jobClient.RequestInspector = fixContentTypeInspector()
 
 	jobClient.Authorizer = auth
 	jobID := p.batchConfig.JobID
@@ -167,7 +165,7 @@ func (e *ConfigError) Error() string {
 	return e.ErrorDetails + ": " + string(configJSON)
 }
 
-func getBatchBaseURL(config BatchConfig) string {
+func getBatchBaseURL(config *BatchConfig) string {
 	return fmt.Sprintf("https://%s.%s.batch.azure.com", config.AccountName, config.AccountLocation)
 }
 
@@ -232,7 +230,10 @@ func getLaunchCommand(container v1.Container) (cmd string) {
 
 func getPodCommand(p BatchPodComponents) (string, error) {
 	template := template.New("run.sh.tmpl").Option("missingkey=error").Funcs(template.FuncMap{
-		"getLaunchCommand": getLaunchCommand,
+		"getLaunchCommand":     getLaunchCommand,
+		"isHostPathVolume":     isHostPathVolume,
+		"isEmptyDirVolume":     isEmptyDirVolume,
+		"getValidVolumeMounts": getValidVolumeMounts,
 	})
 
 	template, err := template.Parse(azureBatchPodTemplate)
@@ -242,4 +243,37 @@ func getPodCommand(p BatchPodComponents) (string, error) {
 	var output bytes.Buffer
 	err = template.Execute(&output, p)
 	return output.String(), err
+}
+
+func isHostPathVolume(v v1.Volume) bool {
+	if v.HostPath == nil {
+		return false
+	}
+	return true
+}
+
+func isEmptyDirVolume(v v1.Volume) bool {
+	if v.EmptyDir == nil {
+		return false
+	}
+	return true
+}
+
+func getValidVolumeMounts(container v1.Container, volumes []v1.Volume) []v1.VolumeMount {
+	volDic := make(map[string]v1.Volume)
+	for _, vol := range volumes {
+		volDic[vol.Name] = vol
+	}
+	var mounts []v1.VolumeMount
+	for _, mount := range container.VolumeMounts {
+		vol, ok := volDic[mount.Name]
+		if !ok {
+			continue
+		}
+		if vol.EmptyDir == nil && vol.HostPath == nil {
+			continue
+		}
+		mounts = append(mounts, mount)
+	}
+	return mounts
 }

@@ -1,24 +1,13 @@
-package azure
+package azurebatch
 
 import (
-	"bytes"
 	"testing"
-	"text/template"
 
 	"github.com/virtual-kubelet/virtual-kubelet/providers/azure/client/aci"
 	"k8s.io/api/core/v1"
 )
 
 func TestBatchBashGenerator(t *testing.T) {
-	template := template.New("run.sh.tmpl").Option("missingkey=error").Funcs(template.FuncMap{
-		"getLaunchCommand": getLaunchCommand,
-	})
-
-	template, err := template.Parse(azureBatchPodTemplate)
-	if err != nil {
-		t.Error(err)
-		t.FailNow()
-	}
 
 	templateVars := BatchPodComponents{
 		Containers: []v1.Container{
@@ -41,6 +30,16 @@ func TestBatchBashGenerator(t *testing.T) {
 				Args: []string{
 					`15`,
 				},
+				VolumeMounts: []v1.VolumeMount{
+					v1.VolumeMount{
+						Name:      "emptyDirVol",
+						MountPath: "/emptyVol",
+					},
+					v1.VolumeMount{
+						Name:      "hostVol",
+						MountPath: "/hostVol",
+					},
+				},
 			},
 		},
 		PullCredentials: []aci.ImageRegistryCredential{
@@ -52,11 +51,26 @@ func TestBatchBashGenerator(t *testing.T) {
 		},
 		PodName: "Barry",
 		TaskID:  "barryid",
+		Volumes: []v1.Volume{
+			v1.Volume{
+				Name: "emptyDirVol",
+				VolumeSource: v1.VolumeSource{
+					EmptyDir: &v1.EmptyDirVolumeSource{},
+				},
+			},
+			v1.Volume{
+				Name: "hostVol",
+				VolumeSource: v1.VolumeSource{
+					HostPath: &v1.HostPathVolumeSource{
+						Path: "/home",
+					},
+				},
+			},
+		},
 	}
 
-	var output bytes.Buffer
-	err = template.Execute(&output, templateVars)
-	t.Log(output.String())
+	podCommand, err := getPodCommand(templateVars)
+	t.Log(podCommand)
 	if err != nil {
 		t.Error(err)
 		t.FailNow()

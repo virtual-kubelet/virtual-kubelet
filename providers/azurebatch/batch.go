@@ -1,4 +1,4 @@
-package azure
+package azurebatch
 
 import (
 	"context"
@@ -7,7 +7,6 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
-	"net/http/httputil"
 
 	"github.com/Azure/go-autorest/autorest/to"
 
@@ -26,8 +25,9 @@ const (
 	stderrFile string = "stderr.txt"
 )
 
+// BatchProvider the base struct for the Azure Batch provider
 type BatchProvider struct {
-	batchConfig        BatchConfig
+	batchConfig        *BatchConfig
 	ctx                context.Context
 	cancelOps          context.CancelFunc
 	poolClient         *batch.PoolClient
@@ -46,7 +46,7 @@ type BatchProvider struct {
 	daemonEndpointPort int32
 }
 
-// ARMConfig - Basic azure config used to interact with ARM resources.
+// BatchConfig - Basic azure config used to interact with ARM resources.
 type BatchConfig struct {
 	ClientID        string
 	ClientSecret    string
@@ -59,32 +59,25 @@ type BatchConfig struct {
 	AccountLocation string
 }
 
+// BatchPodComponents provides details for the batch task wrapper
+// to run a pod
 type BatchPodComponents struct {
 	PullCredentials []aci.ImageRegistryCredential
 	Containers      []v1.Container
+	Volumes         []v1.Volume
 	PodName         string
 	TaskID          string
 }
 
 const batchManagementEndpoint = "https://batch.core.windows.net/"
 
-func FixContentTypeInspector() autorest.PrepareDecorator {
+func fixContentTypeInspector() autorest.PrepareDecorator {
 	return func(p autorest.Preparer) autorest.Preparer {
 		return autorest.PreparerFunc(func(r *http.Request) (*http.Request, error) {
 			r.Header.Set("Content-Type", "application/json; odata=minimalmetadata")
-			dump, _ := httputil.DumpRequestOut(r, true)
-			log.Println(string(dump))
+			// dump, _ := httputil.DumpRequestOut(r, true)
+			// log.Println(string(dump))
 			return r, nil
-		})
-	}
-}
-
-func LogResponse() autorest.RespondDecorator {
-	return func(p autorest.Responder) autorest.Responder {
-		return autorest.ResponderFunc(func(r *http.Response) error {
-			dump, _ := httputil.DumpResponse(r, true)
-			log.Println(string(dump))
-			return nil
 		})
 	}
 }
@@ -99,7 +92,7 @@ func NewBatchProvider(config string, rm *manager.ResourceManager, nodeName, oper
 	}
 
 	p := BatchProvider{}
-	p.batchConfig = batchConfig
+	p.batchConfig = &batchConfig
 	// Set sane defaults for Capacity in case config is not supplied
 	p.cpu = "20"
 	p.memory = "100Gi"
@@ -122,14 +115,14 @@ func NewBatchProvider(config string, rm *manager.ResourceManager, nodeName, oper
 	createOrGetPool(&p, auth)
 	createOrGetJob(&p, auth)
 
-	taskclient := batch.NewTaskClientWithBaseURI(getBatchBaseURL(batchConfig))
+	taskclient := batch.NewTaskClientWithBaseURI(getBatchBaseURL(p.batchConfig))
 	taskclient.Authorizer = auth
-	taskclient.RequestInspector = FixContentTypeInspector()
+	taskclient.RequestInspector = fixContentTypeInspector()
 	p.taskClient = &taskclient
 
 	fileClient := batch.NewFileClientWithBaseURI(getBatchBaseURL(p.batchConfig))
 	fileClient.Authorizer = auth
-	fileClient.RequestInspector = FixContentTypeInspector()
+	fileClient.RequestInspector = fixContentTypeInspector()
 	p.fileClient = &fileClient
 
 	return &p, nil
@@ -137,15 +130,12 @@ func NewBatchProvider(config string, rm *manager.ResourceManager, nodeName, oper
 
 // CreatePod accepts a Pod definition
 func (p *BatchProvider) CreatePod(pod *v1.Pod) error {
-
-	if len(pod.Spec.Containers) > 1 {
-		log.Println("Pod contains more than 1 container currently not supported.")
-	}
-
+	log.Println("Creating pod...")
 	podCommand, err := getPodCommand(BatchPodComponents{
 		Containers: pod.Spec.Containers,
 		PodName:    pod.Name,
 		TaskID:     string(pod.UID),
+		Volumes:    pod.Spec.Volumes,
 	})
 	if err != nil {
 		return err
@@ -189,6 +179,9 @@ func (p *BatchProvider) GetPod(namespace, name string) (*v1.Pod, error) {
 	pod := p.resourceManager.GetPod(name)
 	task, err := p.taskClient.Get(p.ctx, p.batchConfig.JobID, getTaskIDForPod(pod), "", "", nil, nil, nil, nil, "", "", nil, nil)
 	if err != nil {
+		if task.Response.StatusCode == http.StatusNotFound {
+			return nil, nil
+		}
 		log.Println(err)
 		return nil, err
 	}
@@ -234,17 +227,25 @@ func (p *BatchProvider) GetPodStatus(namespace, name string) (*v1.PodStatus, err
 		return nil, err
 	}
 
-	startTime := metav1.Time{
-		Time: task.ExecutionInfo.StartTime.Time,
+	startTime := metav1.Time{}
+	retryCount := int32(0)
+	if task.ExecutionInfo != nil {
+		if task.ExecutionInfo.StartTime != nil {
+			startTime.Time = task.ExecutionInfo.StartTime.Time
+		}
+		if task.ExecutionInfo.RetryCount != nil {
+			retryCount = *task.ExecutionInfo.RetryCount
+		}
 	}
 
+	// Todo: Review indivudal container status response
 	return &v1.PodStatus{
 		Phase:     convertTaskStatusToPodPhase(task.State),
 		StartTime: &startTime,
 		ContainerStatuses: []v1.ContainerStatus{
 			v1.ContainerStatus{
 				Name:         pod.Spec.Containers[0].Name,
-				RestartCount: *task.ExecutionInfo.RetryCount,
+				RestartCount: retryCount,
 				State: v1.ContainerState{
 					Running: &v1.ContainerStateRunning{
 						StartedAt: startTime,
