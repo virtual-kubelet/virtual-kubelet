@@ -159,7 +159,7 @@ func (p *BatchProvider) CreatePod(pod *v1.Pod) error {
 // UpdatePod accepts a Pod definition
 func (p *BatchProvider) UpdatePod(pod *v1.Pod) error {
 	log.Println("NOOP: Pod update not supported")
-	return nil
+	return fmt.Errorf("Failed to update pod %s as update not supported", pod.Name)
 }
 
 // DeletePod accepts a Pod definition
@@ -176,6 +176,7 @@ func (p *BatchProvider) DeletePod(pod *v1.Pod) error {
 
 // GetPod returns a pod by name
 func (p *BatchProvider) GetPod(namespace, name string) (*v1.Pod, error) {
+	log.Println("Getting Pod ...")
 	pod := p.resourceManager.GetPod(name)
 	task, err := p.taskClient.Get(p.ctx, p.batchConfig.JobID, getTaskIDForPod(pod), "", "", nil, nil, nil, nil, "", "", nil, nil)
 	if err != nil {
@@ -199,6 +200,8 @@ func (p *BatchProvider) GetPod(namespace, name string) (*v1.Pod, error) {
 
 // GetContainerLogs returns the logs of a container running in a pod by name.
 func (p *BatchProvider) GetContainerLogs(namespace, podName, containerName string, tail int) (string, error) {
+	log.Println("Getting pod logs ....")
+
 	pod := p.resourceManager.GetPod(podName)
 
 	logFileLocation := fmt.Sprintf("wd/%s", containerName)
@@ -220,6 +223,7 @@ func (p *BatchProvider) GetContainerLogs(namespace, podName, containerName strin
 
 // GetPodStatus retrieves the status of a given pod by name.
 func (p *BatchProvider) GetPodStatus(namespace, name string) (*v1.PodStatus, error) {
+	log.Println("Getting pod status ....")
 	pod := p.resourceManager.GetPod(name)
 	task, err := p.taskClient.Get(p.ctx, p.batchConfig.JobID, getTaskIDForPod(pod), "", "", nil, nil, nil, nil, "", "", nil, nil)
 	if err != nil {
@@ -258,8 +262,15 @@ func (p *BatchProvider) GetPodStatus(namespace, name string) (*v1.PodStatus, err
 
 // GetPods retrieves a list of all pods scheduled to run.
 func (p *BatchProvider) GetPods() ([]*v1.Pod, error) {
-	log.Println("not implimented")
-	return make([]*v1.Pod, 0), nil
+	log.Println("Getting pods...")
+	pods := p.resourceManager.GetPods()
+	for _, pod := range pods {
+		status, _ := p.GetPodStatus(pod.Namespace, pod.Name)
+		if status != nil {
+			pod.Status = *status
+		}
+	}
+	return pods, nil
 }
 
 // Capacity returns a resource list containing the capacity limits

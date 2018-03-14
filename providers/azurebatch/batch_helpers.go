@@ -58,7 +58,7 @@ func createOrGetPool(p *BatchProvider, auth *autorest.BearerAuthorizer) {
 			StartTask: &batch.StartTask{
 				ResourceFiles: &[]batch.ResourceFile{
 					batch.ResourceFile{
-						BlobSource: to.StringPtr("https://raw.githubusercontent.com/Azure/batch-shipyard/b40a812d3df7df1d283cc30344ca2a69a1d97f95/contrib/packer/ubuntu-16.04-GPU%2BIB/bootstrap.sh"),
+						BlobSource: to.StringPtr("https://raw.githubusercontent.com/Azure/batch-shipyard/f0c9656ca2ccab1a6314f617ff13ea686056f51b/contrib/packer/ubuntu-16.04/bootstrap.sh"),
 						FilePath:   to.StringPtr("bootstrap.sh"),
 						FileMode:   to.StringPtr("777"),
 					},
@@ -68,7 +68,7 @@ func createOrGetPool(p *BatchProvider, auth *autorest.BearerAuthorizer) {
 				UserIdentity: &batch.UserIdentity{
 					AutoUser: &batch.AutoUserSpecification{
 						ElevationLevel: batch.Admin,
-						Scope:          batch.Task,
+						Scope:          batch.Pool,
 					},
 				},
 			},
