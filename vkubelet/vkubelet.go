@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/virtual-kubelet/virtual-kubelet/manager"
+	"github.com/virtual-kubelet/virtual-kubelet/providers/aws"
 	"github.com/virtual-kubelet/virtual-kubelet/providers/azure"
 	"github.com/virtual-kubelet/virtual-kubelet/providers/hypersh"
 	"github.com/virtual-kubelet/virtual-kubelet/providers/mock"
@@ -38,10 +39,8 @@ type Server struct {
 
 // New creates a new virtual-kubelet server.
 func New(nodeName, operatingSystem, namespace, kubeConfig, taint, provider, providerConfig string) (*Server, error) {
-	var (
-		config *rest.Config
-		err    error
-	)
+	var config *rest.Config
+
 	// Check if the kubeConfig file exists.
 	if _, err := os.Stat(kubeConfig); !os.IsNotExist(err) {
 		// Get the kubeconfig from the filepath.
@@ -75,6 +74,11 @@ func New(nodeName, operatingSystem, namespace, kubeConfig, taint, provider, prov
 
 	var p Provider
 	switch provider {
+	case "aws":
+		p, err = aws.NewFargateProvider(providerConfig, rm, nodeName, operatingSystem, internalIP, daemonEndpointPort)
+		if err != nil {
+			return nil, err
+		}
 	case "azure":
 		p, err = azure.NewACIProvider(providerConfig, rm, nodeName, operatingSystem, internalIP, daemonEndpointPort)
 		if err != nil {
@@ -143,6 +147,7 @@ func (s *Server) registerNode() error {
 				"type":                  "virtual-kubelet",
 				"kubernetes.io/role":    "agent",
 				"beta.kubernetes.io/os": strings.ToLower(s.provider.OperatingSystem()),
+
 				"alpha.service-controller.kubernetes.io/exclude-balancer": "true",
 			},
 		},
@@ -245,7 +250,8 @@ func (s *Server) updateNode() {
 	}
 }
 
-// reconcile is the main reconiliation loop that compares differences between Kubernetes and the active provider and reconciles the differences.
+// reconcile is the main reconciliation loop that compares differences between Kubernetes and
+// the active provider and reconciles the differences.
 func (s *Server) reconcile() {
 	providerPods, err := s.provider.GetPods()
 	if err != nil {
@@ -320,7 +326,7 @@ func (s *Server) deletePod(pod *corev1.Pod) error {
 	}
 
 	if !errors.IsNotFound(delErr) {
-		var grace int64 = 0
+		var grace int64
 		if err := s.k8sClient.CoreV1().Pods(pod.Namespace).Delete(pod.Name, &metav1.DeleteOptions{GracePeriodSeconds: &grace}); err != nil && errors.IsNotFound(err) {
 			if errors.IsNotFound(err) {
 				return nil
