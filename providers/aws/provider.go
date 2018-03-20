@@ -20,7 +20,16 @@ type FargateProvider struct {
 	internalIP         string
 	daemonEndpointPort int32
 
+	// AWS resources.
+	region         string
+	subnets        []string
+	securityGroups []string
+
+	// Fargate resources.
+	clusterName             string
 	capacity                capacity
+	assignPublicIPv4Address bool
+	platformVersion         string
 	lastTransitionTime      time.Time
 }
 
@@ -55,6 +64,17 @@ func NewFargateProvider(
 		internalIP:         internalIP,
 		daemonEndpointPort: daemonEndpointPort,
 	}
+
+	// Read the Fargate provider configuration file.
+	err := p.loadConfigFile(config)
+	if err != nil {
+		err = fmt.Errorf("failed to load configuration file %s: %v", config, err)
+		return nil, err
+	}
+
+	log.Printf("Loaded provider configuration file %s.", config)
+
+	p.lastTransitionTime = time.Now()
 
 	log.Printf("Created Fargate provider: %+v.", p)
 
