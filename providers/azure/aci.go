@@ -452,26 +452,78 @@ func (p *ACIProvider) getImagePullSecrets(pod *v1.Pod) ([]aci.ImageRegistryCrede
 		// TODO: Check if secret type is v1.SecretTypeDockercfg and use DockerConfigKey instead of hardcoded value
 		// TODO: Check if secret type is v1.SecretTypeDockerConfigJson and use DockerConfigJsonKey to determine if it's in json format
 		// TODO: Return error if it's not one of these two types
-		repoData, ok := secret.Data[".dockercfg"]
-		if !ok {
-			return ips, fmt.Errorf("no dockercfg present in secret")
+		switch secret.Type {
+		case v1.SecretTypeDockercfg:
+			ips, err = readDockerCfgSecret(secret, ips)
+		case v1.SecretTypeDockerConfigJson:
+			ips, err = readDockerConfigJSONSecret(secret, ips)
+		default:
+			return nil, fmt.Errorf("image pull secret type is not one of kubernetes.io/dockercfg or kubernetes.io/dockerconfigjson")
 		}
 
-		var authConfigs map[string]AuthConfig
-		err = json.Unmarshal(repoData, &authConfigs)
 		if err != nil {
 			return ips, err
 		}
 
-		for server, authConfig := range authConfigs {
-			ips = append(ips, aci.ImageRegistryCredential{
-				Password: authConfig.Password,
-				Server:   server,
-				Username: authConfig.Username,
-			})
-		}
 	}
 	return ips, nil
+}
+
+func readDockerCfgSecret(secret *v1.Secret, ips []aci.ImageRegistryCredential) ([]aci.ImageRegistryCredential, error) {
+	var err error
+	var authConfigs map[string]AuthConfig
+	repoData, ok := secret.Data[string(v1.DockerConfigKey)]
+
+	if !ok {
+		return ips, fmt.Errorf("no dockercfg present in secret")
+	}
+
+	err = json.Unmarshal(repoData, &authConfigs)
+	if err != nil {
+		return ips, err
+	}
+
+	for server, authConfig := range authConfigs {
+		ips = append(ips, aci.ImageRegistryCredential{
+			Password: authConfig.Password,
+			Server:   server,
+			Username: authConfig.Username,
+		})
+	}
+
+	return ips, err
+}
+
+func readDockerConfigJSONSecret(secret *v1.Secret, ips []aci.ImageRegistryCredential) ([]aci.ImageRegistryCredential, error) {
+	var err error
+	repoData, ok := secret.Data[string(v1.DockerConfigJsonKey)]
+
+	if !ok {
+		return ips, fmt.Errorf("no dockerconfigjson present in secret")
+	}
+
+	var authConfigs map[string]map[string]AuthConfig
+
+	err = json.Unmarshal(repoData, &authConfigs)
+	if err != nil {
+		return ips, err
+	}
+
+	auths, ok := authConfigs["auths"]
+
+	if !ok {
+		return ips, fmt.Errorf("malformed dockerconfigjson in secret")
+	}
+
+	for server, authConfig := range auths {
+		ips = append(ips, aci.ImageRegistryCredential{
+			Password: authConfig.Password,
+			Server:   server,
+			Username: authConfig.Username,
+		})
+	}
+
+	return ips, err
 }
 
 func (p *ACIProvider) getContainers(pod *v1.Pod) ([]aci.Container, error) {
