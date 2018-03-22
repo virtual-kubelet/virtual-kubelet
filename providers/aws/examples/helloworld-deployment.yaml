@@ -1,0 +1,33 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: helloworld
+spec:
+  selector:
+    matchLabels:
+      app: helloworld
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: helloworld
+      annotations:
+#        # uncomment this if you want to assume an IAM role
+#        iam.amazonaws.com/role: virtual-kubelet
+#        # uncomment this if you want to assume an IAM role
+#        iam.amazonaws.com/role: virtual-kubelet
+#        # uncomment this if you want to assume an IAM role
+#        iam.amazonaws.com/role: virtual-kubelet
+    spec:
+      containers:
+      - name: helloworld
+        image: microsoft/aci-helloworld
+        ports:
+        - name: http
+          containerPort: 8080
+      nodeSelector:
+        type: virtual-kubelet
+      tolerations:
+      - key: "aws.amazon.com/fargate"
+        operator: "Exists"
+        effect: "NoSchedule"
