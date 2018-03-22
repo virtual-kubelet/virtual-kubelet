@@ -1,4 +1,4 @@
-# Kubernetes virtual-kubelet with ACI
+# Kubernetes Virtual Kubelet with ACI
 
 Azure Container Instances (ACI) provide a hosted environment for running containers in Azure. When using ACI, there is no need to manage the underlying compute infrastructure, Azure handles this management for you. When running containers in ACI, you are charged by the second for each running container.
 
@@ -24,7 +24,7 @@ See the [full installation instructions](https://docs.microsoft.com/en-us/cli/az
 
 #### MacOS
 
-```console
+```cli
 brew install azure-cli
 ```
 
@@ -35,12 +35,12 @@ Download and run the [Azure CLI Installer (MSI)](https://aka.ms/InstallAzureCliW
 #### Ubuntu 64-bit
 
 1. Add the azure-cli repo to your sources:
-    ```console
+    ```cli
     echo "deb [arch=amd64] https://packages.microsoft.com/repos/azure-cli/ wheezy main" | \
          sudo tee /etc/apt/sources.list.d/azure-cli.list
     ```
-1. Run the following commands to install the Azure CLI and its dependencies:
-    ```console
+2. Run the following commands to install the Azure CLI and its dependencies:
+    ```cli
     sudo apt-key adv --keyserver packages.microsoft.com --recv-keys 52E16F86FEE04B979B07E28DB02C46DF417A0893
     sudo apt-get install apt-transport-https
     sudo apt-get update && sudo apt-get install azure-cli
@@ -50,7 +50,7 @@ Download and run the [Azure CLI Installer (MSI)](https://aka.ms/InstallAzureCliW
 
 Install `kubectl` by running the following command:
 
-```console
+```cli
 az aks install-cli
 ```
 
@@ -61,19 +61,19 @@ Install `helm` by running the following command:
 
 #### MacOS
 
-```console
+```cli
 brew install kubernetes-helm
 ```
 
 #### Windows
 
 1. Download the latest [Helm release](https://storage.googleapis.com/kubernetes-helm/helm-v2.7.2-windows-amd64.tar.gz).
-1. Decompress the tar file.
-1. Copy **helm.exe** to a directory on your PATH.
+2. Decompress the tar file.
+3. Copy **helm.exe** to a directory on your PATH.
 
 #### Linux
 
-```console
+```cli
 curl https://raw.githubusercontent.com/kubernetes/helm/master/scripts/get | bash
 ```
 ---
@@ -87,27 +87,59 @@ Now that we have all the tools, we will set up your Azure account to work with A
 First let's identify your Azure subscription and save it for use later on in the quickstart.
 
 1. Run `az login` and follow the instructions in the command output to authorize `az` to use your account
-1. List your Azure subscriptions:
-    ```console
+2. List your Azure subscriptions:
+    ```cli
     az account list -o table
     ```
-1. Copy your subscription ID and save it in an environment variable:
+3. Copy your subscription ID and save it in an environment variable:
 
     **Bash**
-    ```console
+    ```cli
     export AZURE_SUBSCRIPTION_ID="<SubscriptionId>"
     ```
 
     **PowerShell**
-    ```console
+    ```cli
     $env:AZURE_SUBSCRIPTION_ID = "<SubscriptionId>"
     ```
+
+### ACI Connector Installation
+
+The Azure cli can be used to install the ACI provider. We like to say Azure's provider or implementation for Virtual Kubelet is the ACI Connector. 
+For this section Virtual Kubelet's specific ACI provider will be referenced as the the ACI Connector. 
+If you continue with this section you can skip sections below up to "Schedule a pod in ACI", as we use Azure Container Service (AKS) to easily deploy and install the connector, thus it is assumed 
+that you've created an [AKS cluster](https://docs.microsoft.com/en-us/azure/aks/kubernetes-walkthrough). 
+
+To install the ACI Connector use the az cli and the aks namespace. Make sure to use the resource group of the aks cluster you've created and the name of the aks cluster you've created. You can choose the connector name to be anything. Choose any command below to install the Linux, Windows, or both the Windows and Linux Connector.
+
+1. Install the Linux ACI Connector
+
+   **Bash**
+   ```cli
+   az aks install-connector --resource-group <aks cluster rg> --name <aks cluster name> --os-type linux --connector-name myaciconnector
+   ```
+
+2. Install the Windows ACI Connector
+
+   **Bash**
+   ```cli 
+   az aks install-connector --resource-group <aks cluster rg> --name <aks cluster name> --os-type windows --connector-name myaciconnector
+   ```
+
+3. Install both the Windows and Linux ACI Connectors
+
+   **Bash**
+   ```cli
+   az aks install-connector --resource-group <aks cluster rg> --name <aks cluster name> --os-type both --connector-name myaciconnector
+   ```
+
+Now you are ready to deploy a pod to the connector so skip to the "Schedule a pod in ACI" section. 
 
 ### Create a Resource Group for ACI
 
 To use Azure Container Instances, you must provide a resource group. Create one with the az cli using the following command.
 
-```console
+```cli
 export ACI_REGION=eastus
 az group create --name aci-group --location "$ACI_REGION"
 export AZURE_RG=aci-group
@@ -119,20 +151,20 @@ This creates an identity for the Virtual Kubelet ACI provider to use when provis
 resources on your account on behalf of Kubernetes.
 
 1. Create a service principal with RBAC enabled for the quickstart:
-    ```console
+    ```cli
     az ad sp create-for-rbac --name virtual-kubelet-quickstart -o table
     ```
-1. Save the values from the command output in environment variables:
+2. Save the values from the command output in environment variables:
 
     **Bash**
-    ```console
+    ```cli
     export AZURE_TENANT_ID=<Tenant>
     export AZURE_CLIENT_ID=<AppId>
     export AZURE_CLIENT_SECRET=<Password>
     ```
 
     **PowerShell**
-    ```console
+    ```cli
     $env:AZURE_TENANT_ID = "<Tenant>"
     $env:AZURE_CLIENT_ID = "<AppId>"
     $env:AZURE_CLIENT_SECRET = "<Password>"
@@ -142,7 +174,7 @@ resources on your account on behalf of Kubernetes.
 
 You will need to enable ACI in your subscription:
 
-    ```console
+    ```cli
     az provider register -n Microsoft.ContainerInstance
     ```
 
@@ -152,17 +184,17 @@ Run these commands to deploy the virtual kubelet which connects your Kubernetes 
 
 If your cluster is an AKS cluster:
 
-```console
+```cli
 export VK_RELEASE=virtual-kubelet-for-aks-0.1.3
 ````
 
 For any other type of Kubernetes cluster:
 
-```console
+```cli
 export VK_RELEASE=virtual-kubelet-0.1.0
 ```
 
-```console
+```cli
 RELEASE_NAME=virtual-kubelet
 NODE_NAME=virtual-kubelet
 CHART_URL=https://github.com/virtual-kubelet/virtual-kubelet/raw/master/charts/$VK_RELEASE.tgz
@@ -202,6 +234,7 @@ The virtual kubelet is getting deployed on your cluster.
 
 To verify that virtual kubelet has started, run:
 
+```cli
   kubectl --namespace=default get pods -l "app=virtual-kubelet-virtual-kubelet"
 ```
 
@@ -209,7 +242,7 @@ To verify that virtual kubelet has started, run:
 
 To validate that the Virtual Kubelet has been installed, return a list of Kubernetes nodes using the [kubectl get nodes][kubectl-get] command. You should see a node that matches the name given to the ACI connector.
 
-```azurecli-interactive
+```cli
 kubectl get nodes
 ```
 
@@ -217,7 +250,7 @@ Output:
 
 ```console
 NAME                                        STATUS    ROLES     AGE       VERSION
-virtual-kubelet                             Ready     <none>    2m        v1.8.3
+virtual-kubelet-myconnector-linux           Ready     <none>    2m        v1.8.3
 aks-nodepool1-39289454-0                    Ready     agent     22h       v1.7.7
 aks-nodepool1-39289454-1                    Ready     agent     22h       v1.7.7
 aks-nodepool1-39289454-2                    Ready     agent     22h       v1.7.7
@@ -248,18 +281,18 @@ spec:
     - containerPort: 443
       name: https
   dnsPolicy: ClusterFirst
-  nodeName: virtual-kubelet
+  nodeName: virtual-kubelet-myconnector-linux
 ```
 
 Run the application with the [kubectl create][kubectl-create] command.
 
-```console
+```cli
 kubectl create -f virtual-kubelet-test.yml
 ```
 
 Use the [kubectl get pods][kubectl-get] command with the `-o wide` argument to output a list of pods with the scheduled node.
 
-```console
+```cli
 kubectl get pods -o wide
 ```
 
@@ -329,12 +362,27 @@ Output:
 "helloworld-aci.westus.azurecontainer.io"
 ```
 -->
+
+## Upgrade the ACI Connector 
+
+If you've installed Virtual Kubelet with the Azure cli so you're using the ACI Connector implementation, then you are also able to upgrade the connector to the latest release. 
+Run the following command to upgrade your ACI Connector. 
+
+```cli
+az aks upgrade-connector --resource-group <aks cluster rg> --name <aks cluster name> --connector-name myconnector --os-type linux
+```
+
 ## Remove the Virtual Kubelet
 
 You can remove your Virtual Kubelet node by deleting the Helm deployment. Run the following command:
 
-```
+```cli
 helm delete virtual-kubelet --purge
+```
+If you used the ACI Connector installation then use the following command to remove the the ACI Connector from your cluster.
+
+```cli
+az aks remove-connector --resource-group <aks cluster rg> --name <aks cluster name> --connector-name myconnector --os-type linux
 ```
 
 <!-- LINKS -->
