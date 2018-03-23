@@ -5,7 +5,15 @@ Azure Container Instances (ACI) provide a hosted environment for running contain
 The Azure Container Instances provider for the Virtual Kubelet configures an ACI instance as a node in any Kubernetes cluster. When using the Virtual Kubelet ACI provider, pods can be scheduled on an ACI instance as if the ACI instance is a standard Kubernetes node. This configuration allows you to take advantage of both the capabilities of Kubernetes and the management value and cost benefit of ACI.
 
 This document details configuring the Virtual Kubelet ACI provider.
+#### Table of Contents
 
+* [Prerequiste](#Prerequisite)
+* [Quick set-up with the ACI Connector](#Quick-set-up-with-the-ACI-Connector)
+* [Manual set-up](#Manual-set-up)
+* [Validate the Virtual Kubelet ACI provider](#Validate-the-Virtual-Kubelet-ACI-provider)
+* [Schedule a pod in ACI](#Schedule-a-pod-in-ACI)
+* [Upgrade the ACI Connector ](#Upgrade-the-ACI-Connector)
+* [Remove the Virtual Kubelet](#Remove-the-Virtual-Kubelet)
 ## Prerequisite
 
 This guide assumes that you have a Kubernetes cluster up and running (can be `minikube`) and that `kubectl` is already configured to talk to it.
@@ -103,7 +111,7 @@ First let's identify your Azure subscription and save it for use later on in the
     $env:AZURE_SUBSCRIPTION_ID = "<SubscriptionId>"
     ```
 
-### ACI Connector Installation
+## Quick set-up with the ACI Connector
 
 The Azure cli can be used to install the ACI provider. We like to say Azure's provider or implementation for Virtual Kubelet is the ACI Connector. 
 For this section Virtual Kubelet's specific ACI provider will be referenced as the the ACI Connector. 
@@ -134,6 +142,8 @@ To install the ACI Connector use the az cli and the aks namespace. Make sure to 
    ```
 
 Now you are ready to deploy a pod to the connector so skip to the "Schedule a pod in ACI" section. 
+
+## Manual set-up
 
 ### Create a Resource Group for ACI
 
