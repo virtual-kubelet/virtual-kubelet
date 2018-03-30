@@ -22,19 +22,33 @@ import (
 
 	"gopkg.in/yaml.v2"
 
+	"strings"
+
 	"github.com/vmware/vic/pkg/trace"
 )
 
 type VicConfig struct {
 	PersonaAddr   string `yaml:"persona-server"`
 	PortlayerAddr string `yaml:"portlayer-server"`
-
+	HostUUID      string `yaml:"host-uuid"`
 }
 
 const (
-	personaAddrEnv   = "PERSONA_ADDR"
-	portlayerAddrEnv = "PORTLAYER_ADDR"
+	personaAddrEnv      = "PERSONA_ADDR"
+	portlayerAddrEnv    = "PORTLAYER_ADDR"
+	hostUUIDEnv         = "HOST_UUID"
+	localVirtualKubelet = "LOCAL_VIRTUAL_KUBELET"
 )
+
+func LocalInstance() bool {
+	value := strings.ToLower(os.Getenv(localVirtualKubelet))
+
+	if value == "1" || value == "t" || value == "true" {
+		return true
+	}
+
+	return false
+}
 
 func NewVicConfig(op trace.Operation, configFile string) VicConfig {
 	var config VicConfig
@@ -73,4 +87,5 @@ func (v *VicConfig) loadConfigFile(configFile string) error {
 func (v *VicConfig) loadConfigFromEnv() {
 	v.PersonaAddr = os.Getenv(personaAddrEnv)
 	v.PortlayerAddr = os.Getenv(portlayerAddrEnv)
+	v.HostUUID = os.Getenv(hostUUIDEnv)
 }

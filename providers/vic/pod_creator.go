@@ -189,6 +189,8 @@ func (v *VicPodCreator) createPod(op trace.Operation, pod *v1.Pod, start bool) (
 		return "", err
 	}
 
+	op.Infof("Created Pod: %s, Handle: %s, ID: %s", pod.Name, h, id)
+
 	return id, nil
 }
 
