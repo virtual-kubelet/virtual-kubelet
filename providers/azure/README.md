@@ -292,6 +292,9 @@ spec:
       name: https
   dnsPolicy: ClusterFirst
   nodeName: virtual-kubelet-myconnector-linux
+  tolerations:
+  - key: azure.com/aci
+    effect: NoSchedule
 ```
 
 Run the application with the [kubectl create][kubectl-create] command.
