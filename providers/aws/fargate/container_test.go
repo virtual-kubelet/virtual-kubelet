@@ -1,0 +1,239 @@
+package fargate
+
+import (
+	"fmt"
+	"testing"
+
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/service/ecs"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
+)
+
+const (
+	anyCPURequest    = "500m"
+	anyCPULimit      = "2"
+	anyMemoryRequest = "768Mi"
+	anyMemoryLimit   = "2Gi"
+
+	anyContainerName     = "any container name"
+	anyContainerImage    = "any container image"
+	anyContainerReason   = "any reason"
+	anyContainerExitCode = 42
+)
+
+var (
+	anyContainerSpec = corev1.Container{
+		Name:       anyContainerName,
+		Image:      anyContainerImage,
+		Command:    []string{"anyCmd"},
+		Args:       []string{"anyArg1", "anyArg2"},
+		WorkingDir: "/any/working/dir",
+	}
+)
+
+// TestCreateContainer verifies whether Kubernetes container specs are translated to
+// Fargate container definitions correctly.
+func TestContainerDefinition(t *testing.T) {
+	cntrSpec := anyContainerSpec
+
+	cntr, err := newContainer(&cntrSpec)
+	require.NoError(t, err, "failed to create container")
+
+	assert.Equal(t, cntrSpec.Name, *cntr.definition.Name, "incorrect name")
+	assert.Equal(t, cntrSpec.Image, *cntr.definition.Image, "incorrect image")
+	assert.Equal(t, cntrSpec.Command[0], *cntr.definition.EntryPoint[0], "incorrect command")
+	assert.Equal(t, cntrSpec.Args[0], *cntr.definition.Command[0], "incorrect args")
+	assert.Equal(t, cntrSpec.WorkingDir, *cntr.definition.WorkingDirectory, "incorrect working dir")
+}
+
+// TestContainerResourceRequirementsDefaults verifies whether the container gets default CPU
+// and memory resources when none is specified.
+func TestContainerResourceRequirementsDefaults(t *testing.T) {
+	cntrSpec := anyContainerSpec
+
+	cntr, err := newContainer(&cntrSpec)
+	require.NoError(t, err, "failed to create container")
+
+	assert.Equal(t, containerDefaultCPULimit, *cntr.definition.Cpu, "incorrect CPU limit")
+	assert.Equal(t, containerDefaultMemoryLimit, *cntr.definition.Memory, "incorrect memory limit")
+}
+
+// TestContainerResourceRequirementsWithRequestsNoLimits verifies whether the container gets
+// correct CPU and memory requests when only requests are specified.
+func TestContainerResourceRequirementsWithRequestsNoLimits(t *testing.T) {
+	cntrSpec := anyContainerSpec
+	cntrSpec.Resources = corev1.ResourceRequirements{
+		Requests: map[corev1.ResourceName]resource.Quantity{
+			corev1.ResourceCPU:    resource.MustParse(anyCPURequest),
+			corev1.ResourceMemory: resource.MustParse(anyMemoryRequest),
+		},
+	}
+
+	cntr, err := newContainer(&cntrSpec)
+	require.NoError(t, err, "failed to create container")
+
+	assert.Equal(t, int64(512), *cntr.definition.Cpu, "incorrect CPU limit")
+	assert.Equal(t, int64(768), *cntr.definition.Memory, "incorrect memory limit")
+}
+
+// TestContainerResourceRequirementsWithLimitsNoRequests verifies whether the container gets
+// correct CPU and memory limits when only limits are specified.
+func TestContainerResourceRequirementsWithLimitsNoRequests(t *testing.T) {
+	cntrSpec := anyContainerSpec
+	cntrSpec.Resources = corev1.ResourceRequirements{
+		Limits: map[corev1.ResourceName]resource.Quantity{
+			corev1.ResourceCPU:    resource.MustParse(anyCPULimit),
+			corev1.ResourceMemory: resource.MustParse(anyMemoryLimit),
+		},
+	}
+
+	cntr, err := newContainer(&cntrSpec)
+	require.NoError(t, err, "failed to create container")
+
+	assert.Equal(t, int64(2048), *cntr.definition.Cpu, "incorrect CPU limit")
+	assert.Equal(t, int64(2048), *cntr.definition.Memory, "incorrect memory limit")
+}
+
+// TestContainerResourceRequirementsWithRequestsAndLimits verifies whether the container gets
+// correct CPU and memory limits when both requests and limits are specified.
+func TestContainerResourceRequirementsWithRequestsAndLimits(t *testing.T) {
+	cntrSpec := anyContainerSpec
+	cntrSpec.Resources = corev1.ResourceRequirements{
+		Requests: map[corev1.ResourceName]resource.Quantity{
+			corev1.ResourceCPU:    resource.MustParse(anyCPURequest),
+			corev1.ResourceMemory: resource.MustParse(anyMemoryRequest),
+		},
+		Limits: map[corev1.ResourceName]resource.Quantity{
+			corev1.ResourceCPU:    resource.MustParse(anyCPULimit),
+			corev1.ResourceMemory: resource.MustParse(anyMemoryLimit),
+		},
+	}
+
+	cntr, err := newContainer(&cntrSpec)
+	require.NoError(t, err, "failed to create container")
+
+	assert.Equal(t, int64(2048), *cntr.definition.Cpu, "incorrect CPU limit")
+	assert.Equal(t, int64(2048), *cntr.definition.Memory, "incorrect memory limit")
+}
+
+// TestContainerResourceRequirements verifies whether Kubernetes container resource requirements
+// are translated to Fargate container resource requests correctly.
+func TestContainerResourceRequirementsTranslations(t *testing.T) {
+	type testCase struct {
+		requestedCPU          string
+		requestedMemoryInMiBs string
+		expectedCPU           int64
+		expectedMemoryInMiBs  int64
+	}
+
+	// Expected and observed CPU quantities are in units of 1/1024th vCPUs.
+	var testCases = []testCase{
+		{"1m", "100Ki", 1, 1},
+		{"100m", "500Ki", 102, 1},
+		{"200m", "300Mi", 204, 300},
+		{"500m", "500Mi", 512, 500},
+		{"1000m", "512Mi", 1024, 512},
+		{"1", "512Mi", 1024, 512},
+		{"1500m", "1000Mi", 1536, 1000},
+		{"1500m", "1024Mi", 1536, 1024},
+		{"2", "2Gi", 2048, 2048},
+		{"8", "30Gi", 8192, 30 * 1024},
+	}
+
+	for _, tc := range testCases {
+		t.Run(
+			fmt.Sprintf("cpu:%s,memory:%s", tc.requestedCPU, tc.requestedMemoryInMiBs),
+			func(t *testing.T) {
+				reqs := corev1.ResourceRequirements{
+					Limits: map[corev1.ResourceName]resource.Quantity{
+						corev1.ResourceCPU:    resource.MustParse(tc.requestedCPU),
+						corev1.ResourceMemory: resource.MustParse(tc.requestedMemoryInMiBs),
+					},
+				}
+
+				cntrSpec := anyContainerSpec
+				cntrSpec.Resources = reqs
+
+				cntr, err := newContainer(&cntrSpec)
+				require.NoError(t, err, "failed to create container")
+
+				assert.Truef(t,
+					*cntr.definition.Cpu == tc.expectedCPU && *cntr.definition.Memory == tc.expectedMemoryInMiBs,
+					"requested (cpu:%v memory:%v) expected (cpu:%v memory:%v) observed (cpu:%v memory:%v)",
+					tc.requestedCPU, tc.requestedMemoryInMiBs,
+					tc.expectedCPU, tc.expectedMemoryInMiBs,
+					*cntr.definition.Cpu, *cntr.definition.Memory)
+			})
+	}
+}
+
+// TestContainerStatus verifies whether Kubernetes containers report their status correctly for
+// all Fargate container state transitions.
+func TestContainerStatus(t *testing.T) {
+	cntrSpec := anyContainerSpec
+
+	cntr, err := newContainer(&cntrSpec)
+	require.NoError(t, err, "failed to create container")
+
+	// Fargate container status provisioning.
+	state := ecs.Container{
+		Name:       aws.String(anyContainerName),
+		Reason:     aws.String(anyContainerReason),
+		LastStatus: aws.String(containerStatusProvisioning),
+		ExitCode:   aws.Int64(0),
+	}
+
+	status := cntr.getStatus(&state)
+
+	assert.Equal(t, anyContainerName, status.Name, "incorrect name")
+	assert.NotNil(t, status.State.Waiting, "incorrect state")
+	assert.Equal(t, anyContainerReason, status.State.Waiting.Reason, "incorrect reason")
+	assert.Nil(t, status.State.Running, "incorrect state")
+	assert.Nil(t, status.State.Terminated, "incorrect state")
+	assert.False(t, status.Ready, "incorrect ready")
+	assert.Equal(t, anyContainerImage, status.Image, "incorrect image")
+
+	// Fargate container status pending.
+	state.LastStatus = aws.String(containerStatusPending)
+	status = cntr.getStatus(&state)
+
+	assert.Equal(t, anyContainerName, status.Name, "incorrect name")
+	assert.NotNil(t, status.State.Waiting, "incorrect state")
+	assert.Equal(t, anyContainerReason, status.State.Waiting.Reason, "incorrect reason")
+	assert.Nil(t, status.State.Running, "incorrect state")
+	assert.Nil(t, status.State.Terminated, "incorrect state")
+	assert.False(t, status.Ready, "incorrect ready")
+	assert.Equal(t, anyContainerImage, status.Image, "incorrect image")
+
+	// Fargate container status running.
+	state.LastStatus = aws.String(containerStatusRunning)
+	status = cntr.getStatus(&state)
+
+	assert.Equal(t, anyContainerName, status.Name, "incorrect name")
+	assert.Nil(t, status.State.Waiting, "incorrect state")
+	assert.NotNil(t, status.State.Running, "incorrect state")
+	assert.False(t, status.State.Running.StartedAt.IsZero(), "incorrect startedat")
+	assert.Nil(t, status.State.Terminated, "incorrect state")
+	assert.True(t, status.Ready, "incorrect ready")
+	assert.Equal(t, anyContainerImage, status.Image, "incorrect image")
+
+	// Fargate container status stopped.
+	state.LastStatus = aws.String(containerStatusStopped)
+	state.ExitCode = aws.Int64(anyContainerExitCode)
+	status = cntr.getStatus(&state)
+
+	assert.Equal(t, anyContainerName, status.Name, "incorrect name")
+	assert.Nil(t, status.State.Waiting, "incorrect state")
+	assert.Nil(t, status.State.Running, "incorrect state")
+	assert.NotNil(t, status.State.Terminated, "incorrect state")
+	assert.Equal(t, int32(anyContainerExitCode), status.State.Terminated.ExitCode, "incorrect exitcode")
+	assert.Equal(t, anyContainerReason, status.State.Terminated.Reason, "incorrect reason")
+	assert.False(t, status.State.Terminated.StartedAt.IsZero(), "incorrect startedat")
+	assert.False(t, status.State.Terminated.FinishedAt.IsZero(), "incorrect finishedat")
+	assert.False(t, status.Ready, "incorrect ready")
+	assert.Equal(t, anyContainerImage, status.Image, "incorrect image")
+}
