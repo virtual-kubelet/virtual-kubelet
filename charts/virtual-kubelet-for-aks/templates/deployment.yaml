@@ -17,7 +17,7 @@ spec:
         - name: KUBELET_PORT
           value: "10250"
         - name: ACS_CREDENTIAL_LOCATION
-          value: /etc/virtual-kubelet/acs.json
+          value: /etc/virtual-kubelet/acs/azure.json
         - name: AZURE_TENANT_ID
           value: {{ .Values.env.azureTenantId }}
         - name: AZURE_SUBSCRIPTION_ID
@@ -45,7 +45,7 @@ spec:
         - name: credentials
           mountPath: "/etc/virtual-kubelet"
         - name: acs-credential
-          mountPath: "/etc/virtual-kubelet/acs.json"
+          mountPath: "/etc/virtual-kubelet/acs"
         command: ["virtual-kubelet"]
         args: ["--provider", "azure", "--namespace", "default", "--nodename", {{ default "virtual-kubelet" .Values.env.nodeName | quote }} , "--os", {{ default "Linux" .Values.env.nodeOsType | quote }}, "--taint", {{ default "azure.com/aci" .Values.env.nodeTaint | quote }}]
       volumes:
@@ -54,4 +54,4 @@ spec:
           secretName: {{ template "fullname" . }}
       - name: acs-credential
         hostPath:
-          path: /etc/kubernetes/azure.json
+          path: /etc/kubernetes
