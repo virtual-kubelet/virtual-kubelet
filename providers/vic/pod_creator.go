@@ -21,6 +21,7 @@ import (
 	"github.com/virtual-kubelet/virtual-kubelet/providers/vic/cache"
 	vicpod "github.com/virtual-kubelet/virtual-kubelet/providers/vic/pod"
 	"github.com/virtual-kubelet/virtual-kubelet/providers/vic/proxy"
+
 	"github.com/vmware/vic/lib/apiservers/engine/errors"
 	"github.com/vmware/vic/lib/apiservers/portlayer/client"
 	"github.com/vmware/vic/lib/metadata"
@@ -233,41 +234,6 @@ func IsolationContainerConfigFromKubeContainer(op trace.Operation, cSpec *v1.Con
 
 	// set up environment
 	config.Env = setEnvFromImageConfig(config.Tty, config.Env, imgConfig.Config.Env)
-
-	//// HACK:  get the exposed ports in the annotation to open up for demo purposes.
-	//var exPort, hostPort, hostIP string
-	//op.Infof("annotation = %#v", pod.Annotations)
-	//if cSpec.Image == "socat" {
-	//	for key, val := range pod.Annotations {
-	//		switch key {
-	//		case "socat.external":
-	//			exPort = val
-	//		case "socat.internal":
-	//			hostPort = val
-	//		case "socat.ip":
-	//			hostIP = val
-	//		}
-	//	}
-	//	config.PortMap[exPort] = proxy.PortBinding{
-	//		HostIP:   hostIP,
-	//		HostPort: hostPort,
-	//	}
-	//} else if cSpec.Image == "nginx" {
-	//	for key, val := range pod.Annotations {
-	//		switch key {
-	//		case "nginx.external":
-	//			exPort = val
-	//		case "nginx.internal":
-	//			hostPort = val
-	//		case "nginx.ip":
-	//			hostIP = val
-	//		}
-	//	}
-	//	config.PortMap[exPort] = proxy.PortBinding{
-	//		HostIP:   hostIP,
-	//		HostPort: hostPort,
-	//	}
-	//}
 
 	op.Infof("config = %#v", config)
 
