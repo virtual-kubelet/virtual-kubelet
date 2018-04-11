@@ -1,0 +1,41 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: {{ template "fullname" . }}
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: {{ template "fullname" . }}
+    spec:
+      containers:
+      - name: {{ template "fullname" . }}
+        image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+        imagePullPolicy: {{ .Values.image.pullPolicy }}
+        env:
+        - name: KUBELET_PORT
+          value: "10250"
+        - name: AZURE_AUTH_LOCATION
+          value: /etc/virtual-kubelet/credentials.json
+        - name: ACI_RESOURCE_GROUP
+          value: {{ .Values.env.aciResourceGroup }}
+        - name: ACI_REGION
+          value: {{ default "westus" .Values.env.aciRegion }}
+        - name: APISERVER_CERT_LOCATION
+          value: /etc/virtual-kubelet/cert.pem
+        - name: APISERVER_KEY_LOCATION
+          value: /etc/virtual-kubelet/key.pem
+        - name: VKUBELET_POD_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+        volumeMounts:
+        - name: credentials
+          mountPath: "/etc/virtual-kubelet"
+        command: ["virtual-kubelet"]
+        args: ["--provider", "azure", "--namespace", "default", "--nodename", {{ default "virtual-kubelet" .Values.env.nodeName | quote }} , "--os", {{ default "Linux" .Values.env.nodeOsType | quote }}, "--taint", {{ default "azure.com/aci" .Values.env.nodeTaint | quote }}]
+      volumes:
+      - name: credentials
+        secret:
+          secretName: {{ template "fullname" . }}
