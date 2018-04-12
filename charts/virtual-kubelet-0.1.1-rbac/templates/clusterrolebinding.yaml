@@ -5,7 +5,7 @@ metadata:
   name: {{ template "fullname" . }}-role-binding
 subjects:
 - kind: ServiceAccount
-  name: default
+  name: {{ template "fullname" . }}-service-account
   namespace: default
 roleRef:
   apiGroup: rbac.authorization.k8s.io
