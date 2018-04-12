@@ -58,6 +58,7 @@ a `virtual-kubelet` node.
 * Environment variables
 * Public IPs
 * kubectl logs
+* DNS name labels
 
 ## Current Limitations
 
@@ -92,22 +93,6 @@ Flags:
 Use "virtual-kubelet [command] --help" for more information about a command.
 ```
 
-## Deploy as a Pod by Helm Chart
-
-Run these commands to deploy the virtual kubelet which connects your Kubernetes cluster to Azure Container Instances.
-If you want to run the connector from the Azure command-line check out this.
-
-```bash
-RELEASE_NAME=virtual-kubelet
-CHART_URL=https://github.com/virtual-kubelet/virtual-kubelet/raw/master/charts/virtual-kubelet-0.1.0.tgz
-
-curl https://raw.githubusercontent.com/virtual-kubelet/virtual-kubelet/master/scripts/createCertAndKey.sh > createCertAndKey.sh
-. createCertAndKey.sh
-
-helm install "$CHART_URL" --name "$RELEASE_NAME" \
-    --set env.azureClientId=<YOUR-AZURECLIENTID-HERE>,env.azureClientKey=<YOUR-AZURECLIENTKEY-HERE>,env.azureTenantId=<YOUR-AZURETENANTID-HERE>,env.azureSubscriptionId=<YOUR-AZURESUBSCRIPTIONID-HERE>,env.aciResourceGroup=<YOUR-ACIRESOURCEGROUP-HERE>,env.nodeName=<YOUR-NODE-NAME>,env.nodeOsType=<Linux|Windows>,env.nodeTaint=<YOUR-NODE-TAINT>,env.apiserverCert=$cert,env.apiserverKey=$key
-```
-
 ## Providers
 
 This project features a pluggable provider interface developers can implement
@@ -125,21 +110,16 @@ The Azure Container Instances Provider allows you to utilize both
 typical pods on VMs and Azure Container instances simultaneously in the
 same Kubernetes cluster.
 
-```bash
-./bin/virtual-kubelet --provider azure
-```
-
-#### Environment Variables
-
-`ACI_RESOURCE_GROUP` must be set to the name of a valid Azure resource group where your
-ACI workload will be run.
-
-`ACI_REGION` must be set to the name of the region your `ACI_RESOURCE_GROUP` was created.
+You can find detailed instructions on how to set it up and how to test it in the [Azure Container Instances Provider documentation](./providers/azure/README.md).
 
 #### Configuration File
 
 The Azure connector can use a configuration file specified by the `--provider-config` flag.
 The config file is in TOML format, and an example lives in `providers/azure/example.toml`.
+
+#### More Details
+
+See the [ACI Readme](providers/azure/README.md)
 
 ### Hyper.sh Provider
 
@@ -222,14 +202,5 @@ Enable the ServiceNodeExclusion flag, by modifying the Controller Manager manife
 
 ## Contributing
 
-This project welcomes contributions and suggestions.  Most contributions require you to agree to a
-Contributor License Agreement (CLA) declaring that you have the right to, and actually do, grant us
-the rights to use your contribution. For details, visit https://cla.microsoft.com.
-
-When you submit a pull request, a CLA-bot will automatically determine whether you need to provide
-a CLA and decorate the PR appropriately (e.g., label, comment). Simply follow the instructions
-provided by the bot. You will only need to do this once across all repos using our CLA.
-
-This project has adopted the [Microsoft Open Source Code of Conduct](https://opensource.microsoft.com/codeofconduct/).
-For more information see the [Code of Conduct FAQ](https://opensource.microsoft.com/codeofconduct/faq/) or
-contact [opencode@microsoft.com](mailto:opencode@microsoft.com) with any additional questions or comments.
+Virtual Kubelet follows the [CNCF Code of Conduct](https://github.com/cncf/foundation/blob/master/code-of-conduct.md).
+Sign the [CNCF CLA](https://github.com/kubernetes/community/blob/master/CLA.md) to be able to make Pull Requests to this repo. 

@@ -1,23 +1,19 @@
 apiVersion: v1
 kind: Pod
 metadata:
-  name: iis
+  name: nano
 spec:
   containers:
-  - image: microsoft/iis:nanoserver
+  - image: microsoft/nanoserver:latest
     imagePullPolicy: Always
-    name: iis
+    command: ["powershell.exe", "-Command", "while ($true) { Sleep 5; Write-Host 'helloworld' }"]
+    name: nanoserver
     resources:
       requests:
-        memory: 3.5G
-        cpu: 2
-    ports:
-    - containerPort: 80
-      name: http
-      protocol: TCP
-    - containerPort: 443
-      name: https
+        memory: 1.5G
+        cpu: 1
   dnsPolicy: Default
+  restartPolicy: OnFailure
   nodeName: virtual-kubelet-myaciconnector-win
   automountServiceAccountToken: false
   tolerations:

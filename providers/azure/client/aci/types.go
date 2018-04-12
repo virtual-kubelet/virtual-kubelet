@@ -172,9 +172,10 @@ type ImageRegistryCredential struct {
 
 // IPAddress is IP address for the container group.
 type IPAddress struct {
-	Ports []Port `json:"ports,omitempty"`
-	Type  string `json:"type,omitempty"`
-	IP    string `json:"ip,omitempty"`
+	Ports        []Port `json:"ports,omitempty"`
+	Type         string `json:"type,omitempty"`
+	IP           string `json:"ip,omitempty"`
+	DNSNameLabel string `json:"dnsNameLabel,omitempty"`
 }
 
 // Logs is the logs.

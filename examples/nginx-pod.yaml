@@ -18,7 +18,7 @@ spec:
     - containerPort: 443
       name: https
   dnsPolicy: ClusterFirst
-  nodeName: virtual-kubelet
+  nodeName: virtual-kubelet-myaciconnector-linux
   tolerations:
   - key: azure.com/aci
     effect: NoSchedule

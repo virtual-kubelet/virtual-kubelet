@@ -1,5 +1,5 @@
 [package]
-name = "rust-web-provider"
+name = "web-rust"
 version = "0.1.0"
 authors = ["Rajasekharan Vengalil <rajave@microsoft.com>"]
 

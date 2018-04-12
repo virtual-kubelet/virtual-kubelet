@@ -77,9 +77,9 @@ func (p *MockProvider) DeletePod(pod *v1.Pod) (err error) {
 
 // GetPod returns a pod by name that is stored in memory.
 func (p *MockProvider) GetPod(namespace, name string) (pod *v1.Pod, err error) {
-	log.Printf("receive GetPod %q\n", pod.Name)
+	log.Printf("receive GetPod %q\n", name)
 
-	key, err := buildKey(pod)
+	key, err := buildKeyFromNames(namespace, name)
 	if err != nil {
 		return nil, err
 	}
@@ -246,6 +246,10 @@ func (p *MockProvider) OperatingSystem() string {
 	return providers.OperatingSystemLinux
 }
 
+func buildKeyFromNames(namespace string, name string) (string, error) {
+	return fmt.Sprintf("%s-%s", namespace, name), nil
+}
+
 // buildKey is a helper for building the "key" for the providers pod store.
 func buildKey(pod *v1.Pod) (string, error) {
 	if pod.ObjectMeta.Namespace == "" {
@@ -256,5 +260,5 @@ func buildKey(pod *v1.Pod) (string, error) {
 		return "", fmt.Errorf("pod name not found")
 	}
 
-	return fmt.Sprintf("%s-%s", pod.ObjectMeta.Namespace, pod.ObjectMeta.Name), nil
+	return buildKeyFromNames(pod.ObjectMeta.Namespace, pod.ObjectMeta.Name)
 }

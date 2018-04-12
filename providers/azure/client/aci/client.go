@@ -10,8 +10,8 @@ import (
 const (
 	// BaseURI is the default URI used for compute services.
 	BaseURI    = "https://management.azure.com"
-	userAgent  = "virtual-kubelet/azure-arm-aci/2017-12-01"
-	apiVersion = "2017-12-01-preview"
+	userAgent  = "virtual-kubelet/azure-arm-aci/2018-02-01"
+	apiVersion = "2018-02-01-preview"
 
 	containerGroupURLPath                    = "subscriptions/{{.subscriptionId}}/resourceGroups/{{.resourceGroup}}/providers/Microsoft.ContainerInstance/containerGroups/{{.containerGroupName}}"
 	containerGroupListURLPath                = "subscriptions/{{.subscriptionId}}/providers/Microsoft.ContainerInstance/containerGroups"
