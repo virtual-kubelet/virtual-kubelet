@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/virtual-kubelet/virtual-kubelet/manager"
+	"github.com/virtual-kubelet/virtual-kubelet/providers/aws"
 	"github.com/virtual-kubelet/virtual-kubelet/providers/azure"
 	"github.com/virtual-kubelet/virtual-kubelet/providers/hypersh"
 	"github.com/virtual-kubelet/virtual-kubelet/providers/mock"
@@ -69,12 +70,20 @@ func New(nodeName, operatingSystem, namespace, kubeConfig, taint, provider, prov
 		daemonEndpointPortEnv = "10250"
 	}
 	i64value, err := strconv.ParseInt(daemonEndpointPortEnv, 10, 32)
+	if err != nil {
+		return nil, err
+	}
 	daemonEndpointPort := int32(i64value)
 
 	internalIP := os.Getenv("VKUBELET_POD_IP")
 
 	var p Provider
 	switch provider {
+	case "aws":
+		p, err = aws.NewProvider(providerConfig, rm, nodeName, operatingSystem, internalIP, daemonEndpointPort)
+		if err != nil {
+			return nil, err
+		}
 	case "azure":
 		p, err = azure.NewACIProvider(providerConfig, rm, nodeName, operatingSystem, internalIP, daemonEndpointPort)
 		if err != nil {
@@ -140,9 +149,9 @@ func (s *Server) registerNode() error {
 		ObjectMeta: metav1.ObjectMeta{
 			Name: s.nodeName,
 			Labels: map[string]string{
-				"type":                  "virtual-kubelet",
-				"kubernetes.io/role":    "agent",
-				"beta.kubernetes.io/os": strings.ToLower(s.provider.OperatingSystem()),
+				"type":                                                    "virtual-kubelet",
+				"kubernetes.io/role":                                      "agent",
+				"beta.kubernetes.io/os":                                   strings.ToLower(s.provider.OperatingSystem()),
 				"alpha.service-controller.kubernetes.io/exclude-balancer": "true",
 			},
 		},

@@ -1,0 +1,8 @@
+# example configuration file for AWS Fargate virtual-kubelet
+
+Region = "us-east-1"
+Cluster = "virtual-kubelet-fargate"
+CloudWatchLogGroup = "/ecs/virtual-kubelet-logs"
+ExecutionRoleArn = "virtual-kubelet-task-executor"
+Subnets = [ "subnet-a", "subnet-b", "subnet-c" ]
+SecurityGroups = [ ]
