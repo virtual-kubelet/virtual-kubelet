@@ -230,7 +230,7 @@ func (p *Provider) GetPod(namespace, name string) (*v1.Pod, error) {
 func (p *Provider) GetContainerLogs(namespace, podName, containerName string, tail int) (string, error) {
 	log.Println("Getting pod logs ....")
 
-	logFileLocation := fmt.Sprintf("wd/%s", containerName)
+	logFileLocation := fmt.Sprintf("wd/%s.log", containerName)
 	// todo: Log file is the json log from docker - deserialise and form at it before returning it.
 	reader, err := p.fileClient.GetFromTask(p.ctx, p.batchConfig.JobID, getTaskIDForPod(namespace, podName), logFileLocation, nil, nil, nil, nil, "", nil, nil)
 

@@ -1,10 +1,12 @@
 apiVersion: v1
 kind: Pod
 metadata:
-  name: nginx-aks
+  name: busyecho
 spec:
   containers:
-  - image: nginx
+  - image: busybox
+    command:
+      - echo "Hello from container"
     imagePullPolicy: Always
     name: nginx
     resources:
@@ -19,3 +21,6 @@ spec:
       name: https
   dnsPolicy: ClusterFirst
   nodeName: virtual-kubelet
+  tolerations:
+  - key: azure.com/aci
+    effect: NoSchedule

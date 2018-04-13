@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/Azure/go-autorest/autorest/azure"
 	"log"
 	"net/http"
 	"os"
@@ -96,9 +95,7 @@ func NewACIProvider(config string, rm *manager.ResourceManager, nodeName, operat
 		}
 	}
 
-	azAuth := &client.Authentication{}
-	azAuth.ActiveDirectoryEndpoint = azure.PublicCloud.ActiveDirectoryEndpoint
-	azAuth.ResourceManagerEndpoint = azure.PublicCloud.ResourceManagerEndpoint
+	var azAuth *client.Authentication
 
 	if authFilepath := os.Getenv("AZURE_AUTH_LOCATION"); authFilepath != "" {
 		auth, err := client.NewAuthenticationFromFile(authFilepath)

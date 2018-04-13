@@ -75,10 +75,10 @@ func convertTaskStatusToPodPhase(t *batch.CloudTask) (podPhase apiv1.PodPhase) {
 		podPhase = apiv1.PodRunning
 	case batch.TaskStateCompleted:
 		podPhase = apiv1.PodSucceeded
-	}
 
-	if t.State == batch.TaskStateCompleted && *t.ExecutionInfo.ExitCode != 0 {
-		podPhase = apiv1.PodFailed
+		if t.ExecutionInfo != nil && t.ExecutionInfo.ExitCode != nil && *t.ExecutionInfo.ExitCode != 0 {
+			podPhase = apiv1.PodFailed
+		}
 	}
 
 	return
@@ -117,15 +117,19 @@ func convertTaskStatusToContainerState(t *batch.CloudTask) (containerState apiv1
 	case batch.TaskStateCompleted:
 		termStatus := apiv1.ContainerState{
 			Terminated: &apiv1.ContainerStateTerminated{
-				ExitCode: *t.ExecutionInfo.ExitCode,
 				FinishedAt: metav1.Time{
 					Time: t.StateTransitionTime.Time,
 				},
 				StartedAt: startTime,
 			},
 		}
-		if *t.ExecutionInfo.ExitCode != 0 {
-			termStatus.Terminated.Message = *t.ExecutionInfo.FailureInfo.Message
+
+		if t.ExecutionInfo != nil && t.ExecutionInfo.ExitCode != nil {
+			exitCode := *t.ExecutionInfo.ExitCode
+			termStatus.Terminated.ExitCode = exitCode
+			if exitCode != 0 {
+				termStatus.Terminated.Message = *t.ExecutionInfo.FailureInfo.Message
+			}
 		}
 	}
 
