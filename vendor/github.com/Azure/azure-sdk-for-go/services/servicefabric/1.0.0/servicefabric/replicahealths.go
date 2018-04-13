@@ -153,7 +153,7 @@ func (client ReplicaHealthsClient) SendPreparer(ctx context.Context, partitionID
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPost(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/Partitions/{partitionId}/$/GetReplicas/{replicaId}/$/ReportHealth", pathParameters),

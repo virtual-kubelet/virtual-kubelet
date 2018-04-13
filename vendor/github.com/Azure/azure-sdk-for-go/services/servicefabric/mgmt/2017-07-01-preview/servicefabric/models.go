@@ -52,6 +52,11 @@ const (
 	WaitingForNodes ClusterState = "WaitingForNodes"
 )
 
+// PossibleClusterStateValues returns an array of possible values for the ClusterState const type.
+func PossibleClusterStateValues() []ClusterState {
+	return []ClusterState{AutoScale, BaselineUpgrade, Deploying, EnforcingClusterVersion, Ready, UpdatingInfrastructure, UpdatingUserCertificate, UpdatingUserConfiguration, UpgradeServiceUnreachable, WaitingForNodes}
+}
+
 // DefaultMoveCost enumerates the values for default move cost.
 type DefaultMoveCost string
 
@@ -66,6 +71,11 @@ const (
 	Zero DefaultMoveCost = "Zero"
 )
 
+// PossibleDefaultMoveCostValues returns an array of possible values for the DefaultMoveCost const type.
+func PossibleDefaultMoveCostValues() []DefaultMoveCost {
+	return []DefaultMoveCost{High, Low, Medium, Zero}
+}
+
 // DurabilityLevel enumerates the values for durability level.
 type DurabilityLevel string
 
@@ -78,6 +88,11 @@ const (
 	Silver DurabilityLevel = "Silver"
 )
 
+// PossibleDurabilityLevelValues returns an array of possible values for the DurabilityLevel const type.
+func PossibleDurabilityLevelValues() []DurabilityLevel {
+	return []DurabilityLevel{Bronze, Gold, Silver}
+}
+
 // Environment enumerates the values for environment.
 type Environment string
 
@@ -87,6 +102,11 @@ const (
 	// Windows ...
 	Windows Environment = "Windows"
 )
+
+// PossibleEnvironmentValues returns an array of possible values for the Environment const type.
+func PossibleEnvironmentValues() []Environment {
+	return []Environment{Linux, Windows}
+}
 
 // PartitionScheme enumerates the values for partition scheme.
 type PartitionScheme string
@@ -102,6 +122,11 @@ const (
 	PartitionSchemeUniformInt64Range PartitionScheme = "UniformInt64Range"
 )
 
+// PossiblePartitionSchemeValues returns an array of possible values for the PartitionScheme const type.
+func PossiblePartitionSchemeValues() []PartitionScheme {
+	return []PartitionScheme{PartitionSchemeNamed, PartitionSchemePartitionSchemeDescription, PartitionSchemeSingleton, PartitionSchemeUniformInt64Range}
+}
+
 // ProvisioningState enumerates the values for provisioning state.
 type ProvisioningState string
 
@@ -115,6 +140,11 @@ const (
 	// Updating ...
 	Updating ProvisioningState = "Updating"
 )
+
+// PossibleProvisioningStateValues returns an array of possible values for the ProvisioningState const type.
+func PossibleProvisioningStateValues() []ProvisioningState {
+	return []ProvisioningState{Canceled, Failed, Succeeded, Updating}
+}
 
 // ReliabilityLevel enumerates the values for reliability level.
 type ReliabilityLevel string
@@ -132,6 +162,11 @@ const (
 	ReliabilityLevelSilver ReliabilityLevel = "Silver"
 )
 
+// PossibleReliabilityLevelValues returns an array of possible values for the ReliabilityLevel const type.
+func PossibleReliabilityLevelValues() []ReliabilityLevel {
+	return []ReliabilityLevel{ReliabilityLevelBronze, ReliabilityLevelGold, ReliabilityLevelNone, ReliabilityLevelPlatinum, ReliabilityLevelSilver}
+}
+
 // ReliabilityLevel1 enumerates the values for reliability level 1.
 type ReliabilityLevel1 string
 
@@ -143,6 +178,11 @@ const (
 	// ReliabilityLevel1Silver ...
 	ReliabilityLevel1Silver ReliabilityLevel1 = "Silver"
 )
+
+// PossibleReliabilityLevel1Values returns an array of possible values for the ReliabilityLevel1 const type.
+func PossibleReliabilityLevel1Values() []ReliabilityLevel1 {
+	return []ReliabilityLevel1{ReliabilityLevel1Bronze, ReliabilityLevel1Gold, ReliabilityLevel1Silver}
+}
 
 // Scheme enumerates the values for scheme.
 type Scheme string
@@ -158,6 +198,11 @@ const (
 	NonAlignedAffinity Scheme = "NonAlignedAffinity"
 )
 
+// PossibleSchemeValues returns an array of possible values for the Scheme const type.
+func PossibleSchemeValues() []Scheme {
+	return []Scheme{Affinity, AlignedAffinity, Invalid, NonAlignedAffinity}
+}
+
 // ServiceKind enumerates the values for service kind.
 type ServiceKind string
 
@@ -169,6 +214,11 @@ const (
 	// ServiceKindStateless ...
 	ServiceKindStateless ServiceKind = "Stateless"
 )
+
+// PossibleServiceKindValues returns an array of possible values for the ServiceKind const type.
+func PossibleServiceKindValues() []ServiceKind {
+	return []ServiceKind{ServiceKindServiceProperties, ServiceKindStateful, ServiceKindStateless}
+}
 
 // ServiceKindBasicServiceUpdateProperties enumerates the values for service kind basic service update
 // properties.
@@ -183,6 +233,11 @@ const (
 	ServiceKindBasicServiceUpdatePropertiesServiceKindStateless ServiceKindBasicServiceUpdateProperties = "Stateless"
 )
 
+// PossibleServiceKindBasicServiceUpdatePropertiesValues returns an array of possible values for the ServiceKindBasicServiceUpdateProperties const type.
+func PossibleServiceKindBasicServiceUpdatePropertiesValues() []ServiceKindBasicServiceUpdateProperties {
+	return []ServiceKindBasicServiceUpdateProperties{ServiceKindBasicServiceUpdatePropertiesServiceKindServiceUpdateProperties, ServiceKindBasicServiceUpdatePropertiesServiceKindStateful, ServiceKindBasicServiceUpdatePropertiesServiceKindStateless}
+}
+
 // Type enumerates the values for type.
 type Type string
 
@@ -190,6 +245,11 @@ const (
 	// TypeServicePlacementPolicyDescription ...
 	TypeServicePlacementPolicyDescription Type = "ServicePlacementPolicyDescription"
 )
+
+// PossibleTypeValues returns an array of possible values for the Type const type.
+func PossibleTypeValues() []Type {
+	return []Type{TypeServicePlacementPolicyDescription}
+}
 
 // UpgradeMode enumerates the values for upgrade mode.
 type UpgradeMode string
@@ -201,6 +261,11 @@ const (
 	Manual UpgradeMode = "Manual"
 )
 
+// PossibleUpgradeModeValues returns an array of possible values for the UpgradeMode const type.
+func PossibleUpgradeModeValues() []UpgradeMode {
+	return []UpgradeMode{Automatic, Manual}
+}
+
 // UpgradeMode1 enumerates the values for upgrade mode 1.
 type UpgradeMode1 string
 
@@ -210,6 +275,11 @@ const (
 	// UpgradeMode1Manual ...
 	UpgradeMode1Manual UpgradeMode1 = "Manual"
 )
+
+// PossibleUpgradeMode1Values returns an array of possible values for the UpgradeMode1 const type.
+func PossibleUpgradeMode1Values() []UpgradeMode1 {
+	return []UpgradeMode1{UpgradeMode1Automatic, UpgradeMode1Manual}
+}
 
 // Weight enumerates the values for weight.
 type Weight string
@@ -224,6 +294,11 @@ const (
 	// WeightZero ...
 	WeightZero Weight = "Zero"
 )
+
+// PossibleWeightValues returns an array of possible values for the Weight const type.
+func PossibleWeightValues() []Weight {
+	return []Weight{WeightHigh, WeightLow, WeightMedium, WeightZero}
+}
 
 // X509StoreName enumerates the values for x509 store name.
 type X509StoreName string
@@ -246,6 +321,11 @@ const (
 	// TrustedPublisher ...
 	TrustedPublisher X509StoreName = "TrustedPublisher"
 )
+
+// PossibleX509StoreNameValues returns an array of possible values for the X509StoreName const type.
+func PossibleX509StoreNameValues() []X509StoreName {
+	return []X509StoreName{AddressBook, AuthRoot, CertificateAuthority, Disallowed, My, Root, TrustedPeople, TrustedPublisher}
+}
 
 // ApplicationDeleteFuture an abstraction for monitoring and retrieving the results of a long-running operation.
 type ApplicationDeleteFuture struct {
@@ -468,6 +548,27 @@ type ApplicationResource struct {
 	Location *string `json:"location,omitempty"`
 }
 
+// MarshalJSON is the custom marshaler for ApplicationResource.
+func (ar ApplicationResource) MarshalJSON() ([]byte, error) {
+	objectMap := make(map[string]interface{})
+	if ar.ApplicationProperties != nil {
+		objectMap["properties"] = ar.ApplicationProperties
+	}
+	if ar.ID != nil {
+		objectMap["id"] = ar.ID
+	}
+	if ar.Name != nil {
+		objectMap["name"] = ar.Name
+	}
+	if ar.Type != nil {
+		objectMap["type"] = ar.Type
+	}
+	if ar.Location != nil {
+		objectMap["location"] = ar.Location
+	}
+	return json.Marshal(objectMap)
+}
+
 // UnmarshalJSON is the custom unmarshaler for ApplicationResource struct.
 func (ar *ApplicationResource) UnmarshalJSON(body []byte) error {
 	var m map[string]*json.RawMessage
@@ -546,6 +647,27 @@ type ApplicationResourceUpdate struct {
 	Type *string `json:"type,omitempty"`
 	// Location - Resource location.
 	Location *string `json:"location,omitempty"`
+}
+
+// MarshalJSON is the custom marshaler for ApplicationResourceUpdate.
+func (aru ApplicationResourceUpdate) MarshalJSON() ([]byte, error) {
+	objectMap := make(map[string]interface{})
+	if aru.ApplicationUpdateProperties != nil {
+		objectMap["properties"] = aru.ApplicationUpdateProperties
+	}
+	if aru.ID != nil {
+		objectMap["id"] = aru.ID
+	}
+	if aru.Name != nil {
+		objectMap["name"] = aru.Name
+	}
+	if aru.Type != nil {
+		objectMap["type"] = aru.Type
+	}
+	if aru.Location != nil {
+		objectMap["location"] = aru.Location
+	}
+	return json.Marshal(objectMap)
 }
 
 // UnmarshalJSON is the custom unmarshaler for ApplicationResourceUpdate struct.
@@ -675,6 +797,27 @@ type ApplicationTypeResource struct {
 	Type *string `json:"type,omitempty"`
 	// Location - Resource location.
 	Location *string `json:"location,omitempty"`
+}
+
+// MarshalJSON is the custom marshaler for ApplicationTypeResource.
+func (atr ApplicationTypeResource) MarshalJSON() ([]byte, error) {
+	objectMap := make(map[string]interface{})
+	if atr.ApplicationTypeProperties != nil {
+		objectMap["properties"] = atr.ApplicationTypeProperties
+	}
+	if atr.ID != nil {
+		objectMap["id"] = atr.ID
+	}
+	if atr.Name != nil {
+		objectMap["name"] = atr.Name
+	}
+	if atr.Type != nil {
+		objectMap["type"] = atr.Type
+	}
+	if atr.Location != nil {
+		objectMap["location"] = atr.Location
+	}
+	return json.Marshal(objectMap)
 }
 
 // UnmarshalJSON is the custom unmarshaler for ApplicationTypeResource struct.
@@ -942,6 +1085,24 @@ type ClusterCodeVersionsResult struct {
 	// Type - The result resource type
 	Type                   *string `json:"type,omitempty"`
 	*ClusterVersionDetails `json:"properties,omitempty"`
+}
+
+// MarshalJSON is the custom marshaler for ClusterCodeVersionsResult.
+func (ccvr ClusterCodeVersionsResult) MarshalJSON() ([]byte, error) {
+	objectMap := make(map[string]interface{})
+	if ccvr.ID != nil {
+		objectMap["id"] = ccvr.ID
+	}
+	if ccvr.Name != nil {
+		objectMap["name"] = ccvr.Name
+	}
+	if ccvr.Type != nil {
+		objectMap["type"] = ccvr.Type
+	}
+	if ccvr.ClusterVersionDetails != nil {
+		objectMap["properties"] = ccvr.ClusterVersionDetails
+	}
+	return json.Marshal(objectMap)
 }
 
 // UnmarshalJSON is the custom unmarshaler for ClusterCodeVersionsResult struct.
@@ -1322,7 +1483,9 @@ func (npsd NamedPartitionSchemeDescription) MarshalJSON() ([]byte, error) {
 	if npsd.Names != nil {
 		objectMap["Names"] = npsd.Names
 	}
-	objectMap["PartitionScheme"] = npsd.PartitionScheme
+	if npsd.PartitionScheme != "" {
+		objectMap["PartitionScheme"] = npsd.PartitionScheme
+	}
 	return json.Marshal(objectMap)
 }
 
@@ -1396,7 +1559,9 @@ func (ntd NodeTypeDescription) MarshalJSON() ([]byte, error) {
 	if ntd.HTTPGatewayEndpointPort != nil {
 		objectMap["httpGatewayEndpointPort"] = ntd.HTTPGatewayEndpointPort
 	}
-	objectMap["durabilityLevel"] = ntd.DurabilityLevel
+	if ntd.DurabilityLevel != "" {
+		objectMap["durabilityLevel"] = ntd.DurabilityLevel
+	}
 	if ntd.ApplicationPorts != nil {
 		objectMap["applicationPorts"] = ntd.ApplicationPorts
 	}
@@ -1592,7 +1757,9 @@ func unmarshalBasicPartitionSchemeDescriptionArray(body []byte) ([]BasicPartitio
 func (psd PartitionSchemeDescription) MarshalJSON() ([]byte, error) {
 	psd.PartitionScheme = PartitionSchemePartitionSchemeDescription
 	objectMap := make(map[string]interface{})
-	objectMap["PartitionScheme"] = psd.PartitionScheme
+	if psd.PartitionScheme != "" {
+		objectMap["PartitionScheme"] = psd.PartitionScheme
+	}
 	return json.Marshal(objectMap)
 }
 
@@ -1842,7 +2009,9 @@ func unmarshalBasicServicePlacementPolicyDescriptionArray(body []byte) ([]BasicS
 func (sppd ServicePlacementPolicyDescription) MarshalJSON() ([]byte, error) {
 	sppd.Type = TypeServicePlacementPolicyDescription
 	objectMap := make(map[string]interface{})
-	objectMap["Type"] = sppd.Type
+	if sppd.Type != "" {
+		objectMap["Type"] = sppd.Type
+	}
 	return json.Marshal(objectMap)
 }
 
@@ -1888,7 +2057,7 @@ func unmarshalBasicServiceProperties(body []byte) (BasicServiceProperties, error
 		return nil, err
 	}
 
-	switch m[""] {
+	switch m["serviceKind"] {
 	case string(ServiceKindStateless):
 		var ssp StatelessServiceProperties
 		err := json.Unmarshal(body, &ssp)
@@ -1933,7 +2102,9 @@ func (sp ServiceProperties) MarshalJSON() ([]byte, error) {
 		objectMap["serviceTypeName"] = sp.ServiceTypeName
 	}
 	objectMap["partitionDescription"] = sp.PartitionDescription
-	objectMap["serviceKind"] = sp.ServiceKind
+	if sp.ServiceKind != "" {
+		objectMap["serviceKind"] = sp.ServiceKind
+	}
 	if sp.PlacementConstraints != nil {
 		objectMap["placementConstraints"] = sp.PlacementConstraints
 	}
@@ -1946,48 +2117,30 @@ func (sp ServiceProperties) MarshalJSON() ([]byte, error) {
 	if sp.ServicePlacementPolicies != nil {
 		objectMap["servicePlacementPolicies"] = sp.ServicePlacementPolicies
 	}
-	objectMap["defaultMoveCost"] = sp.DefaultMoveCost
+	if sp.DefaultMoveCost != "" {
+		objectMap["defaultMoveCost"] = sp.DefaultMoveCost
+	}
 	return json.Marshal(objectMap)
 }
 
-// AsServiceProperties is the BasicServicePropertiesBase implementation for ServiceProperties.
-func (sp ServiceProperties) AsServiceProperties() (*ServiceProperties, bool) {
-	return &sp, true
-}
-
-// AsBasicServiceProperties is the BasicServicePropertiesBase implementation for ServiceProperties.
-func (sp ServiceProperties) AsBasicServiceProperties() (BasicServiceProperties, bool) {
-	return &sp, true
-}
-
-// AsServiceUpdateProperties is the BasicServicePropertiesBase implementation for ServiceProperties.
-func (sp ServiceProperties) AsServiceUpdateProperties() (*ServiceUpdateProperties, bool) {
-	return nil, false
-}
-
-// AsBasicServiceUpdateProperties is the BasicServicePropertiesBase implementation for ServiceProperties.
-func (sp ServiceProperties) AsBasicServiceUpdateProperties() (BasicServiceUpdateProperties, bool) {
-	return nil, false
-}
-
-// AsStatelessServiceProperties is the BasicServicePropertiesBase implementation for ServiceProperties.
+// AsStatelessServiceProperties is the BasicServiceProperties implementation for ServiceProperties.
 func (sp ServiceProperties) AsStatelessServiceProperties() (*StatelessServiceProperties, bool) {
 	return nil, false
 }
 
-// AsStatelessServiceUpdateProperties is the BasicServicePropertiesBase implementation for ServiceProperties.
-func (sp ServiceProperties) AsStatelessServiceUpdateProperties() (*StatelessServiceUpdateProperties, bool) {
-	return nil, false
-}
-
-// AsStatefulServiceProperties is the BasicServicePropertiesBase implementation for ServiceProperties.
+// AsStatefulServiceProperties is the BasicServiceProperties implementation for ServiceProperties.
 func (sp ServiceProperties) AsStatefulServiceProperties() (*StatefulServiceProperties, bool) {
 	return nil, false
 }
 
-// AsStatefulServiceUpdateProperties is the BasicServicePropertiesBase implementation for ServiceProperties.
-func (sp ServiceProperties) AsStatefulServiceUpdateProperties() (*StatefulServiceUpdateProperties, bool) {
-	return nil, false
+// AsServiceProperties is the BasicServiceProperties implementation for ServiceProperties.
+func (sp ServiceProperties) AsServiceProperties() (*ServiceProperties, bool) {
+	return &sp, true
+}
+
+// AsBasicServiceProperties is the BasicServiceProperties implementation for ServiceProperties.
+func (sp ServiceProperties) AsBasicServiceProperties() (BasicServiceProperties, bool) {
+	return &sp, true
 }
 
 // UnmarshalJSON is the custom unmarshaler for ServiceProperties struct.
@@ -2216,6 +2369,25 @@ type ServiceResource struct {
 	Location *string `json:"location,omitempty"`
 }
 
+// MarshalJSON is the custom marshaler for ServiceResource.
+func (sr ServiceResource) MarshalJSON() ([]byte, error) {
+	objectMap := make(map[string]interface{})
+	objectMap["properties"] = sr.BasicServiceProperties
+	if sr.ID != nil {
+		objectMap["id"] = sr.ID
+	}
+	if sr.Name != nil {
+		objectMap["name"] = sr.Name
+	}
+	if sr.Type != nil {
+		objectMap["type"] = sr.Type
+	}
+	if sr.Location != nil {
+		objectMap["location"] = sr.Location
+	}
+	return json.Marshal(objectMap)
+}
+
 // UnmarshalJSON is the custom unmarshaler for ServiceResource struct.
 func (sr *ServiceResource) UnmarshalJSON(body []byte) error {
 	var m map[string]*json.RawMessage
@@ -2293,6 +2465,25 @@ type ServiceResourceUpdate struct {
 	Type *string `json:"type,omitempty"`
 	// Location - Resource location.
 	Location *string `json:"location,omitempty"`
+}
+
+// MarshalJSON is the custom marshaler for ServiceResourceUpdate.
+func (sru ServiceResourceUpdate) MarshalJSON() ([]byte, error) {
+	objectMap := make(map[string]interface{})
+	objectMap["properties"] = sru.BasicServiceUpdateProperties
+	if sru.ID != nil {
+		objectMap["id"] = sru.ID
+	}
+	if sru.Name != nil {
+		objectMap["name"] = sru.Name
+	}
+	if sru.Type != nil {
+		objectMap["type"] = sru.Type
+	}
+	if sru.Location != nil {
+		objectMap["location"] = sru.Location
+	}
+	return json.Marshal(objectMap)
 }
 
 // UnmarshalJSON is the custom unmarshaler for ServiceResourceUpdate struct.
@@ -2417,7 +2608,7 @@ func unmarshalBasicServiceUpdateProperties(body []byte) (BasicServiceUpdatePrope
 		return nil, err
 	}
 
-	switch m[""] {
+	switch m["serviceKind"] {
 	case string(ServiceKindBasicServiceUpdatePropertiesServiceKindStateless):
 		var ssup StatelessServiceUpdateProperties
 		err := json.Unmarshal(body, &ssup)
@@ -2455,7 +2646,9 @@ func unmarshalBasicServiceUpdatePropertiesArray(body []byte) ([]BasicServiceUpda
 func (sup ServiceUpdateProperties) MarshalJSON() ([]byte, error) {
 	sup.ServiceKind = ServiceKindBasicServiceUpdatePropertiesServiceKindServiceUpdateProperties
 	objectMap := make(map[string]interface{})
-	objectMap["serviceKind"] = sup.ServiceKind
+	if sup.ServiceKind != "" {
+		objectMap["serviceKind"] = sup.ServiceKind
+	}
 	if sup.PlacementConstraints != nil {
 		objectMap["placementConstraints"] = sup.PlacementConstraints
 	}
@@ -2468,48 +2661,30 @@ func (sup ServiceUpdateProperties) MarshalJSON() ([]byte, error) {
 	if sup.ServicePlacementPolicies != nil {
 		objectMap["servicePlacementPolicies"] = sup.ServicePlacementPolicies
 	}
-	objectMap["defaultMoveCost"] = sup.DefaultMoveCost
+	if sup.DefaultMoveCost != "" {
+		objectMap["defaultMoveCost"] = sup.DefaultMoveCost
+	}
 	return json.Marshal(objectMap)
 }
 
-// AsServiceProperties is the BasicServicePropertiesBase implementation for ServiceUpdateProperties.
-func (sup ServiceUpdateProperties) AsServiceProperties() (*ServiceProperties, bool) {
-	return nil, false
-}
-
-// AsBasicServiceProperties is the BasicServicePropertiesBase implementation for ServiceUpdateProperties.
-func (sup ServiceUpdateProperties) AsBasicServiceProperties() (BasicServiceProperties, bool) {
-	return nil, false
-}
-
-// AsServiceUpdateProperties is the BasicServicePropertiesBase implementation for ServiceUpdateProperties.
-func (sup ServiceUpdateProperties) AsServiceUpdateProperties() (*ServiceUpdateProperties, bool) {
-	return &sup, true
-}
-
-// AsBasicServiceUpdateProperties is the BasicServicePropertiesBase implementation for ServiceUpdateProperties.
-func (sup ServiceUpdateProperties) AsBasicServiceUpdateProperties() (BasicServiceUpdateProperties, bool) {
-	return &sup, true
-}
-
-// AsStatelessServiceProperties is the BasicServicePropertiesBase implementation for ServiceUpdateProperties.
-func (sup ServiceUpdateProperties) AsStatelessServiceProperties() (*StatelessServiceProperties, bool) {
-	return nil, false
-}
-
-// AsStatelessServiceUpdateProperties is the BasicServicePropertiesBase implementation for ServiceUpdateProperties.
+// AsStatelessServiceUpdateProperties is the BasicServiceUpdateProperties implementation for ServiceUpdateProperties.
 func (sup ServiceUpdateProperties) AsStatelessServiceUpdateProperties() (*StatelessServiceUpdateProperties, bool) {
 	return nil, false
 }
 
-// AsStatefulServiceProperties is the BasicServicePropertiesBase implementation for ServiceUpdateProperties.
-func (sup ServiceUpdateProperties) AsStatefulServiceProperties() (*StatefulServiceProperties, bool) {
+// AsStatefulServiceUpdateProperties is the BasicServiceUpdateProperties implementation for ServiceUpdateProperties.
+func (sup ServiceUpdateProperties) AsStatefulServiceUpdateProperties() (*StatefulServiceUpdateProperties, bool) {
 	return nil, false
 }
 
-// AsStatefulServiceUpdateProperties is the BasicServicePropertiesBase implementation for ServiceUpdateProperties.
-func (sup ServiceUpdateProperties) AsStatefulServiceUpdateProperties() (*StatefulServiceUpdateProperties, bool) {
-	return nil, false
+// AsServiceUpdateProperties is the BasicServiceUpdateProperties implementation for ServiceUpdateProperties.
+func (sup ServiceUpdateProperties) AsServiceUpdateProperties() (*ServiceUpdateProperties, bool) {
+	return &sup, true
+}
+
+// AsBasicServiceUpdateProperties is the BasicServiceUpdateProperties implementation for ServiceUpdateProperties.
+func (sup ServiceUpdateProperties) AsBasicServiceUpdateProperties() (BasicServiceUpdateProperties, bool) {
+	return &sup, true
 }
 
 // UnmarshalJSON is the custom unmarshaler for ServiceUpdateProperties struct.
@@ -2607,7 +2782,9 @@ type SingletonPartitionSchemeDescription struct {
 func (spsd SingletonPartitionSchemeDescription) MarshalJSON() ([]byte, error) {
 	spsd.PartitionScheme = PartitionSchemeSingleton
 	objectMap := make(map[string]interface{})
-	objectMap["PartitionScheme"] = spsd.PartitionScheme
+	if spsd.PartitionScheme != "" {
+		objectMap["PartitionScheme"] = spsd.PartitionScheme
+	}
 	return json.Marshal(objectMap)
 }
 
@@ -2695,7 +2872,9 @@ func (ssp StatefulServiceProperties) MarshalJSON() ([]byte, error) {
 		objectMap["serviceTypeName"] = ssp.ServiceTypeName
 	}
 	objectMap["partitionDescription"] = ssp.PartitionDescription
-	objectMap["serviceKind"] = ssp.ServiceKind
+	if ssp.ServiceKind != "" {
+		objectMap["serviceKind"] = ssp.ServiceKind
+	}
 	if ssp.PlacementConstraints != nil {
 		objectMap["placementConstraints"] = ssp.PlacementConstraints
 	}
@@ -2708,48 +2887,30 @@ func (ssp StatefulServiceProperties) MarshalJSON() ([]byte, error) {
 	if ssp.ServicePlacementPolicies != nil {
 		objectMap["servicePlacementPolicies"] = ssp.ServicePlacementPolicies
 	}
-	objectMap["defaultMoveCost"] = ssp.DefaultMoveCost
+	if ssp.DefaultMoveCost != "" {
+		objectMap["defaultMoveCost"] = ssp.DefaultMoveCost
+	}
 	return json.Marshal(objectMap)
 }
 
-// AsServiceProperties is the BasicServicePropertiesBase implementation for StatefulServiceProperties.
-func (ssp StatefulServiceProperties) AsServiceProperties() (*ServiceProperties, bool) {
-	return nil, false
-}
-
-// AsBasicServiceProperties is the BasicServicePropertiesBase implementation for StatefulServiceProperties.
-func (ssp StatefulServiceProperties) AsBasicServiceProperties() (BasicServiceProperties, bool) {
-	return &ssp, true
-}
-
-// AsServiceUpdateProperties is the BasicServicePropertiesBase implementation for StatefulServiceProperties.
-func (ssp StatefulServiceProperties) AsServiceUpdateProperties() (*ServiceUpdateProperties, bool) {
-	return nil, false
-}
-
-// AsBasicServiceUpdateProperties is the BasicServicePropertiesBase implementation for StatefulServiceProperties.
-func (ssp StatefulServiceProperties) AsBasicServiceUpdateProperties() (BasicServiceUpdateProperties, bool) {
-	return nil, false
-}
-
-// AsStatelessServiceProperties is the BasicServicePropertiesBase implementation for StatefulServiceProperties.
+// AsStatelessServiceProperties is the BasicServiceProperties implementation for StatefulServiceProperties.
 func (ssp StatefulServiceProperties) AsStatelessServiceProperties() (*StatelessServiceProperties, bool) {
 	return nil, false
 }
 
-// AsStatelessServiceUpdateProperties is the BasicServicePropertiesBase implementation for StatefulServiceProperties.
-func (ssp StatefulServiceProperties) AsStatelessServiceUpdateProperties() (*StatelessServiceUpdateProperties, bool) {
-	return nil, false
-}
-
-// AsStatefulServiceProperties is the BasicServicePropertiesBase implementation for StatefulServiceProperties.
+// AsStatefulServiceProperties is the BasicServiceProperties implementation for StatefulServiceProperties.
 func (ssp StatefulServiceProperties) AsStatefulServiceProperties() (*StatefulServiceProperties, bool) {
 	return &ssp, true
 }
 
-// AsStatefulServiceUpdateProperties is the BasicServicePropertiesBase implementation for StatefulServiceProperties.
-func (ssp StatefulServiceProperties) AsStatefulServiceUpdateProperties() (*StatefulServiceUpdateProperties, bool) {
+// AsServiceProperties is the BasicServiceProperties implementation for StatefulServiceProperties.
+func (ssp StatefulServiceProperties) AsServiceProperties() (*ServiceProperties, bool) {
 	return nil, false
+}
+
+// AsBasicServiceProperties is the BasicServiceProperties implementation for StatefulServiceProperties.
+func (ssp StatefulServiceProperties) AsBasicServiceProperties() (BasicServiceProperties, bool) {
+	return &ssp, true
 }
 
 // UnmarshalJSON is the custom unmarshaler for StatefulServiceProperties struct.
@@ -2942,7 +3103,9 @@ func (ssup StatefulServiceUpdateProperties) MarshalJSON() ([]byte, error) {
 	if ssup.StandByReplicaKeepDuration != nil {
 		objectMap["standByReplicaKeepDuration"] = ssup.StandByReplicaKeepDuration
 	}
-	objectMap["serviceKind"] = ssup.ServiceKind
+	if ssup.ServiceKind != "" {
+		objectMap["serviceKind"] = ssup.ServiceKind
+	}
 	if ssup.PlacementConstraints != nil {
 		objectMap["placementConstraints"] = ssup.PlacementConstraints
 	}
@@ -2955,47 +3118,29 @@ func (ssup StatefulServiceUpdateProperties) MarshalJSON() ([]byte, error) {
 	if ssup.ServicePlacementPolicies != nil {
 		objectMap["servicePlacementPolicies"] = ssup.ServicePlacementPolicies
 	}
-	objectMap["defaultMoveCost"] = ssup.DefaultMoveCost
+	if ssup.DefaultMoveCost != "" {
+		objectMap["defaultMoveCost"] = ssup.DefaultMoveCost
+	}
 	return json.Marshal(objectMap)
 }
 
-// AsServiceProperties is the BasicServicePropertiesBase implementation for StatefulServiceUpdateProperties.
-func (ssup StatefulServiceUpdateProperties) AsServiceProperties() (*ServiceProperties, bool) {
-	return nil, false
-}
-
-// AsBasicServiceProperties is the BasicServicePropertiesBase implementation for StatefulServiceUpdateProperties.
-func (ssup StatefulServiceUpdateProperties) AsBasicServiceProperties() (BasicServiceProperties, bool) {
-	return nil, false
-}
-
-// AsServiceUpdateProperties is the BasicServicePropertiesBase implementation for StatefulServiceUpdateProperties.
-func (ssup StatefulServiceUpdateProperties) AsServiceUpdateProperties() (*ServiceUpdateProperties, bool) {
-	return nil, false
-}
-
-// AsBasicServiceUpdateProperties is the BasicServicePropertiesBase implementation for StatefulServiceUpdateProperties.
-func (ssup StatefulServiceUpdateProperties) AsBasicServiceUpdateProperties() (BasicServiceUpdateProperties, bool) {
-	return &ssup, true
-}
-
-// AsStatelessServiceProperties is the BasicServicePropertiesBase implementation for StatefulServiceUpdateProperties.
-func (ssup StatefulServiceUpdateProperties) AsStatelessServiceProperties() (*StatelessServiceProperties, bool) {
-	return nil, false
-}
-
-// AsStatelessServiceUpdateProperties is the BasicServicePropertiesBase implementation for StatefulServiceUpdateProperties.
+// AsStatelessServiceUpdateProperties is the BasicServiceUpdateProperties implementation for StatefulServiceUpdateProperties.
 func (ssup StatefulServiceUpdateProperties) AsStatelessServiceUpdateProperties() (*StatelessServiceUpdateProperties, bool) {
 	return nil, false
 }
 
-// AsStatefulServiceProperties is the BasicServicePropertiesBase implementation for StatefulServiceUpdateProperties.
-func (ssup StatefulServiceUpdateProperties) AsStatefulServiceProperties() (*StatefulServiceProperties, bool) {
+// AsStatefulServiceUpdateProperties is the BasicServiceUpdateProperties implementation for StatefulServiceUpdateProperties.
+func (ssup StatefulServiceUpdateProperties) AsStatefulServiceUpdateProperties() (*StatefulServiceUpdateProperties, bool) {
+	return &ssup, true
+}
+
+// AsServiceUpdateProperties is the BasicServiceUpdateProperties implementation for StatefulServiceUpdateProperties.
+func (ssup StatefulServiceUpdateProperties) AsServiceUpdateProperties() (*ServiceUpdateProperties, bool) {
 	return nil, false
 }
 
-// AsStatefulServiceUpdateProperties is the BasicServicePropertiesBase implementation for StatefulServiceUpdateProperties.
-func (ssup StatefulServiceUpdateProperties) AsStatefulServiceUpdateProperties() (*StatefulServiceUpdateProperties, bool) {
+// AsBasicServiceUpdateProperties is the BasicServiceUpdateProperties implementation for StatefulServiceUpdateProperties.
+func (ssup StatefulServiceUpdateProperties) AsBasicServiceUpdateProperties() (BasicServiceUpdateProperties, bool) {
 	return &ssup, true
 }
 
@@ -3146,7 +3291,9 @@ func (ssp StatelessServiceProperties) MarshalJSON() ([]byte, error) {
 		objectMap["serviceTypeName"] = ssp.ServiceTypeName
 	}
 	objectMap["partitionDescription"] = ssp.PartitionDescription
-	objectMap["serviceKind"] = ssp.ServiceKind
+	if ssp.ServiceKind != "" {
+		objectMap["serviceKind"] = ssp.ServiceKind
+	}
 	if ssp.PlacementConstraints != nil {
 		objectMap["placementConstraints"] = ssp.PlacementConstraints
 	}
@@ -3159,48 +3306,30 @@ func (ssp StatelessServiceProperties) MarshalJSON() ([]byte, error) {
 	if ssp.ServicePlacementPolicies != nil {
 		objectMap["servicePlacementPolicies"] = ssp.ServicePlacementPolicies
 	}
-	objectMap["defaultMoveCost"] = ssp.DefaultMoveCost
+	if ssp.DefaultMoveCost != "" {
+		objectMap["defaultMoveCost"] = ssp.DefaultMoveCost
+	}
 	return json.Marshal(objectMap)
 }
 
-// AsServiceProperties is the BasicServicePropertiesBase implementation for StatelessServiceProperties.
-func (ssp StatelessServiceProperties) AsServiceProperties() (*ServiceProperties, bool) {
-	return nil, false
-}
-
-// AsBasicServiceProperties is the BasicServicePropertiesBase implementation for StatelessServiceProperties.
-func (ssp StatelessServiceProperties) AsBasicServiceProperties() (BasicServiceProperties, bool) {
-	return &ssp, true
-}
-
-// AsServiceUpdateProperties is the BasicServicePropertiesBase implementation for StatelessServiceProperties.
-func (ssp StatelessServiceProperties) AsServiceUpdateProperties() (*ServiceUpdateProperties, bool) {
-	return nil, false
-}
-
-// AsBasicServiceUpdateProperties is the BasicServicePropertiesBase implementation for StatelessServiceProperties.
-func (ssp StatelessServiceProperties) AsBasicServiceUpdateProperties() (BasicServiceUpdateProperties, bool) {
-	return nil, false
-}
-
-// AsStatelessServiceProperties is the BasicServicePropertiesBase implementation for StatelessServiceProperties.
+// AsStatelessServiceProperties is the BasicServiceProperties implementation for StatelessServiceProperties.
 func (ssp StatelessServiceProperties) AsStatelessServiceProperties() (*StatelessServiceProperties, bool) {
 	return &ssp, true
 }
 
-// AsStatelessServiceUpdateProperties is the BasicServicePropertiesBase implementation for StatelessServiceProperties.
-func (ssp StatelessServiceProperties) AsStatelessServiceUpdateProperties() (*StatelessServiceUpdateProperties, bool) {
-	return nil, false
-}
-
-// AsStatefulServiceProperties is the BasicServicePropertiesBase implementation for StatelessServiceProperties.
+// AsStatefulServiceProperties is the BasicServiceProperties implementation for StatelessServiceProperties.
 func (ssp StatelessServiceProperties) AsStatefulServiceProperties() (*StatefulServiceProperties, bool) {
 	return nil, false
 }
 
-// AsStatefulServiceUpdateProperties is the BasicServicePropertiesBase implementation for StatelessServiceProperties.
-func (ssp StatelessServiceProperties) AsStatefulServiceUpdateProperties() (*StatefulServiceUpdateProperties, bool) {
+// AsServiceProperties is the BasicServiceProperties implementation for StatelessServiceProperties.
+func (ssp StatelessServiceProperties) AsServiceProperties() (*ServiceProperties, bool) {
 	return nil, false
+}
+
+// AsBasicServiceProperties is the BasicServiceProperties implementation for StatelessServiceProperties.
+func (ssp StatelessServiceProperties) AsBasicServiceProperties() (BasicServiceProperties, bool) {
+	return &ssp, true
 }
 
 // UnmarshalJSON is the custom unmarshaler for StatelessServiceProperties struct.
@@ -3328,7 +3457,9 @@ func (ssup StatelessServiceUpdateProperties) MarshalJSON() ([]byte, error) {
 	if ssup.InstanceCount != nil {
 		objectMap["instanceCount"] = ssup.InstanceCount
 	}
-	objectMap["serviceKind"] = ssup.ServiceKind
+	if ssup.ServiceKind != "" {
+		objectMap["serviceKind"] = ssup.ServiceKind
+	}
 	if ssup.PlacementConstraints != nil {
 		objectMap["placementConstraints"] = ssup.PlacementConstraints
 	}
@@ -3341,48 +3472,30 @@ func (ssup StatelessServiceUpdateProperties) MarshalJSON() ([]byte, error) {
 	if ssup.ServicePlacementPolicies != nil {
 		objectMap["servicePlacementPolicies"] = ssup.ServicePlacementPolicies
 	}
-	objectMap["defaultMoveCost"] = ssup.DefaultMoveCost
+	if ssup.DefaultMoveCost != "" {
+		objectMap["defaultMoveCost"] = ssup.DefaultMoveCost
+	}
 	return json.Marshal(objectMap)
 }
 
-// AsServiceProperties is the BasicServicePropertiesBase implementation for StatelessServiceUpdateProperties.
-func (ssup StatelessServiceUpdateProperties) AsServiceProperties() (*ServiceProperties, bool) {
-	return nil, false
-}
-
-// AsBasicServiceProperties is the BasicServicePropertiesBase implementation for StatelessServiceUpdateProperties.
-func (ssup StatelessServiceUpdateProperties) AsBasicServiceProperties() (BasicServiceProperties, bool) {
-	return nil, false
-}
-
-// AsServiceUpdateProperties is the BasicServicePropertiesBase implementation for StatelessServiceUpdateProperties.
-func (ssup StatelessServiceUpdateProperties) AsServiceUpdateProperties() (*ServiceUpdateProperties, bool) {
-	return nil, false
-}
-
-// AsBasicServiceUpdateProperties is the BasicServicePropertiesBase implementation for StatelessServiceUpdateProperties.
-func (ssup StatelessServiceUpdateProperties) AsBasicServiceUpdateProperties() (BasicServiceUpdateProperties, bool) {
-	return &ssup, true
-}
-
-// AsStatelessServiceProperties is the BasicServicePropertiesBase implementation for StatelessServiceUpdateProperties.
-func (ssup StatelessServiceUpdateProperties) AsStatelessServiceProperties() (*StatelessServiceProperties, bool) {
-	return nil, false
-}
-
-// AsStatelessServiceUpdateProperties is the BasicServicePropertiesBase implementation for StatelessServiceUpdateProperties.
+// AsStatelessServiceUpdateProperties is the BasicServiceUpdateProperties implementation for StatelessServiceUpdateProperties.
 func (ssup StatelessServiceUpdateProperties) AsStatelessServiceUpdateProperties() (*StatelessServiceUpdateProperties, bool) {
 	return &ssup, true
 }
 
-// AsStatefulServiceProperties is the BasicServicePropertiesBase implementation for StatelessServiceUpdateProperties.
-func (ssup StatelessServiceUpdateProperties) AsStatefulServiceProperties() (*StatefulServiceProperties, bool) {
+// AsStatefulServiceUpdateProperties is the BasicServiceUpdateProperties implementation for StatelessServiceUpdateProperties.
+func (ssup StatelessServiceUpdateProperties) AsStatefulServiceUpdateProperties() (*StatefulServiceUpdateProperties, bool) {
 	return nil, false
 }
 
-// AsStatefulServiceUpdateProperties is the BasicServicePropertiesBase implementation for StatelessServiceUpdateProperties.
-func (ssup StatelessServiceUpdateProperties) AsStatefulServiceUpdateProperties() (*StatefulServiceUpdateProperties, bool) {
+// AsServiceUpdateProperties is the BasicServiceUpdateProperties implementation for StatelessServiceUpdateProperties.
+func (ssup StatelessServiceUpdateProperties) AsServiceUpdateProperties() (*ServiceUpdateProperties, bool) {
 	return nil, false
+}
+
+// AsBasicServiceUpdateProperties is the BasicServiceUpdateProperties implementation for StatelessServiceUpdateProperties.
+func (ssup StatelessServiceUpdateProperties) AsBasicServiceUpdateProperties() (BasicServiceUpdateProperties, bool) {
+	return &ssup, true
 }
 
 // UnmarshalJSON is the custom unmarshaler for StatelessServiceUpdateProperties struct.
@@ -3490,7 +3603,9 @@ func (ui6rpsd UniformInt64RangePartitionSchemeDescription) MarshalJSON() ([]byte
 	if ui6rpsd.HighKey != nil {
 		objectMap["HighKey"] = ui6rpsd.HighKey
 	}
-	objectMap["PartitionScheme"] = ui6rpsd.PartitionScheme
+	if ui6rpsd.PartitionScheme != "" {
+		objectMap["PartitionScheme"] = ui6rpsd.PartitionScheme
+	}
 	return json.Marshal(objectMap)
 }
 
@@ -3636,6 +3751,27 @@ type VersionResource struct {
 	Type *string `json:"type,omitempty"`
 	// Location - Resource location.
 	Location *string `json:"location,omitempty"`
+}
+
+// MarshalJSON is the custom marshaler for VersionResource.
+func (vr VersionResource) MarshalJSON() ([]byte, error) {
+	objectMap := make(map[string]interface{})
+	if vr.VersionProperties != nil {
+		objectMap["properties"] = vr.VersionProperties
+	}
+	if vr.ID != nil {
+		objectMap["id"] = vr.ID
+	}
+	if vr.Name != nil {
+		objectMap["name"] = vr.Name
+	}
+	if vr.Type != nil {
+		objectMap["type"] = vr.Type
+	}
+	if vr.Location != nil {
+		objectMap["location"] = vr.Location
+	}
+	return json.Marshal(objectMap)
 }
 
 // UnmarshalJSON is the custom unmarshaler for VersionResource struct.

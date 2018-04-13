@@ -84,7 +84,7 @@ func (client RestorePointsClient) CreatePreparer(ctx context.Context, resourceGr
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPost(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Sql/servers/{serverName}/databases/{databaseName}/restorePoints", pathParameters),
@@ -118,6 +118,75 @@ func (client RestorePointsClient) CreateResponder(resp *http.Response) (result R
 		autorest.ByUnmarshallingJSON(&result),
 		autorest.ByClosing())
 	result.Response = autorest.Response{Response: resp}
+	return
+}
+
+// Delete deletes a restore point.
+//
+// resourceGroupName is the name of the resource group that contains the resource. You can obtain this value from
+// the Azure Resource Manager API or the portal. serverName is the name of the server. databaseName is the name of
+// the database. restorePointName is the name of the restore point.
+func (client RestorePointsClient) Delete(ctx context.Context, resourceGroupName string, serverName string, databaseName string, restorePointName string) (result autorest.Response, err error) {
+	req, err := client.DeletePreparer(ctx, resourceGroupName, serverName, databaseName, restorePointName)
+	if err != nil {
+		err = autorest.NewErrorWithError(err, "sql.RestorePointsClient", "Delete", nil, "Failure preparing request")
+		return
+	}
+
+	resp, err := client.DeleteSender(req)
+	if err != nil {
+		result.Response = resp
+		err = autorest.NewErrorWithError(err, "sql.RestorePointsClient", "Delete", resp, "Failure sending request")
+		return
+	}
+
+	result, err = client.DeleteResponder(resp)
+	if err != nil {
+		err = autorest.NewErrorWithError(err, "sql.RestorePointsClient", "Delete", resp, "Failure responding to request")
+	}
+
+	return
+}
+
+// DeletePreparer prepares the Delete request.
+func (client RestorePointsClient) DeletePreparer(ctx context.Context, resourceGroupName string, serverName string, databaseName string, restorePointName string) (*http.Request, error) {
+	pathParameters := map[string]interface{}{
+		"databaseName":      autorest.Encode("path", databaseName),
+		"resourceGroupName": autorest.Encode("path", resourceGroupName),
+		"restorePointName":  autorest.Encode("path", restorePointName),
+		"serverName":        autorest.Encode("path", serverName),
+		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
+	}
+
+	const APIVersion = "2017-03-01-preview"
+	queryParameters := map[string]interface{}{
+		"api-version": APIVersion,
+	}
+
+	preparer := autorest.CreatePreparer(
+		autorest.AsDelete(),
+		autorest.WithBaseURL(client.BaseURI),
+		autorest.WithPathParameters("/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Sql/servers/{serverName}/databases/{databaseName}/restorePoints/{restorePointName}", pathParameters),
+		autorest.WithQueryParameters(queryParameters))
+	return preparer.Prepare((&http.Request{}).WithContext(ctx))
+}
+
+// DeleteSender sends the Delete request. The method will close the
+// http.Response Body if it receives an error.
+func (client RestorePointsClient) DeleteSender(req *http.Request) (*http.Response, error) {
+	return autorest.SendWithSender(client, req,
+		azure.DoRetryWithRegistration(client.Client))
+}
+
+// DeleteResponder handles the response to the Delete request. The method always
+// closes the http.Response Body.
+func (client RestorePointsClient) DeleteResponder(resp *http.Response) (result autorest.Response, err error) {
+	err = autorest.Respond(
+		resp,
+		client.ByInspecting(),
+		azure.WithErrorUnlessStatusCode(http.StatusOK),
+		autorest.ByClosing())
+	result.Response = resp
 	return
 }
 
@@ -191,7 +260,7 @@ func (client RestorePointsClient) GetResponder(resp *http.Response) (result Rest
 	return
 }
 
-// ListByDatabase gets a collection of restore points that belongs to the database.
+// ListByDatabase gets a list of database restore points.
 //
 // resourceGroupName is the name of the resource group that contains the resource. You can obtain this value from
 // the Azure Resource Manager API or the portal. serverName is the name of the server. databaseName is the name of

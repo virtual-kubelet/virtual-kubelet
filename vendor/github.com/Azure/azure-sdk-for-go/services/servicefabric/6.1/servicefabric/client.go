@@ -190,7 +190,7 @@ func (client BaseClient) CancelRepairTaskPreparer(ctx context.Context, repairTas
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPost(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPath("/$/CancelRepairTask"),
@@ -351,7 +351,7 @@ func (client BaseClient) CopyImageStoreContentPreparer(ctx context.Context, imag
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPost(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPath("/ImageStore/$/Copy"),
@@ -438,7 +438,7 @@ func (client BaseClient) CreateApplicationPreparer(ctx context.Context, applicat
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPost(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPath("/Applications/$/Create"),
@@ -520,7 +520,7 @@ func (client BaseClient) CreateComposeDeploymentPreparer(ctx context.Context, cr
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPut(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPath("/ComposeDeployments/$/Create"),
@@ -599,7 +599,7 @@ func (client BaseClient) CreateNamePreparer(ctx context.Context, nameDescription
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPost(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPath("/Names/$/Create"),
@@ -677,7 +677,7 @@ func (client BaseClient) CreateRepairTaskPreparer(ctx context.Context, repairTas
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPost(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPath("/$/CreateRepairTask"),
@@ -770,7 +770,7 @@ func (client BaseClient) CreateServicePreparer(ctx context.Context, applicationI
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPost(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/Applications/{applicationId}/$/GetServices/$/Create", pathParameters),
@@ -862,7 +862,7 @@ func (client BaseClient) CreateServiceFromTemplatePreparer(ctx context.Context, 
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPost(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/Applications/{applicationId}/$/GetServices/$/CreateFromTemplate", pathParameters),
@@ -1343,7 +1343,7 @@ func (client BaseClient) DeleteRepairTaskPreparer(ctx context.Context, repairTas
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPost(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPath("/$/DeleteRepairTask"),
@@ -1525,7 +1525,7 @@ func (client BaseClient) DeployedServicePackageToNodePreparer(ctx context.Contex
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPost(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/Nodes/{nodeName}/$/DeployServicePackage", pathParameters),
@@ -1612,7 +1612,7 @@ func (client BaseClient) DisableNodePreparer(ctx context.Context, nodeName strin
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPost(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/Nodes/{nodeName}/$/Deactivate", pathParameters),
@@ -1761,7 +1761,7 @@ func (client BaseClient) ForceApproveRepairTaskPreparer(ctx context.Context, rep
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPost(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPath("/$/ForceApproveRepairTask"),
@@ -2156,7 +2156,7 @@ func (client BaseClient) GetApplicationHealthUsingPolicyPreparer(ctx context.Con
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPost(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/Applications/{applicationId}/$/GetHealth", pathParameters),
@@ -3546,7 +3546,7 @@ func (client BaseClient) GetClusterHealthChunkUsingPolicyAndAdvancedFiltersPrepa
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPost(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPath("/$/GetClusterHealthChunk"),
@@ -3721,7 +3721,7 @@ func (client BaseClient) GetClusterHealthUsingPolicyPreparer(ctx context.Context
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPost(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPath("/$/GetClusterHealth"),
@@ -4611,7 +4611,7 @@ func (client BaseClient) GetDeployedApplicationHealthUsingPolicyPreparer(ctx con
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPost(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/Nodes/{nodeName}/$/GetApplications/{applicationId}/$/GetHealth", pathParameters),
@@ -5143,7 +5143,7 @@ func (client BaseClient) GetDeployedServicePackageHealthUsingPolicyPreparer(ctx 
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPost(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/Nodes/{nodeName}/$/GetApplications/{applicationId}/$/GetServicePackages/{servicePackageName}/$/GetHealth", pathParameters),
@@ -6463,7 +6463,7 @@ func (client BaseClient) GetNodeHealthUsingPolicyPreparer(ctx context.Context, n
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPost(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/Nodes/{nodeName}/$/GetHealth", pathParameters),
@@ -7071,7 +7071,7 @@ func (client BaseClient) GetPartitionHealthUsingPolicyPreparer(ctx context.Conte
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPost(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/Partitions/{partitionId}/$/GetHealth", pathParameters),
@@ -8141,7 +8141,7 @@ func (client BaseClient) GetReplicaHealthUsingPolicyPreparer(ctx context.Context
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPost(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/Partitions/{partitionId}/$/GetReplicas/{replicaId}/$/GetHealth", pathParameters),
@@ -8687,7 +8687,7 @@ func (client BaseClient) GetServiceHealthUsingPolicyPreparer(ctx context.Context
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPost(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/Services/{serviceId}/$/GetHealth", pathParameters),
@@ -9562,7 +9562,7 @@ func (client BaseClient) ProvisionApplicationTypePreparer(ctx context.Context, p
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPost(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPath("/ApplicationTypes/$/Provision"),
@@ -9639,7 +9639,7 @@ func (client BaseClient) ProvisionClusterPreparer(ctx context.Context, provision
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPost(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPath("/$/Provision"),
@@ -9724,7 +9724,7 @@ func (client BaseClient) PutPropertyPreparer(ctx context.Context, nameID string,
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPut(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/Names/{nameId}/$/GetProperty", pathParameters),
@@ -10412,7 +10412,7 @@ func (client BaseClient) ReportApplicationHealthPreparer(ctx context.Context, ap
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPost(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/Applications/{applicationId}/$/ReportHealth", pathParameters),
@@ -10516,7 +10516,7 @@ func (client BaseClient) ReportClusterHealthPreparer(ctx context.Context, health
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPost(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPath("/$/ReportClusterHealth"),
@@ -10629,7 +10629,7 @@ func (client BaseClient) ReportDeployedApplicationHealthPreparer(ctx context.Con
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPost(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/Nodes/{nodeName}/$/GetApplications/{applicationId}/$/ReportHealth", pathParameters),
@@ -10745,7 +10745,7 @@ func (client BaseClient) ReportDeployedServicePackageHealthPreparer(ctx context.
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPost(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/Nodes/{nodeName}/$/GetApplications/{applicationId}/$/GetServicePackages/{servicePackageName}/$/ReportHealth", pathParameters),
@@ -10853,7 +10853,7 @@ func (client BaseClient) ReportNodeHealthPreparer(ctx context.Context, nodeName 
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPost(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/Nodes/{nodeName}/$/ReportHealth", pathParameters),
@@ -10961,7 +10961,7 @@ func (client BaseClient) ReportPartitionHealthPreparer(ctx context.Context, part
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPost(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/Partitions/{partitionId}/$/ReportHealth", pathParameters),
@@ -11073,7 +11073,7 @@ func (client BaseClient) ReportReplicaHealthPreparer(ctx context.Context, partit
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPost(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/Partitions/{partitionId}/$/GetReplicas/{replicaId}/$/ReportHealth", pathParameters),
@@ -11185,7 +11185,7 @@ func (client BaseClient) ReportServiceHealthPreparer(ctx context.Context, servic
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPost(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/Services/{serviceId}/$/ReportHealth", pathParameters),
@@ -11460,7 +11460,7 @@ func (client BaseClient) RestartDeployedCodePackagePreparer(ctx context.Context,
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPost(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/Nodes/{nodeName}/$/GetApplications/{applicationId}/$/GetCodePackages/$/Restart", pathParameters),
@@ -11544,7 +11544,7 @@ func (client BaseClient) RestartNodePreparer(ctx context.Context, nodeName strin
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPost(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/Nodes/{nodeName}/$/Restart", pathParameters),
@@ -11718,7 +11718,7 @@ func (client BaseClient) ResumeApplicationUpgradePreparer(ctx context.Context, a
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPost(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/Applications/{applicationId}/$/MoveToNextUpgradeDomain", pathParameters),
@@ -11798,7 +11798,7 @@ func (client BaseClient) ResumeClusterUpgradePreparer(ctx context.Context, resum
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPost(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPath("/$/MoveToNextUpgradeDomain"),
@@ -12037,7 +12037,7 @@ func (client BaseClient) SetUpgradeOrchestrationServiceStatePreparer(ctx context
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPost(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPath("/$/SetUpgradeOrchestrationServiceState"),
@@ -12129,7 +12129,7 @@ func (client BaseClient) StartApplicationUpgradePreparer(ctx context.Context, ap
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPost(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/Applications/{applicationId}/$/Upgrade", pathParameters),
@@ -12227,7 +12227,7 @@ func (client BaseClient) StartChaosPreparer(ctx context.Context, chaosParameters
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPost(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPath("/Tools/Chaos/$/Start"),
@@ -12307,7 +12307,7 @@ func (client BaseClient) StartClusterConfigurationUpgradePreparer(ctx context.Co
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPost(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPath("/$/StartClusterConfigurationUpgrade"),
@@ -12396,7 +12396,7 @@ func (client BaseClient) StartClusterUpgradePreparer(ctx context.Context, startC
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPost(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPath("/$/Upgrade"),
@@ -12482,7 +12482,7 @@ func (client BaseClient) StartComposeDeploymentUpgradePreparer(ctx context.Conte
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPost(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/ComposeDeployments/{deploymentName}/$/Upgrade", pathParameters),
@@ -13027,7 +13027,7 @@ func (client BaseClient) SubmitPropertyBatchPreparer(ctx context.Context, nameID
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPost(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/Names/{nameId}/$/GetProperties/$/SubmitBatch", pathParameters),
@@ -13114,7 +13114,7 @@ func (client BaseClient) UnprovisionApplicationTypePreparer(ctx context.Context,
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPost(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/ApplicationTypes/{applicationTypeName}/$/Unprovision", pathParameters),
@@ -13192,7 +13192,7 @@ func (client BaseClient) UnprovisionClusterPreparer(ctx context.Context, unprovi
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPost(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPath("/$/Unprovision"),
@@ -13282,7 +13282,7 @@ func (client BaseClient) UpdateApplicationUpgradePreparer(ctx context.Context, a
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPost(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/Applications/{applicationId}/$/UpdateUpgrade", pathParameters),
@@ -13370,7 +13370,7 @@ func (client BaseClient) UpdateClusterUpgradePreparer(ctx context.Context, updat
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPost(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPath("/$/UpdateUpgrade"),
@@ -13439,7 +13439,7 @@ func (client BaseClient) UpdateRepairExecutionStatePreparer(ctx context.Context,
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPost(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPath("/$/UpdateRepairExecutionState"),
@@ -13508,7 +13508,7 @@ func (client BaseClient) UpdateRepairTaskHealthPolicyPreparer(ctx context.Contex
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPost(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPath("/$/UpdateRepairTaskHealthPolicy"),
@@ -13600,7 +13600,7 @@ func (client BaseClient) UpdateServicePreparer(ctx context.Context, serviceID st
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPost(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/Services/{serviceId}/$/Update", pathParameters),

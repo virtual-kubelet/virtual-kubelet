@@ -30,6 +30,13 @@ func NewWithoutDefaults() BaseClient {
 	return original.NewWithoutDefaults()
 }
 
+type ContainerRegistryEventActor = original.ContainerRegistryEventActor
+type ContainerRegistryEventData = original.ContainerRegistryEventData
+type ContainerRegistryEventRequest = original.ContainerRegistryEventRequest
+type ContainerRegistryEventSource = original.ContainerRegistryEventSource
+type ContainerRegistryEventTarget = original.ContainerRegistryEventTarget
+type ContainerRegistryImageDeletedEventData = original.ContainerRegistryImageDeletedEventData
+type ContainerRegistryImagePushedEventData = original.ContainerRegistryImagePushedEventData
 type DeviceLifeCycleEventProperties = original.DeviceLifeCycleEventProperties
 type DeviceTwinInfo = original.DeviceTwinInfo
 type DeviceTwinInfoProperties = original.DeviceTwinInfoProperties

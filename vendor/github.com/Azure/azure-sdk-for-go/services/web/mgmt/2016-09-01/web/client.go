@@ -97,7 +97,7 @@ func (client BaseClient) CheckNameAvailabilityPreparer(ctx context.Context, requ
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPost(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/subscriptions/{subscriptionId}/providers/Microsoft.Web/checknameavailability", pathParameters),
@@ -537,7 +537,7 @@ func (client BaseClient) ListSiteIdentifiersAssignedToHostNamePreparer(ctx conte
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPost(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/subscriptions/{subscriptionId}/providers/Microsoft.Web/listSitesAssignedToHostName", pathParameters),
@@ -794,7 +794,7 @@ func (client BaseClient) MovePreparer(ctx context.Context, resourceGroupName str
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPost(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/moveResources", pathParameters),
@@ -862,7 +862,7 @@ func (client BaseClient) UpdatePublishingUserPreparer(ctx context.Context, userD
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPut(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPath("/providers/Microsoft.Web/publishingUsers/web"),
@@ -928,7 +928,7 @@ func (client BaseClient) UpdateSourceControlPreparer(ctx context.Context, source
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPut(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/providers/Microsoft.Web/sourcecontrols/{sourceControlType}", pathParameters),
@@ -1011,7 +1011,7 @@ func (client BaseClient) ValidatePreparer(ctx context.Context, resourceGroupName
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPost(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Web/validate", pathParameters),
@@ -1093,7 +1093,7 @@ func (client BaseClient) ValidateMovePreparer(ctx context.Context, resourceGroup
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPost(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/validateMoveResources", pathParameters),
@@ -1159,7 +1159,7 @@ func (client BaseClient) VerifyHostingEnvironmentVnetPreparer(ctx context.Contex
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPost(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/subscriptions/{subscriptionId}/providers/Microsoft.Web/verifyHostingEnvironmentVnet", pathParameters),

@@ -86,6 +86,10 @@ const (
 	Secondary AccountKeyType = original.Secondary
 )
 
+func PossibleAccountKeyTypeValues() []AccountKeyType {
+	return original.PossibleAccountKeyTypeValues()
+}
+
 type AllocationState = original.AllocationState
 
 const (
@@ -94,12 +98,20 @@ const (
 	Stopping AllocationState = original.Stopping
 )
 
+func PossibleAllocationStateValues() []AllocationState {
+	return original.PossibleAllocationStateValues()
+}
+
 type AutoUserScope = original.AutoUserScope
 
 const (
 	AutoUserScopePool AutoUserScope = original.AutoUserScopePool
 	AutoUserScopeTask AutoUserScope = original.AutoUserScopeTask
 )
+
+func PossibleAutoUserScopeValues() []AutoUserScope {
+	return original.PossibleAutoUserScopeValues()
+}
 
 type CachingType = original.CachingType
 
@@ -109,12 +121,20 @@ const (
 	ReadWrite CachingType = original.ReadWrite
 )
 
+func PossibleCachingTypeValues() []CachingType {
+	return original.PossibleCachingTypeValues()
+}
+
 type CertificateFormat = original.CertificateFormat
 
 const (
 	Cer CertificateFormat = original.Cer
 	Pfx CertificateFormat = original.Pfx
 )
+
+func PossibleCertificateFormatValues() []CertificateFormat {
+	return original.PossibleCertificateFormatValues()
+}
 
 type CertificateProvisioningState = original.CertificateProvisioningState
 
@@ -124,12 +144,20 @@ const (
 	Succeeded CertificateProvisioningState = original.Succeeded
 )
 
+func PossibleCertificateProvisioningStateValues() []CertificateProvisioningState {
+	return original.PossibleCertificateProvisioningStateValues()
+}
+
 type CertificateStoreLocation = original.CertificateStoreLocation
 
 const (
 	CurrentUser  CertificateStoreLocation = original.CurrentUser
 	LocalMachine CertificateStoreLocation = original.LocalMachine
 )
+
+func PossibleCertificateStoreLocationValues() []CertificateStoreLocation {
+	return original.PossibleCertificateStoreLocationValues()
+}
 
 type CertificateVisibility = original.CertificateVisibility
 
@@ -138,6 +166,10 @@ const (
 	CertificateVisibilityStartTask  CertificateVisibility = original.CertificateVisibilityStartTask
 	CertificateVisibilityTask       CertificateVisibility = original.CertificateVisibilityTask
 )
+
+func PossibleCertificateVisibilityValues() []CertificateVisibility {
+	return original.PossibleCertificateVisibilityValues()
+}
 
 type ComputeNodeDeallocationOption = original.ComputeNodeDeallocationOption
 
@@ -148,12 +180,20 @@ const (
 	Terminate      ComputeNodeDeallocationOption = original.Terminate
 )
 
+func PossibleComputeNodeDeallocationOptionValues() []ComputeNodeDeallocationOption {
+	return original.PossibleComputeNodeDeallocationOptionValues()
+}
+
 type ComputeNodeFillType = original.ComputeNodeFillType
 
 const (
 	Pack   ComputeNodeFillType = original.Pack
 	Spread ComputeNodeFillType = original.Spread
 )
+
+func PossibleComputeNodeFillTypeValues() []ComputeNodeFillType {
+	return original.PossibleComputeNodeFillTypeValues()
+}
 
 type ElevationLevel = original.ElevationLevel
 
@@ -162,12 +202,20 @@ const (
 	NonAdmin ElevationLevel = original.NonAdmin
 )
 
+func PossibleElevationLevelValues() []ElevationLevel {
+	return original.PossibleElevationLevelValues()
+}
+
 type InboundEndpointProtocol = original.InboundEndpointProtocol
 
 const (
 	TCP InboundEndpointProtocol = original.TCP
 	UDP InboundEndpointProtocol = original.UDP
 )
+
+func PossibleInboundEndpointProtocolValues() []InboundEndpointProtocol {
+	return original.PossibleInboundEndpointProtocolValues()
+}
 
 type InterNodeCommunicationState = original.InterNodeCommunicationState
 
@@ -176,6 +224,10 @@ const (
 	Enabled  InterNodeCommunicationState = original.Enabled
 )
 
+func PossibleInterNodeCommunicationStateValues() []InterNodeCommunicationState {
+	return original.PossibleInterNodeCommunicationStateValues()
+}
+
 type NameAvailabilityReason = original.NameAvailabilityReason
 
 const (
@@ -183,12 +235,20 @@ const (
 	Invalid       NameAvailabilityReason = original.Invalid
 )
 
+func PossibleNameAvailabilityReasonValues() []NameAvailabilityReason {
+	return original.PossibleNameAvailabilityReasonValues()
+}
+
 type NetworkSecurityGroupRuleAccess = original.NetworkSecurityGroupRuleAccess
 
 const (
 	Allow NetworkSecurityGroupRuleAccess = original.Allow
 	Deny  NetworkSecurityGroupRuleAccess = original.Deny
 )
+
+func PossibleNetworkSecurityGroupRuleAccessValues() []NetworkSecurityGroupRuleAccess {
+	return original.PossibleNetworkSecurityGroupRuleAccessValues()
+}
 
 type PackageState = original.PackageState
 
@@ -198,6 +258,10 @@ const (
 	Unmapped PackageState = original.Unmapped
 )
 
+func PossiblePackageStateValues() []PackageState {
+	return original.PossiblePackageStateValues()
+}
+
 type PoolAllocationMode = original.PoolAllocationMode
 
 const (
@@ -205,12 +269,20 @@ const (
 	UserSubscription PoolAllocationMode = original.UserSubscription
 )
 
+func PossiblePoolAllocationModeValues() []PoolAllocationMode {
+	return original.PossiblePoolAllocationModeValues()
+}
+
 type PoolProvisioningState = original.PoolProvisioningState
 
 const (
 	PoolProvisioningStateDeleting  PoolProvisioningState = original.PoolProvisioningStateDeleting
 	PoolProvisioningStateSucceeded PoolProvisioningState = original.PoolProvisioningStateSucceeded
 )
+
+func PossiblePoolProvisioningStateValues() []PoolProvisioningState {
+	return original.PossiblePoolProvisioningStateValues()
+}
 
 type ProvisioningState = original.ProvisioningState
 
@@ -223,12 +295,20 @@ const (
 	ProvisioningStateSucceeded ProvisioningState = original.ProvisioningStateSucceeded
 )
 
+func PossibleProvisioningStateValues() []ProvisioningState {
+	return original.PossibleProvisioningStateValues()
+}
+
 type StorageAccountType = original.StorageAccountType
 
 const (
 	PremiumLRS  StorageAccountType = original.PremiumLRS
 	StandardLRS StorageAccountType = original.StandardLRS
 )
+
+func PossibleStorageAccountTypeValues() []StorageAccountType {
+	return original.PossibleStorageAccountTypeValues()
+}
 
 type Account = original.Account
 type AccountCreateFuture = original.AccountCreateFuture

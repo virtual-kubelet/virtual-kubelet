@@ -7,8 +7,8 @@
     "services/batch/2017-09-01.6.0/batch",
     "version"
   ]
-  revision = "1e334c402ea1460704b0263e5d188f28ad946ce1"
-  version = "14.1.1"
+  revision = "51228ee60b238eaa5a9d53adc82ebd8b321bca4f"
+  version = "v15.1.1"
 
 [[projects]]
   branch = "master"
@@ -29,8 +29,8 @@
     "autorest/to",
     "autorest/validation"
   ]
-  revision = "1e3943ee722538420f21945f4bc820347abe433d"
-  version = "v10.1.2"
+  revision = "9ad9326b278af8fa5cc67c30c0ce9a58cc0862b2"
+  version = "v10.6.0"
 
 [[projects]]
   name = "github.com/BurntSushi/toml"
@@ -379,6 +379,12 @@
   revision = "59fac5042749a5afb9af70e813da1dd5474f0167"
 
 [[projects]]
+  name = "github.com/lawrencegripper/pod2docker"
+  packages = ["."]
+  revision = "f511a5c5eac0f95e94adcf1736d12e6de6609092"
+  version = "v0.2"
+
+[[projects]]
   name = "github.com/magiconair/properties"
   packages = ["."]
   revision = "be5ece7dd465ab0765a9682137865547526d1dfb"
@@ -704,6 +710,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "3b7f1b4669aa4469a61b87cd33dbe5966af642166a49ad48c623299737f71759"
+  inputs-digest = "ab70d6687243864f11a4fe9e1d2e8cff59d2d0bef3f4e89b27da132736196913"
   solver-name = "gps-cdcl"
   solver-version = 1

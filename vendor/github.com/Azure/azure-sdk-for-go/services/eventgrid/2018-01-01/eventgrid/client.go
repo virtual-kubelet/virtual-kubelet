@@ -89,7 +89,7 @@ func (client BaseClient) PublishEventsPreparer(ctx context.Context, topicHostnam
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPost(),
 		autorest.WithCustomBaseURL("https://{topicHostname}", urlParameters),
 		autorest.WithPath("/api/events"),

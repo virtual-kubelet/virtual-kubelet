@@ -76,7 +76,7 @@ func (client GlobalClient) CheckNameAvailabilityPreparer(ctx context.Context, re
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPost(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/subscriptions/{subscriptionId}/providers/Microsoft.Web/checknameavailability", pathParameters),
@@ -1041,7 +1041,7 @@ func (client GlobalClient) UpdateSubscriptionPublishingCredentialsPreparer(ctx c
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPut(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/subscriptions/{subscriptionId}/providers/Microsoft.Web/publishingCredentials", pathParameters),

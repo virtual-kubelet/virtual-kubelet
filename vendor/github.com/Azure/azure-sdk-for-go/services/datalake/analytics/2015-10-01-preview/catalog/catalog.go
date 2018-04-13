@@ -86,7 +86,7 @@ func (client Client) CreateSecretPreparer(ctx context.Context, accountName strin
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPut(),
 		autorest.WithCustomBaseURL("https://{accountName}.{adlaCatalogDnsSuffix}", urlParameters),
 		autorest.WithPathParameters("/catalog/usql/databases/{databaseName}/secrets/{secretName}", pathParameters),
@@ -2907,7 +2907,7 @@ func (client Client) UpdateSecretPreparer(ctx context.Context, accountName strin
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPatch(),
 		autorest.WithCustomBaseURL("https://{accountName}.{adlaCatalogDnsSuffix}", urlParameters),
 		autorest.WithPathParameters("/catalog/usql/databases/{databaseName}/secrets/{secretName}", pathParameters),

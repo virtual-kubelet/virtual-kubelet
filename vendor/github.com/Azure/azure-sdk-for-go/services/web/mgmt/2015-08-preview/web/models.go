@@ -37,6 +37,11 @@ const (
 	Permit AccessControlEntryAction = "Permit"
 )
 
+// PossibleAccessControlEntryActionValues returns an array of possible values for the AccessControlEntryAction const type.
+func PossibleAccessControlEntryActionValues() []AccessControlEntryAction {
+	return []AccessControlEntryAction{Deny, Permit}
+}
+
 // AutoHealActionType enumerates the values for auto heal action type.
 type AutoHealActionType string
 
@@ -49,6 +54,11 @@ const (
 	Recycle AutoHealActionType = "Recycle"
 )
 
+// PossibleAutoHealActionTypeValues returns an array of possible values for the AutoHealActionType const type.
+func PossibleAutoHealActionTypeValues() []AutoHealActionType {
+	return []AutoHealActionType{CustomAction, LogEvent, Recycle}
+}
+
 // AzureResourceType enumerates the values for azure resource type.
 type AzureResourceType string
 
@@ -58,6 +68,11 @@ const (
 	// Website ...
 	Website AzureResourceType = "Website"
 )
+
+// PossibleAzureResourceTypeValues returns an array of possible values for the AzureResourceType const type.
+func PossibleAzureResourceTypeValues() []AzureResourceType {
+	return []AzureResourceType{TrafficManager, Website}
+}
 
 // BackupItemStatus enumerates the values for backup item status.
 type BackupItemStatus string
@@ -85,6 +100,11 @@ const (
 	TimedOut BackupItemStatus = "TimedOut"
 )
 
+// PossibleBackupItemStatusValues returns an array of possible values for the BackupItemStatus const type.
+func PossibleBackupItemStatusValues() []BackupItemStatus {
+	return []BackupItemStatus{Created, Deleted, DeleteFailed, DeleteInProgress, Failed, InProgress, PartiallySucceeded, Skipped, Succeeded, TimedOut}
+}
+
 // BackupRestoreOperationType enumerates the values for backup restore operation type.
 type BackupRestoreOperationType string
 
@@ -96,6 +116,11 @@ const (
 	// Relocation ...
 	Relocation BackupRestoreOperationType = "Relocation"
 )
+
+// PossibleBackupRestoreOperationTypeValues returns an array of possible values for the BackupRestoreOperationType const type.
+func PossibleBackupRestoreOperationTypeValues() []BackupRestoreOperationType {
+	return []BackupRestoreOperationType{Clone, Default, Relocation}
+}
 
 // BuiltInAuthenticationProvider enumerates the values for built in authentication provider.
 type BuiltInAuthenticationProvider string
@@ -112,6 +137,11 @@ const (
 	// Twitter ...
 	Twitter BuiltInAuthenticationProvider = "Twitter"
 )
+
+// PossibleBuiltInAuthenticationProviderValues returns an array of possible values for the BuiltInAuthenticationProvider const type.
+func PossibleBuiltInAuthenticationProviderValues() []BuiltInAuthenticationProvider {
+	return []BuiltInAuthenticationProvider{AzureActiveDirectory, Facebook, Google, MicrosoftAccount, Twitter}
+}
 
 // CertificateOrderActionType enumerates the values for certificate order action type.
 type CertificateOrderActionType string
@@ -136,6 +166,11 @@ const (
 	// SanDrop ...
 	SanDrop CertificateOrderActionType = "SanDrop"
 )
+
+// PossibleCertificateOrderActionTypeValues returns an array of possible values for the CertificateOrderActionType const type.
+func PossibleCertificateOrderActionTypeValues() []CertificateOrderActionType {
+	return []CertificateOrderActionType{CertificateIssued, CertificateOrderCanceled, CertificateOrderCreated, CertificateRevoked, DomainValidationComplete, FraudDetected, OrgNameChange, OrgValidationComplete, SanDrop}
+}
 
 // CertificateOrderStatus enumerates the values for certificate order status.
 type CertificateOrderStatus string
@@ -163,6 +198,11 @@ const (
 	Unused CertificateOrderStatus = "Unused"
 )
 
+// PossibleCertificateOrderStatusValues returns an array of possible values for the CertificateOrderStatus const type.
+func PossibleCertificateOrderStatusValues() []CertificateOrderStatus {
+	return []CertificateOrderStatus{Canceled, Denied, Expired, Issued, NotSubmitted, Pendingissuance, PendingRekey, Pendingrevocation, Revoked, Unused}
+}
+
 // CertificateProductType enumerates the values for certificate product type.
 type CertificateProductType string
 
@@ -172,6 +212,11 @@ const (
 	// StandardDomainValidatedWildCardSsl ...
 	StandardDomainValidatedWildCardSsl CertificateProductType = "StandardDomainValidatedWildCardSsl"
 )
+
+// PossibleCertificateProductTypeValues returns an array of possible values for the CertificateProductType const type.
+func PossibleCertificateProductTypeValues() []CertificateProductType {
+	return []CertificateProductType{StandardDomainValidatedSsl, StandardDomainValidatedWildCardSsl}
+}
 
 // Channels enumerates the values for channels.
 type Channels string
@@ -187,6 +232,11 @@ const (
 	Notification Channels = "Notification"
 )
 
+// PossibleChannelsValues returns an array of possible values for the Channels const type.
+func PossibleChannelsValues() []Channels {
+	return []Channels{All, API, Email, Notification}
+}
+
 // CloneAbilityResult enumerates the values for clone ability result.
 type CloneAbilityResult string
 
@@ -199,6 +249,11 @@ const (
 	PartiallyCloneable CloneAbilityResult = "PartiallyCloneable"
 )
 
+// PossibleCloneAbilityResultValues returns an array of possible values for the CloneAbilityResult const type.
+func PossibleCloneAbilityResultValues() []CloneAbilityResult {
+	return []CloneAbilityResult{Cloneable, NotCloneable, PartiallyCloneable}
+}
+
 // ComputeModeOptions enumerates the values for compute mode options.
 type ComputeModeOptions string
 
@@ -210,6 +265,11 @@ const (
 	// Shared ...
 	Shared ComputeModeOptions = "Shared"
 )
+
+// PossibleComputeModeOptionsValues returns an array of possible values for the ComputeModeOptions const type.
+func PossibleComputeModeOptionsValues() []ComputeModeOptions {
+	return []ComputeModeOptions{Dedicated, Dynamic, Shared}
+}
 
 // ConnectionParameterType enumerates the values for connection parameter type.
 type ConnectionParameterType string
@@ -235,6 +295,11 @@ const (
 	ConnectionParameterTypeString ConnectionParameterType = "string"
 )
 
+// PossibleConnectionParameterTypeValues returns an array of possible values for the ConnectionParameterType const type.
+func PossibleConnectionParameterTypeValues() []ConnectionParameterType {
+	return []ConnectionParameterType{ConnectionParameterTypeArray, ConnectionParameterTypeBool, ConnectionParameterTypeConnection, ConnectionParameterTypeInt, ConnectionParameterTypeOauthSetting, ConnectionParameterTypeObject, ConnectionParameterTypeSecureobject, ConnectionParameterTypeSecurestring, ConnectionParameterTypeString}
+}
+
 // CustomHostNameDNSRecordType enumerates the values for custom host name dns record type.
 type CustomHostNameDNSRecordType string
 
@@ -244,6 +309,11 @@ const (
 	// CName ...
 	CName CustomHostNameDNSRecordType = "CName"
 )
+
+// PossibleCustomHostNameDNSRecordTypeValues returns an array of possible values for the CustomHostNameDNSRecordType const type.
+func PossibleCustomHostNameDNSRecordTypeValues() []CustomHostNameDNSRecordType {
+	return []CustomHostNameDNSRecordType{A, CName}
+}
 
 // DatabaseServerType enumerates the values for database server type.
 type DatabaseServerType string
@@ -258,6 +328,11 @@ const (
 	// SQLServer ...
 	SQLServer DatabaseServerType = "SQLServer"
 )
+
+// PossibleDatabaseServerTypeValues returns an array of possible values for the DatabaseServerType const type.
+func PossibleDatabaseServerTypeValues() []DatabaseServerType {
+	return []DatabaseServerType{Custom, MySQL, SQLAzure, SQLServer}
+}
 
 // DomainStatus enumerates the values for domain status.
 type DomainStatus string
@@ -307,6 +382,11 @@ const (
 	DomainStatusUpdated DomainStatus = "Updated"
 )
 
+// PossibleDomainStatusValues returns an array of possible values for the DomainStatus const type.
+func PossibleDomainStatusValues() []DomainStatus {
+	return []DomainStatus{DomainStatusActive, DomainStatusAwaiting, DomainStatusCancelled, DomainStatusConfiscated, DomainStatusDisabled, DomainStatusExcluded, DomainStatusExpired, DomainStatusFailed, DomainStatusHeld, DomainStatusJSONConverterFailed, DomainStatusLocked, DomainStatusParked, DomainStatusPending, DomainStatusReserved, DomainStatusReverted, DomainStatusSuspended, DomainStatusTransferred, DomainStatusUnknown, DomainStatusUnlocked, DomainStatusUnparked, DomainStatusUpdated}
+}
+
 // DomainType enumerates the values for domain type.
 type DomainType string
 
@@ -317,6 +397,11 @@ const (
 	SoftDeleted DomainType = "SoftDeleted"
 )
 
+// PossibleDomainTypeValues returns an array of possible values for the DomainType const type.
+func PossibleDomainTypeValues() []DomainType {
+	return []DomainType{Regular, SoftDeleted}
+}
+
 // FrequencyUnit enumerates the values for frequency unit.
 type FrequencyUnit string
 
@@ -326,6 +411,11 @@ const (
 	// Hour ...
 	Hour FrequencyUnit = "Hour"
 )
+
+// PossibleFrequencyUnitValues returns an array of possible values for the FrequencyUnit const type.
+func PossibleFrequencyUnitValues() []FrequencyUnit {
+	return []FrequencyUnit{Day, Hour}
+}
 
 // HostingEnvironmentStatus enumerates the values for hosting environment status.
 type HostingEnvironmentStatus string
@@ -341,6 +431,11 @@ const (
 	Scaling HostingEnvironmentStatus = "Scaling"
 )
 
+// PossibleHostingEnvironmentStatusValues returns an array of possible values for the HostingEnvironmentStatus const type.
+func PossibleHostingEnvironmentStatusValues() []HostingEnvironmentStatus {
+	return []HostingEnvironmentStatus{Deleting, Preparing, Ready, Scaling}
+}
+
 // HostNameType enumerates the values for host name type.
 type HostNameType string
 
@@ -350,6 +445,11 @@ const (
 	// Verified ...
 	Verified HostNameType = "Verified"
 )
+
+// PossibleHostNameTypeValues returns an array of possible values for the HostNameType const type.
+func PossibleHostNameTypeValues() []HostNameType {
+	return []HostNameType{Managed, Verified}
+}
 
 // InternalLoadBalancingMode enumerates the values for internal load balancing mode.
 type InternalLoadBalancingMode string
@@ -362,6 +462,11 @@ const (
 	// Web ...
 	Web InternalLoadBalancingMode = "Web"
 )
+
+// PossibleInternalLoadBalancingModeValues returns an array of possible values for the InternalLoadBalancingMode const type.
+func PossibleInternalLoadBalancingModeValues() []InternalLoadBalancingMode {
+	return []InternalLoadBalancingMode{None, Publishing, Web}
+}
 
 // KeyVaultSecretStatus enumerates the values for key vault secret status.
 type KeyVaultSecretStatus string
@@ -389,6 +494,11 @@ const (
 	KeyVaultSecretStatusWaitingOnCertificateOrder KeyVaultSecretStatus = "WaitingOnCertificateOrder"
 )
 
+// PossibleKeyVaultSecretStatusValues returns an array of possible values for the KeyVaultSecretStatus const type.
+func PossibleKeyVaultSecretStatusValues() []KeyVaultSecretStatus {
+	return []KeyVaultSecretStatus{KeyVaultSecretStatusAzureServiceUnauthorizedToAccessKeyVault, KeyVaultSecretStatusCertificateOrderFailed, KeyVaultSecretStatusInitialized, KeyVaultSecretStatusKeyVaultDoesNotExist, KeyVaultSecretStatusKeyVaultSecretDoesNotExist, KeyVaultSecretStatusOperationNotPermittedOnKeyVault, KeyVaultSecretStatusSucceeded, KeyVaultSecretStatusUnknown, KeyVaultSecretStatusUnknownError, KeyVaultSecretStatusWaitingOnCertificateOrder}
+}
+
 // LinkState enumerates the values for link state.
 type LinkState string
 
@@ -400,6 +510,11 @@ const (
 	// Unauthenticated ...
 	Unauthenticated LinkState = "Unauthenticated"
 )
+
+// PossibleLinkStateValues returns an array of possible values for the LinkState const type.
+func PossibleLinkStateValues() []LinkState {
+	return []LinkState{Authenticated, Error, Unauthenticated}
+}
 
 // LogLevel enumerates the values for log level.
 type LogLevel string
@@ -417,6 +532,11 @@ const (
 	LogLevelWarning LogLevel = "Warning"
 )
 
+// PossibleLogLevelValues returns an array of possible values for the LogLevel const type.
+func PossibleLogLevelValues() []LogLevel {
+	return []LogLevel{LogLevelError, LogLevelInformation, LogLevelOff, LogLevelVerbose, LogLevelWarning}
+}
+
 // ManagedHostingEnvironmentStatus enumerates the values for managed hosting environment status.
 type ManagedHostingEnvironmentStatus string
 
@@ -429,6 +549,11 @@ const (
 	ManagedHostingEnvironmentStatusReady ManagedHostingEnvironmentStatus = "Ready"
 )
 
+// PossibleManagedHostingEnvironmentStatusValues returns an array of possible values for the ManagedHostingEnvironmentStatus const type.
+func PossibleManagedHostingEnvironmentStatusValues() []ManagedHostingEnvironmentStatus {
+	return []ManagedHostingEnvironmentStatus{ManagedHostingEnvironmentStatusDeleting, ManagedHostingEnvironmentStatusPreparing, ManagedHostingEnvironmentStatusReady}
+}
+
 // ManagedPipelineMode enumerates the values for managed pipeline mode.
 type ManagedPipelineMode string
 
@@ -438,6 +563,11 @@ const (
 	// Integrated ...
 	Integrated ManagedPipelineMode = "Integrated"
 )
+
+// PossibleManagedPipelineModeValues returns an array of possible values for the ManagedPipelineMode const type.
+func PossibleManagedPipelineModeValues() []ManagedPipelineMode {
+	return []ManagedPipelineMode{Classic, Integrated}
+}
 
 // NotificationLevel enumerates the values for notification level.
 type NotificationLevel string
@@ -453,6 +583,11 @@ const (
 	Warning NotificationLevel = "Warning"
 )
 
+// PossibleNotificationLevelValues returns an array of possible values for the NotificationLevel const type.
+func PossibleNotificationLevelValues() []NotificationLevel {
+	return []NotificationLevel{Critical, Information, NonUrgentSuggestion, Warning}
+}
+
 // PrincipalType enumerates the values for principal type.
 type PrincipalType string
 
@@ -464,6 +599,11 @@ const (
 	// PrincipalTypeMicrosoftAccount ...
 	PrincipalTypeMicrosoftAccount PrincipalType = "MicrosoftAccount"
 )
+
+// PossiblePrincipalTypeValues returns an array of possible values for the PrincipalType const type.
+func PossiblePrincipalTypeValues() []PrincipalType {
+	return []PrincipalType{PrincipalTypeActiveDirectory, PrincipalTypeConnection, PrincipalTypeMicrosoftAccount}
+}
 
 // ProvisioningState enumerates the values for provisioning state.
 type ProvisioningState string
@@ -481,6 +621,11 @@ const (
 	ProvisioningStateSucceeded ProvisioningState = "Succeeded"
 )
 
+// PossibleProvisioningStateValues returns an array of possible values for the ProvisioningState const type.
+func PossibleProvisioningStateValues() []ProvisioningState {
+	return []ProvisioningState{ProvisioningStateCanceled, ProvisioningStateDeleting, ProvisioningStateFailed, ProvisioningStateInProgress, ProvisioningStateSucceeded}
+}
+
 // SiteAvailabilityState enumerates the values for site availability state.
 type SiteAvailabilityState string
 
@@ -492,6 +637,11 @@ const (
 	// Normal ...
 	Normal SiteAvailabilityState = "Normal"
 )
+
+// PossibleSiteAvailabilityStateValues returns an array of possible values for the SiteAvailabilityState const type.
+func PossibleSiteAvailabilityStateValues() []SiteAvailabilityState {
+	return []SiteAvailabilityState{DisasterRecoveryMode, Limited, Normal}
+}
 
 // SiteLoadBalancing enumerates the values for site load balancing.
 type SiteLoadBalancing string
@@ -509,6 +659,11 @@ const (
 	WeightedTotalTraffic SiteLoadBalancing = "WeightedTotalTraffic"
 )
 
+// PossibleSiteLoadBalancingValues returns an array of possible values for the SiteLoadBalancing const type.
+func PossibleSiteLoadBalancingValues() []SiteLoadBalancing {
+	return []SiteLoadBalancing{LeastRequests, LeastResponseTime, RequestHash, WeightedRoundRobin, WeightedTotalTraffic}
+}
+
 // SslState enumerates the values for ssl state.
 type SslState string
 
@@ -521,6 +676,11 @@ const (
 	SniEnabled SslState = "SniEnabled"
 )
 
+// PossibleSslStateValues returns an array of possible values for the SslState const type.
+func PossibleSslStateValues() []SslState {
+	return []SslState{Disabled, IPBasedEnabled, SniEnabled}
+}
+
 // StatusOptions enumerates the values for status options.
 type StatusOptions string
 
@@ -530,6 +690,11 @@ const (
 	// StatusOptionsReady ...
 	StatusOptionsReady StatusOptions = "Ready"
 )
+
+// PossibleStatusOptionsValues returns an array of possible values for the StatusOptions const type.
+func PossibleStatusOptionsValues() []StatusOptions {
+	return []StatusOptions{StatusOptionsPending, StatusOptionsReady}
+}
 
 // UnauthenticatedClientAction enumerates the values for unauthenticated client action.
 type UnauthenticatedClientAction string
@@ -541,6 +706,11 @@ const (
 	RedirectToLoginPage UnauthenticatedClientAction = "RedirectToLoginPage"
 )
 
+// PossibleUnauthenticatedClientActionValues returns an array of possible values for the UnauthenticatedClientAction const type.
+func PossibleUnauthenticatedClientActionValues() []UnauthenticatedClientAction {
+	return []UnauthenticatedClientAction{AllowAnonymous, RedirectToLoginPage}
+}
+
 // UsageState enumerates the values for usage state.
 type UsageState string
 
@@ -550,6 +720,11 @@ const (
 	// UsageStateNormal ...
 	UsageStateNormal UsageState = "Normal"
 )
+
+// PossibleUsageStateValues returns an array of possible values for the UsageState const type.
+func PossibleUsageStateValues() []UsageState {
+	return []UsageState{UsageStateExceeded, UsageStateNormal}
+}
 
 // WorkerSizeOptions enumerates the values for worker size options.
 type WorkerSizeOptions string
@@ -564,6 +739,11 @@ const (
 	// WorkerSizeOptionsSmall ...
 	WorkerSizeOptionsSmall WorkerSizeOptions = "Small"
 )
+
+// PossibleWorkerSizeOptionsValues returns an array of possible values for the WorkerSizeOptions const type.
+func PossibleWorkerSizeOptionsValues() []WorkerSizeOptions {
+	return []WorkerSizeOptions{WorkerSizeOptionsDefault, WorkerSizeOptionsLarge, WorkerSizeOptionsMedium, WorkerSizeOptionsSmall}
+}
 
 // Address address information for domain registration
 type Address struct {
@@ -2864,12 +3044,18 @@ func (co CertificateOrderProperties) MarshalJSON() ([]byte, error) {
 	if co.KeySize != nil {
 		objectMap["keySize"] = co.KeySize
 	}
-	objectMap["productType"] = co.ProductType
+	if co.ProductType != "" {
+		objectMap["productType"] = co.ProductType
+	}
 	if co.AutoRenew != nil {
 		objectMap["autoRenew"] = co.AutoRenew
 	}
-	objectMap["provisioningState"] = co.ProvisioningState
-	objectMap["status"] = co.Status
+	if co.ProvisioningState != "" {
+		objectMap["provisioningState"] = co.ProvisioningState
+	}
+	if co.Status != "" {
+		objectMap["status"] = co.Status
+	}
 	if co.SignedCertificate != nil {
 		objectMap["signedCertificate"] = co.SignedCertificate
 	}

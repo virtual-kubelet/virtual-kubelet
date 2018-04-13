@@ -41,12 +41,20 @@ const (
 	Key2 AccessKeyName = original.Key2
 )
 
+func PossibleAccessKeyNameValues() []AccessKeyName {
+	return original.PossibleAccessKeyNameValues()
+}
+
 type CheckNameReason = original.CheckNameReason
 
 const (
 	Invalid     CheckNameReason = original.Invalid
 	Unavailable CheckNameReason = original.Unavailable
 )
+
+func PossibleCheckNameReasonValues() []CheckNameReason {
+	return original.PossibleCheckNameReasonValues()
+}
 
 type AzureSku = original.AzureSku
 type CheckNameRequest = original.CheckNameRequest

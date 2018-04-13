@@ -85,6 +85,10 @@ const (
 	WaitingForNodes           ClusterState = original.WaitingForNodes
 )
 
+func PossibleClusterStateValues() []ClusterState {
+	return original.PossibleClusterStateValues()
+}
+
 type DefaultMoveCost = original.DefaultMoveCost
 
 const (
@@ -94,6 +98,10 @@ const (
 	Zero   DefaultMoveCost = original.Zero
 )
 
+func PossibleDefaultMoveCostValues() []DefaultMoveCost {
+	return original.PossibleDefaultMoveCostValues()
+}
+
 type DurabilityLevel = original.DurabilityLevel
 
 const (
@@ -102,12 +110,20 @@ const (
 	Silver DurabilityLevel = original.Silver
 )
 
+func PossibleDurabilityLevelValues() []DurabilityLevel {
+	return original.PossibleDurabilityLevelValues()
+}
+
 type Environment = original.Environment
 
 const (
 	Linux   Environment = original.Linux
 	Windows Environment = original.Windows
 )
+
+func PossibleEnvironmentValues() []Environment {
+	return original.PossibleEnvironmentValues()
+}
 
 type PartitionScheme = original.PartitionScheme
 
@@ -118,6 +134,10 @@ const (
 	PartitionSchemeUniformInt64Range          PartitionScheme = original.PartitionSchemeUniformInt64Range
 )
 
+func PossiblePartitionSchemeValues() []PartitionScheme {
+	return original.PossiblePartitionSchemeValues()
+}
+
 type ProvisioningState = original.ProvisioningState
 
 const (
@@ -126,6 +146,10 @@ const (
 	Succeeded ProvisioningState = original.Succeeded
 	Updating  ProvisioningState = original.Updating
 )
+
+func PossibleProvisioningStateValues() []ProvisioningState {
+	return original.PossibleProvisioningStateValues()
+}
 
 type ReliabilityLevel = original.ReliabilityLevel
 
@@ -137,6 +161,10 @@ const (
 	ReliabilityLevelSilver   ReliabilityLevel = original.ReliabilityLevelSilver
 )
 
+func PossibleReliabilityLevelValues() []ReliabilityLevel {
+	return original.PossibleReliabilityLevelValues()
+}
+
 type ReliabilityLevel1 = original.ReliabilityLevel1
 
 const (
@@ -144,6 +172,10 @@ const (
 	ReliabilityLevel1Gold   ReliabilityLevel1 = original.ReliabilityLevel1Gold
 	ReliabilityLevel1Silver ReliabilityLevel1 = original.ReliabilityLevel1Silver
 )
+
+func PossibleReliabilityLevel1Values() []ReliabilityLevel1 {
+	return original.PossibleReliabilityLevel1Values()
+}
 
 type Scheme = original.Scheme
 
@@ -154,6 +186,10 @@ const (
 	NonAlignedAffinity Scheme = original.NonAlignedAffinity
 )
 
+func PossibleSchemeValues() []Scheme {
+	return original.PossibleSchemeValues()
+}
+
 type ServiceKind = original.ServiceKind
 
 const (
@@ -161,6 +197,10 @@ const (
 	ServiceKindStateful          ServiceKind = original.ServiceKindStateful
 	ServiceKindStateless         ServiceKind = original.ServiceKindStateless
 )
+
+func PossibleServiceKindValues() []ServiceKind {
+	return original.PossibleServiceKindValues()
+}
 
 type ServiceKindBasicServiceUpdateProperties = original.ServiceKindBasicServiceUpdateProperties
 
@@ -170,11 +210,19 @@ const (
 	ServiceKindBasicServiceUpdatePropertiesServiceKindStateless               ServiceKindBasicServiceUpdateProperties = original.ServiceKindBasicServiceUpdatePropertiesServiceKindStateless
 )
 
+func PossibleServiceKindBasicServiceUpdatePropertiesValues() []ServiceKindBasicServiceUpdateProperties {
+	return original.PossibleServiceKindBasicServiceUpdatePropertiesValues()
+}
+
 type Type = original.Type
 
 const (
 	TypeServicePlacementPolicyDescription Type = original.TypeServicePlacementPolicyDescription
 )
+
+func PossibleTypeValues() []Type {
+	return original.PossibleTypeValues()
+}
 
 type UpgradeMode = original.UpgradeMode
 
@@ -183,12 +231,20 @@ const (
 	Manual    UpgradeMode = original.Manual
 )
 
+func PossibleUpgradeModeValues() []UpgradeMode {
+	return original.PossibleUpgradeModeValues()
+}
+
 type UpgradeMode1 = original.UpgradeMode1
 
 const (
 	UpgradeMode1Automatic UpgradeMode1 = original.UpgradeMode1Automatic
 	UpgradeMode1Manual    UpgradeMode1 = original.UpgradeMode1Manual
 )
+
+func PossibleUpgradeMode1Values() []UpgradeMode1 {
+	return original.PossibleUpgradeMode1Values()
+}
 
 type Weight = original.Weight
 
@@ -198,6 +254,10 @@ const (
 	WeightMedium Weight = original.WeightMedium
 	WeightZero   Weight = original.WeightZero
 )
+
+func PossibleWeightValues() []Weight {
+	return original.PossibleWeightValues()
+}
 
 type X509StoreName = original.X509StoreName
 
@@ -211,6 +271,10 @@ const (
 	TrustedPeople        X509StoreName = original.TrustedPeople
 	TrustedPublisher     X509StoreName = original.TrustedPublisher
 )
+
+func PossibleX509StoreNameValues() []X509StoreName {
+	return original.PossibleX509StoreNameValues()
+}
 
 type ApplicationDeleteFuture = original.ApplicationDeleteFuture
 type ApplicationHealthPolicy = original.ApplicationHealthPolicy

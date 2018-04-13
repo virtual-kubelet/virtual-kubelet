@@ -98,7 +98,7 @@ func (client PersonGroupPersonClient) AddPersonFaceFromStreamPreparer(ctx contex
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsOctetStream(),
+		autorest.AsContentType("application/octet-stream"),
 		autorest.AsPost(),
 		autorest.WithCustomBaseURL("https://{AzureRegion}.api.cognitive.microsoft.com/face/v1.0", urlParameters),
 		autorest.WithPathParameters("/persongroups/{personGroupId}/persons/{personId}/persistedFaces", pathParameters),
@@ -189,7 +189,7 @@ func (client PersonGroupPersonClient) AddPersonFaceFromURLPreparer(ctx context.C
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPost(),
 		autorest.WithCustomBaseURL("https://{AzureRegion}.api.cognitive.microsoft.com/face/v1.0", urlParameters),
 		autorest.WithPathParameters("/persongroups/{personGroupId}/persons/{personId}/persistedFaces", pathParameters),
@@ -266,7 +266,7 @@ func (client PersonGroupPersonClient) CreatePreparer(ctx context.Context, person
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPost(),
 		autorest.WithCustomBaseURL("https://{AzureRegion}.api.cognitive.microsoft.com/face/v1.0", urlParameters),
 		autorest.WithPathParameters("/persongroups/{personGroupId}/persons", pathParameters),
@@ -708,7 +708,7 @@ func (client PersonGroupPersonClient) UpdatePreparer(ctx context.Context, person
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPatch(),
 		autorest.WithCustomBaseURL("https://{AzureRegion}.api.cognitive.microsoft.com/face/v1.0", urlParameters),
 		autorest.WithPathParameters("/persongroups/{personGroupId}/persons/{personId}", pathParameters),
@@ -782,7 +782,7 @@ func (client PersonGroupPersonClient) UpdateFacePreparer(ctx context.Context, pe
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPatch(),
 		autorest.WithCustomBaseURL("https://{AzureRegion}.api.cognitive.microsoft.com/face/v1.0", urlParameters),
 		autorest.WithPathParameters("/persongroups/{personGroupId}/persons/{personId}/persistedFaces/{persistedFaceId}", pathParameters),

@@ -35,6 +35,11 @@ const (
 	Template ApplianceArtifactType = "Template"
 )
 
+// PossibleApplianceArtifactTypeValues returns an array of possible values for the ApplianceArtifactType const type.
+func PossibleApplianceArtifactTypeValues() []ApplianceArtifactType {
+	return []ApplianceArtifactType{Custom, Template}
+}
+
 // ApplianceLockLevel enumerates the values for appliance lock level.
 type ApplianceLockLevel string
 
@@ -46,6 +51,11 @@ const (
 	// ReadOnly ...
 	ReadOnly ApplianceLockLevel = "ReadOnly"
 )
+
+// PossibleApplianceLockLevelValues returns an array of possible values for the ApplianceLockLevel const type.
+func PossibleApplianceLockLevelValues() []ApplianceLockLevel {
+	return []ApplianceLockLevel{CanNotDelete, None, ReadOnly}
+}
 
 // ProvisioningState enumerates the values for provisioning state.
 type ProvisioningState string
@@ -75,6 +85,11 @@ const (
 	Updating ProvisioningState = "Updating"
 )
 
+// PossibleProvisioningStateValues returns an array of possible values for the ProvisioningState const type.
+func PossibleProvisioningStateValues() []ProvisioningState {
+	return []ProvisioningState{Accepted, Canceled, Created, Creating, Deleted, Deleting, Failed, Ready, Running, Succeeded, Updating}
+}
+
 // ResourceIdentityType enumerates the values for resource identity type.
 type ResourceIdentityType string
 
@@ -82,6 +97,11 @@ const (
 	// SystemAssigned ...
 	SystemAssigned ResourceIdentityType = "SystemAssigned"
 )
+
+// PossibleResourceIdentityTypeValues returns an array of possible values for the ResourceIdentityType const type.
+func PossibleResourceIdentityTypeValues() []ResourceIdentityType {
+	return []ResourceIdentityType{SystemAssigned}
+}
 
 // Appliance information about appliance.
 type Appliance struct {

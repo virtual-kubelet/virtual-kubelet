@@ -89,7 +89,7 @@ func (client AppsClient) AddPremierAddOnPreparer(ctx context.Context, resourceGr
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPut(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Web/sites/{name}/premieraddons/{premierAddOnName}", pathParameters),
@@ -170,7 +170,7 @@ func (client AppsClient) AddPremierAddOnSlotPreparer(ctx context.Context, resour
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPut(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Web/sites/{name}/slots/{slot}/premieraddons/{premierAddOnName}", pathParameters),
@@ -407,7 +407,7 @@ func (client AppsClient) ApplySlotConfigToProductionPreparer(ctx context.Context
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPost(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Web/sites/{name}/applySlotConfig", pathParameters),
@@ -488,7 +488,7 @@ func (client AppsClient) ApplySlotConfigurationSlotPreparer(ctx context.Context,
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPost(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Web/sites/{name}/slots/{slot}/applySlotConfig", pathParameters),
@@ -574,7 +574,7 @@ func (client AppsClient) BackupPreparer(ctx context.Context, resourceGroupName s
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPost(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Web/sites/{name}/backup", pathParameters),
@@ -663,7 +663,7 @@ func (client AppsClient) BackupSlotPreparer(ctx context.Context, resourceGroupNa
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPost(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Web/sites/{name}/slots/{slot}/backup", pathParameters),
@@ -741,7 +741,7 @@ func (client AppsClient) CreateDeploymentPreparer(ctx context.Context, resourceG
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPut(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Web/sites/{name}/deployments/{id}", pathParameters),
@@ -821,7 +821,7 @@ func (client AppsClient) CreateDeploymentSlotPreparer(ctx context.Context, resou
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPut(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Web/sites/{name}/slots/{slot}/deployments/{id}", pathParameters),
@@ -893,7 +893,7 @@ func (client AppsClient) CreateFunctionPreparer(ctx context.Context, resourceGro
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPut(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Web/sites/{name}/functions/{functionName}", pathParameters),
@@ -975,7 +975,7 @@ func (client AppsClient) CreateInstanceFunctionSlotPreparer(ctx context.Context,
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPut(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Web/sites/{name}/slots/{slot}/functions/{functionName}", pathParameters),
@@ -1055,7 +1055,7 @@ func (client AppsClient) CreateInstanceMSDeployOperationPreparer(ctx context.Con
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPut(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Web/sites/{name}/instances/{instanceId}/extensions/MSDeploy", pathParameters),
@@ -1137,7 +1137,7 @@ func (client AppsClient) CreateInstanceMSDeployOperationSlotPreparer(ctx context
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPut(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Web/sites/{name}/slots/{slot}/instances/{instanceId}/extensions/MSDeploy", pathParameters),
@@ -1216,7 +1216,7 @@ func (client AppsClient) CreateMSDeployOperationPreparer(ctx context.Context, re
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPut(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Web/sites/{name}/extensions/MSDeploy", pathParameters),
@@ -1297,7 +1297,7 @@ func (client AppsClient) CreateMSDeployOperationSlotPreparer(ctx context.Context
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPut(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Web/sites/{name}/slots/{slot}/extensions/MSDeploy", pathParameters),
@@ -1338,12 +1338,8 @@ func (client AppsClient) CreateMSDeployOperationSlotResponder(resp *http.Respons
 //
 // resourceGroupName is name of the resource group to which the resource belongs. name is unique name of the app to
 // create or update. To create or update a deployment slot, use the {slot} parameter. siteEnvelope is a JSON
-// representation of the app properties. See example. skipDNSRegistration is if true web app hostname is not
-// registered with DNS on creation. This parameter is
-// only used for app creation. skipCustomDomainVerification is if true, custom (non *.azurewebsites.net) domains
-// associated with web app are not verified. forceDNSRegistration is if true, web app hostname is force registered
-// with DNS. TTLInSeconds is time to live in seconds for web app's default domain name.
-func (client AppsClient) CreateOrUpdate(ctx context.Context, resourceGroupName string, name string, siteEnvelope Site, skipDNSRegistration *bool, skipCustomDomainVerification *bool, forceDNSRegistration *bool, TTLInSeconds string) (result AppsCreateOrUpdateFuture, err error) {
+// representation of the app properties. See example.
+func (client AppsClient) CreateOrUpdate(ctx context.Context, resourceGroupName string, name string, siteEnvelope Site) (result AppsCreateOrUpdateFuture, err error) {
 	if err := validation.Validate([]validation.Validation{
 		{TargetValue: resourceGroupName,
 			Constraints: []validation.Constraint{{Target: "resourceGroupName", Name: validation.MaxLength, Rule: 90, Chain: nil},
@@ -1367,7 +1363,7 @@ func (client AppsClient) CreateOrUpdate(ctx context.Context, resourceGroupName s
 		return result, validation.NewError("web.AppsClient", "CreateOrUpdate", err.Error())
 	}
 
-	req, err := client.CreateOrUpdatePreparer(ctx, resourceGroupName, name, siteEnvelope, skipDNSRegistration, skipCustomDomainVerification, forceDNSRegistration, TTLInSeconds)
+	req, err := client.CreateOrUpdatePreparer(ctx, resourceGroupName, name, siteEnvelope)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "web.AppsClient", "CreateOrUpdate", nil, "Failure preparing request")
 		return
@@ -1383,7 +1379,7 @@ func (client AppsClient) CreateOrUpdate(ctx context.Context, resourceGroupName s
 }
 
 // CreateOrUpdatePreparer prepares the CreateOrUpdate request.
-func (client AppsClient) CreateOrUpdatePreparer(ctx context.Context, resourceGroupName string, name string, siteEnvelope Site, skipDNSRegistration *bool, skipCustomDomainVerification *bool, forceDNSRegistration *bool, TTLInSeconds string) (*http.Request, error) {
+func (client AppsClient) CreateOrUpdatePreparer(ctx context.Context, resourceGroupName string, name string, siteEnvelope Site) (*http.Request, error) {
 	pathParameters := map[string]interface{}{
 		"name":              autorest.Encode("path", name),
 		"resourceGroupName": autorest.Encode("path", resourceGroupName),
@@ -1394,21 +1390,9 @@ func (client AppsClient) CreateOrUpdatePreparer(ctx context.Context, resourceGro
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
-	if skipDNSRegistration != nil {
-		queryParameters["skipDnsRegistration"] = autorest.Encode("query", *skipDNSRegistration)
-	}
-	if skipCustomDomainVerification != nil {
-		queryParameters["skipCustomDomainVerification"] = autorest.Encode("query", *skipCustomDomainVerification)
-	}
-	if forceDNSRegistration != nil {
-		queryParameters["forceDnsRegistration"] = autorest.Encode("query", *forceDNSRegistration)
-	}
-	if len(TTLInSeconds) > 0 {
-		queryParameters["ttlInSeconds"] = autorest.Encode("query", TTLInSeconds)
-	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPut(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Web/sites/{name}", pathParameters),
@@ -1500,7 +1484,7 @@ func (client AppsClient) CreateOrUpdateConfigurationPreparer(ctx context.Context
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPut(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Web/sites/{name}/config/web", pathParameters),
@@ -1586,7 +1570,7 @@ func (client AppsClient) CreateOrUpdateConfigurationSlotPreparer(ctx context.Con
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPut(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Web/sites/{name}/slots/{slot}/config/web", pathParameters),
@@ -1666,7 +1650,7 @@ func (client AppsClient) CreateOrUpdateDomainOwnershipIdentifierPreparer(ctx con
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPut(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Web/sites/{name}/domainOwnershipIdentifiers/{domainOwnershipIdentifierName}", pathParameters),
@@ -1748,7 +1732,7 @@ func (client AppsClient) CreateOrUpdateDomainOwnershipIdentifierSlotPreparer(ctx
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPut(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Web/sites/{name}/slots/{slot}/domainOwnershipIdentifiers/{domainOwnershipIdentifierName}", pathParameters),
@@ -1827,7 +1811,7 @@ func (client AppsClient) CreateOrUpdateHostNameBindingPreparer(ctx context.Conte
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPut(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Web/sites/{name}/hostNameBindings/{hostName}", pathParameters),
@@ -1908,7 +1892,7 @@ func (client AppsClient) CreateOrUpdateHostNameBindingSlotPreparer(ctx context.C
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPut(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Web/sites/{name}/slots/{slot}/hostNameBindings/{hostName}", pathParameters),
@@ -1988,7 +1972,7 @@ func (client AppsClient) CreateOrUpdateHybridConnectionPreparer(ctx context.Cont
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPut(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Web/sites/{name}/hybridConnectionNamespaces/{namespaceName}/relays/{relayName}", pathParameters),
@@ -2070,7 +2054,7 @@ func (client AppsClient) CreateOrUpdateHybridConnectionSlotPreparer(ctx context.
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPut(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Web/sites/{name}/slots/{slot}/hybridConnectionNamespaces/{namespaceName}/relays/{relayName}", pathParameters),
@@ -2149,7 +2133,7 @@ func (client AppsClient) CreateOrUpdatePublicCertificatePreparer(ctx context.Con
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPut(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Web/sites/{name}/publicCertificates/{publicCertificateName}", pathParameters),
@@ -2230,7 +2214,7 @@ func (client AppsClient) CreateOrUpdatePublicCertificateSlotPreparer(ctx context
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPut(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Web/sites/{name}/slots/{slot}/publicCertificates/{publicCertificateName}", pathParameters),
@@ -2310,7 +2294,7 @@ func (client AppsClient) CreateOrUpdateRelayServiceConnectionPreparer(ctx contex
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPut(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Web/sites/{name}/hybridconnection/{entityName}", pathParameters),
@@ -2392,7 +2376,7 @@ func (client AppsClient) CreateOrUpdateRelayServiceConnectionSlotPreparer(ctx co
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPut(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Web/sites/{name}/slots/{slot}/hybridconnection/{entityName}", pathParameters),
@@ -2497,7 +2481,7 @@ func (client AppsClient) CreateOrUpdateSlotPreparer(ctx context.Context, resourc
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPut(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Web/sites/{name}/slots/{slot}", pathParameters),
@@ -2576,7 +2560,7 @@ func (client AppsClient) CreateOrUpdateSourceControlPreparer(ctx context.Context
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPut(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Web/sites/{name}/sourcecontrols/web", pathParameters),
@@ -2658,7 +2642,7 @@ func (client AppsClient) CreateOrUpdateSourceControlSlotPreparer(ctx context.Con
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPut(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Web/sites/{name}/slots/{slot}/sourcecontrols/web", pathParameters),
@@ -2746,7 +2730,7 @@ func (client AppsClient) CreateOrUpdateVnetConnectionPreparer(ctx context.Contex
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPut(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Web/sites/{name}/virtualNetworkConnections/{vnetName}", pathParameters),
@@ -2829,7 +2813,7 @@ func (client AppsClient) CreateOrUpdateVnetConnectionGatewayPreparer(ctx context
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPut(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Web/sites/{name}/virtualNetworkConnections/{vnetName}/gateways/{gatewayName}", pathParameters),
@@ -2915,7 +2899,7 @@ func (client AppsClient) CreateOrUpdateVnetConnectionGatewaySlotPreparer(ctx con
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPut(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Web/sites/{name}/slots/{slot}/virtualNetworkConnections/{vnetName}/gateways/{gatewayName}", pathParameters),
@@ -2997,7 +2981,7 @@ func (client AppsClient) CreateOrUpdateVnetConnectionSlotPreparer(ctx context.Co
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPut(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Web/sites/{name}/slots/{slot}/virtualNetworkConnections/{vnetName}", pathParameters),
@@ -3031,8 +3015,8 @@ func (client AppsClient) CreateOrUpdateVnetConnectionSlotResponder(resp *http.Re
 // resourceGroupName is name of the resource group to which the resource belongs. name is name of the app to
 // delete. deleteMetrics is if true, web app metrics are also deleted. deleteEmptyServerFarm is specify true if the
 // App Service plan will be empty after app deletion and you want to delete the empty App Service plan. By default,
-// the empty App Service plan is not deleted. skipDNSRegistration is if true, DNS registration is skipped.
-func (client AppsClient) Delete(ctx context.Context, resourceGroupName string, name string, deleteMetrics *bool, deleteEmptyServerFarm *bool, skipDNSRegistration *bool) (result autorest.Response, err error) {
+// the empty App Service plan is not deleted.
+func (client AppsClient) Delete(ctx context.Context, resourceGroupName string, name string, deleteMetrics *bool, deleteEmptyServerFarm *bool) (result autorest.Response, err error) {
 	if err := validation.Validate([]validation.Validation{
 		{TargetValue: resourceGroupName,
 			Constraints: []validation.Constraint{{Target: "resourceGroupName", Name: validation.MaxLength, Rule: 90, Chain: nil},
@@ -3041,7 +3025,7 @@ func (client AppsClient) Delete(ctx context.Context, resourceGroupName string, n
 		return result, validation.NewError("web.AppsClient", "Delete", err.Error())
 	}
 
-	req, err := client.DeletePreparer(ctx, resourceGroupName, name, deleteMetrics, deleteEmptyServerFarm, skipDNSRegistration)
+	req, err := client.DeletePreparer(ctx, resourceGroupName, name, deleteMetrics, deleteEmptyServerFarm)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "web.AppsClient", "Delete", nil, "Failure preparing request")
 		return
@@ -3063,7 +3047,7 @@ func (client AppsClient) Delete(ctx context.Context, resourceGroupName string, n
 }
 
 // DeletePreparer prepares the Delete request.
-func (client AppsClient) DeletePreparer(ctx context.Context, resourceGroupName string, name string, deleteMetrics *bool, deleteEmptyServerFarm *bool, skipDNSRegistration *bool) (*http.Request, error) {
+func (client AppsClient) DeletePreparer(ctx context.Context, resourceGroupName string, name string, deleteMetrics *bool, deleteEmptyServerFarm *bool) (*http.Request, error) {
 	pathParameters := map[string]interface{}{
 		"name":              autorest.Encode("path", name),
 		"resourceGroupName": autorest.Encode("path", resourceGroupName),
@@ -3079,9 +3063,6 @@ func (client AppsClient) DeletePreparer(ctx context.Context, resourceGroupName s
 	}
 	if deleteEmptyServerFarm != nil {
 		queryParameters["deleteEmptyServerFarm"] = autorest.Encode("query", *deleteEmptyServerFarm)
-	}
-	if skipDNSRegistration != nil {
-		queryParameters["skipDnsRegistration"] = autorest.Encode("query", *skipDNSRegistration)
 	}
 
 	preparer := autorest.CreatePreparer(
@@ -5840,7 +5821,7 @@ func (client AppsClient) DiscoverRestorePreparer(ctx context.Context, resourceGr
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPut(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Web/sites/{name}/backups/discover", pathParameters),
@@ -5924,7 +5905,7 @@ func (client AppsClient) DiscoverRestoreSlotPreparer(ctx context.Context, resour
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPut(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Web/sites/{name}/slots/{slot}/backups/discover", pathParameters),
@@ -13065,7 +13046,7 @@ func (client AppsClient) ListBackupStatusSecretsPreparer(ctx context.Context, re
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPost(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Web/sites/{name}/backups/{backupId}/list", pathParameters),
@@ -13157,7 +13138,7 @@ func (client AppsClient) ListBackupStatusSecretsSlotPreparer(ctx context.Context
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPost(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Web/sites/{name}/slots/{slot}/backups/{backupId}/list", pathParameters),
@@ -18502,7 +18483,7 @@ func (client AppsClient) ListPublishingProfileXMLWithSecretsPreparer(ctx context
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPost(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Web/sites/{name}/publishxml", pathParameters),
@@ -18581,7 +18562,7 @@ func (client AppsClient) ListPublishingProfileXMLWithSecretsSlotPreparer(ctx con
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPost(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Web/sites/{name}/slots/{slot}/publishxml", pathParameters),
@@ -19243,7 +19224,7 @@ func (client AppsClient) ListSlotDifferencesFromProductionPreparer(ctx context.C
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPost(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Web/sites/{name}/slotsdiffs", pathParameters),
@@ -19353,7 +19334,7 @@ func (client AppsClient) ListSlotDifferencesSlotPreparer(ctx context.Context, re
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPost(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Web/sites/{name}/slots/{slot}/slotsdiffs", pathParameters),
@@ -20903,7 +20884,7 @@ func (client AppsClient) MigrateMySQLPreparer(ctx context.Context, resourceGroup
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPost(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Web/sites/{name}/migratemysql", pathParameters),
@@ -20988,7 +20969,7 @@ func (client AppsClient) MigrateStoragePreparer(ctx context.Context, subscriptio
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPut(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Web/sites/{name}/migrate", pathParameters),
@@ -21071,7 +21052,7 @@ func (client AppsClient) RecoverPreparer(ctx context.Context, resourceGroupName 
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPost(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Web/sites/{name}/recover", pathParameters),
@@ -21307,7 +21288,7 @@ func (client AppsClient) RecoverSlotPreparer(ctx context.Context, resourceGroupN
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPost(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Web/sites/{name}/slots/{slot}/recover", pathParameters),
@@ -21708,7 +21689,7 @@ func (client AppsClient) RestorePreparer(ctx context.Context, resourceGroupName 
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPost(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Web/sites/{name}/backups/{backupId}/restore", pathParameters),
@@ -21795,7 +21776,7 @@ func (client AppsClient) RestoreSlotPreparer(ctx context.Context, resourceGroupN
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPost(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Web/sites/{name}/slots/{slot}/backups/{backupId}/restore", pathParameters),
@@ -22952,7 +22933,7 @@ func (client AppsClient) SwapSlotSlotPreparer(ctx context.Context, resourceGroup
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPost(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Web/sites/{name}/slots/{slot}/slotsswap", pathParameters),
@@ -23033,7 +23014,7 @@ func (client AppsClient) SwapSlotWithProductionPreparer(ctx context.Context, res
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPost(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Web/sites/{name}/slotsswap", pathParameters),
@@ -23369,12 +23350,8 @@ func (client AppsClient) SyncRepositorySlotResponder(resp *http.Response) (resul
 //
 // resourceGroupName is name of the resource group to which the resource belongs. name is unique name of the app to
 // create or update. To create or update a deployment slot, use the {slot} parameter. siteEnvelope is a JSON
-// representation of the app properties. See example. skipDNSRegistration is if true web app hostname is not
-// registered with DNS on creation. This parameter is
-// only used for app creation. skipCustomDomainVerification is if true, custom (non *.azurewebsites.net) domains
-// associated with web app are not verified. forceDNSRegistration is if true, web app hostname is force registered
-// with DNS. TTLInSeconds is time to live in seconds for web app's default domain name.
-func (client AppsClient) Update(ctx context.Context, resourceGroupName string, name string, siteEnvelope SitePatchResource, skipDNSRegistration *bool, skipCustomDomainVerification *bool, forceDNSRegistration *bool, TTLInSeconds string) (result Site, err error) {
+// representation of the app properties. See example.
+func (client AppsClient) Update(ctx context.Context, resourceGroupName string, name string, siteEnvelope SitePatchResource) (result Site, err error) {
 	if err := validation.Validate([]validation.Validation{
 		{TargetValue: resourceGroupName,
 			Constraints: []validation.Constraint{{Target: "resourceGroupName", Name: validation.MaxLength, Rule: 90, Chain: nil},
@@ -23383,7 +23360,7 @@ func (client AppsClient) Update(ctx context.Context, resourceGroupName string, n
 		return result, validation.NewError("web.AppsClient", "Update", err.Error())
 	}
 
-	req, err := client.UpdatePreparer(ctx, resourceGroupName, name, siteEnvelope, skipDNSRegistration, skipCustomDomainVerification, forceDNSRegistration, TTLInSeconds)
+	req, err := client.UpdatePreparer(ctx, resourceGroupName, name, siteEnvelope)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "web.AppsClient", "Update", nil, "Failure preparing request")
 		return
@@ -23405,7 +23382,7 @@ func (client AppsClient) Update(ctx context.Context, resourceGroupName string, n
 }
 
 // UpdatePreparer prepares the Update request.
-func (client AppsClient) UpdatePreparer(ctx context.Context, resourceGroupName string, name string, siteEnvelope SitePatchResource, skipDNSRegistration *bool, skipCustomDomainVerification *bool, forceDNSRegistration *bool, TTLInSeconds string) (*http.Request, error) {
+func (client AppsClient) UpdatePreparer(ctx context.Context, resourceGroupName string, name string, siteEnvelope SitePatchResource) (*http.Request, error) {
 	pathParameters := map[string]interface{}{
 		"name":              autorest.Encode("path", name),
 		"resourceGroupName": autorest.Encode("path", resourceGroupName),
@@ -23416,21 +23393,9 @@ func (client AppsClient) UpdatePreparer(ctx context.Context, resourceGroupName s
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
-	if skipDNSRegistration != nil {
-		queryParameters["skipDnsRegistration"] = autorest.Encode("query", *skipDNSRegistration)
-	}
-	if skipCustomDomainVerification != nil {
-		queryParameters["skipCustomDomainVerification"] = autorest.Encode("query", *skipCustomDomainVerification)
-	}
-	if forceDNSRegistration != nil {
-		queryParameters["forceDnsRegistration"] = autorest.Encode("query", *forceDNSRegistration)
-	}
-	if len(TTLInSeconds) > 0 {
-		queryParameters["ttlInSeconds"] = autorest.Encode("query", TTLInSeconds)
-	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPatch(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Web/sites/{name}", pathParameters),
@@ -23507,7 +23472,7 @@ func (client AppsClient) UpdateApplicationSettingsPreparer(ctx context.Context, 
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPut(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Web/sites/{name}/config/appsettings", pathParameters),
@@ -23586,7 +23551,7 @@ func (client AppsClient) UpdateApplicationSettingsSlotPreparer(ctx context.Conte
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPut(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Web/sites/{name}/slots/{slot}/config/appsettings", pathParameters),
@@ -23663,7 +23628,7 @@ func (client AppsClient) UpdateAuthSettingsPreparer(ctx context.Context, resourc
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPut(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Web/sites/{name}/config/authsettings", pathParameters),
@@ -23742,7 +23707,7 @@ func (client AppsClient) UpdateAuthSettingsSlotPreparer(ctx context.Context, res
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPut(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Web/sites/{name}/slots/{slot}/config/authsettings", pathParameters),
@@ -23829,7 +23794,7 @@ func (client AppsClient) UpdateBackupConfigurationPreparer(ctx context.Context, 
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPut(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Web/sites/{name}/config/backup", pathParameters),
@@ -23918,7 +23883,7 @@ func (client AppsClient) UpdateBackupConfigurationSlotPreparer(ctx context.Conte
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPut(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Web/sites/{name}/slots/{slot}/config/backup", pathParameters),
@@ -23995,7 +23960,7 @@ func (client AppsClient) UpdateConfigurationPreparer(ctx context.Context, resour
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPatch(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Web/sites/{name}/config/web", pathParameters),
@@ -24074,7 +24039,7 @@ func (client AppsClient) UpdateConfigurationSlotPreparer(ctx context.Context, re
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPatch(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Web/sites/{name}/slots/{slot}/config/web", pathParameters),
@@ -24151,7 +24116,7 @@ func (client AppsClient) UpdateConnectionStringsPreparer(ctx context.Context, re
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPut(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Web/sites/{name}/config/connectionstrings", pathParameters),
@@ -24231,7 +24196,7 @@ func (client AppsClient) UpdateConnectionStringsSlotPreparer(ctx context.Context
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPut(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Web/sites/{name}/slots/{slot}/config/connectionstrings", pathParameters),
@@ -24324,7 +24289,7 @@ func (client AppsClient) UpdateDiagnosticLogsConfigPreparer(ctx context.Context,
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPut(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Web/sites/{name}/config/logs", pathParameters),
@@ -24419,7 +24384,7 @@ func (client AppsClient) UpdateDiagnosticLogsConfigSlotPreparer(ctx context.Cont
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPut(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Web/sites/{name}/slots/{slot}/config/logs", pathParameters),
@@ -24499,7 +24464,7 @@ func (client AppsClient) UpdateDomainOwnershipIdentifierPreparer(ctx context.Con
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPatch(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Web/sites/{name}/domainOwnershipIdentifiers/{domainOwnershipIdentifierName}", pathParameters),
@@ -24581,7 +24546,7 @@ func (client AppsClient) UpdateDomainOwnershipIdentifierSlotPreparer(ctx context
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPatch(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Web/sites/{name}/slots/{slot}/domainOwnershipIdentifiers/{domainOwnershipIdentifierName}", pathParameters),
@@ -24661,7 +24626,7 @@ func (client AppsClient) UpdateHybridConnectionPreparer(ctx context.Context, res
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPatch(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Web/sites/{name}/hybridConnectionNamespaces/{namespaceName}/relays/{relayName}", pathParameters),
@@ -24743,7 +24708,7 @@ func (client AppsClient) UpdateHybridConnectionSlotPreparer(ctx context.Context,
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPatch(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Web/sites/{name}/slots/{slot}/hybridConnectionNamespaces/{namespaceName}/relays/{relayName}", pathParameters),
@@ -24820,7 +24785,7 @@ func (client AppsClient) UpdateMetadataPreparer(ctx context.Context, resourceGro
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPut(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Web/sites/{name}/config/metadata", pathParameters),
@@ -24899,7 +24864,7 @@ func (client AppsClient) UpdateMetadataSlotPreparer(ctx context.Context, resourc
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPut(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Web/sites/{name}/slots/{slot}/config/metadata", pathParameters),
@@ -24979,7 +24944,7 @@ func (client AppsClient) UpdateRelayServiceConnectionPreparer(ctx context.Contex
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPatch(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Web/sites/{name}/hybridconnection/{entityName}", pathParameters),
@@ -25061,7 +25026,7 @@ func (client AppsClient) UpdateRelayServiceConnectionSlotPreparer(ctx context.Co
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPatch(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Web/sites/{name}/slots/{slot}/hybridconnection/{entityName}", pathParameters),
@@ -25141,7 +25106,7 @@ func (client AppsClient) UpdateSitePushSettingsPreparer(ctx context.Context, res
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPut(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Web/sites/{name}/config/pushsettings", pathParameters),
@@ -25223,7 +25188,7 @@ func (client AppsClient) UpdateSitePushSettingsSlotPreparer(ctx context.Context,
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPut(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Web/sites/{name}/slots/{slot}/config/pushsettings", pathParameters),
@@ -25319,7 +25284,7 @@ func (client AppsClient) UpdateSlotPreparer(ctx context.Context, resourceGroupNa
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPatch(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Web/sites/{name}/slots/{slot}", pathParameters),
@@ -25397,7 +25362,7 @@ func (client AppsClient) UpdateSlotConfigurationNamesPreparer(ctx context.Contex
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPut(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Web/sites/{name}/config/slotConfigNames", pathParameters),
@@ -25474,7 +25439,7 @@ func (client AppsClient) UpdateSourceControlPreparer(ctx context.Context, resour
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPatch(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Web/sites/{name}/sourcecontrols/web", pathParameters),
@@ -25554,7 +25519,7 @@ func (client AppsClient) UpdateSourceControlSlotPreparer(ctx context.Context, re
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPatch(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Web/sites/{name}/slots/{slot}/sourcecontrols/web", pathParameters),
@@ -25634,7 +25599,7 @@ func (client AppsClient) UpdateVnetConnectionPreparer(ctx context.Context, resou
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPatch(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Web/sites/{name}/virtualNetworkConnections/{vnetName}", pathParameters),
@@ -25714,7 +25679,7 @@ func (client AppsClient) UpdateVnetConnectionGatewayPreparer(ctx context.Context
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPatch(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Web/sites/{name}/virtualNetworkConnections/{vnetName}/gateways/{gatewayName}", pathParameters),
@@ -25797,7 +25762,7 @@ func (client AppsClient) UpdateVnetConnectionGatewaySlotPreparer(ctx context.Con
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPatch(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Web/sites/{name}/slots/{slot}/virtualNetworkConnections/{vnetName}/gateways/{gatewayName}", pathParameters),
@@ -25879,7 +25844,7 @@ func (client AppsClient) UpdateVnetConnectionSlotPreparer(ctx context.Context, r
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPatch(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Web/sites/{name}/slots/{slot}/virtualNetworkConnections/{vnetName}", pathParameters),

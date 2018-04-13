@@ -44,6 +44,11 @@ const (
 	ServiceConfig AccessRightsDescription = "ServiceConfig"
 )
 
+// PossibleAccessRightsDescriptionValues returns an array of possible values for the AccessRightsDescription const type.
+func PossibleAccessRightsDescriptionValues() []AccessRightsDescription {
+	return []AccessRightsDescription{DeviceConnect, EnrollmentRead, EnrollmentWrite, RegistrationStatusRead, RegistrationStatusWrite, ServiceConfig}
+}
+
 // AllocationPolicy enumerates the values for allocation policy.
 type AllocationPolicy string
 
@@ -56,6 +61,11 @@ const (
 	Static AllocationPolicy = "Static"
 )
 
+// PossibleAllocationPolicyValues returns an array of possible values for the AllocationPolicy const type.
+func PossibleAllocationPolicyValues() []AllocationPolicy {
+	return []AllocationPolicy{GeoLatency, Hashed, Static}
+}
+
 // CertificatePurpose enumerates the values for certificate purpose.
 type CertificatePurpose string
 
@@ -66,6 +76,11 @@ const (
 	ServerAuthentication CertificatePurpose = "serverAuthentication"
 )
 
+// PossibleCertificatePurposeValues returns an array of possible values for the CertificatePurpose const type.
+func PossibleCertificatePurposeValues() []CertificatePurpose {
+	return []CertificatePurpose{ClientAuthentication, ServerAuthentication}
+}
+
 // IotDpsSku enumerates the values for iot dps sku.
 type IotDpsSku string
 
@@ -73,6 +88,11 @@ const (
 	// S1 ...
 	S1 IotDpsSku = "S1"
 )
+
+// PossibleIotDpsSkuValues returns an array of possible values for the IotDpsSku const type.
+func PossibleIotDpsSkuValues() []IotDpsSku {
+	return []IotDpsSku{S1}
+}
 
 // NameUnavailabilityReason enumerates the values for name unavailability reason.
 type NameUnavailabilityReason string
@@ -83,6 +103,11 @@ const (
 	// Invalid ...
 	Invalid NameUnavailabilityReason = "Invalid"
 )
+
+// PossibleNameUnavailabilityReasonValues returns an array of possible values for the NameUnavailabilityReason const type.
+func PossibleNameUnavailabilityReasonValues() []NameUnavailabilityReason {
+	return []NameUnavailabilityReason{AlreadyExists, Invalid}
+}
 
 // State enumerates the values for state.
 type State string
@@ -113,6 +138,11 @@ const (
 	// Transitioning ...
 	Transitioning State = "Transitioning"
 )
+
+// PossibleStateValues returns an array of possible values for the State const type.
+func PossibleStateValues() []State {
+	return []State{Activating, ActivationFailed, Active, Deleted, Deleting, DeletionFailed, FailingOver, FailoverFailed, Resuming, Suspended, Suspending, Transitioning}
+}
 
 // AsyncOperationResult result of a long running operation.
 type AsyncOperationResult struct {

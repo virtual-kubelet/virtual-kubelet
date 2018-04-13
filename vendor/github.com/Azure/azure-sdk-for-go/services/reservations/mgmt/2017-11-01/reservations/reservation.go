@@ -322,7 +322,7 @@ func (client Client) MergePreparer(ctx context.Context, reservationOrderID strin
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPost(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/providers/Microsoft.Capacity/reservationOrders/{reservationOrderId}/merge", pathParameters),
@@ -390,7 +390,7 @@ func (client Client) SplitPreparer(ctx context.Context, reservationOrderID strin
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPost(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/providers/Microsoft.Capacity/reservationOrders/{reservationOrderId}/split", pathParameters),
@@ -460,7 +460,7 @@ func (client Client) UpdatePreparer(ctx context.Context, reservationOrderID stri
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPatch(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/providers/Microsoft.Capacity/reservationOrders/{reservationOrderId}/reservations/{reservationId}", pathParameters),

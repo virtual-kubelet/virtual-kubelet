@@ -51,12 +51,20 @@ const (
 	Send   AccessRights = original.Send
 )
 
+func PossibleAccessRightsValues() []AccessRights {
+	return original.PossibleAccessRightsValues()
+}
+
 type NamespaceType = original.NamespaceType
 
 const (
 	Messaging       NamespaceType = original.Messaging
 	NotificationHub NamespaceType = original.NotificationHub
 )
+
+func PossibleNamespaceTypeValues() []NamespaceType {
+	return original.PossibleNamespaceTypeValues()
+}
 
 type SkuName = original.SkuName
 
@@ -65,6 +73,10 @@ const (
 	Free     SkuName = original.Free
 	Standard SkuName = original.Standard
 )
+
+func PossibleSkuNameValues() []SkuName {
+	return original.PossibleSkuNameValues()
+}
 
 type AdmCredential = original.AdmCredential
 type AdmCredentialProperties = original.AdmCredentialProperties

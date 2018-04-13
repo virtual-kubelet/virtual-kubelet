@@ -31,13 +31,13 @@ type SavedSearchesClient struct {
 }
 
 // NewSavedSearchesClient creates an instance of the SavedSearchesClient client.
-func NewSavedSearchesClient(subscriptionID string) SavedSearchesClient {
-	return NewSavedSearchesClientWithBaseURI(DefaultBaseURI, subscriptionID)
+func NewSavedSearchesClient(subscriptionID string, purgeID string) SavedSearchesClient {
+	return NewSavedSearchesClientWithBaseURI(DefaultBaseURI, subscriptionID, purgeID)
 }
 
 // NewSavedSearchesClientWithBaseURI creates an instance of the SavedSearchesClient client.
-func NewSavedSearchesClientWithBaseURI(baseURI string, subscriptionID string) SavedSearchesClient {
-	return SavedSearchesClient{NewWithBaseURI(baseURI, subscriptionID)}
+func NewSavedSearchesClientWithBaseURI(baseURI string, subscriptionID string, purgeID string) SavedSearchesClient {
+	return SavedSearchesClient{NewWithBaseURI(baseURI, subscriptionID, purgeID)}
 }
 
 // CreateOrUpdate creates or updates a saved search for a given workspace.
@@ -100,7 +100,7 @@ func (client SavedSearchesClient) CreateOrUpdatePreparer(ctx context.Context, re
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPut(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/Microsoft.OperationalInsights/workspaces/{workspaceName}/savedSearches/{savedSearchName}", pathParameters),

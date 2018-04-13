@@ -37,6 +37,11 @@ const (
 	Hourly AggregationGranularity = "Hourly"
 )
 
+// PossibleAggregationGranularityValues returns an array of possible values for the AggregationGranularity const type.
+func PossibleAggregationGranularityValues() []AggregationGranularity {
+	return []AggregationGranularity{Daily, Hourly}
+}
+
 // Name enumerates the values for name.
 type Name string
 
@@ -50,6 +55,11 @@ const (
 	// NameRecurringCharge ...
 	NameRecurringCharge Name = "Recurring Charge"
 )
+
+// PossibleNameValues returns an array of possible values for the Name const type.
+func PossibleNameValues() []Name {
+	return []Name{NameMonetaryCommitment, NameMonetaryCredit, NameOfferTermInfo, NameRecurringCharge}
+}
 
 // ErrorResponse describes the format of Error response.
 type ErrorResponse struct {
@@ -150,7 +160,9 @@ func (mc MonetaryCommitment) MarshalJSON() ([]byte, error) {
 	if mc.EffectiveDate != nil {
 		objectMap["EffectiveDate"] = mc.EffectiveDate
 	}
-	objectMap["Name"] = mc.Name
+	if mc.Name != "" {
+		objectMap["Name"] = mc.Name
+	}
 	return json.Marshal(objectMap)
 }
 
@@ -204,7 +216,9 @@ func (mc MonetaryCredit) MarshalJSON() ([]byte, error) {
 	if mc.EffectiveDate != nil {
 		objectMap["EffectiveDate"] = mc.EffectiveDate
 	}
-	objectMap["Name"] = mc.Name
+	if mc.Name != "" {
+		objectMap["Name"] = mc.Name
+	}
 	return json.Marshal(objectMap)
 }
 
@@ -301,7 +315,9 @@ func (oti OfferTermInfo) MarshalJSON() ([]byte, error) {
 	if oti.EffectiveDate != nil {
 		objectMap["EffectiveDate"] = oti.EffectiveDate
 	}
-	objectMap["Name"] = oti.Name
+	if oti.Name != "" {
+		objectMap["Name"] = oti.Name
+	}
 	return json.Marshal(objectMap)
 }
 
@@ -363,7 +379,9 @@ func (rc RecurringCharge) MarshalJSON() ([]byte, error) {
 	if rc.EffectiveDate != nil {
 		objectMap["EffectiveDate"] = rc.EffectiveDate
 	}
-	objectMap["Name"] = rc.Name
+	if rc.Name != "" {
+		objectMap["Name"] = rc.Name
+	}
 	return json.Marshal(objectMap)
 }
 
@@ -476,6 +494,24 @@ type UsageAggregation struct {
 	Type *string `json:"type,omitempty"`
 	// UsageSample - Usage data.
 	*UsageSample `json:"properties,omitempty"`
+}
+
+// MarshalJSON is the custom marshaler for UsageAggregation.
+func (ua UsageAggregation) MarshalJSON() ([]byte, error) {
+	objectMap := make(map[string]interface{})
+	if ua.ID != nil {
+		objectMap["id"] = ua.ID
+	}
+	if ua.Name != nil {
+		objectMap["name"] = ua.Name
+	}
+	if ua.Type != nil {
+		objectMap["type"] = ua.Type
+	}
+	if ua.UsageSample != nil {
+		objectMap["properties"] = ua.UsageSample
+	}
+	return json.Marshal(objectMap)
 }
 
 // UnmarshalJSON is the custom unmarshaler for UsageAggregation struct.
@@ -642,7 +678,7 @@ type UsageSample struct {
 	// UsageEndTime - UTC end time for the usage bucket to which this usage aggregate belongs.
 	UsageEndTime *date.Time `json:"usageEndTime,omitempty"`
 	// Quantity - The amount of the resource consumption that occurred in this time frame.
-	Quantity interface{} `json:"quantity,omitempty"`
+	Quantity *float64 `json:"quantity,omitempty"`
 	// Unit - The unit in which the usage for this resource is being counted, e.g. Hours, GB.
 	Unit *string `json:"unit,omitempty"`
 	// MeterName - Friendly name of the resource being consumed.

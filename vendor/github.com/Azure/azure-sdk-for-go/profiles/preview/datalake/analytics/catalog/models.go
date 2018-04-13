@@ -50,6 +50,10 @@ const (
 	UserObj  ACLType = original.UserObj
 )
 
+func PossibleACLTypeValues() []ACLType {
+	return original.PossibleACLTypeValues()
+}
+
 type FileType = original.FileType
 
 const (
@@ -57,6 +61,10 @@ const (
 	Nodeploy FileType = original.Nodeploy
 	Resource FileType = original.Resource
 )
+
+func PossibleFileTypeValues() []FileType {
+	return original.PossibleFileTypeValues()
+}
 
 type PermissionType = original.PermissionType
 
@@ -69,6 +77,10 @@ const (
 	Use    PermissionType = original.Use
 	Write  PermissionType = original.Write
 )
+
+func PossiblePermissionTypeValues() []PermissionType {
+	return original.PossiblePermissionTypeValues()
+}
 
 type ACL = original.ACL
 type ACLCreateOrUpdateParameters = original.ACLCreateOrUpdateParameters

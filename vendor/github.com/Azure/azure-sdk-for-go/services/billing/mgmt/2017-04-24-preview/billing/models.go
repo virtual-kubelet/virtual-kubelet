@@ -62,6 +62,24 @@ type Invoice struct {
 	Type *string `json:"type,omitempty"`
 }
 
+// MarshalJSON is the custom marshaler for Invoice.
+func (i Invoice) MarshalJSON() ([]byte, error) {
+	objectMap := make(map[string]interface{})
+	if i.InvoiceProperties != nil {
+		objectMap["properties"] = i.InvoiceProperties
+	}
+	if i.ID != nil {
+		objectMap["id"] = i.ID
+	}
+	if i.Name != nil {
+		objectMap["name"] = i.Name
+	}
+	if i.Type != nil {
+		objectMap["type"] = i.Type
+	}
+	return json.Marshal(objectMap)
+}
+
 // UnmarshalJSON is the custom unmarshaler for Invoice struct.
 func (i *Invoice) UnmarshalJSON(body []byte) error {
 	var m map[string]*json.RawMessage
@@ -359,6 +377,24 @@ type Period struct {
 	Name *string `json:"name,omitempty"`
 	// Type - Resource type.
 	Type *string `json:"type,omitempty"`
+}
+
+// MarshalJSON is the custom marshaler for Period.
+func (p Period) MarshalJSON() ([]byte, error) {
+	objectMap := make(map[string]interface{})
+	if p.PeriodProperties != nil {
+		objectMap["properties"] = p.PeriodProperties
+	}
+	if p.ID != nil {
+		objectMap["id"] = p.ID
+	}
+	if p.Name != nil {
+		objectMap["name"] = p.Name
+	}
+	if p.Type != nil {
+		objectMap["type"] = p.Type
+	}
+	return json.Marshal(objectMap)
 }
 
 // UnmarshalJSON is the custom unmarshaler for Period struct.

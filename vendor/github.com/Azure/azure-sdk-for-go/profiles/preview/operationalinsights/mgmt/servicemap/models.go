@@ -77,12 +77,32 @@ const (
 	Estimated Accuracy = original.Estimated
 )
 
+func PossibleAccuracyValues() []Accuracy {
+	return original.PossibleAccuracyValues()
+}
+
+type AzureCloudServiceRoleType = original.AzureCloudServiceRoleType
+
+const (
+	Unknown AzureCloudServiceRoleType = original.Unknown
+	Web     AzureCloudServiceRoleType = original.Web
+	Worker  AzureCloudServiceRoleType = original.Worker
+)
+
+func PossibleAzureCloudServiceRoleTypeValues() []AzureCloudServiceRoleType {
+	return original.PossibleAzureCloudServiceRoleTypeValues()
+}
+
 type Bitness = original.Bitness
 
 const (
 	SixFourbit  Bitness = original.SixFourbit
 	ThreeTwobit Bitness = original.ThreeTwobit
 )
+
+func PossibleBitnessValues() []Bitness {
+	return original.PossibleBitnessValues()
+}
 
 type ConnectionFailureState = original.ConnectionFailureState
 
@@ -92,22 +112,35 @@ const (
 	Ok     ConnectionFailureState = original.Ok
 )
 
+func PossibleConnectionFailureStateValues() []ConnectionFailureState {
+	return original.PossibleConnectionFailureStateValues()
+}
+
 type HypervisorType = original.HypervisorType
 
 const (
-	Hyperv  HypervisorType = original.Hyperv
-	Unknown HypervisorType = original.Unknown
+	HypervisorTypeHyperv  HypervisorType = original.HypervisorTypeHyperv
+	HypervisorTypeUnknown HypervisorType = original.HypervisorTypeUnknown
 )
+
+func PossibleHypervisorTypeValues() []HypervisorType {
+	return original.PossibleHypervisorTypeValues()
+}
 
 type Kind = original.Kind
 
 const (
+	KindRefclientgroup      Kind = original.KindRefclientgroup
 	KindRefmachine          Kind = original.KindRefmachine
 	KindRefmachinewithhints Kind = original.KindRefmachinewithhints
 	KindRefport             Kind = original.KindRefport
 	KindRefprocess          Kind = original.KindRefprocess
 	KindResourceReference   Kind = original.KindResourceReference
 )
+
+func PossibleKindValues() []Kind {
+	return original.PossibleKindValues()
+}
 
 type KindBasicCoreResource = original.KindBasicCoreResource
 
@@ -120,13 +153,45 @@ const (
 	KindProcess      KindBasicCoreResource = original.KindProcess
 )
 
+func PossibleKindBasicCoreResourceValues() []KindBasicCoreResource {
+	return original.PossibleKindBasicCoreResourceValues()
+}
+
+type KindBasicHostingConfiguration = original.KindBasicHostingConfiguration
+
+const (
+	KindHostingConfiguration KindBasicHostingConfiguration = original.KindHostingConfiguration
+	KindProviderazure        KindBasicHostingConfiguration = original.KindProviderazure
+)
+
+func PossibleKindBasicHostingConfigurationValues() []KindBasicHostingConfiguration {
+	return original.PossibleKindBasicHostingConfigurationValues()
+}
+
 type KindBasicMapRequest = original.KindBasicMapRequest
 
 const (
 	KindMapmachineGroupDependency  KindBasicMapRequest = original.KindMapmachineGroupDependency
+	KindMapmachineListDependency   KindBasicMapRequest = original.KindMapmachineListDependency
 	KindMapRequest                 KindBasicMapRequest = original.KindMapRequest
 	KindMapsingleMachineDependency KindBasicMapRequest = original.KindMapsingleMachineDependency
+	KindMultipleMachinesMapRequest KindBasicMapRequest = original.KindMultipleMachinesMapRequest
 )
+
+func PossibleKindBasicMapRequestValues() []KindBasicMapRequest {
+	return original.PossibleKindBasicMapRequestValues()
+}
+
+type KindBasicProcessHostingConfiguration = original.KindBasicProcessHostingConfiguration
+
+const (
+	KindBasicProcessHostingConfigurationKindProcessHostingConfiguration KindBasicProcessHostingConfiguration = original.KindBasicProcessHostingConfigurationKindProcessHostingConfiguration
+	KindBasicProcessHostingConfigurationKindProviderazure               KindBasicProcessHostingConfiguration = original.KindBasicProcessHostingConfigurationKindProviderazure
+)
+
+func PossibleKindBasicProcessHostingConfigurationValues() []KindBasicProcessHostingConfiguration {
+	return original.PossibleKindBasicProcessHostingConfigurationValues()
+}
 
 type KindBasicRelationship = original.KindBasicRelationship
 
@@ -136,6 +201,24 @@ const (
 	KindRelconnection KindBasicRelationship = original.KindRelconnection
 )
 
+func PossibleKindBasicRelationshipValues() []KindBasicRelationship {
+	return original.PossibleKindBasicRelationshipValues()
+}
+
+type MachineGroupType = original.MachineGroupType
+
+const (
+	MachineGroupTypeAzureCs    MachineGroupType = original.MachineGroupTypeAzureCs
+	MachineGroupTypeAzureSf    MachineGroupType = original.MachineGroupTypeAzureSf
+	MachineGroupTypeAzureVmss  MachineGroupType = original.MachineGroupTypeAzureVmss
+	MachineGroupTypeUnknown    MachineGroupType = original.MachineGroupTypeUnknown
+	MachineGroupTypeUserStatic MachineGroupType = original.MachineGroupTypeUserStatic
+)
+
+func PossibleMachineGroupTypeValues() []MachineGroupType {
+	return original.PossibleMachineGroupTypeValues()
+}
+
 type MachineRebootStatus = original.MachineRebootStatus
 
 const (
@@ -144,12 +227,20 @@ const (
 	MachineRebootStatusUnknown     MachineRebootStatus = original.MachineRebootStatusUnknown
 )
 
+func PossibleMachineRebootStatusValues() []MachineRebootStatus {
+	return original.PossibleMachineRebootStatusValues()
+}
+
 type MonitoringState = original.MonitoringState
 
 const (
 	Discovered MonitoringState = original.Discovered
 	Monitored  MonitoringState = original.Monitored
 )
+
+func PossibleMonitoringStateValues() []MonitoringState {
+	return original.PossibleMonitoringStateValues()
+}
 
 type OperatingSystemFamily = original.OperatingSystemFamily
 
@@ -161,6 +252,10 @@ const (
 	OperatingSystemFamilyWindows OperatingSystemFamily = original.OperatingSystemFamilyWindows
 )
 
+func PossibleOperatingSystemFamilyValues() []OperatingSystemFamily {
+	return original.PossibleOperatingSystemFamilyValues()
+}
+
 type ProcessRole = original.ProcessRole
 
 const (
@@ -171,6 +266,30 @@ const (
 	WebServer      ProcessRole = original.WebServer
 )
 
+func PossibleProcessRoleValues() []ProcessRole {
+	return original.PossibleProcessRoleValues()
+}
+
+type Provider = original.Provider
+
+const (
+	Azure Provider = original.Azure
+)
+
+func PossibleProviderValues() []Provider {
+	return original.PossibleProviderValues()
+}
+
+type Provider1 = original.Provider1
+
+const (
+	Provider1Azure Provider1 = original.Provider1Azure
+)
+
+func PossibleProvider1Values() []Provider1 {
+	return original.PossibleProvider1Values()
+}
+
 type VirtualizationState = original.VirtualizationState
 
 const (
@@ -179,6 +298,10 @@ const (
 	VirtualizationStateUnknown    VirtualizationState = original.VirtualizationStateUnknown
 	VirtualizationStateVirtual    VirtualizationState = original.VirtualizationStateVirtual
 )
+
+func PossibleVirtualizationStateValues() []VirtualizationState {
+	return original.PossibleVirtualizationStateValues()
+}
 
 type VirtualMachineType = original.VirtualMachineType
 
@@ -192,9 +315,18 @@ const (
 	VirtualMachineTypeXen       VirtualMachineType = original.VirtualMachineTypeXen
 )
 
+func PossibleVirtualMachineTypeValues() []VirtualMachineType {
+	return original.PossibleVirtualMachineTypeValues()
+}
+
 type Acceptor = original.Acceptor
 type AcceptorProperties = original.AcceptorProperties
 type AgentConfiguration = original.AgentConfiguration
+type AzureCloudServiceConfiguration = original.AzureCloudServiceConfiguration
+type AzureHostingConfiguration = original.AzureHostingConfiguration
+type AzureProcessHostingConfiguration = original.AzureProcessHostingConfiguration
+type AzureServiceFabricClusterConfiguration = original.AzureServiceFabricClusterConfiguration
+type AzureVMScaleSetConfiguration = original.AzureVMScaleSetConfiguration
 type ClientGroup = original.ClientGroup
 type ClientGroupMember = original.ClientGroupMember
 type ClientGroupMemberProperties = original.ClientGroupMemberProperties
@@ -203,6 +335,7 @@ type ClientGroupMembersCollectionIterator = original.ClientGroupMembersCollectio
 type ClientGroupMembersCollectionPage = original.ClientGroupMembersCollectionPage
 type ClientGroupMembersCount = original.ClientGroupMembersCount
 type ClientGroupProperties = original.ClientGroupProperties
+type ClientGroupReference = original.ClientGroupReference
 type Connection = original.Connection
 type ConnectionCollection = original.ConnectionCollection
 type ConnectionCollectionIterator = original.ConnectionCollectionIterator
@@ -212,7 +345,10 @@ type BasicCoreResource = original.BasicCoreResource
 type CoreResource = original.CoreResource
 type Error = original.Error
 type ErrorResponse = original.ErrorResponse
+type BasicHostingConfiguration = original.BasicHostingConfiguration
+type HostingConfiguration = original.HostingConfiguration
 type HypervisorConfiguration = original.HypervisorConfiguration
+type ImageConfiguration = original.ImageConfiguration
 type Ipv4NetworkInterface = original.Ipv4NetworkInterface
 type Ipv6NetworkInterface = original.Ipv6NetworkInterface
 type Liveness = original.Liveness
@@ -227,6 +363,7 @@ type MachineGroupCollectionIterator = original.MachineGroupCollectionIterator
 type MachineGroupCollectionPage = original.MachineGroupCollectionPage
 type MachineGroupMapRequest = original.MachineGroupMapRequest
 type MachineGroupProperties = original.MachineGroupProperties
+type MachineListMapRequest = original.MachineListMapRequest
 type MachineProperties = original.MachineProperties
 type MachineReference = original.MachineReference
 type MachineReferenceWithHints = original.MachineReferenceWithHints
@@ -240,6 +377,8 @@ type MapNodes = original.MapNodes
 type BasicMapRequest = original.BasicMapRequest
 type MapRequest = original.MapRequest
 type MapResponse = original.MapResponse
+type BasicMultipleMachinesMapRequest = original.BasicMultipleMachinesMapRequest
+type MultipleMachinesMapRequest = original.MultipleMachinesMapRequest
 type NetworkConfiguration = original.NetworkConfiguration
 type OperatingSystemConfiguration = original.OperatingSystemConfiguration
 type Port = original.Port
@@ -254,6 +393,9 @@ type ProcessCollection = original.ProcessCollection
 type ProcessCollectionIterator = original.ProcessCollectionIterator
 type ProcessCollectionPage = original.ProcessCollectionPage
 type ProcessDetails = original.ProcessDetails
+type ProcessHostedService = original.ProcessHostedService
+type BasicProcessHostingConfiguration = original.BasicProcessHostingConfiguration
+type ProcessHostingConfiguration = original.ProcessHostingConfiguration
 type ProcessProperties = original.ProcessProperties
 type ProcessReference = original.ProcessReference
 type ProcessReferenceProperties = original.ProcessReferenceProperties

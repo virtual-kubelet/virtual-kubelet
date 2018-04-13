@@ -32,6 +32,11 @@ const (
 	CiscoUCS HanaHardwareTypeNamesEnum = "Cisco_UCS"
 )
 
+// PossibleHanaHardwareTypeNamesEnumValues returns an array of possible values for the HanaHardwareTypeNamesEnum const type.
+func PossibleHanaHardwareTypeNamesEnumValues() []HanaHardwareTypeNamesEnum {
+	return []HanaHardwareTypeNamesEnum{CiscoUCS}
+}
+
 // HanaInstanceSizeNamesEnum enumerates the values for hana instance size names enum.
 type HanaInstanceSizeNamesEnum string
 
@@ -49,6 +54,21 @@ const (
 	// S72m ...
 	S72m HanaInstanceSizeNamesEnum = "S72m"
 )
+
+// PossibleHanaInstanceSizeNamesEnumValues returns an array of possible values for the HanaInstanceSizeNamesEnum const type.
+func PossibleHanaInstanceSizeNamesEnumValues() []HanaInstanceSizeNamesEnum {
+	return []HanaInstanceSizeNamesEnum{S144, S144m, S192, S192m, S72, S72m}
+}
+
+// Disk specifies the disk information fo the HANA instance
+type Disk struct {
+	// Name - The disk name.
+	Name *string `json:"name,omitempty"`
+	// DiskSizeGB - Specifies the size of an empty data disk in gigabytes.
+	DiskSizeGB *int32 `json:"diskSizeGB,omitempty"`
+	// Lun - Specifies the logical unit number of the data disk. This value is used to identify data disks within the VM and therefore must be unique for each data disk attached to a VM.
+	Lun *int32 `json:"lun,omitempty"`
+}
 
 // Display detailed HANA operation information
 type Display struct {
@@ -306,7 +326,7 @@ type HardwareProfile struct {
 	HanaInstanceSize HanaInstanceSizeNamesEnum `json:"hanaInstanceSize,omitempty"`
 }
 
-// IPAddress ...
+// IPAddress specifies the IP address of the network interaface.
 type IPAddress struct {
 	// IPAddress - Specifies the IP address of the network interface.
 	IPAddress *string `json:"ipAddress,omitempty"`
@@ -384,4 +404,6 @@ func (r Resource) MarshalJSON() ([]byte, error) {
 type StorageProfile struct {
 	// NfsIPAddress - IP Address to connect to storage.
 	NfsIPAddress *string `json:"nfsIpAddress,omitempty"`
+	// OsDisks - Specifies information about the operating system disk used by the hana instance.
+	OsDisks *[]Disk `json:"osDisks,omitempty"`
 }

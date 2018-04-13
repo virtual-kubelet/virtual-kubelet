@@ -51,11 +51,19 @@ const (
 	ReadWrite CachingTypes = original.ReadWrite
 )
 
+func PossibleCachingTypesValues() []CachingTypes {
+	return original.PossibleCachingTypesValues()
+}
+
 type ComponentNames = original.ComponentNames
 
 const (
 	MicrosoftWindowsShellSetup ComponentNames = original.MicrosoftWindowsShellSetup
 )
+
+func PossibleComponentNamesValues() []ComponentNames {
+	return original.PossibleComponentNamesValues()
+}
 
 type DiskCreateOptionTypes = original.DiskCreateOptionTypes
 
@@ -65,11 +73,19 @@ const (
 	FromImage DiskCreateOptionTypes = original.FromImage
 )
 
+func PossibleDiskCreateOptionTypesValues() []DiskCreateOptionTypes {
+	return original.PossibleDiskCreateOptionTypesValues()
+}
+
 type InstanceViewTypes = original.InstanceViewTypes
 
 const (
 	InstanceView InstanceViewTypes = original.InstanceView
 )
+
+func PossibleInstanceViewTypesValues() []InstanceViewTypes {
+	return original.PossibleInstanceViewTypesValues()
+}
 
 type OperatingSystemTypes = original.OperatingSystemTypes
 
@@ -78,11 +94,19 @@ const (
 	Windows OperatingSystemTypes = original.Windows
 )
 
+func PossibleOperatingSystemTypesValues() []OperatingSystemTypes {
+	return original.PossibleOperatingSystemTypesValues()
+}
+
 type PassNames = original.PassNames
 
 const (
 	OobeSystem PassNames = original.OobeSystem
 )
+
+func PossiblePassNamesValues() []PassNames {
+	return original.PossiblePassNamesValues()
+}
 
 type ProtocolTypes = original.ProtocolTypes
 
@@ -91,11 +115,19 @@ const (
 	HTTPS ProtocolTypes = original.HTTPS
 )
 
+func PossibleProtocolTypesValues() []ProtocolTypes {
+	return original.PossibleProtocolTypesValues()
+}
+
 type ResourceIdentityType = original.ResourceIdentityType
 
 const (
 	SystemAssigned ResourceIdentityType = original.SystemAssigned
 )
+
+func PossibleResourceIdentityTypeValues() []ResourceIdentityType {
+	return original.PossibleResourceIdentityTypeValues()
+}
 
 type SettingNames = original.SettingNames
 
@@ -103,6 +135,10 @@ const (
 	AutoLogon          SettingNames = original.AutoLogon
 	FirstLogonCommands SettingNames = original.FirstLogonCommands
 )
+
+func PossibleSettingNamesValues() []SettingNames {
+	return original.PossibleSettingNamesValues()
+}
 
 type StatusLevelTypes = original.StatusLevelTypes
 
@@ -112,6 +148,10 @@ const (
 	Warning StatusLevelTypes = original.Warning
 )
 
+func PossibleStatusLevelTypesValues() []StatusLevelTypes {
+	return original.PossibleStatusLevelTypesValues()
+}
+
 type UpgradeMode = original.UpgradeMode
 
 const (
@@ -119,12 +159,20 @@ const (
 	Manual    UpgradeMode = original.Manual
 )
 
+func PossibleUpgradeModeValues() []UpgradeMode {
+	return original.PossibleUpgradeModeValues()
+}
+
 type VirtualMachineScaleSetSkuScaleType = original.VirtualMachineScaleSetSkuScaleType
 
 const (
 	VirtualMachineScaleSetSkuScaleTypeAutomatic VirtualMachineScaleSetSkuScaleType = original.VirtualMachineScaleSetSkuScaleTypeAutomatic
 	VirtualMachineScaleSetSkuScaleTypeNone      VirtualMachineScaleSetSkuScaleType = original.VirtualMachineScaleSetSkuScaleTypeNone
 )
+
+func PossibleVirtualMachineScaleSetSkuScaleTypeValues() []VirtualMachineScaleSetSkuScaleType {
+	return original.PossibleVirtualMachineScaleSetSkuScaleTypeValues()
+}
 
 type VirtualMachineSizeTypes = original.VirtualMachineSizeTypes
 
@@ -194,6 +242,10 @@ const (
 	StandardGS5    VirtualMachineSizeTypes = original.StandardGS5
 )
 
+func PossibleVirtualMachineSizeTypesValues() []VirtualMachineSizeTypes {
+	return original.PossibleVirtualMachineSizeTypesValues()
+}
+
 type AdditionalUnattendContent = original.AdditionalUnattendContent
 type APIEntityReference = original.APIEntityReference
 type APIError = original.APIError
@@ -236,6 +288,7 @@ type SSHConfiguration = original.SSHConfiguration
 type SSHPublicKey = original.SSHPublicKey
 type StorageProfile = original.StorageProfile
 type SubResource = original.SubResource
+type UpdateResource = original.UpdateResource
 type UpgradePolicy = original.UpgradePolicy
 type Usage = original.Usage
 type UsageName = original.UsageName
@@ -255,6 +308,10 @@ type VirtualMachineExtensionInstanceView = original.VirtualMachineExtensionInsta
 type VirtualMachineExtensionProperties = original.VirtualMachineExtensionProperties
 type VirtualMachineExtensionsCreateOrUpdateFuture = original.VirtualMachineExtensionsCreateOrUpdateFuture
 type VirtualMachineExtensionsDeleteFuture = original.VirtualMachineExtensionsDeleteFuture
+type VirtualMachineExtensionsListResult = original.VirtualMachineExtensionsListResult
+type VirtualMachineExtensionsUpdateFuture = original.VirtualMachineExtensionsUpdateFuture
+type VirtualMachineExtensionUpdate = original.VirtualMachineExtensionUpdate
+type VirtualMachineExtensionUpdateProperties = original.VirtualMachineExtensionUpdateProperties
 type VirtualMachineIdentity = original.VirtualMachineIdentity
 type VirtualMachineImage = original.VirtualMachineImage
 type VirtualMachineImageProperties = original.VirtualMachineImageProperties

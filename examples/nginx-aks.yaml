@@ -1,0 +1,21 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: nginx-aks
+spec:
+  containers:
+  - image: nginx
+    imagePullPolicy: Always
+    name: nginx
+    resources:
+      requests:
+        memory: 1G
+        cpu: 1
+    ports:
+    - containerPort: 80
+      name: http
+      protocol: TCP
+    - containerPort: 443
+      name: https
+  dnsPolicy: ClusterFirst
+  nodeName: virtual-kubelet

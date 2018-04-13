@@ -52,6 +52,11 @@ const (
 	Westus2 AzureRegions = "westus2"
 )
 
+// PossibleAzureRegionsValues returns an array of possible values for the AzureRegions const type.
+func PossibleAzureRegionsValues() []AzureRegions {
+	return []AzureRegions{Australiaeast, Brazilsouth, Eastasia, Eastus, Eastus2, Northeurope, Southcentralus, Southeastasia, Westcentralus, Westeurope, Westus, Westus2}
+}
+
 // APIError error information returned by the API
 type APIError struct {
 	// StatusCode - HTTP Status code

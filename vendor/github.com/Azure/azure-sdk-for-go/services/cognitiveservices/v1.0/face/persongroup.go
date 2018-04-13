@@ -83,7 +83,7 @@ func (client PersonGroupClient) CreatePreparer(ctx context.Context, personGroupI
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPut(),
 		autorest.WithCustomBaseURL("https://{AzureRegion}.api.cognitive.microsoft.com/face/v1.0", urlParameters),
 		autorest.WithPathParameters("/persongroups/{personGroupId}", pathParameters),
@@ -510,7 +510,7 @@ func (client PersonGroupClient) UpdatePreparer(ctx context.Context, personGroupI
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPatch(),
 		autorest.WithCustomBaseURL("https://{AzureRegion}.api.cognitive.microsoft.com/face/v1.0", urlParameters),
 		autorest.WithPathParameters("/persongroups/{personGroupId}", pathParameters),

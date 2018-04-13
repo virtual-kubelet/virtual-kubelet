@@ -24,7 +24,6 @@ import (
 	"math/big"
 	"net/http"
 	"net/url"
-	"os"
 	"reflect"
 	"strconv"
 	"strings"
@@ -148,7 +147,7 @@ func TestServicePrincipalTokenRefreshUsesPOST(t *testing.T) {
 	}
 }
 
-func TestServicePrincipalTokenFromMSIRefreshUsesPOST(t *testing.T) {
+func TestServicePrincipalTokenFromMSIRefreshUsesGET(t *testing.T) {
 	resource := "https://resource"
 	cb := func(token Token) error { return nil }
 
@@ -165,8 +164,8 @@ func TestServicePrincipalTokenFromMSIRefreshUsesPOST(t *testing.T) {
 		(func() SendDecorator {
 			return func(s Sender) Sender {
 				return SenderFunc(func(r *http.Request) (*http.Response, error) {
-					if r.Method != "POST" {
-						t.Fatalf("adal: ServicePrincipalToken#Refresh did not correctly set HTTP method -- expected %v, received %v", "POST", r.Method)
+					if r.Method != "GET" {
+						t.Fatalf("adal: ServicePrincipalToken#Refresh did not correctly set HTTP method -- expected %v, received %v", "GET", r.Method)
 					}
 					if h := r.Header.Get("Metadata"); h != "true" {
 						t.Fatalf("adal: ServicePrincipalToken#Refresh did not correctly set Metadata header for MSI")
@@ -612,26 +611,12 @@ func TestNewServicePrincipalTokenFromMSIWithUserAssignedID(t *testing.T) {
 }
 
 func TestGetVMEndpoint(t *testing.T) {
-	tempSettingsFile, err := ioutil.TempFile("", "ManagedIdentity-Settings")
-	if err != nil {
-		t.Fatal("Couldn't write temp settings file")
-	}
-	defer os.Remove(tempSettingsFile.Name())
-
-	settingsContents := []byte(`{
-		"url": "http://msiendpoint/"
-	}`)
-
-	if _, err := tempSettingsFile.Write(settingsContents); err != nil {
-		t.Fatal("Couldn't fill temp settings file")
-	}
-
-	endpoint, err := getMSIVMEndpoint(tempSettingsFile.Name())
+	endpoint, err := GetMSIVMEndpoint()
 	if err != nil {
 		t.Fatal("Coudn't get VM endpoint")
 	}
 
-	if endpoint != "http://msiendpoint/" {
+	if endpoint != msiEndpoint {
 		t.Fatal("Didn't get correct endpoint")
 	}
 }

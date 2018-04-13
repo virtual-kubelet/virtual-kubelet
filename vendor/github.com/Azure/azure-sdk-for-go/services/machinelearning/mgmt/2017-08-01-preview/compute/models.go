@@ -126,6 +126,11 @@ const (
 	StandardGS5 AgentVMSizeTypes = "Standard_GS5"
 )
 
+// PossibleAgentVMSizeTypesValues returns an array of possible values for the AgentVMSizeTypes const type.
+func PossibleAgentVMSizeTypesValues() []AgentVMSizeTypes {
+	return []AgentVMSizeTypes{StandardA0, StandardA1, StandardA10, StandardA11, StandardA2, StandardA3, StandardA4, StandardA5, StandardA6, StandardA7, StandardA8, StandardA9, StandardD1, StandardD11, StandardD11V2, StandardD12, StandardD12V2, StandardD13, StandardD13V2, StandardD14, StandardD14V2, StandardD1V2, StandardD2, StandardD2V2, StandardD3, StandardD3V2, StandardD4, StandardD4V2, StandardD5V2, StandardDS1, StandardDS11, StandardDS12, StandardDS13, StandardDS14, StandardDS2, StandardDS3, StandardDS4, StandardG1, StandardG2, StandardG3, StandardG4, StandardG5, StandardGS1, StandardGS2, StandardGS3, StandardGS4, StandardGS5}
+}
+
 // ClusterType enumerates the values for cluster type.
 type ClusterType string
 
@@ -135,6 +140,11 @@ const (
 	// Local ...
 	Local ClusterType = "Local"
 )
+
+// PossibleClusterTypeValues returns an array of possible values for the ClusterType const type.
+func PossibleClusterTypeValues() []ClusterType {
+	return []ClusterType{ACS, Local}
+}
 
 // OperationStatus enumerates the values for operation status.
 type OperationStatus string
@@ -156,6 +166,11 @@ const (
 	Updating OperationStatus = "Updating"
 )
 
+// PossibleOperationStatusValues returns an array of possible values for the OperationStatus const type.
+func PossibleOperationStatusValues() []OperationStatus {
+	return []OperationStatus{Canceled, Creating, Deleting, Failed, Succeeded, Unknown, Updating}
+}
+
 // OrchestratorType enumerates the values for orchestrator type.
 type OrchestratorType string
 
@@ -166,6 +181,11 @@ const (
 	None OrchestratorType = "None"
 )
 
+// PossibleOrchestratorTypeValues returns an array of possible values for the OrchestratorType const type.
+func PossibleOrchestratorTypeValues() []OrchestratorType {
+	return []OrchestratorType{Kubernetes, None}
+}
+
 // Status enumerates the values for status.
 type Status string
 
@@ -175,6 +195,11 @@ const (
 	// Enabled ...
 	Enabled Status = "Enabled"
 )
+
+// PossibleStatusValues returns an array of possible values for the Status const type.
+func PossibleStatusValues() []Status {
+	return []Status{Disabled, Enabled}
+}
 
 // SystemServiceType enumerates the values for system service type.
 type SystemServiceType string
@@ -188,6 +213,11 @@ const (
 	SystemServiceTypeScoringFrontEnd SystemServiceType = "ScoringFrontEnd"
 )
 
+// PossibleSystemServiceTypeValues returns an array of possible values for the SystemServiceType const type.
+func PossibleSystemServiceTypeValues() []SystemServiceType {
+	return []SystemServiceType{SystemServiceTypeBatchFrontEnd, SystemServiceTypeNone, SystemServiceTypeScoringFrontEnd}
+}
+
 // UpdatesAvailable enumerates the values for updates available.
 type UpdatesAvailable string
 
@@ -197,6 +227,11 @@ const (
 	// Yes ...
 	Yes UpdatesAvailable = "Yes"
 )
+
+// PossibleUpdatesAvailableValues returns an array of possible values for the UpdatesAvailable const type.
+func PossibleUpdatesAvailableValues() []UpdatesAvailable {
+	return []UpdatesAvailable{No, Yes}
+}
 
 // AcsClusterProperties information about the container service backing the cluster
 type AcsClusterProperties struct {

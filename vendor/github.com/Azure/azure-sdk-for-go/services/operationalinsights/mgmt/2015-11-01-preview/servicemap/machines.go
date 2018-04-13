@@ -479,11 +479,14 @@ func (client MachinesClient) ListConnectionsComplete(ctx context.Context, resour
 	return
 }
 
-// ListMachineGroupMembership returns a collection of machine groups this machine belongs to.
+// ListMachineGroupMembership returns a collection of machine groups this machine belongs to during the specified time
+// interval.
 //
 // resourceGroupName is resource group name within the specified subscriptionId. workspaceName is OMS workspace
-// containing the resources of interest. machineName is machine resource name.
-func (client MachinesClient) ListMachineGroupMembership(ctx context.Context, resourceGroupName string, workspaceName string, machineName string) (result MachineGroupCollectionPage, err error) {
+// containing the resources of interest. machineName is machine resource name. startTime is UTC date and time
+// specifying the start time of an interval. When not specified the service uses DateTime.UtcNow - 10m endTime is
+// UTC date and time specifying the end time of an interval. When not specified the service uses DateTime.UtcNow
+func (client MachinesClient) ListMachineGroupMembership(ctx context.Context, resourceGroupName string, workspaceName string, machineName string, startTime *date.Time, endTime *date.Time) (result MachineGroupCollectionPage, err error) {
 	if err := validation.Validate([]validation.Validation{
 		{TargetValue: resourceGroupName,
 			Constraints: []validation.Constraint{{Target: "resourceGroupName", Name: validation.MaxLength, Rule: 64, Chain: nil},
@@ -500,7 +503,7 @@ func (client MachinesClient) ListMachineGroupMembership(ctx context.Context, res
 	}
 
 	result.fn = client.listMachineGroupMembershipNextResults
-	req, err := client.ListMachineGroupMembershipPreparer(ctx, resourceGroupName, workspaceName, machineName)
+	req, err := client.ListMachineGroupMembershipPreparer(ctx, resourceGroupName, workspaceName, machineName, startTime, endTime)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "servicemap.MachinesClient", "ListMachineGroupMembership", nil, "Failure preparing request")
 		return
@@ -522,7 +525,7 @@ func (client MachinesClient) ListMachineGroupMembership(ctx context.Context, res
 }
 
 // ListMachineGroupMembershipPreparer prepares the ListMachineGroupMembership request.
-func (client MachinesClient) ListMachineGroupMembershipPreparer(ctx context.Context, resourceGroupName string, workspaceName string, machineName string) (*http.Request, error) {
+func (client MachinesClient) ListMachineGroupMembershipPreparer(ctx context.Context, resourceGroupName string, workspaceName string, machineName string, startTime *date.Time, endTime *date.Time) (*http.Request, error) {
 	pathParameters := map[string]interface{}{
 		"machineName":       autorest.Encode("path", machineName),
 		"resourceGroupName": autorest.Encode("path", resourceGroupName),
@@ -533,6 +536,12 @@ func (client MachinesClient) ListMachineGroupMembershipPreparer(ctx context.Cont
 	const APIVersion = "2015-11-01-preview"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
+	}
+	if startTime != nil {
+		queryParameters["startTime"] = autorest.Encode("query", *startTime)
+	}
+	if endTime != nil {
+		queryParameters["endTime"] = autorest.Encode("query", *endTime)
 	}
 
 	preparer := autorest.CreatePreparer(
@@ -585,8 +594,8 @@ func (client MachinesClient) listMachineGroupMembershipNextResults(lastResults M
 }
 
 // ListMachineGroupMembershipComplete enumerates all values, automatically crossing page boundaries as required.
-func (client MachinesClient) ListMachineGroupMembershipComplete(ctx context.Context, resourceGroupName string, workspaceName string, machineName string) (result MachineGroupCollectionIterator, err error) {
-	result.page, err = client.ListMachineGroupMembership(ctx, resourceGroupName, workspaceName, machineName)
+func (client MachinesClient) ListMachineGroupMembershipComplete(ctx context.Context, resourceGroupName string, workspaceName string, machineName string, startTime *date.Time, endTime *date.Time) (result MachineGroupCollectionIterator, err error) {
+	result.page, err = client.ListMachineGroupMembership(ctx, resourceGroupName, workspaceName, machineName, startTime, endTime)
 	return
 }
 

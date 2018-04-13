@@ -59,12 +59,20 @@ const (
 	QuotaID                     ResourceSkuRestrictionsReasonCode = original.QuotaID
 )
 
+func PossibleResourceSkuRestrictionsReasonCodeValues() []ResourceSkuRestrictionsReasonCode {
+	return original.PossibleResourceSkuRestrictionsReasonCodeValues()
+}
+
 type ResourceSkuRestrictionsType = original.ResourceSkuRestrictionsType
 
 const (
 	Location ResourceSkuRestrictionsType = original.Location
 	Zone     ResourceSkuRestrictionsType = original.Zone
 )
+
+func PossibleResourceSkuRestrictionsTypeValues() []ResourceSkuRestrictionsType {
+	return original.PossibleResourceSkuRestrictionsTypeValues()
+}
 
 type SkuCapacityScaleType = original.SkuCapacityScaleType
 
@@ -73,6 +81,10 @@ const (
 	Manual    SkuCapacityScaleType = original.Manual
 	None      SkuCapacityScaleType = original.None
 )
+
+func PossibleSkuCapacityScaleTypeValues() []SkuCapacityScaleType {
+	return original.PossibleSkuCapacityScaleTypeValues()
+}
 
 type CatalogSku = original.CatalogSku
 type CommitmentAssociation = original.CommitmentAssociation

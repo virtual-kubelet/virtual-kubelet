@@ -74,7 +74,7 @@ func (client ModelClient) AddClosedListPreparer(ctx context.Context, appID uuid.
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPost(),
 		autorest.WithCustomBaseURL("https://{AzureRegion}.api.cognitive.microsoft.com/luis/api/v2.0", urlParameters),
 		autorest.WithPathParameters("/apps/{appId}/versions/{versionId}/closedlists", pathParameters),
@@ -140,7 +140,7 @@ func (client ModelClient) AddCompositeEntityPreparer(ctx context.Context, appID 
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPost(),
 		autorest.WithCustomBaseURL("https://{AzureRegion}.api.cognitive.microsoft.com/luis/api/v2.0", urlParameters),
 		autorest.WithPathParameters("/apps/{appId}/versions/{versionId}/compositeentities", pathParameters),
@@ -207,7 +207,7 @@ func (client ModelClient) AddCompositeEntityChildPreparer(ctx context.Context, a
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPost(),
 		autorest.WithCustomBaseURL("https://{AzureRegion}.api.cognitive.microsoft.com/luis/api/v2.0", urlParameters),
 		autorest.WithPathParameters("/apps/{appId}/versions/{versionId}/compositeentities/{cEntityId}/children", pathParameters),
@@ -273,7 +273,7 @@ func (client ModelClient) AddCustomPrebuiltDomainPreparer(ctx context.Context, a
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPost(),
 		autorest.WithCustomBaseURL("https://{AzureRegion}.api.cognitive.microsoft.com/luis/api/v2.0", urlParameters),
 		autorest.WithPathParameters("/apps/{appId}/versions/{versionId}/customprebuiltdomains", pathParameters),
@@ -339,7 +339,7 @@ func (client ModelClient) AddCustomPrebuiltEntityPreparer(ctx context.Context, a
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPost(),
 		autorest.WithCustomBaseURL("https://{AzureRegion}.api.cognitive.microsoft.com/luis/api/v2.0", urlParameters),
 		autorest.WithPathParameters("/apps/{appId}/versions/{versionId}/customprebuiltentities", pathParameters),
@@ -405,7 +405,7 @@ func (client ModelClient) AddCustomPrebuiltIntentPreparer(ctx context.Context, a
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPost(),
 		autorest.WithCustomBaseURL("https://{AzureRegion}.api.cognitive.microsoft.com/luis/api/v2.0", urlParameters),
 		autorest.WithPathParameters("/apps/{appId}/versions/{versionId}/customprebuiltintents", pathParameters),
@@ -471,7 +471,7 @@ func (client ModelClient) AddEntityPreparer(ctx context.Context, appID uuid.UUID
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPost(),
 		autorest.WithCustomBaseURL("https://{AzureRegion}.api.cognitive.microsoft.com/luis/api/v2.0", urlParameters),
 		autorest.WithPathParameters("/apps/{appId}/versions/{versionId}/entities", pathParameters),
@@ -537,7 +537,7 @@ func (client ModelClient) AddHierarchicalEntityPreparer(ctx context.Context, app
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPost(),
 		autorest.WithCustomBaseURL("https://{AzureRegion}.api.cognitive.microsoft.com/luis/api/v2.0", urlParameters),
 		autorest.WithPathParameters("/apps/{appId}/versions/{versionId}/hierarchicalentities", pathParameters),
@@ -604,7 +604,7 @@ func (client ModelClient) AddHierarchicalEntityChildPreparer(ctx context.Context
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPost(),
 		autorest.WithCustomBaseURL("https://{AzureRegion}.api.cognitive.microsoft.com/luis/api/v2.0", urlParameters),
 		autorest.WithPathParameters("/apps/{appId}/versions/{versionId}/hierarchicalentities/{hEntityId}/children", pathParameters),
@@ -670,7 +670,7 @@ func (client ModelClient) AddIntentPreparer(ctx context.Context, appID uuid.UUID
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPost(),
 		autorest.WithCustomBaseURL("https://{AzureRegion}.api.cognitive.microsoft.com/luis/api/v2.0", urlParameters),
 		autorest.WithPathParameters("/apps/{appId}/versions/{versionId}/intents", pathParameters),
@@ -742,7 +742,7 @@ func (client ModelClient) AddPrebuiltPreparer(ctx context.Context, appID uuid.UU
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPost(),
 		autorest.WithCustomBaseURL("https://{AzureRegion}.api.cognitive.microsoft.com/luis/api/v2.0", urlParameters),
 		autorest.WithPathParameters("/apps/{appId}/versions/{versionId}/prebuilts", pathParameters),
@@ -809,7 +809,7 @@ func (client ModelClient) AddSubListPreparer(ctx context.Context, appID uuid.UUI
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPost(),
 		autorest.WithCustomBaseURL("https://{AzureRegion}.api.cognitive.microsoft.com/luis/api/v2.0", urlParameters),
 		autorest.WithPathParameters("/apps/{appId}/versions/{versionId}/closedlists/{clEntityId}/sublists", pathParameters),
@@ -3021,7 +3021,7 @@ func (client ModelClient) PatchClosedListPreparer(ctx context.Context, appID uui
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPatch(),
 		autorest.WithCustomBaseURL("https://{AzureRegion}.api.cognitive.microsoft.com/luis/api/v2.0", urlParameters),
 		autorest.WithPathParameters("/apps/{appId}/versions/{versionId}/closedlists/{clEntityId}", pathParameters),
@@ -3088,7 +3088,7 @@ func (client ModelClient) UpdateClosedListPreparer(ctx context.Context, appID uu
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPut(),
 		autorest.WithCustomBaseURL("https://{AzureRegion}.api.cognitive.microsoft.com/luis/api/v2.0", urlParameters),
 		autorest.WithPathParameters("/apps/{appId}/versions/{versionId}/closedlists/{clEntityId}", pathParameters),
@@ -3155,7 +3155,7 @@ func (client ModelClient) UpdateCompositeEntityPreparer(ctx context.Context, app
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPut(),
 		autorest.WithCustomBaseURL("https://{AzureRegion}.api.cognitive.microsoft.com/luis/api/v2.0", urlParameters),
 		autorest.WithPathParameters("/apps/{appId}/versions/{versionId}/compositeentities/{cEntityId}", pathParameters),
@@ -3222,7 +3222,7 @@ func (client ModelClient) UpdateEntityPreparer(ctx context.Context, appID uuid.U
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPut(),
 		autorest.WithCustomBaseURL("https://{AzureRegion}.api.cognitive.microsoft.com/luis/api/v2.0", urlParameters),
 		autorest.WithPathParameters("/apps/{appId}/versions/{versionId}/entities/{entityId}", pathParameters),
@@ -3289,7 +3289,7 @@ func (client ModelClient) UpdateHierarchicalEntityPreparer(ctx context.Context, 
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPut(),
 		autorest.WithCustomBaseURL("https://{AzureRegion}.api.cognitive.microsoft.com/luis/api/v2.0", urlParameters),
 		autorest.WithPathParameters("/apps/{appId}/versions/{versionId}/hierarchicalentities/{hEntityId}", pathParameters),
@@ -3358,7 +3358,7 @@ func (client ModelClient) UpdateHierarchicalEntityChildPreparer(ctx context.Cont
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPut(),
 		autorest.WithCustomBaseURL("https://{AzureRegion}.api.cognitive.microsoft.com/luis/api/v2.0", urlParameters),
 		autorest.WithPathParameters("/apps/{appId}/versions/{versionId}/hierarchicalentities/{hEntityId}/children/{hChildId}", pathParameters),
@@ -3425,7 +3425,7 @@ func (client ModelClient) UpdateIntentPreparer(ctx context.Context, appID uuid.U
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPut(),
 		autorest.WithCustomBaseURL("https://{AzureRegion}.api.cognitive.microsoft.com/luis/api/v2.0", urlParameters),
 		autorest.WithPathParameters("/apps/{appId}/versions/{versionId}/intents/{intentId}", pathParameters),
@@ -3494,7 +3494,7 @@ func (client ModelClient) UpdateSubListPreparer(ctx context.Context, appID uuid.
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPut(),
 		autorest.WithCustomBaseURL("https://{AzureRegion}.api.cognitive.microsoft.com/luis/api/v2.0", urlParameters),
 		autorest.WithPathParameters("/apps/{appId}/versions/{versionId}/closedlists/{clEntityId}/sublists/{subListId}", pathParameters),

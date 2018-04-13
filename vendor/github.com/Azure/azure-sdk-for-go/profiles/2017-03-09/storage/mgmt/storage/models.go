@@ -50,12 +50,20 @@ const (
 	Hot  AccessTier = original.Hot
 )
 
+func PossibleAccessTierValues() []AccessTier {
+	return original.PossibleAccessTierValues()
+}
+
 type AccountStatus = original.AccountStatus
 
 const (
 	Available   AccountStatus = original.Available
 	Unavailable AccountStatus = original.Unavailable
 )
+
+func PossibleAccountStatusValues() []AccountStatus {
+	return original.PossibleAccountStatusValues()
+}
 
 type KeyPermission = original.KeyPermission
 
@@ -64,12 +72,20 @@ const (
 	READ KeyPermission = original.READ
 )
 
+func PossibleKeyPermissionValues() []KeyPermission {
+	return original.PossibleKeyPermissionValues()
+}
+
 type Kind = original.Kind
 
 const (
 	BlobStorage Kind = original.BlobStorage
 	Storage     Kind = original.Storage
 )
+
+func PossibleKindValues() []Kind {
+	return original.PossibleKindValues()
+}
 
 type ProvisioningState = original.ProvisioningState
 
@@ -79,12 +95,20 @@ const (
 	Succeeded    ProvisioningState = original.Succeeded
 )
 
+func PossibleProvisioningStateValues() []ProvisioningState {
+	return original.PossibleProvisioningStateValues()
+}
+
 type Reason = original.Reason
 
 const (
 	AccountNameInvalid Reason = original.AccountNameInvalid
 	AlreadyExists      Reason = original.AlreadyExists
 )
+
+func PossibleReasonValues() []Reason {
+	return original.PossibleReasonValues()
+}
 
 type SkuName = original.SkuName
 
@@ -96,12 +120,20 @@ const (
 	StandardZRS   SkuName = original.StandardZRS
 )
 
+func PossibleSkuNameValues() []SkuName {
+	return original.PossibleSkuNameValues()
+}
+
 type SkuTier = original.SkuTier
 
 const (
 	Premium  SkuTier = original.Premium
 	Standard SkuTier = original.Standard
 )
+
+func PossibleSkuTierValues() []SkuTier {
+	return original.PossibleSkuTierValues()
+}
 
 type UsageUnit = original.UsageUnit
 
@@ -113,6 +145,10 @@ const (
 	Percent         UsageUnit = original.Percent
 	Seconds         UsageUnit = original.Seconds
 )
+
+func PossibleUsageUnitValues() []UsageUnit {
+	return original.PossibleUsageUnitValues()
+}
 
 type Account = original.Account
 type AccountCheckNameAvailabilityParameters = original.AccountCheckNameAvailabilityParameters

@@ -39,6 +39,11 @@ const (
 	X12 AgreementType = "X12"
 )
 
+// PossibleAgreementTypeValues returns an array of possible values for the AgreementType const type.
+func PossibleAgreementTypeValues() []AgreementType {
+	return []AgreementType{AS2, Edifact, NotSpecified, X12}
+}
+
 // EdifactCharacterSet enumerates the values for edifact character set.
 type EdifactCharacterSet string
 
@@ -75,6 +80,11 @@ const (
 	EdifactCharacterSetUNOY EdifactCharacterSet = "UNOY"
 )
 
+// PossibleEdifactCharacterSetValues returns an array of possible values for the EdifactCharacterSet const type.
+func PossibleEdifactCharacterSetValues() []EdifactCharacterSet {
+	return []EdifactCharacterSet{EdifactCharacterSetKECA, EdifactCharacterSetNotSpecified, EdifactCharacterSetUNOA, EdifactCharacterSetUNOB, EdifactCharacterSetUNOC, EdifactCharacterSetUNOD, EdifactCharacterSetUNOE, EdifactCharacterSetUNOF, EdifactCharacterSetUNOG, EdifactCharacterSetUNOH, EdifactCharacterSetUNOI, EdifactCharacterSetUNOJ, EdifactCharacterSetUNOK, EdifactCharacterSetUNOX, EdifactCharacterSetUNOY}
+}
+
 // EdifactDecimalIndicator enumerates the values for edifact decimal indicator.
 type EdifactDecimalIndicator string
 
@@ -86,6 +96,11 @@ const (
 	// EdifactDecimalIndicatorNotSpecified ...
 	EdifactDecimalIndicatorNotSpecified EdifactDecimalIndicator = "NotSpecified"
 )
+
+// PossibleEdifactDecimalIndicatorValues returns an array of possible values for the EdifactDecimalIndicator const type.
+func PossibleEdifactDecimalIndicatorValues() []EdifactDecimalIndicator {
+	return []EdifactDecimalIndicator{EdifactDecimalIndicatorComma, EdifactDecimalIndicatorDecimal, EdifactDecimalIndicatorNotSpecified}
+}
 
 // EncryptionAlgorithm enumerates the values for encryption algorithm.
 type EncryptionAlgorithm string
@@ -107,6 +122,11 @@ const (
 	EncryptionAlgorithmRC2 EncryptionAlgorithm = "RC2"
 )
 
+// PossibleEncryptionAlgorithmValues returns an array of possible values for the EncryptionAlgorithm const type.
+func PossibleEncryptionAlgorithmValues() []EncryptionAlgorithm {
+	return []EncryptionAlgorithm{EncryptionAlgorithmAES128, EncryptionAlgorithmAES192, EncryptionAlgorithmAES256, EncryptionAlgorithmDES3, EncryptionAlgorithmNone, EncryptionAlgorithmNotSpecified, EncryptionAlgorithmRC2}
+}
+
 // HashingAlgorithm enumerates the values for hashing algorithm.
 type HashingAlgorithm string
 
@@ -123,6 +143,11 @@ const (
 	HashingAlgorithmSHA2512 HashingAlgorithm = "SHA2512"
 )
 
+// PossibleHashingAlgorithmValues returns an array of possible values for the HashingAlgorithm const type.
+func PossibleHashingAlgorithmValues() []HashingAlgorithm {
+	return []HashingAlgorithm{HashingAlgorithmNone, HashingAlgorithmNotSpecified, HashingAlgorithmSHA2256, HashingAlgorithmSHA2384, HashingAlgorithmSHA2512}
+}
+
 // MapType enumerates the values for map type.
 type MapType string
 
@@ -132,6 +157,11 @@ const (
 	// MapTypeXslt ...
 	MapTypeXslt MapType = "Xslt"
 )
+
+// PossibleMapTypeValues returns an array of possible values for the MapType const type.
+func PossibleMapTypeValues() []MapType {
+	return []MapType{MapTypeNotSpecified, MapTypeXslt}
+}
 
 // MessageFilterType enumerates the values for message filter type.
 type MessageFilterType string
@@ -145,6 +175,11 @@ const (
 	MessageFilterTypeNotSpecified MessageFilterType = "NotSpecified"
 )
 
+// PossibleMessageFilterTypeValues returns an array of possible values for the MessageFilterType const type.
+func PossibleMessageFilterTypeValues() []MessageFilterType {
+	return []MessageFilterType{MessageFilterTypeExclude, MessageFilterTypeInclude, MessageFilterTypeNotSpecified}
+}
+
 // PartnerType enumerates the values for partner type.
 type PartnerType string
 
@@ -155,6 +190,11 @@ const (
 	PartnerTypeNotSpecified PartnerType = "NotSpecified"
 )
 
+// PossiblePartnerTypeValues returns an array of possible values for the PartnerType const type.
+func PossiblePartnerTypeValues() []PartnerType {
+	return []PartnerType{PartnerTypeB2B, PartnerTypeNotSpecified}
+}
+
 // SchemaType enumerates the values for schema type.
 type SchemaType string
 
@@ -164,6 +204,11 @@ const (
 	// SchemaTypeXML ...
 	SchemaTypeXML SchemaType = "Xml"
 )
+
+// PossibleSchemaTypeValues returns an array of possible values for the SchemaType const type.
+func PossibleSchemaTypeValues() []SchemaType {
+	return []SchemaType{SchemaTypeNotSpecified, SchemaTypeXML}
+}
 
 // SegmentTerminatorSuffix enumerates the values for segment terminator suffix.
 type SegmentTerminatorSuffix string
@@ -180,6 +225,11 @@ const (
 	// SegmentTerminatorSuffixNotSpecified ...
 	SegmentTerminatorSuffixNotSpecified SegmentTerminatorSuffix = "NotSpecified"
 )
+
+// PossibleSegmentTerminatorSuffixValues returns an array of possible values for the SegmentTerminatorSuffix const type.
+func PossibleSegmentTerminatorSuffixValues() []SegmentTerminatorSuffix {
+	return []SegmentTerminatorSuffix{SegmentTerminatorSuffixCR, SegmentTerminatorSuffixCRLF, SegmentTerminatorSuffixLF, SegmentTerminatorSuffixNone, SegmentTerminatorSuffixNotSpecified}
+}
 
 // SkuName enumerates the values for sku name.
 type SkuName string
@@ -199,6 +249,11 @@ const (
 	SkuNameStandard SkuName = "Standard"
 )
 
+// PossibleSkuNameValues returns an array of possible values for the SkuName const type.
+func PossibleSkuNameValues() []SkuName {
+	return []SkuName{SkuNameBasic, SkuNameFree, SkuNameNotSpecified, SkuNamePremium, SkuNameShared, SkuNameStandard}
+}
+
 // TrailingSeparatorPolicy enumerates the values for trailing separator policy.
 type TrailingSeparatorPolicy string
 
@@ -212,6 +267,11 @@ const (
 	// TrailingSeparatorPolicyOptional ...
 	TrailingSeparatorPolicyOptional TrailingSeparatorPolicy = "Optional"
 )
+
+// PossibleTrailingSeparatorPolicyValues returns an array of possible values for the TrailingSeparatorPolicy const type.
+func PossibleTrailingSeparatorPolicyValues() []TrailingSeparatorPolicy {
+	return []TrailingSeparatorPolicy{TrailingSeparatorPolicyMandatory, TrailingSeparatorPolicyNotAllowed, TrailingSeparatorPolicyNotSpecified, TrailingSeparatorPolicyOptional}
+}
 
 // UsageIndicator enumerates the values for usage indicator.
 type UsageIndicator string
@@ -227,6 +287,11 @@ const (
 	UsageIndicatorTest UsageIndicator = "Test"
 )
 
+// PossibleUsageIndicatorValues returns an array of possible values for the UsageIndicator const type.
+func PossibleUsageIndicatorValues() []UsageIndicator {
+	return []UsageIndicator{UsageIndicatorInformation, UsageIndicatorNotSpecified, UsageIndicatorProduction, UsageIndicatorTest}
+}
+
 // X12CharacterSet enumerates the values for x12 character set.
 type X12CharacterSet string
 
@@ -241,6 +306,11 @@ const (
 	X12CharacterSetUTF8 X12CharacterSet = "UTF8"
 )
 
+// PossibleX12CharacterSetValues returns an array of possible values for the X12CharacterSet const type.
+func PossibleX12CharacterSetValues() []X12CharacterSet {
+	return []X12CharacterSet{X12CharacterSetBasic, X12CharacterSetExtended, X12CharacterSetNotSpecified, X12CharacterSetUTF8}
+}
+
 // X12DateFormat enumerates the values for x12 date format.
 type X12DateFormat string
 
@@ -252,6 +322,11 @@ const (
 	// X12DateFormatYYMMDD ...
 	X12DateFormatYYMMDD X12DateFormat = "YYMMDD"
 )
+
+// PossibleX12DateFormatValues returns an array of possible values for the X12DateFormat const type.
+func PossibleX12DateFormatValues() []X12DateFormat {
+	return []X12DateFormat{X12DateFormatCCYYMMDD, X12DateFormatNotSpecified, X12DateFormatYYMMDD}
+}
 
 // X12TimeFormat enumerates the values for x12 time format.
 type X12TimeFormat string
@@ -268,6 +343,11 @@ const (
 	// X12TimeFormatNotSpecified ...
 	X12TimeFormatNotSpecified X12TimeFormat = "NotSpecified"
 )
+
+// PossibleX12TimeFormatValues returns an array of possible values for the X12TimeFormat const type.
+func PossibleX12TimeFormatValues() []X12TimeFormat {
+	return []X12TimeFormat{X12TimeFormatHHMM, X12TimeFormatHHMMSS, X12TimeFormatHHMMSSd, X12TimeFormatHHMMSSdd, X12TimeFormatNotSpecified}
+}
 
 // AgreementContent ...
 type AgreementContent struct {

@@ -1,5 +1,50 @@
 # CHANGELOG
 
+## v10.6.0
+
+- Changed MSI token implementation. Now, the token endpoint is the IMDS endpoint.
+
+## v10.5.1
+
+### Bug Fixes
+
+- `DeviceFlowConfig.Authorizer()` now prints the device code message when running `go test`. `-v` flag is required.
+
+## v10.5.0
+
+### New Features
+
+- Added NewPollingRequestWithContext() for use with polling asynchronous operations.
+
+### Bug Fixes
+
+- Make retry logic use the request's context instead of the deprecated Cancel object.
+
+## v10.4.0
+
+### New Features
+- Added helper for parsing Azure Resource ID's.
+- Added deprecation message to utils.GetEnvVarOrExit()
+
+## v10.3.0
+
+### New Features
+- Added EnvironmentFromURL method to load an Environment from a given URL. This function is particularly useful in the private and hybrid Cloud model, where one may define their own endpoints
+- Added TokenAudience endpoint to Environment structure. This is useful in private and hybrid cloud models where TokenAudience endpoint can be different from ResourceManagerEndpoint
+
+## v10.2.0
+
+### New Features
+
+- Added endpoints for batch management.
+
+## v10.1.3
+
+### Bug Fixes
+
+- In Client.Do() invoke WithInspection() last so that it will inspect WithAuthorization().
+- Fixed authorization methods to invoke p.Prepare() first, aligning them with the other preparers.
+
 ## v10.1.2
 
 - Corrected comment for auth.NewAuthorizerFromFile() function.

@@ -53,6 +53,10 @@ const (
 	Updating  ProvisioningState = original.Updating
 )
 
+func PossibleProvisioningStateValues() []ProvisioningState {
+	return original.PossibleProvisioningStateValues()
+}
+
 type Account = original.Account
 type AccountListResult = original.AccountListResult
 type AccountListResultIterator = original.AccountListResultIterator

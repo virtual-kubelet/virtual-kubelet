@@ -47,6 +47,10 @@ const (
 	Westus2        AzureRegions = original.Westus2
 )
 
+func PossibleAzureRegionsValues() []AzureRegions {
+	return original.PossibleAzureRegionsValues()
+}
+
 type BatchInput = original.BatchInput
 type DetectedLanguage = original.DetectedLanguage
 type ErrorRecord = original.ErrorRecord

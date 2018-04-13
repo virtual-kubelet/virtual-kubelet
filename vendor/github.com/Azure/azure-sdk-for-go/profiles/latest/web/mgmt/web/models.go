@@ -131,6 +131,10 @@ const (
 	Permit AccessControlEntryAction = original.Permit
 )
 
+func PossibleAccessControlEntryActionValues() []AccessControlEntryAction {
+	return original.PossibleAccessControlEntryActionValues()
+}
+
 type AppServicePlanRestrictions = original.AppServicePlanRestrictions
 
 const (
@@ -142,6 +146,10 @@ const (
 	Standard AppServicePlanRestrictions = original.Standard
 )
 
+func PossibleAppServicePlanRestrictionsValues() []AppServicePlanRestrictions {
+	return original.PossibleAppServicePlanRestrictionsValues()
+}
+
 type AutoHealActionType = original.AutoHealActionType
 
 const (
@@ -150,12 +158,20 @@ const (
 	Recycle      AutoHealActionType = original.Recycle
 )
 
+func PossibleAutoHealActionTypeValues() []AutoHealActionType {
+	return original.PossibleAutoHealActionTypeValues()
+}
+
 type AzureResourceType = original.AzureResourceType
 
 const (
 	TrafficManager AzureResourceType = original.TrafficManager
 	Website        AzureResourceType = original.Website
 )
+
+func PossibleAzureResourceTypeValues() []AzureResourceType {
+	return original.PossibleAzureResourceTypeValues()
+}
 
 type BackupItemStatus = original.BackupItemStatus
 
@@ -172,6 +188,10 @@ const (
 	TimedOut           BackupItemStatus = original.TimedOut
 )
 
+func PossibleBackupItemStatusValues() []BackupItemStatus {
+	return original.PossibleBackupItemStatusValues()
+}
+
 type BackupRestoreOperationType = original.BackupRestoreOperationType
 
 const (
@@ -180,6 +200,10 @@ const (
 	BackupRestoreOperationTypeRelocation BackupRestoreOperationType = original.BackupRestoreOperationTypeRelocation
 	BackupRestoreOperationTypeSnapshot   BackupRestoreOperationType = original.BackupRestoreOperationTypeSnapshot
 )
+
+func PossibleBackupRestoreOperationTypeValues() []BackupRestoreOperationType {
+	return original.PossibleBackupRestoreOperationTypeValues()
+}
 
 type BuiltInAuthenticationProvider = original.BuiltInAuthenticationProvider
 
@@ -190,6 +214,10 @@ const (
 	MicrosoftAccount     BuiltInAuthenticationProvider = original.MicrosoftAccount
 	Twitter              BuiltInAuthenticationProvider = original.Twitter
 )
+
+func PossibleBuiltInAuthenticationProviderValues() []BuiltInAuthenticationProvider {
+	return original.PossibleBuiltInAuthenticationProviderValues()
+}
 
 type CertificateOrderActionType = original.CertificateOrderActionType
 
@@ -210,6 +238,10 @@ const (
 	Unknown                      CertificateOrderActionType = original.Unknown
 )
 
+func PossibleCertificateOrderActionTypeValues() []CertificateOrderActionType {
+	return original.PossibleCertificateOrderActionTypeValues()
+}
+
 type CertificateOrderStatus = original.CertificateOrderStatus
 
 const (
@@ -225,12 +257,20 @@ const (
 	Unused            CertificateOrderStatus = original.Unused
 )
 
+func PossibleCertificateOrderStatusValues() []CertificateOrderStatus {
+	return original.PossibleCertificateOrderStatusValues()
+}
+
 type CertificateProductType = original.CertificateProductType
 
 const (
 	StandardDomainValidatedSsl         CertificateProductType = original.StandardDomainValidatedSsl
 	StandardDomainValidatedWildCardSsl CertificateProductType = original.StandardDomainValidatedWildCardSsl
 )
+
+func PossibleCertificateProductTypeValues() []CertificateProductType {
+	return original.PossibleCertificateProductTypeValues()
+}
 
 type Channels = original.Channels
 
@@ -241,6 +281,10 @@ const (
 	Notification Channels = original.Notification
 	Webhook      Channels = original.Webhook
 )
+
+func PossibleChannelsValues() []Channels {
+	return original.PossibleChannelsValues()
+}
 
 type CheckNameResourceTypes = original.CheckNameResourceTypes
 
@@ -255,6 +299,10 @@ const (
 	CheckNameResourceTypesSlot                            CheckNameResourceTypes = original.CheckNameResourceTypesSlot
 )
 
+func PossibleCheckNameResourceTypesValues() []CheckNameResourceTypes {
+	return original.PossibleCheckNameResourceTypesValues()
+}
+
 type CloneAbilityResult = original.CloneAbilityResult
 
 const (
@@ -263,6 +311,10 @@ const (
 	PartiallyCloneable CloneAbilityResult = original.PartiallyCloneable
 )
 
+func PossibleCloneAbilityResultValues() []CloneAbilityResult {
+	return original.PossibleCloneAbilityResultValues()
+}
+
 type ComputeModeOptions = original.ComputeModeOptions
 
 const (
@@ -270,6 +322,10 @@ const (
 	ComputeModeOptionsDynamic   ComputeModeOptions = original.ComputeModeOptionsDynamic
 	ComputeModeOptionsShared    ComputeModeOptions = original.ComputeModeOptionsShared
 )
+
+func PossibleComputeModeOptionsValues() []ComputeModeOptions {
+	return original.PossibleComputeModeOptionsValues()
+}
 
 type ConnectionStringType = original.ConnectionStringType
 
@@ -287,6 +343,10 @@ const (
 	SQLServer       ConnectionStringType = original.SQLServer
 )
 
+func PossibleConnectionStringTypeValues() []ConnectionStringType {
+	return original.PossibleConnectionStringTypeValues()
+}
+
 type ContinuousWebJobStatus = original.ContinuousWebJobStatus
 
 const (
@@ -297,12 +357,20 @@ const (
 	Stopped        ContinuousWebJobStatus = original.Stopped
 )
 
+func PossibleContinuousWebJobStatusValues() []ContinuousWebJobStatus {
+	return original.PossibleContinuousWebJobStatusValues()
+}
+
 type CustomHostNameDNSRecordType = original.CustomHostNameDNSRecordType
 
 const (
 	A     CustomHostNameDNSRecordType = original.A
 	CName CustomHostNameDNSRecordType = original.CName
 )
+
+func PossibleCustomHostNameDNSRecordTypeValues() []CustomHostNameDNSRecordType {
+	return original.PossibleCustomHostNameDNSRecordTypeValues()
+}
 
 type DatabaseType = original.DatabaseType
 
@@ -313,12 +381,20 @@ const (
 	DatabaseTypeSQLAzure   DatabaseType = original.DatabaseTypeSQLAzure
 )
 
+func PossibleDatabaseTypeValues() []DatabaseType {
+	return original.PossibleDatabaseTypeValues()
+}
+
 type DNSType = original.DNSType
 
 const (
 	AzureDNS                  DNSType = original.AzureDNS
 	DefaultDomainRegistrarDNS DNSType = original.DefaultDomainRegistrarDNS
 )
+
+func PossibleDNSTypeValues() []DNSType {
+	return original.PossibleDNSTypeValues()
+}
 
 type DNSVerificationTestResult = original.DNSVerificationTestResult
 
@@ -327,6 +403,10 @@ const (
 	DNSVerificationTestResultPassed  DNSVerificationTestResult = original.DNSVerificationTestResultPassed
 	DNSVerificationTestResultSkipped DNSVerificationTestResult = original.DNSVerificationTestResultSkipped
 )
+
+func PossibleDNSVerificationTestResultValues() []DNSVerificationTestResult {
+	return original.PossibleDNSVerificationTestResultValues()
+}
 
 type DomainStatus = original.DomainStatus
 
@@ -354,6 +434,10 @@ const (
 	DomainStatusUpdated             DomainStatus = original.DomainStatusUpdated
 )
 
+func PossibleDomainStatusValues() []DomainStatus {
+	return original.PossibleDomainStatusValues()
+}
+
 type DomainType = original.DomainType
 
 const (
@@ -361,12 +445,20 @@ const (
 	SoftDeleted DomainType = original.SoftDeleted
 )
 
+func PossibleDomainTypeValues() []DomainType {
+	return original.PossibleDomainTypeValues()
+}
+
 type FrequencyUnit = original.FrequencyUnit
 
 const (
 	Day  FrequencyUnit = original.Day
 	Hour FrequencyUnit = original.Hour
 )
+
+func PossibleFrequencyUnitValues() []FrequencyUnit {
+	return original.PossibleFrequencyUnitValues()
+}
 
 type HostingEnvironmentStatus = original.HostingEnvironmentStatus
 
@@ -377,12 +469,20 @@ const (
 	Scaling   HostingEnvironmentStatus = original.Scaling
 )
 
+func PossibleHostingEnvironmentStatusValues() []HostingEnvironmentStatus {
+	return original.PossibleHostingEnvironmentStatusValues()
+}
+
 type HostNameType = original.HostNameType
 
 const (
 	Managed  HostNameType = original.Managed
 	Verified HostNameType = original.Verified
 )
+
+func PossibleHostNameTypeValues() []HostNameType {
+	return original.PossibleHostNameTypeValues()
+}
 
 type HostType = original.HostType
 
@@ -391,12 +491,20 @@ const (
 	HostTypeStandard   HostType = original.HostTypeStandard
 )
 
+func PossibleHostTypeValues() []HostType {
+	return original.PossibleHostTypeValues()
+}
+
 type InAvailabilityReasonType = original.InAvailabilityReasonType
 
 const (
 	AlreadyExists InAvailabilityReasonType = original.AlreadyExists
 	Invalid       InAvailabilityReasonType = original.Invalid
 )
+
+func PossibleInAvailabilityReasonTypeValues() []InAvailabilityReasonType {
+	return original.PossibleInAvailabilityReasonTypeValues()
+}
 
 type InternalLoadBalancingMode = original.InternalLoadBalancingMode
 
@@ -405,6 +513,10 @@ const (
 	InternalLoadBalancingModePublishing InternalLoadBalancingMode = original.InternalLoadBalancingModePublishing
 	InternalLoadBalancingModeWeb        InternalLoadBalancingMode = original.InternalLoadBalancingModeWeb
 )
+
+func PossibleInternalLoadBalancingModeValues() []InternalLoadBalancingMode {
+	return original.PossibleInternalLoadBalancingModeValues()
+}
 
 type IssueType = original.IssueType
 
@@ -419,12 +531,20 @@ const (
 	UserIssue            IssueType = original.UserIssue
 )
 
+func PossibleIssueTypeValues() []IssueType {
+	return original.PossibleIssueTypeValues()
+}
+
 type JobType = original.JobType
 
 const (
 	Continuous JobType = original.Continuous
 	Triggered  JobType = original.Triggered
 )
+
+func PossibleJobTypeValues() []JobType {
+	return original.PossibleJobTypeValues()
+}
 
 type KeyVaultSecretStatus = original.KeyVaultSecretStatus
 
@@ -442,6 +562,10 @@ const (
 	KeyVaultSecretStatusWaitingOnCertificateOrder                KeyVaultSecretStatus = original.KeyVaultSecretStatusWaitingOnCertificateOrder
 )
 
+func PossibleKeyVaultSecretStatusValues() []KeyVaultSecretStatus {
+	return original.PossibleKeyVaultSecretStatusValues()
+}
+
 type LogLevel = original.LogLevel
 
 const (
@@ -452,12 +576,30 @@ const (
 	Warning     LogLevel = original.Warning
 )
 
+func PossibleLogLevelValues() []LogLevel {
+	return original.PossibleLogLevelValues()
+}
+
 type ManagedPipelineMode = original.ManagedPipelineMode
 
 const (
 	Classic    ManagedPipelineMode = original.Classic
 	Integrated ManagedPipelineMode = original.Integrated
 )
+
+func PossibleManagedPipelineModeValues() []ManagedPipelineMode {
+	return original.PossibleManagedPipelineModeValues()
+}
+
+type ManagedServiceIdentityType = original.ManagedServiceIdentityType
+
+const (
+	SystemAssigned ManagedServiceIdentityType = original.SystemAssigned
+)
+
+func PossibleManagedServiceIdentityTypeValues() []ManagedServiceIdentityType {
+	return original.PossibleManagedServiceIdentityTypeValues()
+}
 
 type MSDeployLogEntryType = original.MSDeployLogEntryType
 
@@ -466,6 +608,10 @@ const (
 	MSDeployLogEntryTypeMessage MSDeployLogEntryType = original.MSDeployLogEntryTypeMessage
 	MSDeployLogEntryTypeWarning MSDeployLogEntryType = original.MSDeployLogEntryTypeWarning
 )
+
+func PossibleMSDeployLogEntryTypeValues() []MSDeployLogEntryType {
+	return original.PossibleMSDeployLogEntryTypeValues()
+}
 
 type MSDeployProvisioningState = original.MSDeployProvisioningState
 
@@ -477,12 +623,20 @@ const (
 	MSDeployProvisioningStateSucceeded MSDeployProvisioningState = original.MSDeployProvisioningStateSucceeded
 )
 
+func PossibleMSDeployProvisioningStateValues() []MSDeployProvisioningState {
+	return original.PossibleMSDeployProvisioningStateValues()
+}
+
 type MySQLMigrationType = original.MySQLMigrationType
 
 const (
 	LocalToRemote MySQLMigrationType = original.LocalToRemote
 	RemoteToLocal MySQLMigrationType = original.RemoteToLocal
 )
+
+func PossibleMySQLMigrationTypeValues() []MySQLMigrationType {
+	return original.PossibleMySQLMigrationTypeValues()
+}
 
 type NotificationLevel = original.NotificationLevel
 
@@ -492,6 +646,10 @@ const (
 	NotificationLevelNonUrgentSuggestion NotificationLevel = original.NotificationLevelNonUrgentSuggestion
 	NotificationLevelWarning             NotificationLevel = original.NotificationLevelWarning
 )
+
+func PossibleNotificationLevelValues() []NotificationLevel {
+	return original.PossibleNotificationLevelValues()
+}
 
 type OperationStatus = original.OperationStatus
 
@@ -503,6 +661,10 @@ const (
 	OperationStatusTimedOut   OperationStatus = original.OperationStatusTimedOut
 )
 
+func PossibleOperationStatusValues() []OperationStatus {
+	return original.PossibleOperationStatusValues()
+}
+
 type ProvisioningState = original.ProvisioningState
 
 const (
@@ -513,6 +675,10 @@ const (
 	ProvisioningStateSucceeded  ProvisioningState = original.ProvisioningStateSucceeded
 )
 
+func PossibleProvisioningStateValues() []ProvisioningState {
+	return original.PossibleProvisioningStateValues()
+}
+
 type PublicCertificateLocation = original.PublicCertificateLocation
 
 const (
@@ -520,6 +686,10 @@ const (
 	PublicCertificateLocationLocalMachineMy PublicCertificateLocation = original.PublicCertificateLocationLocalMachineMy
 	PublicCertificateLocationUnknown        PublicCertificateLocation = original.PublicCertificateLocationUnknown
 )
+
+func PossiblePublicCertificateLocationValues() []PublicCertificateLocation {
+	return original.PossiblePublicCertificateLocationValues()
+}
 
 type PublishingProfileFormat = original.PublishingProfileFormat
 
@@ -529,6 +699,10 @@ const (
 	WebDeploy  PublishingProfileFormat = original.WebDeploy
 )
 
+func PossiblePublishingProfileFormatValues() []PublishingProfileFormat {
+	return original.PossiblePublishingProfileFormatValues()
+}
+
 type ResourceScopeType = original.ResourceScopeType
 
 const (
@@ -537,6 +711,10 @@ const (
 	WebSite      ResourceScopeType = original.WebSite
 )
 
+func PossibleResourceScopeTypeValues() []ResourceScopeType {
+	return original.PossibleResourceScopeTypeValues()
+}
+
 type RouteType = original.RouteType
 
 const (
@@ -544,6 +722,10 @@ const (
 	INHERITED RouteType = original.INHERITED
 	STATIC    RouteType = original.STATIC
 )
+
+func PossibleRouteTypeValues() []RouteType {
+	return original.PossibleRouteTypeValues()
+}
 
 type ScmType = original.ScmType
 
@@ -563,6 +745,10 @@ const (
 	ScmTypeVSO          ScmType = original.ScmTypeVSO
 )
 
+func PossibleScmTypeValues() []ScmType {
+	return original.PossibleScmTypeValues()
+}
+
 type SiteAvailabilityState = original.SiteAvailabilityState
 
 const (
@@ -571,12 +757,20 @@ const (
 	Normal               SiteAvailabilityState = original.Normal
 )
 
+func PossibleSiteAvailabilityStateValues() []SiteAvailabilityState {
+	return original.PossibleSiteAvailabilityStateValues()
+}
+
 type SiteExtensionType = original.SiteExtensionType
 
 const (
 	Gallery SiteExtensionType = original.Gallery
 	WebRoot SiteExtensionType = original.WebRoot
 )
+
+func PossibleSiteExtensionTypeValues() []SiteExtensionType {
+	return original.PossibleSiteExtensionTypeValues()
+}
 
 type SiteLoadBalancing = original.SiteLoadBalancing
 
@@ -587,6 +781,10 @@ const (
 	WeightedRoundRobin   SiteLoadBalancing = original.WeightedRoundRobin
 	WeightedTotalTraffic SiteLoadBalancing = original.WeightedTotalTraffic
 )
+
+func PossibleSiteLoadBalancingValues() []SiteLoadBalancing {
+	return original.PossibleSiteLoadBalancingValues()
+}
 
 type SkuName = original.SkuName
 
@@ -601,6 +799,10 @@ const (
 	SkuNameStandard  SkuName = original.SkuNameStandard
 )
 
+func PossibleSkuNameValues() []SkuName {
+	return original.PossibleSkuNameValues()
+}
+
 type SolutionType = original.SolutionType
 
 const (
@@ -608,6 +810,10 @@ const (
 	DeepInvestigation SolutionType = original.DeepInvestigation
 	QuickSolution     SolutionType = original.QuickSolution
 )
+
+func PossibleSolutionTypeValues() []SolutionType {
+	return original.PossibleSolutionTypeValues()
+}
 
 type SslState = original.SslState
 
@@ -617,6 +823,10 @@ const (
 	SniEnabled     SslState = original.SniEnabled
 )
 
+func PossibleSslStateValues() []SslState {
+	return original.PossibleSslStateValues()
+}
+
 type StatusOptions = original.StatusOptions
 
 const (
@@ -624,6 +834,10 @@ const (
 	StatusOptionsPending  StatusOptions = original.StatusOptionsPending
 	StatusOptionsReady    StatusOptions = original.StatusOptionsReady
 )
+
+func PossibleStatusOptionsValues() []StatusOptions {
+	return original.PossibleStatusOptionsValues()
+}
 
 type SupportedTLSVersions = original.SupportedTLSVersions
 
@@ -633,6 +847,10 @@ const (
 	OneFullStopZero SupportedTLSVersions = original.OneFullStopZero
 )
 
+func PossibleSupportedTLSVersionsValues() []SupportedTLSVersions {
+	return original.PossibleSupportedTLSVersionsValues()
+}
+
 type TriggeredWebJobStatus = original.TriggeredWebJobStatus
 
 const (
@@ -641,12 +859,20 @@ const (
 	TriggeredWebJobStatusSuccess TriggeredWebJobStatus = original.TriggeredWebJobStatusSuccess
 )
 
+func PossibleTriggeredWebJobStatusValues() []TriggeredWebJobStatus {
+	return original.PossibleTriggeredWebJobStatusValues()
+}
+
 type UnauthenticatedClientAction = original.UnauthenticatedClientAction
 
 const (
 	AllowAnonymous      UnauthenticatedClientAction = original.AllowAnonymous
 	RedirectToLoginPage UnauthenticatedClientAction = original.RedirectToLoginPage
 )
+
+func PossibleUnauthenticatedClientActionValues() []UnauthenticatedClientAction {
+	return original.PossibleUnauthenticatedClientActionValues()
+}
 
 type UsageState = original.UsageState
 
@@ -655,12 +881,20 @@ const (
 	UsageStateNormal   UsageState = original.UsageStateNormal
 )
 
+func PossibleUsageStateValues() []UsageState {
+	return original.PossibleUsageStateValues()
+}
+
 type ValidateResourceTypes = original.ValidateResourceTypes
 
 const (
 	ValidateResourceTypesServerFarm ValidateResourceTypes = original.ValidateResourceTypesServerFarm
 	ValidateResourceTypesSite       ValidateResourceTypes = original.ValidateResourceTypesSite
 )
+
+func PossibleValidateResourceTypesValues() []ValidateResourceTypes {
+	return original.PossibleValidateResourceTypesValues()
+}
 
 type WorkerSizeOptions = original.WorkerSizeOptions
 
@@ -673,6 +907,10 @@ const (
 	Medium  WorkerSizeOptions = original.Medium
 	Small   WorkerSizeOptions = original.Small
 )
+
+func PossibleWorkerSizeOptionsValues() []WorkerSizeOptions {
+	return original.PossibleWorkerSizeOptionsValues()
+}
 
 type AbnormalTimePeriod = original.AbnormalTimePeriod
 type Address = original.Address
@@ -688,6 +926,10 @@ type AppInstanceCollection = original.AppInstanceCollection
 type AppInstanceCollectionIterator = original.AppInstanceCollectionIterator
 type AppInstanceCollectionPage = original.AppInstanceCollectionPage
 type ApplicationLogsConfig = original.ApplicationLogsConfig
+type ApplicationStack = original.ApplicationStack
+type ApplicationStackCollection = original.ApplicationStackCollection
+type ApplicationStackCollectionIterator = original.ApplicationStackCollectionIterator
+type ApplicationStackCollectionPage = original.ApplicationStackCollectionPage
 type AppsCreateFunctionFuture = original.AppsCreateFunctionFuture
 type AppsCreateInstanceFunctionSlotFuture = original.AppsCreateInstanceFunctionSlotFuture
 type AppsCreateInstanceMSDeployOperationFuture = original.AppsCreateInstanceMSDeployOperationFuture
@@ -803,6 +1045,9 @@ type CustomHostnameAnalysisResult = original.CustomHostnameAnalysisResult
 type CustomHostnameAnalysisResultProperties = original.CustomHostnameAnalysisResultProperties
 type DatabaseBackupSetting = original.DatabaseBackupSetting
 type DataSource = original.DataSource
+type DefaultErrorResponse = original.DefaultErrorResponse
+type DefaultErrorResponseError = original.DefaultErrorResponseError
+type DefaultErrorResponseErrorDetailsItem = original.DefaultErrorResponseErrorDetailsItem
 type DeletedSite = original.DeletedSite
 type DeletedWebAppCollection = original.DeletedWebAppCollection
 type DeletedWebAppCollectionIterator = original.DeletedWebAppCollectionIterator
@@ -907,7 +1152,6 @@ type ListCertificateEmail = original.ListCertificateEmail
 type ListCertificateOrderAction = original.ListCertificateOrderAction
 type ListHostingEnvironmentDiagnostics = original.ListHostingEnvironmentDiagnostics
 type ListOperation = original.ListOperation
-type ListRecommendation = original.ListRecommendation
 type ListVnetInfo = original.ListVnetInfo
 type ListVnetRoute = original.ListVnetRoute
 type LocalizableString = original.LocalizableString
@@ -976,7 +1220,12 @@ type PushSettingsProperties = original.PushSettingsProperties
 type RampUpRule = original.RampUpRule
 type ReadCloser = original.ReadCloser
 type Recommendation = original.Recommendation
+type RecommendationCollection = original.RecommendationCollection
+type RecommendationCollectionIterator = original.RecommendationCollectionIterator
+type RecommendationCollectionPage = original.RecommendationCollectionPage
+type RecommendationProperties = original.RecommendationProperties
 type RecommendationRule = original.RecommendationRule
+type RecommendationRuleProperties = original.RecommendationRuleProperties
 type ReissueCertificateOrderRequest = original.ReissueCertificateOrderRequest
 type ReissueCertificateOrderRequestProperties = original.ReissueCertificateOrderRequestProperties
 type RelayServiceConnectionEntity = original.RelayServiceConnectionEntity
@@ -988,6 +1237,11 @@ type Resource = original.Resource
 type ResourceCollection = original.ResourceCollection
 type ResourceCollectionIterator = original.ResourceCollectionIterator
 type ResourceCollectionPage = original.ResourceCollectionPage
+type ResourceHealthMetadata = original.ResourceHealthMetadata
+type ResourceHealthMetadataCollection = original.ResourceHealthMetadataCollection
+type ResourceHealthMetadataCollectionIterator = original.ResourceHealthMetadataCollectionIterator
+type ResourceHealthMetadataCollectionPage = original.ResourceHealthMetadataCollectionPage
+type ResourceHealthMetadataProperties = original.ResourceHealthMetadataProperties
 type ResourceMetric = original.ResourceMetric
 type ResourceMetricAvailability = original.ResourceMetricAvailability
 type ResourceMetricCollection = original.ResourceMetricCollection
@@ -1075,6 +1329,8 @@ type SourceControlCollection = original.SourceControlCollection
 type SourceControlCollectionIterator = original.SourceControlCollectionIterator
 type SourceControlCollectionPage = original.SourceControlCollectionPage
 type SourceControlProperties = original.SourceControlProperties
+type StackMajorVersion = original.StackMajorVersion
+type StackMinorVersion = original.StackMinorVersion
 type StampCapacity = original.StampCapacity
 type StampCapacityCollection = original.StampCapacityCollection
 type StampCapacityCollectionIterator = original.StampCapacityCollectionIterator
@@ -1156,6 +1412,15 @@ func NewRecommendationsClient(subscriptionID string) RecommendationsClient {
 }
 func NewRecommendationsClientWithBaseURI(baseURI string, subscriptionID string) RecommendationsClient {
 	return original.NewRecommendationsClientWithBaseURI(baseURI, subscriptionID)
+}
+
+type ResourceHealthMetadataClient = original.ResourceHealthMetadataClient
+
+func NewResourceHealthMetadataClient(subscriptionID string) ResourceHealthMetadataClient {
+	return original.NewResourceHealthMetadataClient(subscriptionID)
+}
+func NewResourceHealthMetadataClientWithBaseURI(baseURI string, subscriptionID string) ResourceHealthMetadataClient {
+	return original.NewResourceHealthMetadataClientWithBaseURI(baseURI, subscriptionID)
 }
 
 type TopLevelDomainsClient = original.TopLevelDomainsClient

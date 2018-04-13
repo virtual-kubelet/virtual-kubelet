@@ -50,6 +50,10 @@ const (
 	Mask     AccessoryType = original.Mask
 )
 
+func PossibleAccessoryTypeValues() []AccessoryType {
+	return original.PossibleAccessoryTypeValues()
+}
+
 type AttributeType = original.AttributeType
 
 const (
@@ -69,6 +73,10 @@ const (
 	AttributeTypeSmile       AttributeType = original.AttributeTypeSmile
 )
 
+func PossibleAttributeTypeValues() []AttributeType {
+	return original.PossibleAttributeTypeValues()
+}
+
 type AzureRegions = original.AzureRegions
 
 const (
@@ -86,6 +94,10 @@ const (
 	Westus2        AzureRegions = original.Westus2
 )
 
+func PossibleAzureRegionsValues() []AzureRegions {
+	return original.PossibleAzureRegionsValues()
+}
+
 type BlurLevel = original.BlurLevel
 
 const (
@@ -93,6 +105,10 @@ const (
 	Low    BlurLevel = original.Low
 	Medium BlurLevel = original.Medium
 )
+
+func PossibleBlurLevelValues() []BlurLevel {
+	return original.PossibleBlurLevelValues()
+}
 
 type ExposureLevel = original.ExposureLevel
 
@@ -102,12 +118,20 @@ const (
 	UnderExposure ExposureLevel = original.UnderExposure
 )
 
+func PossibleExposureLevelValues() []ExposureLevel {
+	return original.PossibleExposureLevelValues()
+}
+
 type FindSimilarMatchMode = original.FindSimilarMatchMode
 
 const (
 	MatchFace   FindSimilarMatchMode = original.MatchFace
 	MatchPerson FindSimilarMatchMode = original.MatchPerson
 )
+
+func PossibleFindSimilarMatchModeValues() []FindSimilarMatchMode {
+	return original.PossibleFindSimilarMatchModeValues()
+}
 
 type Gender = original.Gender
 
@@ -117,6 +141,10 @@ const (
 	Male       Gender = original.Male
 )
 
+func PossibleGenderValues() []Gender {
+	return original.PossibleGenderValues()
+}
+
 type GlassesType = original.GlassesType
 
 const (
@@ -125,6 +153,10 @@ const (
 	Sunglasses      GlassesType = original.Sunglasses
 	SwimmingGoggles GlassesType = original.SwimmingGoggles
 )
+
+func PossibleGlassesTypeValues() []GlassesType {
+	return original.PossibleGlassesTypeValues()
+}
 
 type HairColorType = original.HairColorType
 
@@ -139,6 +171,10 @@ const (
 	White   HairColorType = original.White
 )
 
+func PossibleHairColorTypeValues() []HairColorType {
+	return original.PossibleHairColorTypeValues()
+}
+
 type NoiseLevel = original.NoiseLevel
 
 const (
@@ -146,6 +182,10 @@ const (
 	NoiseLevelLow    NoiseLevel = original.NoiseLevelLow
 	NoiseLevelMedium NoiseLevel = original.NoiseLevelMedium
 )
+
+func PossibleNoiseLevelValues() []NoiseLevel {
+	return original.PossibleNoiseLevelValues()
+}
 
 type TrainingStatusType = original.TrainingStatusType
 
@@ -155,6 +195,10 @@ const (
 	Running    TrainingStatusType = original.Running
 	Succeeded  TrainingStatusType = original.Succeeded
 )
+
+func PossibleTrainingStatusTypeValues() []TrainingStatusType {
+	return original.PossibleTrainingStatusTypeValues()
+}
 
 type Accessory = original.Accessory
 type APIError = original.APIError

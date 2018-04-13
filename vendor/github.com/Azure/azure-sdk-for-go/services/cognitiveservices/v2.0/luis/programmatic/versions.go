@@ -74,7 +74,7 @@ func (client VersionsClient) ClonePreparer(ctx context.Context, appID uuid.UUID,
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPost(),
 		autorest.WithCustomBaseURL("https://{AzureRegion}.api.cognitive.microsoft.com/luis/api/v2.0", urlParameters),
 		autorest.WithPathParameters("/apps/{appId}/versions/{versionId}/clone", pathParameters))
@@ -205,7 +205,7 @@ func (client VersionsClient) DeleteUnlabelledUtterancePreparer(ctx context.Conte
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsDelete(),
 		autorest.WithCustomBaseURL("https://{AzureRegion}.api.cognitive.microsoft.com/luis/api/v2.0", urlParameters),
 		autorest.WithPathParameters("/apps/{appId}/versions/{versionId}/suggest", pathParameters),
@@ -401,7 +401,7 @@ func (client VersionsClient) ImportPreparer(ctx context.Context, appID uuid.UUID
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPost(),
 		autorest.WithCustomBaseURL("https://{AzureRegion}.api.cognitive.microsoft.com/luis/api/v2.0", urlParameters),
 		autorest.WithPathParameters("/apps/{appId}/versions/import", pathParameters),
@@ -556,7 +556,7 @@ func (client VersionsClient) UpdatePreparer(ctx context.Context, appID uuid.UUID
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPut(),
 		autorest.WithCustomBaseURL("https://{AzureRegion}.api.cognitive.microsoft.com/luis/api/v2.0", urlParameters),
 		autorest.WithPathParameters("/apps/{appId}/versions/{versionId}/", pathParameters),

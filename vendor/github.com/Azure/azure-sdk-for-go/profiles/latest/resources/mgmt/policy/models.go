@@ -60,6 +60,10 @@ const (
 	NotSpecified Mode = original.NotSpecified
 )
 
+func PossibleModeValues() []Mode {
+	return original.PossibleModeValues()
+}
+
 type Type = original.Type
 
 const (
@@ -67,6 +71,10 @@ const (
 	TypeCustom       Type = original.TypeCustom
 	TypeNotSpecified Type = original.TypeNotSpecified
 )
+
+func PossibleTypeValues() []Type {
+	return original.PossibleTypeValues()
+}
 
 type Assignment = original.Assignment
 type AssignmentListResult = original.AssignmentListResult

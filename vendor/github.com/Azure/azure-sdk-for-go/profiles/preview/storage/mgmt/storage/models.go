@@ -50,6 +50,10 @@ const (
 	Hot  AccessTier = original.Hot
 )
 
+func PossibleAccessTierValues() []AccessTier {
+	return original.PossibleAccessTierValues()
+}
+
 type AccountStatus = original.AccountStatus
 
 const (
@@ -57,11 +61,19 @@ const (
 	Unavailable AccountStatus = original.Unavailable
 )
 
+func PossibleAccountStatusValues() []AccountStatus {
+	return original.PossibleAccountStatusValues()
+}
+
 type Action = original.Action
 
 const (
 	Allow Action = original.Allow
 )
+
+func PossibleActionValues() []Action {
+	return original.PossibleActionValues()
+}
 
 type Bypass = original.Bypass
 
@@ -72,12 +84,20 @@ const (
 	None          Bypass = original.None
 )
 
+func PossibleBypassValues() []Bypass {
+	return original.PossibleBypassValues()
+}
+
 type DefaultAction = original.DefaultAction
 
 const (
 	DefaultActionAllow DefaultAction = original.DefaultActionAllow
 	DefaultActionDeny  DefaultAction = original.DefaultActionDeny
 )
+
+func PossibleDefaultActionValues() []DefaultAction {
+	return original.PossibleDefaultActionValues()
+}
 
 type HTTPProtocol = original.HTTPProtocol
 
@@ -86,12 +106,20 @@ const (
 	Httpshttp HTTPProtocol = original.Httpshttp
 )
 
+func PossibleHTTPProtocolValues() []HTTPProtocol {
+	return original.PossibleHTTPProtocolValues()
+}
+
 type KeyPermission = original.KeyPermission
 
 const (
 	Full KeyPermission = original.Full
 	Read KeyPermission = original.Read
 )
+
+func PossibleKeyPermissionValues() []KeyPermission {
+	return original.PossibleKeyPermissionValues()
+}
 
 type KeySource = original.KeySource
 
@@ -100,6 +128,10 @@ const (
 	MicrosoftStorage  KeySource = original.MicrosoftStorage
 )
 
+func PossibleKeySourceValues() []KeySource {
+	return original.PossibleKeySourceValues()
+}
+
 type Kind = original.Kind
 
 const (
@@ -107,6 +139,10 @@ const (
 	Storage     Kind = original.Storage
 	StorageV2   Kind = original.StorageV2
 )
+
+func PossibleKindValues() []Kind {
+	return original.PossibleKindValues()
+}
 
 type Permissions = original.Permissions
 
@@ -121,6 +157,10 @@ const (
 	W Permissions = original.W
 )
 
+func PossiblePermissionsValues() []Permissions {
+	return original.PossiblePermissionsValues()
+}
+
 type ProvisioningState = original.ProvisioningState
 
 const (
@@ -129,6 +169,10 @@ const (
 	Succeeded    ProvisioningState = original.Succeeded
 )
 
+func PossibleProvisioningStateValues() []ProvisioningState {
+	return original.PossibleProvisioningStateValues()
+}
+
 type Reason = original.Reason
 
 const (
@@ -136,12 +180,20 @@ const (
 	AlreadyExists      Reason = original.AlreadyExists
 )
 
+func PossibleReasonValues() []Reason {
+	return original.PossibleReasonValues()
+}
+
 type ReasonCode = original.ReasonCode
 
 const (
 	NotAvailableForSubscription ReasonCode = original.NotAvailableForSubscription
 	QuotaID                     ReasonCode = original.QuotaID
 )
+
+func PossibleReasonCodeValues() []ReasonCode {
+	return original.PossibleReasonCodeValues()
+}
 
 type Services = original.Services
 
@@ -152,6 +204,10 @@ const (
 	T Services = original.T
 )
 
+func PossibleServicesValues() []Services {
+	return original.PossibleServicesValues()
+}
+
 type SignedResource = original.SignedResource
 
 const (
@@ -161,6 +217,10 @@ const (
 	SignedResourceS SignedResource = original.SignedResourceS
 )
 
+func PossibleSignedResourceValues() []SignedResource {
+	return original.PossibleSignedResourceValues()
+}
+
 type SignedResourceTypes = original.SignedResourceTypes
 
 const (
@@ -168,6 +228,10 @@ const (
 	SignedResourceTypesO SignedResourceTypes = original.SignedResourceTypesO
 	SignedResourceTypesS SignedResourceTypes = original.SignedResourceTypesS
 )
+
+func PossibleSignedResourceTypesValues() []SignedResourceTypes {
+	return original.PossibleSignedResourceTypesValues()
+}
 
 type SkuName = original.SkuName
 
@@ -179,12 +243,20 @@ const (
 	StandardZRS   SkuName = original.StandardZRS
 )
 
+func PossibleSkuNameValues() []SkuName {
+	return original.PossibleSkuNameValues()
+}
+
 type SkuTier = original.SkuTier
 
 const (
 	Premium  SkuTier = original.Premium
 	Standard SkuTier = original.Standard
 )
+
+func PossibleSkuTierValues() []SkuTier {
+	return original.PossibleSkuTierValues()
+}
 
 type State = original.State
 
@@ -196,6 +268,10 @@ const (
 	StateSucceeded            State = original.StateSucceeded
 )
 
+func PossibleStateValues() []State {
+	return original.PossibleStateValues()
+}
+
 type UsageUnit = original.UsageUnit
 
 const (
@@ -206,6 +282,10 @@ const (
 	Percent         UsageUnit = original.Percent
 	Seconds         UsageUnit = original.Seconds
 )
+
+func PossibleUsageUnitValues() []UsageUnit {
+	return original.PossibleUsageUnitValues()
+}
 
 type Account = original.Account
 type AccountCheckNameAvailabilityParameters = original.AccountCheckNameAvailabilityParameters

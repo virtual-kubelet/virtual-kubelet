@@ -73,6 +73,10 @@ const (
 	Transferring      DriveState = original.Transferring
 )
 
+func PossibleDriveStateValues() []DriveState {
+	return original.PossibleDriveStateValues()
+}
+
 type DriveBitLockerKey = original.DriveBitLockerKey
 type DriveStatus = original.DriveStatus
 type ErrorResponse = original.ErrorResponse

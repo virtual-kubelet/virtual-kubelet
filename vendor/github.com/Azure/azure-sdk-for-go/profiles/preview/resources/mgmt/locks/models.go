@@ -51,6 +51,10 @@ const (
 	ReadOnly     LockLevel = original.ReadOnly
 )
 
+func PossibleLockLevelValues() []LockLevel {
+	return original.PossibleLockLevelValues()
+}
+
 type ManagementLockListResult = original.ManagementLockListResult
 type ManagementLockListResultIterator = original.ManagementLockListResultIterator
 type ManagementLockListResultPage = original.ManagementLockListResultPage

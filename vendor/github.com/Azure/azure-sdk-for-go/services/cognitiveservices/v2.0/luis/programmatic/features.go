@@ -75,7 +75,7 @@ func (client FeaturesClient) AddPhraseListPreparer(ctx context.Context, appID uu
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPost(),
 		autorest.WithCustomBaseURL("https://{AzureRegion}.api.cognitive.microsoft.com/luis/api/v2.0", urlParameters),
 		autorest.WithPathParameters("/apps/{appId}/versions/{versionId}/phraselists", pathParameters),
@@ -449,7 +449,7 @@ func (client FeaturesClient) UpdatePhraseListPreparer(ctx context.Context, appID
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPut(),
 		autorest.WithCustomBaseURL("https://{AzureRegion}.api.cognitive.microsoft.com/luis/api/v2.0", urlParameters),
 		autorest.WithPathParameters("/apps/{appId}/versions/{versionId}/phraselists/{phraselistId}", pathParameters))

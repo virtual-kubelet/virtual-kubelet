@@ -72,7 +72,7 @@ func (client PermissionsClient) AddPreparer(ctx context.Context, appID uuid.UUID
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPost(),
 		autorest.WithCustomBaseURL("https://{AzureRegion}.api.cognitive.microsoft.com/luis/api/v2.0", urlParameters),
 		autorest.WithPathParameters("/apps/{appId}/permissions", pathParameters),
@@ -137,7 +137,7 @@ func (client PermissionsClient) DeletePreparer(ctx context.Context, appID uuid.U
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsDelete(),
 		autorest.WithCustomBaseURL("https://{AzureRegion}.api.cognitive.microsoft.com/luis/api/v2.0", urlParameters),
 		autorest.WithPathParameters("/apps/{appId}/permissions", pathParameters),
@@ -264,7 +264,7 @@ func (client PermissionsClient) UpdatePreparer(ctx context.Context, appID uuid.U
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPut(),
 		autorest.WithCustomBaseURL("https://{AzureRegion}.api.cognitive.microsoft.com/luis/api/v2.0", urlParameters),
 		autorest.WithPathParameters("/apps/{appId}/permissions", pathParameters),

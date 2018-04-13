@@ -47,6 +47,10 @@ const (
 	AnswerTypeWebPages         AnswerType = original.AnswerTypeWebPages
 )
 
+func PossibleAnswerTypeValues() []AnswerType {
+	return original.PossibleAnswerTypeValues()
+}
+
 type ErrorCode = original.ErrorCode
 
 const (
@@ -57,6 +61,10 @@ const (
 	RateLimitExceeded         ErrorCode = original.RateLimitExceeded
 	ServerError               ErrorCode = original.ServerError
 )
+
+func PossibleErrorCodeValues() []ErrorCode {
+	return original.PossibleErrorCodeValues()
+}
 
 type ErrorSubCode = original.ErrorSubCode
 
@@ -74,6 +82,10 @@ const (
 	UnexpectedError         ErrorSubCode = original.UnexpectedError
 )
 
+func PossibleErrorSubCodeValues() []ErrorSubCode {
+	return original.PossibleErrorSubCodeValues()
+}
+
 type Freshness = original.Freshness
 
 const (
@@ -81,6 +93,10 @@ const (
 	Month Freshness = original.Month
 	Week  Freshness = original.Week
 )
+
+func PossibleFreshnessValues() []Freshness {
+	return original.PossibleFreshnessValues()
+}
 
 type SafeSearch = original.SafeSearch
 
@@ -90,6 +106,10 @@ const (
 	Strict   SafeSearch = original.Strict
 )
 
+func PossibleSafeSearchValues() []SafeSearch {
+	return original.PossibleSafeSearchValues()
+}
+
 type TextFormat = original.TextFormat
 
 const (
@@ -97,11 +117,19 @@ const (
 	Raw  TextFormat = original.Raw
 )
 
+func PossibleTextFormatValues() []TextFormat {
+	return original.PossibleTextFormatValues()
+}
+
 type Type = original.Type
 
 const (
 	TypeWebWebGrouping Type = original.TypeWebWebGrouping
 )
+
+func PossibleTypeValues() []Type {
+	return original.PossibleTypeValues()
+}
 
 type TypeBasicResponseBase = original.TypeBasicResponseBase
 
@@ -133,6 +161,10 @@ const (
 	TypeWebPage                            TypeBasicResponseBase = original.TypeWebPage
 	TypeWebWebAnswer                       TypeBasicResponseBase = original.TypeWebWebAnswer
 )
+
+func PossibleTypeBasicResponseBaseValues() []TypeBasicResponseBase {
+	return original.PossibleTypeBasicResponseBaseValues()
+}
 
 type BasicAnswer = original.BasicAnswer
 type Answer = original.Answer

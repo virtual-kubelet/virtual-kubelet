@@ -31,13 +31,13 @@ type StorageInsightsClient struct {
 }
 
 // NewStorageInsightsClient creates an instance of the StorageInsightsClient client.
-func NewStorageInsightsClient(subscriptionID string) StorageInsightsClient {
-	return NewStorageInsightsClientWithBaseURI(DefaultBaseURI, subscriptionID)
+func NewStorageInsightsClient(subscriptionID string, purgeID string) StorageInsightsClient {
+	return NewStorageInsightsClientWithBaseURI(DefaultBaseURI, subscriptionID, purgeID)
 }
 
 // NewStorageInsightsClientWithBaseURI creates an instance of the StorageInsightsClient client.
-func NewStorageInsightsClientWithBaseURI(baseURI string, subscriptionID string) StorageInsightsClient {
-	return StorageInsightsClient{NewWithBaseURI(baseURI, subscriptionID)}
+func NewStorageInsightsClientWithBaseURI(baseURI string, subscriptionID string, purgeID string) StorageInsightsClient {
+	return StorageInsightsClient{NewWithBaseURI(baseURI, subscriptionID, purgeID)}
 }
 
 // CreateOrUpdate create or update a storage insight.
@@ -97,7 +97,7 @@ func (client StorageInsightsClient) CreateOrUpdatePreparer(ctx context.Context, 
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPut(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/Microsoft.OperationalInsights/workspaces/{workspaceName}/storageInsightConfigs/{storageInsightName}", pathParameters),

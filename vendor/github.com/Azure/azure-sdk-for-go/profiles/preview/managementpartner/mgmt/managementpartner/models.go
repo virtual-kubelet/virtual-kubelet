@@ -42,12 +42,20 @@ const (
 	NotFound   Code = original.NotFound
 )
 
+func PossibleCodeValues() []Code {
+	return original.PossibleCodeValues()
+}
+
 type State = original.State
 
 const (
 	Active  State = original.Active
 	Deleted State = original.Deleted
 )
+
+func PossibleStateValues() []State {
+	return original.PossibleStateValues()
+}
 
 type Error = original.Error
 type ExtendedErrorInfo = original.ExtendedErrorInfo

@@ -19,7 +19,7 @@
 
 package insights
 
-import original "github.com/Azure/azure-sdk-for-go/services/monitor/mgmt/2017-09-01/insights"
+import original "github.com/Azure/azure-sdk-for-go/services/monitor/mgmt/2018-03-01/insights"
 
 type ActionGroupsClient = original.ActionGroupsClient
 
@@ -162,12 +162,20 @@ const (
 	Total   AggregationType = original.Total
 )
 
+func PossibleAggregationTypeValues() []AggregationType {
+	return original.PossibleAggregationTypeValues()
+}
+
 type CategoryType = original.CategoryType
 
 const (
 	Logs    CategoryType = original.Logs
 	Metrics CategoryType = original.Metrics
 )
+
+func PossibleCategoryTypeValues() []CategoryType {
+	return original.PossibleCategoryTypeValues()
+}
 
 type ComparisonOperationType = original.ComparisonOperationType
 
@@ -180,6 +188,10 @@ const (
 	NotEquals          ComparisonOperationType = original.NotEquals
 )
 
+func PossibleComparisonOperationTypeValues() []ComparisonOperationType {
+	return original.PossibleComparisonOperationTypeValues()
+}
+
 type ConditionOperator = original.ConditionOperator
 
 const (
@@ -188,6 +200,10 @@ const (
 	ConditionOperatorLessThan           ConditionOperator = original.ConditionOperatorLessThan
 	ConditionOperatorLessThanOrEqual    ConditionOperator = original.ConditionOperatorLessThanOrEqual
 )
+
+func PossibleConditionOperatorValues() []ConditionOperator {
+	return original.PossibleConditionOperatorValues()
+}
 
 type EventLevel = original.EventLevel
 
@@ -199,6 +215,10 @@ const (
 	Warning       EventLevel = original.Warning
 )
 
+func PossibleEventLevelValues() []EventLevel {
+	return original.PossibleEventLevelValues()
+}
+
 type MetricStatisticType = original.MetricStatisticType
 
 const (
@@ -208,6 +228,10 @@ const (
 	MetricStatisticTypeSum     MetricStatisticType = original.MetricStatisticTypeSum
 )
 
+func PossibleMetricStatisticTypeValues() []MetricStatisticType {
+	return original.PossibleMetricStatisticTypeValues()
+}
+
 type OdataType = original.OdataType
 
 const (
@@ -216,6 +240,10 @@ const (
 	OdataTypeRuleDataSource                                                      OdataType = original.OdataTypeRuleDataSource
 )
 
+func PossibleOdataTypeValues() []OdataType {
+	return original.PossibleOdataTypeValues()
+}
+
 type OdataTypeBasicRuleAction = original.OdataTypeBasicRuleAction
 
 const (
@@ -223,6 +251,10 @@ const (
 	OdataTypeMicrosoftAzureManagementInsightsModelsRuleWebhookAction OdataTypeBasicRuleAction = original.OdataTypeMicrosoftAzureManagementInsightsModelsRuleWebhookAction
 	OdataTypeRuleAction                                              OdataTypeBasicRuleAction = original.OdataTypeRuleAction
 )
+
+func PossibleOdataTypeBasicRuleActionValues() []OdataTypeBasicRuleAction {
+	return original.PossibleOdataTypeBasicRuleActionValues()
+}
 
 type OdataTypeBasicRuleCondition = original.OdataTypeBasicRuleCondition
 
@@ -233,6 +265,10 @@ const (
 	OdataTypeRuleCondition                                                        OdataTypeBasicRuleCondition = original.OdataTypeRuleCondition
 )
 
+func PossibleOdataTypeBasicRuleConditionValues() []OdataTypeBasicRuleCondition {
+	return original.PossibleOdataTypeBasicRuleConditionValues()
+}
+
 type ReceiverStatus = original.ReceiverStatus
 
 const (
@@ -240,6 +276,10 @@ const (
 	Enabled      ReceiverStatus = original.Enabled
 	NotSpecified ReceiverStatus = original.NotSpecified
 )
+
+func PossibleReceiverStatusValues() []ReceiverStatus {
+	return original.PossibleReceiverStatusValues()
+}
 
 type RecurrenceFrequency = original.RecurrenceFrequency
 
@@ -254,12 +294,20 @@ const (
 	RecurrenceFrequencyYear   RecurrenceFrequency = original.RecurrenceFrequencyYear
 )
 
+func PossibleRecurrenceFrequencyValues() []RecurrenceFrequency {
+	return original.PossibleRecurrenceFrequencyValues()
+}
+
 type ResultType = original.ResultType
 
 const (
 	Data     ResultType = original.Data
 	Metadata ResultType = original.Metadata
 )
+
+func PossibleResultTypeValues() []ResultType {
+	return original.PossibleResultTypeValues()
+}
 
 type ScaleDirection = original.ScaleDirection
 
@@ -269,6 +317,10 @@ const (
 	ScaleDirectionNone     ScaleDirection = original.ScaleDirectionNone
 )
 
+func PossibleScaleDirectionValues() []ScaleDirection {
+	return original.PossibleScaleDirectionValues()
+}
+
 type ScaleType = original.ScaleType
 
 const (
@@ -277,6 +329,10 @@ const (
 	PercentChangeCount ScaleType = original.PercentChangeCount
 )
 
+func PossibleScaleTypeValues() []ScaleType {
+	return original.PossibleScaleTypeValues()
+}
+
 type Sensitivity = original.Sensitivity
 
 const (
@@ -284,6 +340,10 @@ const (
 	Low    Sensitivity = original.Low
 	Medium Sensitivity = original.Medium
 )
+
+func PossibleSensitivityValues() []Sensitivity {
+	return original.PossibleSensitivityValues()
+}
 
 type TimeAggregationOperator = original.TimeAggregationOperator
 
@@ -295,6 +355,10 @@ const (
 	TimeAggregationOperatorTotal   TimeAggregationOperator = original.TimeAggregationOperatorTotal
 )
 
+func PossibleTimeAggregationOperatorValues() []TimeAggregationOperator {
+	return original.PossibleTimeAggregationOperatorValues()
+}
+
 type TimeAggregationType = original.TimeAggregationType
 
 const (
@@ -304,6 +368,10 @@ const (
 	TimeAggregationTypeMinimum TimeAggregationType = original.TimeAggregationTypeMinimum
 	TimeAggregationTypeTotal   TimeAggregationType = original.TimeAggregationTypeTotal
 )
+
+func PossibleTimeAggregationTypeValues() []TimeAggregationType {
+	return original.PossibleTimeAggregationTypeValues()
+}
 
 type Unit = original.Unit
 
@@ -318,6 +386,10 @@ const (
 	UnitSeconds        Unit = original.UnitSeconds
 	UnitUnspecified    Unit = original.UnitUnspecified
 )
+
+func PossibleUnitValues() []Unit {
+	return original.PossibleUnitValues()
+}
 
 type ActionGroup = original.ActionGroup
 type ActionGroupList = original.ActionGroupList
@@ -347,6 +419,7 @@ type AutoscaleSettingResourceCollectionIterator = original.AutoscaleSettingResou
 type AutoscaleSettingResourceCollectionPage = original.AutoscaleSettingResourceCollectionPage
 type AutoscaleSettingResourcePatch = original.AutoscaleSettingResourcePatch
 type AzureAppPushReceiver = original.AzureAppPushReceiver
+type AzureFunctionReceiver = original.AzureFunctionReceiver
 type Baseline = original.Baseline
 type BaselineMetadataValue = original.BaselineMetadataValue
 type BaselineProperties = original.BaselineProperties
@@ -373,6 +446,7 @@ type IncidentListResult = original.IncidentListResult
 type ItsmReceiver = original.ItsmReceiver
 type LocalizableString = original.LocalizableString
 type LocationThresholdRuleCondition = original.LocationThresholdRuleCondition
+type LogicAppReceiver = original.LogicAppReceiver
 type LogProfileCollection = original.LogProfileCollection
 type LogProfileProperties = original.LogProfileProperties
 type LogProfileResource = original.LogProfileResource

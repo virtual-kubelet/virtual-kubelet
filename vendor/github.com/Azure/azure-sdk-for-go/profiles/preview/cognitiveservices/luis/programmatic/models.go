@@ -71,6 +71,10 @@ const (
 	Westus2        AzureRegions = original.Westus2
 )
 
+func PossibleAzureRegionsValues() []AzureRegions {
+	return original.PossibleAzureRegionsValues()
+}
+
 type OperationStatusType = original.OperationStatusType
 
 const (
@@ -78,6 +82,10 @@ const (
 	FAILED  OperationStatusType = original.FAILED
 	Success OperationStatusType = original.Success
 )
+
+func PossibleOperationStatusTypeValues() []OperationStatusType {
+	return original.PossibleOperationStatusTypeValues()
+}
 
 type ReadableType = original.ReadableType
 
@@ -91,6 +99,10 @@ const (
 	ReadableTypePrebuiltEntityExtractor          ReadableType = original.ReadableTypePrebuiltEntityExtractor
 )
 
+func PossibleReadableTypeValues() []ReadableType {
+	return original.PossibleReadableTypeValues()
+}
+
 type ReadableType1 = original.ReadableType1
 
 const (
@@ -102,6 +114,10 @@ const (
 	ReadableType1IntentClassifier                 ReadableType1 = original.ReadableType1IntentClassifier
 	ReadableType1PrebuiltEntityExtractor          ReadableType1 = original.ReadableType1PrebuiltEntityExtractor
 )
+
+func PossibleReadableType1Values() []ReadableType1 {
+	return original.PossibleReadableType1Values()
+}
 
 type ReadableType2 = original.ReadableType2
 
@@ -115,6 +131,10 @@ const (
 	ReadableType2PrebuiltEntityExtractor          ReadableType2 = original.ReadableType2PrebuiltEntityExtractor
 )
 
+func PossibleReadableType2Values() []ReadableType2 {
+	return original.PossibleReadableType2Values()
+}
+
 type ReadableType3 = original.ReadableType3
 
 const (
@@ -127,6 +147,10 @@ const (
 	ReadableType3PrebuiltEntityExtractor          ReadableType3 = original.ReadableType3PrebuiltEntityExtractor
 )
 
+func PossibleReadableType3Values() []ReadableType3 {
+	return original.PossibleReadableType3Values()
+}
+
 type Status = original.Status
 
 const (
@@ -136,6 +160,10 @@ const (
 	StatusSuccess    Status = original.StatusSuccess
 	StatusUpToDate   Status = original.StatusUpToDate
 )
+
+func PossibleStatusValues() []Status {
+	return original.PossibleStatusValues()
+}
 
 type Status1 = original.Status1
 
@@ -147,6 +175,10 @@ const (
 	Status1UpToDate   Status1 = original.Status1UpToDate
 )
 
+func PossibleStatus1Values() []Status1 {
+	return original.PossibleStatus1Values()
+}
+
 type TrainingStatus = original.TrainingStatus
 
 const (
@@ -154,6 +186,10 @@ const (
 	NeedsTraining TrainingStatus = original.NeedsTraining
 	Trained       TrainingStatus = original.Trained
 )
+
+func PossibleTrainingStatusValues() []TrainingStatus {
+	return original.PossibleTrainingStatusValues()
+}
 
 type ApplicationCreateObject = original.ApplicationCreateObject
 type ApplicationInfoResponse = original.ApplicationInfoResponse

@@ -32,6 +32,11 @@ const (
 	Key2 KeyName = "Key2"
 )
 
+// PossibleKeyNameValues returns an array of possible values for the KeyName const type.
+func PossibleKeyNameValues() []KeyName {
+	return []KeyName{Key1, Key2}
+}
+
 // Kind enumerates the values for kind.
 type Kind string
 
@@ -72,6 +77,11 @@ const (
 	WebLM Kind = "WebLM"
 )
 
+// PossibleKindValues returns an array of possible values for the Kind const type.
+func PossibleKindValues() []Kind {
+	return []Kind{Academic, BingAutosuggest, BingSearch, BingSpeech, BingSpellCheck, ComputerVision, ContentModerator, Emotion, Face, LUIS, Recommendations, SpeakerRecognition, Speech, SpeechTranslation, TextAnalytics, TextTranslation, WebLM}
+}
+
 // ProvisioningState enumerates the values for provisioning state.
 type ProvisioningState string
 
@@ -85,6 +95,11 @@ const (
 	// Succeeded ...
 	Succeeded ProvisioningState = "Succeeded"
 )
+
+// PossibleProvisioningStateValues returns an array of possible values for the ProvisioningState const type.
+func PossibleProvisioningStateValues() []ProvisioningState {
+	return []ProvisioningState{Creating, Failed, ResolvingDNS, Succeeded}
+}
 
 // SkuName enumerates the values for sku name.
 type SkuName string
@@ -114,6 +129,11 @@ const (
 	S6 SkuName = "S6"
 )
 
+// PossibleSkuNameValues returns an array of possible values for the SkuName const type.
+func PossibleSkuNameValues() []SkuName {
+	return []SkuName{F0, P0, P1, P2, S0, S1, S2, S3, S4, S5, S6}
+}
+
 // SkuTier enumerates the values for sku tier.
 type SkuTier string
 
@@ -125,6 +145,11 @@ const (
 	// Standard ...
 	Standard SkuTier = "Standard"
 )
+
+// PossibleSkuTierValues returns an array of possible values for the SkuTier const type.
+func PossibleSkuTierValues() []SkuTier {
+	return []SkuTier{Free, Premium, Standard}
+}
 
 // Account cognitive Services Account is an Azure resource representing the provisioned account, its type, location
 // and SKU.
@@ -296,7 +321,9 @@ func (acp AccountCreateParameters) MarshalJSON() ([]byte, error) {
 	if acp.Sku != nil {
 		objectMap["sku"] = acp.Sku
 	}
-	objectMap["kind"] = acp.Kind
+	if acp.Kind != "" {
+		objectMap["kind"] = acp.Kind
+	}
 	if acp.Location != nil {
 		objectMap["location"] = acp.Location
 	}

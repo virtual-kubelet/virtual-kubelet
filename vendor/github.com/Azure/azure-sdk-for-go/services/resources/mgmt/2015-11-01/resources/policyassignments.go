@@ -78,7 +78,7 @@ func (client PolicyAssignmentsClient) CreatePreparer(ctx context.Context, scope 
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPut(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/{scope}/providers/Microsoft.Authorization/policyAssignments/{policyAssignmentName}", pathParameters),
@@ -144,7 +144,7 @@ func (client PolicyAssignmentsClient) CreateByIDPreparer(ctx context.Context, po
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPut(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/{policyAssignmentId}", pathParameters),

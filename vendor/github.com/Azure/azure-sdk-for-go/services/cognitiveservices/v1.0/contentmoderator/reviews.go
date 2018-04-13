@@ -276,7 +276,7 @@ func (client ReviewsClient) AddVideoFrameURLPreparer(ctx context.Context, conten
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPost(),
 		autorest.WithCustomBaseURL("https://{baseUrl}", urlParameters),
 		autorest.WithPathParameters("/contentmoderator/review/v1.0/teams/{teamName}/reviews/{reviewId}/frames", pathParameters),
@@ -344,7 +344,7 @@ func (client ReviewsClient) AddVideoTranscriptPreparer(ctx context.Context, team
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsOctetStream(),
+		autorest.AsContentType("text/plain"),
 		autorest.AsPut(),
 		autorest.WithCustomBaseURL("https://{baseUrl}", urlParameters),
 		autorest.WithPathParameters("/contentmoderator/review/v1.0/teams/{teamName}/reviews/{reviewId}/transcript", pathParameters),
@@ -418,7 +418,7 @@ func (client ReviewsClient) AddVideoTranscriptModerationResultPreparer(ctx conte
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPut(),
 		autorest.WithCustomBaseURL("https://{baseUrl}", urlParameters),
 		autorest.WithPathParameters("/contentmoderator/review/v1.0/teams/{teamName}/reviews/{reviewId}/transcriptmoderationresult", pathParameters),
@@ -547,7 +547,7 @@ func (client ReviewsClient) CreateJobPreparer(ctx context.Context, teamName stri
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPost(),
 		autorest.WithCustomBaseURL("https://{baseUrl}", urlParameters),
 		autorest.WithPathParameters("/contentmoderator/review/v1.0/teams/{teamName}/jobs", pathParameters),
@@ -649,7 +649,7 @@ func (client ReviewsClient) CreateReviewsPreparer(ctx context.Context, URLConten
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPost(),
 		autorest.WithCustomBaseURL("https://{baseUrl}", urlParameters),
 		autorest.WithPathParameters("/contentmoderator/review/v1.0/teams/{teamName}/reviews", pathParameters),
@@ -751,7 +751,7 @@ func (client ReviewsClient) CreateVideoReviewsPreparer(ctx context.Context, cont
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPost(),
 		autorest.WithCustomBaseURL("https://{baseUrl}", urlParameters),
 		autorest.WithPathParameters("/contentmoderator/review/v1.0/teams/{teamName}/reviews", pathParameters),

@@ -72,12 +72,20 @@ const (
 	ServiceConnectDeviceConnect                          AccessRights = original.ServiceConnectDeviceConnect
 )
 
+func PossibleAccessRightsValues() []AccessRights {
+	return original.PossibleAccessRightsValues()
+}
+
 type Capabilities = original.Capabilities
 
 const (
 	DeviceManagement Capabilities = original.DeviceManagement
 	None             Capabilities = original.None
 )
+
+func PossibleCapabilitiesValues() []Capabilities {
+	return original.PossibleCapabilitiesValues()
+}
 
 type IotHubNameUnavailabilityReason = original.IotHubNameUnavailabilityReason
 
@@ -86,6 +94,10 @@ const (
 	Invalid       IotHubNameUnavailabilityReason = original.Invalid
 )
 
+func PossibleIotHubNameUnavailabilityReasonValues() []IotHubNameUnavailabilityReason {
+	return original.PossibleIotHubNameUnavailabilityReasonValues()
+}
+
 type IotHubScaleType = original.IotHubScaleType
 
 const (
@@ -93,6 +105,10 @@ const (
 	IotHubScaleTypeManual    IotHubScaleType = original.IotHubScaleTypeManual
 	IotHubScaleTypeNone      IotHubScaleType = original.IotHubScaleTypeNone
 )
+
+func PossibleIotHubScaleTypeValues() []IotHubScaleType {
+	return original.PossibleIotHubScaleTypeValues()
+}
 
 type IotHubSku = original.IotHubSku
 
@@ -103,6 +119,10 @@ const (
 	S3 IotHubSku = original.S3
 )
 
+func PossibleIotHubSkuValues() []IotHubSku {
+	return original.PossibleIotHubSkuValues()
+}
+
 type IotHubSkuTier = original.IotHubSkuTier
 
 const (
@@ -110,12 +130,20 @@ const (
 	Standard IotHubSkuTier = original.Standard
 )
 
+func PossibleIotHubSkuTierValues() []IotHubSkuTier {
+	return original.PossibleIotHubSkuTierValues()
+}
+
 type IPFilterActionType = original.IPFilterActionType
 
 const (
 	Accept IPFilterActionType = original.Accept
 	Reject IPFilterActionType = original.Reject
 )
+
+func PossibleIPFilterActionTypeValues() []IPFilterActionType {
+	return original.PossibleIPFilterActionTypeValues()
+}
 
 type JobStatus = original.JobStatus
 
@@ -127,6 +155,10 @@ const (
 	Running   JobStatus = original.Running
 	Unknown   JobStatus = original.Unknown
 )
+
+func PossibleJobStatusValues() []JobStatus {
+	return original.PossibleJobStatusValues()
+}
 
 type JobType = original.JobType
 
@@ -143,6 +175,10 @@ const (
 	JobTypeWriteDeviceProperties     JobType = original.JobTypeWriteDeviceProperties
 )
 
+func PossibleJobTypeValues() []JobType {
+	return original.PossibleJobTypeValues()
+}
+
 type OperationMonitoringLevel = original.OperationMonitoringLevel
 
 const (
@@ -152,6 +188,10 @@ const (
 	OperationMonitoringLevelNone             OperationMonitoringLevel = original.OperationMonitoringLevelNone
 )
 
+func PossibleOperationMonitoringLevelValues() []OperationMonitoringLevel {
+	return original.PossibleOperationMonitoringLevelValues()
+}
+
 type RoutingSource = original.RoutingSource
 
 const (
@@ -160,6 +200,10 @@ const (
 	DeviceMessages           RoutingSource = original.DeviceMessages
 	TwinChangeEvents         RoutingSource = original.TwinChangeEvents
 )
+
+func PossibleRoutingSourceValues() []RoutingSource {
+	return original.PossibleRoutingSourceValues()
+}
 
 type CertificateBodyDescription = original.CertificateBodyDescription
 type CertificateDescription = original.CertificateDescription

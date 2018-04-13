@@ -77,7 +77,7 @@ func (client AppsClient) AddPreparer(ctx context.Context, applicationCreateObjec
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPost(),
 		autorest.WithCustomBaseURL("https://{AzureRegion}.api.cognitive.microsoft.com/luis/api/v2.0", urlParameters),
 		autorest.WithPath("/apps/"),
@@ -137,7 +137,7 @@ func (client AppsClient) AddCustomPrebuiltDomainPreparer(ctx context.Context, pr
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPost(),
 		autorest.WithCustomBaseURL("https://{AzureRegion}.api.cognitive.microsoft.com/luis/api/v2.0", urlParameters),
 		autorest.WithPath("/apps/customprebuiltdomains"),
@@ -450,7 +450,7 @@ func (client AppsClient) ImportPreparer(ctx context.Context, luisApp LuisApp, ap
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPost(),
 		autorest.WithCustomBaseURL("https://{AzureRegion}.api.cognitive.microsoft.com/luis/api/v2.0", urlParameters),
 		autorest.WithPath("/apps/import"),
@@ -1004,7 +1004,7 @@ func (client AppsClient) PublishPreparer(ctx context.Context, appID uuid.UUID, a
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPost(),
 		autorest.WithCustomBaseURL("https://{AzureRegion}.api.cognitive.microsoft.com/luis/api/v2.0", urlParameters),
 		autorest.WithPathParameters("/apps/{appId}/publish", pathParameters),
@@ -1069,7 +1069,7 @@ func (client AppsClient) UpdatePreparer(ctx context.Context, appID uuid.UUID, ap
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPut(),
 		autorest.WithCustomBaseURL("https://{AzureRegion}.api.cognitive.microsoft.com/luis/api/v2.0", urlParameters),
 		autorest.WithPathParameters("/apps/{appId}", pathParameters),
@@ -1134,7 +1134,7 @@ func (client AppsClient) UpdateSettingsPreparer(ctx context.Context, appID uuid.
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPut(),
 		autorest.WithCustomBaseURL("https://{AzureRegion}.api.cognitive.microsoft.com/luis/api/v2.0", urlParameters),
 		autorest.WithPathParameters("/apps/{appId}/settings", pathParameters),

@@ -68,6 +68,21 @@ const (
 	Reader      AccessPolicyRole = original.Reader
 )
 
+func PossibleAccessPolicyRoleValues() []AccessPolicyRole {
+	return original.PossibleAccessPolicyRoleValues()
+}
+
+type DataStringComparisonBehavior = original.DataStringComparisonBehavior
+
+const (
+	Ordinal           DataStringComparisonBehavior = original.Ordinal
+	OrdinalIgnoreCase DataStringComparisonBehavior = original.OrdinalIgnoreCase
+)
+
+func PossibleDataStringComparisonBehaviorValues() []DataStringComparisonBehavior {
+	return original.PossibleDataStringComparisonBehaviorValues()
+}
+
 type IngressState = original.IngressState
 
 const (
@@ -78,6 +93,10 @@ const (
 	Unknown  IngressState = original.Unknown
 )
 
+func PossibleIngressStateValues() []IngressState {
+	return original.PossibleIngressStateValues()
+}
+
 type Kind = original.Kind
 
 const (
@@ -85,6 +104,10 @@ const (
 	KindMicrosoftEventHub                   Kind = original.KindMicrosoftEventHub
 	KindMicrosoftIoTHub                     Kind = original.KindMicrosoftIoTHub
 )
+
+func PossibleKindValues() []Kind {
+	return original.PossibleKindValues()
+}
 
 type KindBasicEventSourceResource = original.KindBasicEventSourceResource
 
@@ -94,6 +117,10 @@ const (
 	KindBasicEventSourceResourceKindMicrosoftIotHub     KindBasicEventSourceResource = original.KindBasicEventSourceResourceKindMicrosoftIotHub
 )
 
+func PossibleKindBasicEventSourceResourceValues() []KindBasicEventSourceResource {
+	return original.PossibleKindBasicEventSourceResourceValues()
+}
+
 type LocalTimestampFormat = original.LocalTimestampFormat
 
 const (
@@ -101,6 +128,10 @@ const (
 	Iana     LocalTimestampFormat = original.Iana
 	TimeSpan LocalTimestampFormat = original.TimeSpan
 )
+
+func PossibleLocalTimestampFormatValues() []LocalTimestampFormat {
+	return original.PossibleLocalTimestampFormatValues()
+}
 
 type ProvisioningState = original.ProvisioningState
 
@@ -113,6 +144,10 @@ const (
 	Updating  ProvisioningState = original.Updating
 )
 
+func PossibleProvisioningStateValues() []ProvisioningState {
+	return original.PossibleProvisioningStateValues()
+}
+
 type ReferenceDataKeyPropertyType = original.ReferenceDataKeyPropertyType
 
 const (
@@ -122,6 +157,10 @@ const (
 	String   ReferenceDataKeyPropertyType = original.String
 )
 
+func PossibleReferenceDataKeyPropertyTypeValues() []ReferenceDataKeyPropertyType {
+	return original.PossibleReferenceDataKeyPropertyTypeValues()
+}
+
 type SkuName = original.SkuName
 
 const (
@@ -129,12 +168,20 @@ const (
 	S2 SkuName = original.S2
 )
 
+func PossibleSkuNameValues() []SkuName {
+	return original.PossibleSkuNameValues()
+}
+
 type StorageLimitExceededBehavior = original.StorageLimitExceededBehavior
 
 const (
 	PauseIngress StorageLimitExceededBehavior = original.PauseIngress
 	PurgeOldData StorageLimitExceededBehavior = original.PurgeOldData
 )
+
+func PossibleStorageLimitExceededBehaviorValues() []StorageLimitExceededBehavior {
+	return original.PossibleStorageLimitExceededBehaviorValues()
+}
 
 type AccessPolicyCreateOrUpdateParameters = original.AccessPolicyCreateOrUpdateParameters
 type AccessPolicyListResponse = original.AccessPolicyListResponse

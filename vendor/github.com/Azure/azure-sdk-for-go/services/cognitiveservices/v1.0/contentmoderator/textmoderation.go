@@ -83,7 +83,7 @@ func (client TextModerationClient) DetectLanguagePreparer(ctx context.Context, t
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("text/plain"),
 		autorest.AsPost(),
 		autorest.WithCustomBaseURL("https://{baseUrl}", urlParameters),
 		autorest.WithPath("/contentmoderator/moderate/v1.0/ProcessText/DetectLanguage"),
@@ -168,7 +168,7 @@ func (client TextModerationClient) ScreenTextPreparer(ctx context.Context, langu
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("text/plain"),
 		autorest.AsPost(),
 		autorest.WithCustomBaseURL("https://{baseUrl}", urlParameters),
 		autorest.WithPath("/contentmoderator/moderate/v1.0/ProcessText/Screen/"),

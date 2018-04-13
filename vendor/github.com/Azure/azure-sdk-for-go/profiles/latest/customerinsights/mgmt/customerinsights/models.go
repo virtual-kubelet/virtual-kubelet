@@ -116,6 +116,10 @@ const (
 	Week     CalculationWindowTypes = original.Week
 )
 
+func PossibleCalculationWindowTypesValues() []CalculationWindowTypes {
+	return original.PossibleCalculationWindowTypesValues()
+}
+
 type CanonicalPropertyValueType = original.CanonicalPropertyValueType
 
 const (
@@ -125,6 +129,10 @@ const (
 	Numeric            CanonicalPropertyValueType = original.Numeric
 )
 
+func PossibleCanonicalPropertyValueTypeValues() []CanonicalPropertyValueType {
+	return original.PossibleCanonicalPropertyValueTypeValues()
+}
+
 type CardinalityTypes = original.CardinalityTypes
 
 const (
@@ -133,6 +141,10 @@ const (
 	OneToOne   CardinalityTypes = original.OneToOne
 )
 
+func PossibleCardinalityTypesValues() []CardinalityTypes {
+	return original.PossibleCardinalityTypesValues()
+}
+
 type CompletionOperationTypes = original.CompletionOperationTypes
 
 const (
@@ -140,6 +152,10 @@ const (
 	DoNothing  CompletionOperationTypes = original.DoNothing
 	MoveFile   CompletionOperationTypes = original.MoveFile
 )
+
+func PossibleCompletionOperationTypesValues() []CompletionOperationTypes {
+	return original.PossibleCompletionOperationTypesValues()
+}
 
 type ConnectorMappingStates = original.ConnectorMappingStates
 
@@ -153,6 +169,10 @@ const (
 	Stopped  ConnectorMappingStates = original.Stopped
 )
 
+func PossibleConnectorMappingStatesValues() []ConnectorMappingStates {
+	return original.PossibleConnectorMappingStatesValues()
+}
+
 type ConnectorStates = original.ConnectorStates
 
 const (
@@ -163,6 +183,10 @@ const (
 	ConnectorStatesFailed   ConnectorStates = original.ConnectorStatesFailed
 	ConnectorStatesReady    ConnectorStates = original.ConnectorStatesReady
 )
+
+func PossibleConnectorStatesValues() []ConnectorStates {
+	return original.PossibleConnectorStatesValues()
+}
 
 type ConnectorTypes = original.ConnectorTypes
 
@@ -175,6 +199,10 @@ const (
 	Salesforce     ConnectorTypes = original.Salesforce
 )
 
+func PossibleConnectorTypesValues() []ConnectorTypes {
+	return original.PossibleConnectorTypesValues()
+}
+
 type DataSourceType = original.DataSourceType
 
 const (
@@ -182,6 +210,10 @@ const (
 	DataSourceTypeLinkInteraction DataSourceType = original.DataSourceTypeLinkInteraction
 	DataSourceTypeSystemDefault   DataSourceType = original.DataSourceTypeSystemDefault
 )
+
+func PossibleDataSourceTypeValues() []DataSourceType {
+	return original.PossibleDataSourceTypeValues()
+}
 
 type EntityType = original.EntityType
 
@@ -192,6 +224,10 @@ const (
 	EntityTypeRelationship EntityType = original.EntityTypeRelationship
 )
 
+func PossibleEntityTypeValues() []EntityType {
+	return original.PossibleEntityTypeValues()
+}
+
 type EntityTypes = original.EntityTypes
 
 const (
@@ -201,6 +237,10 @@ const (
 	EntityTypesRelationship EntityTypes = original.EntityTypesRelationship
 )
 
+func PossibleEntityTypesValues() []EntityTypes {
+	return original.PossibleEntityTypesValues()
+}
+
 type ErrorManagementTypes = original.ErrorManagementTypes
 
 const (
@@ -208,6 +248,10 @@ const (
 	RejectUntilLimit  ErrorManagementTypes = original.RejectUntilLimit
 	StopImport        ErrorManagementTypes = original.StopImport
 )
+
+func PossibleErrorManagementTypesValues() []ErrorManagementTypes {
+	return original.PossibleErrorManagementTypesValues()
+}
 
 type FrequencyTypes = original.FrequencyTypes
 
@@ -219,12 +263,20 @@ const (
 	FrequencyTypesWeek   FrequencyTypes = original.FrequencyTypesWeek
 )
 
+func PossibleFrequencyTypesValues() []FrequencyTypes {
+	return original.PossibleFrequencyTypesValues()
+}
+
 type InstanceOperationType = original.InstanceOperationType
 
 const (
 	Delete InstanceOperationType = original.Delete
 	Upsert InstanceOperationType = original.Upsert
 )
+
+func PossibleInstanceOperationTypeValues() []InstanceOperationType {
+	return original.PossibleInstanceOperationTypeValues()
+}
 
 type KpiFunctions = original.KpiFunctions
 
@@ -239,12 +291,20 @@ const (
 	KpiFunctionsSum           KpiFunctions = original.KpiFunctionsSum
 )
 
+func PossibleKpiFunctionsValues() []KpiFunctions {
+	return original.PossibleKpiFunctionsValues()
+}
+
 type LinkTypes = original.LinkTypes
 
 const (
 	CopyIfNull   LinkTypes = original.CopyIfNull
 	UpdateAlways LinkTypes = original.UpdateAlways
 )
+
+func PossibleLinkTypesValues() []LinkTypes {
+	return original.PossibleLinkTypesValues()
+}
 
 type PermissionTypes = original.PermissionTypes
 
@@ -253,6 +313,10 @@ const (
 	Read   PermissionTypes = original.Read
 	Write  PermissionTypes = original.Write
 )
+
+func PossiblePermissionTypesValues() []PermissionTypes {
+	return original.PossiblePermissionTypesValues()
+}
 
 type PredictionModelLifeCycle = original.PredictionModelLifeCycle
 
@@ -277,6 +341,10 @@ const (
 	PredictionModelLifeCycleTrainingFailed           PredictionModelLifeCycle = original.PredictionModelLifeCycleTrainingFailed
 )
 
+func PossiblePredictionModelLifeCycleValues() []PredictionModelLifeCycle {
+	return original.PossiblePredictionModelLifeCycleValues()
+}
+
 type ProvisioningStates = original.ProvisioningStates
 
 const (
@@ -287,6 +355,10 @@ const (
 	ProvisioningStatesProvisioning      ProvisioningStates = original.ProvisioningStatesProvisioning
 	ProvisioningStatesSucceeded         ProvisioningStates = original.ProvisioningStatesSucceeded
 )
+
+func PossibleProvisioningStatesValues() []ProvisioningStates {
+	return original.PossibleProvisioningStatesValues()
+}
 
 type RoleTypes = original.RoleTypes
 
@@ -299,6 +371,10 @@ const (
 	Reader       RoleTypes = original.Reader
 )
 
+func PossibleRoleTypesValues() []RoleTypes {
+	return original.PossibleRoleTypesValues()
+}
+
 type Status = original.Status
 
 const (
@@ -306,6 +382,10 @@ const (
 	StatusDeleted Status = original.StatusDeleted
 	StatusNone    Status = original.StatusNone
 )
+
+func PossibleStatusValues() []Status {
+	return original.PossibleStatusValues()
+}
 
 type AssignmentPrincipal = original.AssignmentPrincipal
 type AuthorizationPolicy = original.AuthorizationPolicy

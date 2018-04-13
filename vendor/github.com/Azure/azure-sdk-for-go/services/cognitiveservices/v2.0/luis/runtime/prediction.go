@@ -102,7 +102,7 @@ func (client PredictionClient) ResolvePreparer(ctx context.Context, appID string
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPost(),
 		autorest.WithCustomBaseURL("https://{AzureRegion}.api.cognitive.microsoft.com/luis/v2.0/apps", urlParameters),
 		autorest.WithPathParameters("/{appId}", pathParameters),

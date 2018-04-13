@@ -60,17 +60,29 @@ const (
 	BindingTypeMicrosoftStreamAnalyticsJavascriptUdf       BindingType = original.BindingTypeMicrosoftStreamAnalyticsJavascriptUdf
 )
 
+func PossibleBindingTypeValues() []BindingType {
+	return original.PossibleBindingTypeValues()
+}
+
 type CompatibilityLevel = original.CompatibilityLevel
 
 const (
 	OneFullStopZero CompatibilityLevel = original.OneFullStopZero
 )
 
+func PossibleCompatibilityLevelValues() []CompatibilityLevel {
+	return original.PossibleCompatibilityLevelValues()
+}
+
 type Encoding = original.Encoding
 
 const (
 	UTF8 Encoding = original.UTF8
 )
+
+func PossibleEncodingValues() []Encoding {
+	return original.PossibleEncodingValues()
+}
 
 type EventsOutOfOrderPolicy = original.EventsOutOfOrderPolicy
 
@@ -79,6 +91,10 @@ const (
 	Drop   EventsOutOfOrderPolicy = original.Drop
 )
 
+func PossibleEventsOutOfOrderPolicyValues() []EventsOutOfOrderPolicy {
+	return original.PossibleEventsOutOfOrderPolicyValues()
+}
+
 type JSONOutputSerializationFormat = original.JSONOutputSerializationFormat
 
 const (
@@ -86,12 +102,20 @@ const (
 	LineSeparated JSONOutputSerializationFormat = original.LineSeparated
 )
 
+func PossibleJSONOutputSerializationFormatValues() []JSONOutputSerializationFormat {
+	return original.PossibleJSONOutputSerializationFormatValues()
+}
+
 type OutputErrorPolicy = original.OutputErrorPolicy
 
 const (
 	OutputErrorPolicyDrop OutputErrorPolicy = original.OutputErrorPolicyDrop
 	OutputErrorPolicyStop OutputErrorPolicy = original.OutputErrorPolicyStop
 )
+
+func PossibleOutputErrorPolicyValues() []OutputErrorPolicy {
+	return original.PossibleOutputErrorPolicyValues()
+}
 
 type OutputStartMode = original.OutputStartMode
 
@@ -101,11 +125,19 @@ const (
 	LastOutputEventTime OutputStartMode = original.LastOutputEventTime
 )
 
+func PossibleOutputStartModeValues() []OutputStartMode {
+	return original.PossibleOutputStartModeValues()
+}
+
 type SkuName = original.SkuName
 
 const (
 	Standard SkuName = original.Standard
 )
+
+func PossibleSkuNameValues() []SkuName {
+	return original.PossibleSkuNameValues()
+}
 
 type Type = original.Type
 
@@ -116,6 +148,10 @@ const (
 	TypeSerialization Type = original.TypeSerialization
 )
 
+func PossibleTypeValues() []Type {
+	return original.PossibleTypeValues()
+}
+
 type TypeBasicFunctionBinding = original.TypeBasicFunctionBinding
 
 const (
@@ -124,12 +160,20 @@ const (
 	TypeMicrosoftStreamAnalyticsJavascriptUdf TypeBasicFunctionBinding = original.TypeMicrosoftStreamAnalyticsJavascriptUdf
 )
 
+func PossibleTypeBasicFunctionBindingValues() []TypeBasicFunctionBinding {
+	return original.PossibleTypeBasicFunctionBindingValues()
+}
+
 type TypeBasicFunctionProperties = original.TypeBasicFunctionProperties
 
 const (
 	TypeFunctionProperties TypeBasicFunctionProperties = original.TypeFunctionProperties
 	TypeScalar             TypeBasicFunctionProperties = original.TypeScalar
 )
+
+func PossibleTypeBasicFunctionPropertiesValues() []TypeBasicFunctionProperties {
+	return original.PossibleTypeBasicFunctionPropertiesValues()
+}
 
 type TypeBasicInputProperties = original.TypeBasicInputProperties
 
@@ -138,6 +182,10 @@ const (
 	TypeReference       TypeBasicInputProperties = original.TypeReference
 	TypeStream          TypeBasicInputProperties = original.TypeStream
 )
+
+func PossibleTypeBasicInputPropertiesValues() []TypeBasicInputProperties {
+	return original.PossibleTypeBasicInputPropertiesValues()
+}
 
 type TypeBasicOutputDataSource = original.TypeBasicOutputDataSource
 
@@ -154,12 +202,20 @@ const (
 	TypePowerBI                     TypeBasicOutputDataSource = original.TypePowerBI
 )
 
+func PossibleTypeBasicOutputDataSourceValues() []TypeBasicOutputDataSource {
+	return original.PossibleTypeBasicOutputDataSourceValues()
+}
+
 type TypeBasicReferenceInputDataSource = original.TypeBasicReferenceInputDataSource
 
 const (
 	TypeBasicReferenceInputDataSourceTypeMicrosoftStorageBlob     TypeBasicReferenceInputDataSource = original.TypeBasicReferenceInputDataSourceTypeMicrosoftStorageBlob
 	TypeBasicReferenceInputDataSourceTypeReferenceInputDataSource TypeBasicReferenceInputDataSource = original.TypeBasicReferenceInputDataSourceTypeReferenceInputDataSource
 )
+
+func PossibleTypeBasicReferenceInputDataSourceValues() []TypeBasicReferenceInputDataSource {
+	return original.PossibleTypeBasicReferenceInputDataSourceValues()
+}
 
 type TypeBasicStreamInputDataSource = original.TypeBasicStreamInputDataSource
 
@@ -170,11 +226,19 @@ const (
 	TypeBasicStreamInputDataSourceTypeStreamInputDataSource       TypeBasicStreamInputDataSource = original.TypeBasicStreamInputDataSourceTypeStreamInputDataSource
 )
 
+func PossibleTypeBasicStreamInputDataSourceValues() []TypeBasicStreamInputDataSource {
+	return original.PossibleTypeBasicStreamInputDataSourceValues()
+}
+
 type UdfType = original.UdfType
 
 const (
 	Scalar UdfType = original.Scalar
 )
+
+func PossibleUdfTypeValues() []UdfType {
+	return original.PossibleUdfTypeValues()
+}
 
 type AvroSerialization = original.AvroSerialization
 type AzureDataLakeStoreOutputDataSource = original.AzureDataLakeStoreOutputDataSource

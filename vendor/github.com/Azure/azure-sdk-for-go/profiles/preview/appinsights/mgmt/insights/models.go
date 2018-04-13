@@ -21,6 +21,15 @@ package insights
 
 import original "github.com/Azure/azure-sdk-for-go/services/appinsights/mgmt/2015-05-01/insights"
 
+type AnnotationsClient = original.AnnotationsClient
+
+func NewAnnotationsClient(subscriptionID string) AnnotationsClient {
+	return original.NewAnnotationsClient(subscriptionID)
+}
+func NewAnnotationsClientWithBaseURI(baseURI string, subscriptionID string) AnnotationsClient {
+	return original.NewAnnotationsClientWithBaseURI(baseURI, subscriptionID)
+}
+
 type APIKeysClient = original.APIKeysClient
 
 func NewAPIKeysClient(subscriptionID string) APIKeysClient {
@@ -97,6 +106,24 @@ func NewExportConfigurationsClientWithBaseURI(baseURI string, subscriptionID str
 	return original.NewExportConfigurationsClientWithBaseURI(baseURI, subscriptionID)
 }
 
+type FavoriteClient = original.FavoriteClient
+
+func NewFavoriteClient(subscriptionID string) FavoriteClient {
+	return original.NewFavoriteClient(subscriptionID)
+}
+func NewFavoriteClientWithBaseURI(baseURI string, subscriptionID string) FavoriteClient {
+	return original.NewFavoriteClientWithBaseURI(baseURI, subscriptionID)
+}
+
+type FavoritesClient = original.FavoritesClient
+
+func NewFavoritesClient(subscriptionID string) FavoritesClient {
+	return original.NewFavoritesClient(subscriptionID)
+}
+func NewFavoritesClientWithBaseURI(baseURI string, subscriptionID string) FavoritesClient {
+	return original.NewFavoritesClientWithBaseURI(baseURI, subscriptionID)
+}
+
 type ApplicationType = original.ApplicationType
 
 const (
@@ -104,17 +131,68 @@ const (
 	Web   ApplicationType = original.Web
 )
 
+func PossibleApplicationTypeValues() []ApplicationType {
+	return original.PossibleApplicationTypeValues()
+}
+
+type FavoriteSourceType = original.FavoriteSourceType
+
+const (
+	Events       FavoriteSourceType = original.Events
+	Funnel       FavoriteSourceType = original.Funnel
+	Impact       FavoriteSourceType = original.Impact
+	Notebook     FavoriteSourceType = original.Notebook
+	Retention    FavoriteSourceType = original.Retention
+	Segmentation FavoriteSourceType = original.Segmentation
+	Sessions     FavoriteSourceType = original.Sessions
+	Userflows    FavoriteSourceType = original.Userflows
+)
+
+func PossibleFavoriteSourceTypeValues() []FavoriteSourceType {
+	return original.PossibleFavoriteSourceTypeValues()
+}
+
+type FavoriteType = original.FavoriteType
+
+const (
+	Shared FavoriteType = original.Shared
+	User   FavoriteType = original.User
+)
+
+func PossibleFavoriteTypeValues() []FavoriteType {
+	return original.PossibleFavoriteTypeValues()
+}
+
 type FlowType = original.FlowType
 
 const (
 	Bluefield FlowType = original.Bluefield
 )
 
+func PossibleFlowTypeValues() []FlowType {
+	return original.PossibleFlowTypeValues()
+}
+
+type PurgeState = original.PurgeState
+
+const (
+	Completed PurgeState = original.Completed
+	Pending   PurgeState = original.Pending
+)
+
+func PossiblePurgeStateValues() []PurgeState {
+	return original.PossiblePurgeStateValues()
+}
+
 type RequestSource = original.RequestSource
 
 const (
 	Rest RequestSource = original.Rest
 )
+
+func PossibleRequestSourceValues() []RequestSource {
+	return original.PossibleRequestSourceValues()
+}
 
 type WebTestKind = original.WebTestKind
 
@@ -123,6 +201,12 @@ const (
 	Ping      WebTestKind = original.Ping
 )
 
+func PossibleWebTestKindValues() []WebTestKind {
+	return original.PossibleWebTestKindValues()
+}
+
+type Annotation = original.Annotation
+type AnnotationError = original.AnnotationError
 type APIKeyRequest = original.APIKeyRequest
 type ApplicationInsightsComponent = original.ApplicationInsightsComponent
 type ApplicationInsightsComponentAPIKey = original.ApplicationInsightsComponentAPIKey
@@ -132,6 +216,7 @@ type ApplicationInsightsComponentBillingFeatures = original.ApplicationInsightsC
 type ApplicationInsightsComponentDataVolumeCap = original.ApplicationInsightsComponentDataVolumeCap
 type ApplicationInsightsComponentExportConfiguration = original.ApplicationInsightsComponentExportConfiguration
 type ApplicationInsightsComponentExportRequest = original.ApplicationInsightsComponentExportRequest
+type ApplicationInsightsComponentFavorite = original.ApplicationInsightsComponentFavorite
 type ApplicationInsightsComponentFeature = original.ApplicationInsightsComponentFeature
 type ApplicationInsightsComponentFeatureCapabilities = original.ApplicationInsightsComponentFeatureCapabilities
 type ApplicationInsightsComponentFeatureCapability = original.ApplicationInsightsComponentFeatureCapability
@@ -142,15 +227,26 @@ type ApplicationInsightsComponentProactiveDetectionConfiguration = original.Appl
 type ApplicationInsightsComponentProactiveDetectionConfigurationRuleDefinitions = original.ApplicationInsightsComponentProactiveDetectionConfigurationRuleDefinitions
 type ApplicationInsightsComponentProperties = original.ApplicationInsightsComponentProperties
 type ApplicationInsightsComponentQuotaStatus = original.ApplicationInsightsComponentQuotaStatus
+type ApplicationInsightsComponentWebTestLocation = original.ApplicationInsightsComponentWebTestLocation
+type ApplicationInsightsWebTestLocationsListResult = original.ApplicationInsightsWebTestLocationsListResult
+type ComponentPurgeBody = original.ComponentPurgeBody
+type ComponentPurgeBodyFilters = original.ComponentPurgeBodyFilters
+type ComponentPurgeResponse = original.ComponentPurgeResponse
+type ComponentPurgeStatusResponse = original.ComponentPurgeStatusResponse
 type ErrorResponse = original.ErrorResponse
+type InnerError = original.InnerError
+type ListAnnotation = original.ListAnnotation
 type ListApplicationInsightsComponentExportConfiguration = original.ListApplicationInsightsComponentExportConfiguration
+type ListApplicationInsightsComponentFavorite = original.ListApplicationInsightsComponentFavorite
 type ListApplicationInsightsComponentProactiveDetectionConfiguration = original.ListApplicationInsightsComponentProactiveDetectionConfiguration
+type ListWorkItemConfiguration = original.ListWorkItemConfiguration
 type Operation = original.Operation
 type OperationDisplay = original.OperationDisplay
 type OperationListResult = original.OperationListResult
 type OperationListResultIterator = original.OperationListResultIterator
 type OperationListResultPage = original.OperationListResultPage
 type Resource = original.Resource
+type SetObject = original.SetObject
 type TagsResource = original.TagsResource
 type WebTest = original.WebTest
 type WebTestGeolocation = original.WebTestGeolocation
@@ -159,6 +255,9 @@ type WebTestListResultIterator = original.WebTestListResultIterator
 type WebTestListResultPage = original.WebTestListResultPage
 type WebTestProperties = original.WebTestProperties
 type WebTestPropertiesConfiguration = original.WebTestPropertiesConfiguration
+type WorkItemConfiguration = original.WorkItemConfiguration
+type WorkItemConfigurationError = original.WorkItemConfigurationError
+type WorkItemCreateConfiguration = original.WorkItemCreateConfiguration
 type OperationsClient = original.OperationsClient
 
 func NewOperationsClient(subscriptionID string) OperationsClient {
@@ -183,6 +282,15 @@ func Version() string {
 	return original.Version()
 }
 
+type WebTestLocationsClient = original.WebTestLocationsClient
+
+func NewWebTestLocationsClient(subscriptionID string) WebTestLocationsClient {
+	return original.NewWebTestLocationsClient(subscriptionID)
+}
+func NewWebTestLocationsClientWithBaseURI(baseURI string, subscriptionID string) WebTestLocationsClient {
+	return original.NewWebTestLocationsClientWithBaseURI(baseURI, subscriptionID)
+}
+
 type WebTestsClient = original.WebTestsClient
 
 func NewWebTestsClient(subscriptionID string) WebTestsClient {
@@ -190,4 +298,13 @@ func NewWebTestsClient(subscriptionID string) WebTestsClient {
 }
 func NewWebTestsClientWithBaseURI(baseURI string, subscriptionID string) WebTestsClient {
 	return original.NewWebTestsClientWithBaseURI(baseURI, subscriptionID)
+}
+
+type WorkItemConfigurationsClient = original.WorkItemConfigurationsClient
+
+func NewWorkItemConfigurationsClient(subscriptionID string) WorkItemConfigurationsClient {
+	return original.NewWorkItemConfigurationsClient(subscriptionID)
+}
+func NewWorkItemConfigurationsClientWithBaseURI(baseURI string, subscriptionID string) WorkItemConfigurationsClient {
+	return original.NewWorkItemConfigurationsClientWithBaseURI(baseURI, subscriptionID)
 }

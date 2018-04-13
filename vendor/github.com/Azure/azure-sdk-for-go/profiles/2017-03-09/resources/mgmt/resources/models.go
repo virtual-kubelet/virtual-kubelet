@@ -68,11 +68,19 @@ const (
 	Incremental DeploymentMode = original.Incremental
 )
 
+func PossibleDeploymentModeValues() []DeploymentMode {
+	return original.PossibleDeploymentModeValues()
+}
+
 type ResourceIdentityType = original.ResourceIdentityType
 
 const (
 	SystemAssigned ResourceIdentityType = original.SystemAssigned
 )
+
+func PossibleResourceIdentityTypeValues() []ResourceIdentityType {
+	return original.PossibleResourceIdentityTypeValues()
+}
 
 type AliasPathType = original.AliasPathType
 type AliasType = original.AliasType

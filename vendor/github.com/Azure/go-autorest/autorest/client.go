@@ -203,8 +203,10 @@ func (c Client) Do(r *http.Request) (*http.Response, error) {
 		r, _ = Prepare(r,
 			WithUserAgent(c.UserAgent))
 	}
+	// NOTE: c.WithInspection() must be last in the list so that it can inspect all preceding operations
 	r, err := Prepare(r,
-		c.WithAuthorization())
+		c.WithAuthorization(),
+		c.WithInspection())
 	if err != nil {
 		var resp *http.Response
 		if detErr, ok := err.(DetailedError); ok {
@@ -214,9 +216,6 @@ func (c Client) Do(r *http.Request) (*http.Response, error) {
 		}
 		return resp, NewErrorWithError(err, "autorest/Client", "Do", nil, "Preparing request failed")
 	}
-
-	r, _ = Prepare(r,
-		c.WithInspection())
 
 	resp, err := SendWithSender(c.sender(), r)
 	Respond(resp, c.ByInspecting())

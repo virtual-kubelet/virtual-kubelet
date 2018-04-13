@@ -60,6 +60,10 @@ const (
 	NotSpecified Type = original.NotSpecified
 )
 
+func PossibleTypeValues() []Type {
+	return original.PossibleTypeValues()
+}
+
 type Assignment = original.Assignment
 type AssignmentListResult = original.AssignmentListResult
 type AssignmentListResultIterator = original.AssignmentListResultIterator

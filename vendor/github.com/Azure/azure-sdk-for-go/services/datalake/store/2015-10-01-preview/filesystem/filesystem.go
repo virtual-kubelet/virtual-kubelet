@@ -90,7 +90,7 @@ func (client Client) AppendPreparer(ctx context.Context, accountName string, dir
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsOctetStream(),
+		autorest.AsContentType("application/octet-stream"),
 		autorest.AsPost(),
 		autorest.WithCustomBaseURL("https://{accountName}.{adlsFileSystemDnsSuffix}", urlParameters),
 		autorest.WithPathParameters("/webhdfs/v1/{directFilePath}", pathParameters),
@@ -325,7 +325,7 @@ func (client Client) ConcurrentAppendPreparer(ctx context.Context, accountName s
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsOctetStream(),
+		autorest.AsContentType("application/octet-stream"),
 		autorest.AsPost(),
 		autorest.WithCustomBaseURL("https://{accountName}.{adlsFileSystemDnsSuffix}", urlParameters),
 		autorest.WithPathParameters("/WebHdfsExt/{filePath}", pathParameters),
@@ -405,7 +405,7 @@ func (client Client) CreatePreparer(ctx context.Context, accountName string, dir
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsOctetStream(),
+		autorest.AsContentType("application/octet-stream"),
 		autorest.AsPut(),
 		autorest.WithCustomBaseURL("https://{accountName}.{adlsFileSystemDnsSuffix}", urlParameters),
 		autorest.WithPathParameters("/webhdfs/v1/{directFilePath}", pathParameters),
@@ -1081,7 +1081,7 @@ func (client Client) MsConcatPreparer(ctx context.Context, accountName string, m
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsOctetStream(),
+		autorest.AsContentType("application/octet-stream"),
 		autorest.AsPost(),
 		autorest.WithCustomBaseURL("https://{accountName}.{adlsFileSystemDnsSuffix}", urlParameters),
 		autorest.WithPathParameters("/webhdfs/v1/{msConcatDestinationPath}", pathParameters),

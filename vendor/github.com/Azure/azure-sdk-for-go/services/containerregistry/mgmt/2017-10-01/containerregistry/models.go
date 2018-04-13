@@ -36,6 +36,11 @@ const (
 	Password2 PasswordName = "password2"
 )
 
+// PossiblePasswordNameValues returns an array of possible values for the PasswordName const type.
+func PossiblePasswordNameValues() []PasswordName {
+	return []PasswordName{Password, Password2}
+}
+
 // ProvisioningState enumerates the values for provisioning state.
 type ProvisioningState string
 
@@ -54,6 +59,11 @@ const (
 	Updating ProvisioningState = "Updating"
 )
 
+// PossibleProvisioningStateValues returns an array of possible values for the ProvisioningState const type.
+func PossibleProvisioningStateValues() []ProvisioningState {
+	return []ProvisioningState{Canceled, Creating, Deleting, Failed, Succeeded, Updating}
+}
+
 // RegistryUsageUnit enumerates the values for registry usage unit.
 type RegistryUsageUnit string
 
@@ -63,6 +73,11 @@ const (
 	// Count ...
 	Count RegistryUsageUnit = "Count"
 )
+
+// PossibleRegistryUsageUnitValues returns an array of possible values for the RegistryUsageUnit const type.
+func PossibleRegistryUsageUnitValues() []RegistryUsageUnit {
+	return []RegistryUsageUnit{Bytes, Count}
+}
 
 // SkuName enumerates the values for sku name.
 type SkuName string
@@ -78,6 +93,11 @@ const (
 	Standard SkuName = "Standard"
 )
 
+// PossibleSkuNameValues returns an array of possible values for the SkuName const type.
+func PossibleSkuNameValues() []SkuName {
+	return []SkuName{Basic, Classic, Premium, Standard}
+}
+
 // SkuTier enumerates the values for sku tier.
 type SkuTier string
 
@@ -92,6 +112,11 @@ const (
 	SkuTierStandard SkuTier = "Standard"
 )
 
+// PossibleSkuTierValues returns an array of possible values for the SkuTier const type.
+func PossibleSkuTierValues() []SkuTier {
+	return []SkuTier{SkuTierBasic, SkuTierClassic, SkuTierPremium, SkuTierStandard}
+}
+
 // WebhookAction enumerates the values for webhook action.
 type WebhookAction string
 
@@ -102,6 +127,11 @@ const (
 	Push WebhookAction = "push"
 )
 
+// PossibleWebhookActionValues returns an array of possible values for the WebhookAction const type.
+func PossibleWebhookActionValues() []WebhookAction {
+	return []WebhookAction{Delete, Push}
+}
+
 // WebhookStatus enumerates the values for webhook status.
 type WebhookStatus string
 
@@ -111,6 +141,11 @@ const (
 	// Enabled ...
 	Enabled WebhookStatus = "enabled"
 )
+
+// PossibleWebhookStatusValues returns an array of possible values for the WebhookStatus const type.
+func PossibleWebhookStatusValues() []WebhookStatus {
+	return []WebhookStatus{Disabled, Enabled}
+}
 
 // Actor the agent that initiated the event. For most situations, this could be from the authorization context of
 // the request.
@@ -1785,7 +1820,9 @@ func (wpcp WebhookPropertiesCreateParameters) MarshalJSON() ([]byte, error) {
 	if wpcp.CustomHeaders != nil {
 		objectMap["customHeaders"] = wpcp.CustomHeaders
 	}
-	objectMap["status"] = wpcp.Status
+	if wpcp.Status != "" {
+		objectMap["status"] = wpcp.Status
+	}
 	if wpcp.Scope != nil {
 		objectMap["scope"] = wpcp.Scope
 	}
@@ -1818,7 +1855,9 @@ func (wpup WebhookPropertiesUpdateParameters) MarshalJSON() ([]byte, error) {
 	if wpup.CustomHeaders != nil {
 		objectMap["customHeaders"] = wpup.CustomHeaders
 	}
-	objectMap["status"] = wpup.Status
+	if wpup.Status != "" {
+		objectMap["status"] = wpup.Status
+	}
 	if wpup.Scope != nil {
 		objectMap["scope"] = wpup.Scope
 	}

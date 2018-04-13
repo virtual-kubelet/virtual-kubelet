@@ -85,7 +85,7 @@ func (client ServicePrincipalsClient) CreatePreparer(ctx context.Context, parame
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPost(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/{tenantID}/servicePrincipals", pathParameters),
@@ -621,7 +621,7 @@ func (client ServicePrincipalsClient) UpdateKeyCredentialsPreparer(ctx context.C
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPatch(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/{tenantID}/servicePrincipals/{objectId}/keyCredentials", pathParameters),
@@ -688,7 +688,7 @@ func (client ServicePrincipalsClient) UpdatePasswordCredentialsPreparer(ctx cont
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPatch(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/{tenantID}/servicePrincipals/{objectId}/passwordCredentials", pathParameters),

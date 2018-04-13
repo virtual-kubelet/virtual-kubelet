@@ -81,7 +81,7 @@ func (client EventSubscriptionsClient) CreatePreparer(ctx context.Context, scope
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPut(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/{scope}/providers/Microsoft.EventGrid/eventSubscriptions/{eventSubscriptionName}", pathParameters),
@@ -975,7 +975,7 @@ func (client EventSubscriptionsClient) UpdatePreparer(ctx context.Context, scope
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPatch(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/{scope}/providers/Microsoft.EventGrid/eventSubscriptions/{eventSubscriptionName}", pathParameters),

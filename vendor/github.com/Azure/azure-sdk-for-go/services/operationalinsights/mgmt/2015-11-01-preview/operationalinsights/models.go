@@ -62,6 +62,11 @@ const (
 	WindowsPerformanceCounter DataSourceKind = "WindowsPerformanceCounter"
 )
 
+// PossibleDataSourceKindValues returns an array of possible values for the DataSourceKind const type.
+func PossibleDataSourceKindValues() []DataSourceKind {
+	return []DataSourceKind{AzureActivityLog, ChangeTrackingCustomRegistry, ChangeTrackingDefaultPath, ChangeTrackingDefaultRegistry, ChangeTrackingPath, CustomLog, CustomLogCollection, GenericDataSource, IISLogs, LinuxPerformanceCollection, LinuxPerformanceObject, LinuxSyslog, LinuxSyslogCollection, WindowsEvent, WindowsPerformanceCounter}
+}
+
 // EntityStatus enumerates the values for entity status.
 type EntityStatus string
 
@@ -80,6 +85,11 @@ const (
 	Succeeded EntityStatus = "Succeeded"
 )
 
+// PossibleEntityStatusValues returns an array of possible values for the EntityStatus const type.
+func PossibleEntityStatusValues() []EntityStatus {
+	return []EntityStatus{Canceled, Creating, Deleting, Failed, ProvisioningAccount, Succeeded}
+}
+
 // SkuNameEnum enumerates the values for sku name enum.
 type SkuNameEnum string
 
@@ -97,6 +107,11 @@ const (
 	// Unlimited ...
 	Unlimited SkuNameEnum = "Unlimited"
 )
+
+// PossibleSkuNameEnumValues returns an array of possible values for the SkuNameEnum const type.
+func PossibleSkuNameEnumValues() []SkuNameEnum {
+	return []SkuNameEnum{Free, PerNode, Premium, Standalone, Standard, Unlimited}
+}
 
 // DataSource datasources under OMS Workspace.
 type DataSource struct {
@@ -124,7 +139,9 @@ func (ds DataSource) MarshalJSON() ([]byte, error) {
 	if ds.ETag != nil {
 		objectMap["eTag"] = ds.ETag
 	}
-	objectMap["kind"] = ds.Kind
+	if ds.Kind != "" {
+		objectMap["kind"] = ds.Kind
+	}
 	if ds.ID != nil {
 		objectMap["id"] = ds.ID
 	}
@@ -377,6 +394,15 @@ type ListIntelligencePack struct {
 type ManagementGroup struct {
 	// ManagementGroupProperties - The properties of the management group.
 	*ManagementGroupProperties `json:"properties,omitempty"`
+}
+
+// MarshalJSON is the custom marshaler for ManagementGroup.
+func (mg ManagementGroup) MarshalJSON() ([]byte, error) {
+	objectMap := make(map[string]interface{})
+	if mg.ManagementGroupProperties != nil {
+		objectMap["properties"] = mg.ManagementGroupProperties
+	}
+	return json.Marshal(objectMap)
 }
 
 // UnmarshalJSON is the custom unmarshaler for ManagementGroup struct.

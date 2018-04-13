@@ -19,13 +19,12 @@ package batch
 
 import (
 	"context"
-	"net/http"
-
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/date"
 	"github.com/Azure/go-autorest/autorest/validation"
 	"github.com/satori/go.uuid"
+	"net/http"
 )
 
 // PoolClient is the a client for issuing REST requests to the Azure Batch service.
@@ -116,7 +115,7 @@ func (client PoolClient) AddPreparer(ctx context.Context, pool PoolAddParameter,
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; odata=minimalmetadata; charset=utf-8"),
 		autorest.AsPost(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPath("/pools"),
@@ -425,7 +424,7 @@ func (client PoolClient) EnableAutoScalePreparer(ctx context.Context, poolID str
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; odata=minimalmetadata; charset=utf-8"),
 		autorest.AsPost(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/pools/{poolId}/enableautoscale", pathParameters),
@@ -539,7 +538,7 @@ func (client PoolClient) EvaluateAutoScalePreparer(ctx context.Context, poolID s
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; odata=minimalmetadata; charset=utf-8"),
 		autorest.AsPost(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/pools/{poolId}/evaluateautoscale", pathParameters),
@@ -1241,7 +1240,7 @@ func (client PoolClient) PatchPreparer(ctx context.Context, poolID string, poolP
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; odata=minimalmetadata; charset=utf-8"),
 		autorest.AsPatch(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/pools/{poolId}", pathParameters),
@@ -1364,7 +1363,7 @@ func (client PoolClient) RemoveNodesPreparer(ctx context.Context, poolID string,
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; odata=minimalmetadata; charset=utf-8"),
 		autorest.AsPost(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/pools/{poolId}/removenodes", pathParameters),
@@ -1482,7 +1481,7 @@ func (client PoolClient) ResizePreparer(ctx context.Context, poolID string, pool
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; odata=minimalmetadata; charset=utf-8"),
 		autorest.AsPost(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/pools/{poolId}/resize", pathParameters),
@@ -1724,7 +1723,7 @@ func (client PoolClient) UpdatePropertiesPreparer(ctx context.Context, poolID st
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; odata=minimalmetadata; charset=utf-8"),
 		autorest.AsPost(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/pools/{poolId}/updateproperties", pathParameters),
@@ -1838,7 +1837,7 @@ func (client PoolClient) UpgradeOSPreparer(ctx context.Context, poolID string, p
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; odata=minimalmetadata; charset=utf-8"),
 		autorest.AsPost(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/pools/{poolId}/upgradeos", pathParameters),

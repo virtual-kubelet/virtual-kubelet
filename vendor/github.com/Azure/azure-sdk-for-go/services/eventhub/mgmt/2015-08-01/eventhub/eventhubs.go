@@ -96,7 +96,7 @@ func (client EventHubsClient) CreateOrUpdatePreparer(ctx context.Context, resour
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPut(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.EventHub/namespaces/{namespaceName}/eventhubs/{eventHubName}", pathParameters),
@@ -187,7 +187,7 @@ func (client EventHubsClient) CreateOrUpdateAuthorizationRulePreparer(ctx contex
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPut(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.EventHub/namespaces/{namespaceName}/eventhubs/{eventHubName}/authorizationRules/{authorizationRuleName}", pathParameters),
@@ -845,6 +845,91 @@ func (client EventHubsClient) ListKeysResponder(resp *http.Response) (result Res
 	return
 }
 
+// PosttAuthorizationRule gets an AuthorizationRule for an Event Hub by rule name.
+//
+// resourceGroupName is name of the resource group within the azure subscription. namespaceName is the Namespace
+// name eventHubName is the Event Hub name authorizationRuleName is the authorization rule name.
+func (client EventHubsClient) PosttAuthorizationRule(ctx context.Context, resourceGroupName string, namespaceName string, eventHubName string, authorizationRuleName string) (result SharedAccessAuthorizationRuleResource, err error) {
+	if err := validation.Validate([]validation.Validation{
+		{TargetValue: resourceGroupName,
+			Constraints: []validation.Constraint{{Target: "resourceGroupName", Name: validation.MaxLength, Rule: 90, Chain: nil},
+				{Target: "resourceGroupName", Name: validation.MinLength, Rule: 1, Chain: nil}}},
+		{TargetValue: namespaceName,
+			Constraints: []validation.Constraint{{Target: "namespaceName", Name: validation.MaxLength, Rule: 50, Chain: nil},
+				{Target: "namespaceName", Name: validation.MinLength, Rule: 6, Chain: nil}}},
+		{TargetValue: eventHubName,
+			Constraints: []validation.Constraint{{Target: "eventHubName", Name: validation.MaxLength, Rule: 50, Chain: nil},
+				{Target: "eventHubName", Name: validation.MinLength, Rule: 1, Chain: nil}}},
+		{TargetValue: authorizationRuleName,
+			Constraints: []validation.Constraint{{Target: "authorizationRuleName", Name: validation.MaxLength, Rule: 50, Chain: nil},
+				{Target: "authorizationRuleName", Name: validation.MinLength, Rule: 1, Chain: nil}}}}); err != nil {
+		return result, validation.NewError("eventhub.EventHubsClient", "PosttAuthorizationRule", err.Error())
+	}
+
+	req, err := client.PosttAuthorizationRulePreparer(ctx, resourceGroupName, namespaceName, eventHubName, authorizationRuleName)
+	if err != nil {
+		err = autorest.NewErrorWithError(err, "eventhub.EventHubsClient", "PosttAuthorizationRule", nil, "Failure preparing request")
+		return
+	}
+
+	resp, err := client.PosttAuthorizationRuleSender(req)
+	if err != nil {
+		result.Response = autorest.Response{Response: resp}
+		err = autorest.NewErrorWithError(err, "eventhub.EventHubsClient", "PosttAuthorizationRule", resp, "Failure sending request")
+		return
+	}
+
+	result, err = client.PosttAuthorizationRuleResponder(resp)
+	if err != nil {
+		err = autorest.NewErrorWithError(err, "eventhub.EventHubsClient", "PosttAuthorizationRule", resp, "Failure responding to request")
+	}
+
+	return
+}
+
+// PosttAuthorizationRulePreparer prepares the PosttAuthorizationRule request.
+func (client EventHubsClient) PosttAuthorizationRulePreparer(ctx context.Context, resourceGroupName string, namespaceName string, eventHubName string, authorizationRuleName string) (*http.Request, error) {
+	pathParameters := map[string]interface{}{
+		"authorizationRuleName": autorest.Encode("path", authorizationRuleName),
+		"eventHubName":          autorest.Encode("path", eventHubName),
+		"namespaceName":         autorest.Encode("path", namespaceName),
+		"resourceGroupName":     autorest.Encode("path", resourceGroupName),
+		"subscriptionId":        autorest.Encode("path", client.SubscriptionID),
+	}
+
+	const APIVersion = "2015-08-01"
+	queryParameters := map[string]interface{}{
+		"api-version": APIVersion,
+	}
+
+	preparer := autorest.CreatePreparer(
+		autorest.AsPost(),
+		autorest.WithBaseURL(client.BaseURI),
+		autorest.WithPathParameters("/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.EventHub/namespaces/{namespaceName}/eventhubs/{eventHubName}/authorizationRules/{authorizationRuleName}", pathParameters),
+		autorest.WithQueryParameters(queryParameters))
+	return preparer.Prepare((&http.Request{}).WithContext(ctx))
+}
+
+// PosttAuthorizationRuleSender sends the PosttAuthorizationRule request. The method will close the
+// http.Response Body if it receives an error.
+func (client EventHubsClient) PosttAuthorizationRuleSender(req *http.Request) (*http.Response, error) {
+	return autorest.SendWithSender(client, req,
+		azure.DoRetryWithRegistration(client.Client))
+}
+
+// PosttAuthorizationRuleResponder handles the response to the PosttAuthorizationRule request. The method always
+// closes the http.Response Body.
+func (client EventHubsClient) PosttAuthorizationRuleResponder(resp *http.Response) (result SharedAccessAuthorizationRuleResource, err error) {
+	err = autorest.Respond(
+		resp,
+		client.ByInspecting(),
+		azure.WithErrorUnlessStatusCode(http.StatusOK),
+		autorest.ByUnmarshallingJSON(&result),
+		autorest.ByClosing())
+	result.Response = autorest.Response{Response: resp}
+	return
+}
+
 // RegenerateKeys regenerates the ACS and SAS connection strings for the Event Hub.
 //
 // resourceGroupName is name of the resource group within the azure subscription. namespaceName is the Namespace
@@ -904,7 +989,7 @@ func (client EventHubsClient) RegenerateKeysPreparer(ctx context.Context, resour
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPost(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.EventHub/namespaces/{namespaceName}/eventhubs/{eventHubName}/authorizationRules/{authorizationRuleName}/regenerateKeys", pathParameters),

@@ -89,7 +89,7 @@ func (client ImageModerationClient) EvaluateFileInputPreparer(ctx context.Contex
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsOctetStream(),
+		autorest.AsContentType("image/gif"),
 		autorest.AsPost(),
 		autorest.WithCustomBaseURL("https://{baseUrl}", urlParameters),
 		autorest.WithPath("/contentmoderator/moderate/v1.0/ProcessImage/Evaluate"),
@@ -220,7 +220,7 @@ func (client ImageModerationClient) EvaluateURLInputPreparer(ctx context.Context
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPost(),
 		autorest.WithCustomBaseURL("https://{baseUrl}", urlParameters),
 		autorest.WithPath("/contentmoderator/moderate/v1.0/ProcessImage/Evaluate"),
@@ -353,7 +353,7 @@ func (client ImageModerationClient) FindFacesFileInputPreparer(ctx context.Conte
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsOctetStream(),
+		autorest.AsContentType("image/gif"),
 		autorest.AsPost(),
 		autorest.WithCustomBaseURL("https://{baseUrl}", urlParameters),
 		autorest.WithPath("/contentmoderator/moderate/v1.0/ProcessImage/FindFaces"),
@@ -420,7 +420,7 @@ func (client ImageModerationClient) FindFacesURLInputPreparer(ctx context.Contex
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPost(),
 		autorest.WithCustomBaseURL("https://{baseUrl}", urlParameters),
 		autorest.WithPath("/contentmoderator/moderate/v1.0/ProcessImage/FindFaces"),
@@ -499,7 +499,7 @@ func (client ImageModerationClient) MatchFileInputPreparer(ctx context.Context, 
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsOctetStream(),
+		autorest.AsContentType("image/gif"),
 		autorest.AsPost(),
 		autorest.WithCustomBaseURL("https://{baseUrl}", urlParameters),
 		autorest.WithPath("/contentmoderator/moderate/v1.0/ProcessImage/Match"),
@@ -651,7 +651,7 @@ func (client ImageModerationClient) MatchURLInputPreparer(ctx context.Context, c
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPost(),
 		autorest.WithCustomBaseURL("https://{baseUrl}", urlParameters),
 		autorest.WithPath("/contentmoderator/moderate/v1.0/ProcessImage/Match"),
@@ -733,7 +733,7 @@ func (client ImageModerationClient) OCRFileInputPreparer(ctx context.Context, la
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsOctetStream(),
+		autorest.AsContentType("image/gif"),
 		autorest.AsPost(),
 		autorest.WithCustomBaseURL("https://{baseUrl}", urlParameters),
 		autorest.WithPath("/contentmoderator/moderate/v1.0/ProcessImage/OCR"),
@@ -891,7 +891,7 @@ func (client ImageModerationClient) OCRURLInputPreparer(ctx context.Context, lan
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPost(),
 		autorest.WithCustomBaseURL("https://{baseUrl}", urlParameters),
 		autorest.WithPath("/contentmoderator/moderate/v1.0/ProcessImage/OCR"),

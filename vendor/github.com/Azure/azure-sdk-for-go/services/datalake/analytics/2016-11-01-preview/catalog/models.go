@@ -41,6 +41,11 @@ const (
 	UserObj ACLType = "UserObj"
 )
 
+// PossibleACLTypeValues returns an array of possible values for the ACLType const type.
+func PossibleACLTypeValues() []ACLType {
+	return []ACLType{Group, GroupObj, Other, User, UserObj}
+}
+
 // FileType enumerates the values for file type.
 type FileType string
 
@@ -52,6 +57,11 @@ const (
 	// Resource ...
 	Resource FileType = "Resource"
 )
+
+// PossibleFileTypeValues returns an array of possible values for the FileType const type.
+func PossibleFileTypeValues() []FileType {
+	return []FileType{Assembly, Nodeploy, Resource}
+}
 
 // PermissionType enumerates the values for permission type.
 type PermissionType string
@@ -72,6 +82,11 @@ const (
 	// Write ...
 	Write PermissionType = "Write"
 )
+
+// PossiblePermissionTypeValues returns an array of possible values for the PermissionType const type.
+func PossiblePermissionTypeValues() []PermissionType {
+	return []PermissionType{All, Alter, Create, Drop, None, Use, Write}
+}
 
 // ACL a Data Lake Analytics catalog access control list (ACL) entry.
 type ACL struct {

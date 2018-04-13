@@ -37,6 +37,11 @@ const (
 	SQL AuthenticationType = "SQL"
 )
 
+// PossibleAuthenticationTypeValues returns an array of possible values for the AuthenticationType const type.
+func PossibleAuthenticationTypeValues() []AuthenticationType {
+	return []AuthenticationType{ADPassword, SQL}
+}
+
 // AutomaticTuningDisabledReason enumerates the values for automatic tuning disabled reason.
 type AutomaticTuningDisabledReason string
 
@@ -57,6 +62,11 @@ const (
 	QueryStoreReadOnly AutomaticTuningDisabledReason = "QueryStoreReadOnly"
 )
 
+// PossibleAutomaticTuningDisabledReasonValues returns an array of possible values for the AutomaticTuningDisabledReason const type.
+func PossibleAutomaticTuningDisabledReasonValues() []AutomaticTuningDisabledReason {
+	return []AutomaticTuningDisabledReason{AutoConfigured, Default, Disabled, InheritedFromServer, NotSupported, QueryStoreOff, QueryStoreReadOnly}
+}
+
 // AutomaticTuningMode enumerates the values for automatic tuning mode.
 type AutomaticTuningMode string
 
@@ -71,6 +81,11 @@ const (
 	Unspecified AutomaticTuningMode = "Unspecified"
 )
 
+// PossibleAutomaticTuningModeValues returns an array of possible values for the AutomaticTuningMode const type.
+func PossibleAutomaticTuningModeValues() []AutomaticTuningMode {
+	return []AutomaticTuningMode{Auto, Custom, Inherit, Unspecified}
+}
+
 // AutomaticTuningOptionModeActual enumerates the values for automatic tuning option mode actual.
 type AutomaticTuningOptionModeActual string
 
@@ -80,6 +95,11 @@ const (
 	// On ...
 	On AutomaticTuningOptionModeActual = "On"
 )
+
+// PossibleAutomaticTuningOptionModeActualValues returns an array of possible values for the AutomaticTuningOptionModeActual const type.
+func PossibleAutomaticTuningOptionModeActualValues() []AutomaticTuningOptionModeActual {
+	return []AutomaticTuningOptionModeActual{Off, On}
+}
 
 // AutomaticTuningOptionModeDesired enumerates the values for automatic tuning option mode desired.
 type AutomaticTuningOptionModeDesired string
@@ -93,6 +113,11 @@ const (
 	AutomaticTuningOptionModeDesiredOn AutomaticTuningOptionModeDesired = "On"
 )
 
+// PossibleAutomaticTuningOptionModeDesiredValues returns an array of possible values for the AutomaticTuningOptionModeDesired const type.
+func PossibleAutomaticTuningOptionModeDesiredValues() []AutomaticTuningOptionModeDesired {
+	return []AutomaticTuningOptionModeDesired{AutomaticTuningOptionModeDesiredDefault, AutomaticTuningOptionModeDesiredOff, AutomaticTuningOptionModeDesiredOn}
+}
+
 // AutomaticTuningServerMode enumerates the values for automatic tuning server mode.
 type AutomaticTuningServerMode string
 
@@ -104,6 +129,11 @@ const (
 	// AutomaticTuningServerModeUnspecified ...
 	AutomaticTuningServerModeUnspecified AutomaticTuningServerMode = "Unspecified"
 )
+
+// PossibleAutomaticTuningServerModeValues returns an array of possible values for the AutomaticTuningServerMode const type.
+func PossibleAutomaticTuningServerModeValues() []AutomaticTuningServerMode {
+	return []AutomaticTuningServerMode{AutomaticTuningServerModeAuto, AutomaticTuningServerModeCustom, AutomaticTuningServerModeUnspecified}
+}
 
 // AutomaticTuningServerReason enumerates the values for automatic tuning server reason.
 type AutomaticTuningServerReason string
@@ -117,6 +147,11 @@ const (
 	AutomaticTuningServerReasonDisabled AutomaticTuningServerReason = "Disabled"
 )
 
+// PossibleAutomaticTuningServerReasonValues returns an array of possible values for the AutomaticTuningServerReason const type.
+func PossibleAutomaticTuningServerReasonValues() []AutomaticTuningServerReason {
+	return []AutomaticTuningServerReason{AutomaticTuningServerReasonAutoConfigured, AutomaticTuningServerReasonDefault, AutomaticTuningServerReasonDisabled}
+}
+
 // BackupLongTermRetentionPolicyState enumerates the values for backup long term retention policy state.
 type BackupLongTermRetentionPolicyState string
 
@@ -127,6 +162,11 @@ const (
 	BackupLongTermRetentionPolicyStateEnabled BackupLongTermRetentionPolicyState = "Enabled"
 )
 
+// PossibleBackupLongTermRetentionPolicyStateValues returns an array of possible values for the BackupLongTermRetentionPolicyState const type.
+func PossibleBackupLongTermRetentionPolicyStateValues() []BackupLongTermRetentionPolicyState {
+	return []BackupLongTermRetentionPolicyState{BackupLongTermRetentionPolicyStateDisabled, BackupLongTermRetentionPolicyStateEnabled}
+}
+
 // BlobAuditingPolicyState enumerates the values for blob auditing policy state.
 type BlobAuditingPolicyState string
 
@@ -136,6 +176,11 @@ const (
 	// BlobAuditingPolicyStateEnabled ...
 	BlobAuditingPolicyStateEnabled BlobAuditingPolicyState = "Enabled"
 )
+
+// PossibleBlobAuditingPolicyStateValues returns an array of possible values for the BlobAuditingPolicyState const type.
+func PossibleBlobAuditingPolicyStateValues() []BlobAuditingPolicyState {
+	return []BlobAuditingPolicyState{BlobAuditingPolicyStateDisabled, BlobAuditingPolicyStateEnabled}
+}
 
 // CapabilityStatus enumerates the values for capability status.
 type CapabilityStatus string
@@ -151,6 +196,11 @@ const (
 	CapabilityStatusVisible CapabilityStatus = "Visible"
 )
 
+// PossibleCapabilityStatusValues returns an array of possible values for the CapabilityStatus const type.
+func PossibleCapabilityStatusValues() []CapabilityStatus {
+	return []CapabilityStatus{CapabilityStatusAvailable, CapabilityStatusDefault, CapabilityStatusDisabled, CapabilityStatusVisible}
+}
+
 // CheckNameAvailabilityReason enumerates the values for check name availability reason.
 type CheckNameAvailabilityReason string
 
@@ -160,6 +210,11 @@ const (
 	// Invalid ...
 	Invalid CheckNameAvailabilityReason = "Invalid"
 )
+
+// PossibleCheckNameAvailabilityReasonValues returns an array of possible values for the CheckNameAvailabilityReason const type.
+func PossibleCheckNameAvailabilityReasonValues() []CheckNameAvailabilityReason {
+	return []CheckNameAvailabilityReason{AlreadyExists, Invalid}
+}
 
 // CreateMode enumerates the values for create mode.
 type CreateMode string
@@ -182,6 +237,11 @@ const (
 	// CreateModeRestoreLongTermRetentionBackup ...
 	CreateModeRestoreLongTermRetentionBackup CreateMode = "RestoreLongTermRetentionBackup"
 )
+
+// PossibleCreateModeValues returns an array of possible values for the CreateMode const type.
+func PossibleCreateModeValues() []CreateMode {
+	return []CreateMode{CreateModeCopy, CreateModeDefault, CreateModeNonReadableSecondary, CreateModeOnlineSecondary, CreateModePointInTimeRestore, CreateModeRecovery, CreateModeRestore, CreateModeRestoreLongTermRetentionBackup}
+}
 
 // DatabaseEdition enumerates the values for database edition.
 type DatabaseEdition string
@@ -211,6 +271,11 @@ const (
 	Web DatabaseEdition = "Web"
 )
 
+// PossibleDatabaseEditionValues returns an array of possible values for the DatabaseEdition const type.
+func PossibleDatabaseEditionValues() []DatabaseEdition {
+	return []DatabaseEdition{Basic, Business, DataWarehouse, Free, Premium, PremiumRS, Standard, Stretch, System, System2, Web}
+}
+
 // DataMaskingFunction enumerates the values for data masking function.
 type DataMaskingFunction string
 
@@ -229,6 +294,11 @@ const (
 	DataMaskingFunctionText DataMaskingFunction = "Text"
 )
 
+// PossibleDataMaskingFunctionValues returns an array of possible values for the DataMaskingFunction const type.
+func PossibleDataMaskingFunctionValues() []DataMaskingFunction {
+	return []DataMaskingFunction{DataMaskingFunctionCCN, DataMaskingFunctionDefault, DataMaskingFunctionEmail, DataMaskingFunctionNumber, DataMaskingFunctionSSN, DataMaskingFunctionText}
+}
+
 // DataMaskingRuleState enumerates the values for data masking rule state.
 type DataMaskingRuleState string
 
@@ -239,6 +309,11 @@ const (
 	DataMaskingRuleStateEnabled DataMaskingRuleState = "Enabled"
 )
 
+// PossibleDataMaskingRuleStateValues returns an array of possible values for the DataMaskingRuleState const type.
+func PossibleDataMaskingRuleStateValues() []DataMaskingRuleState {
+	return []DataMaskingRuleState{DataMaskingRuleStateDisabled, DataMaskingRuleStateEnabled}
+}
+
 // DataMaskingState enumerates the values for data masking state.
 type DataMaskingState string
 
@@ -248,6 +323,11 @@ const (
 	// DataMaskingStateEnabled ...
 	DataMaskingStateEnabled DataMaskingState = "Enabled"
 )
+
+// PossibleDataMaskingStateValues returns an array of possible values for the DataMaskingState const type.
+func PossibleDataMaskingStateValues() []DataMaskingState {
+	return []DataMaskingState{DataMaskingStateDisabled, DataMaskingStateEnabled}
+}
 
 // ElasticPoolEdition enumerates the values for elastic pool edition.
 type ElasticPoolEdition string
@@ -261,6 +341,11 @@ const (
 	ElasticPoolEditionStandard ElasticPoolEdition = "Standard"
 )
 
+// PossibleElasticPoolEditionValues returns an array of possible values for the ElasticPoolEdition const type.
+func PossibleElasticPoolEditionValues() []ElasticPoolEdition {
+	return []ElasticPoolEdition{ElasticPoolEditionBasic, ElasticPoolEditionPremium, ElasticPoolEditionStandard}
+}
+
 // ElasticPoolState enumerates the values for elastic pool state.
 type ElasticPoolState string
 
@@ -273,6 +358,11 @@ const (
 	ElasticPoolStateReady ElasticPoolState = "Ready"
 )
 
+// PossibleElasticPoolStateValues returns an array of possible values for the ElasticPoolState const type.
+func PossibleElasticPoolStateValues() []ElasticPoolState {
+	return []ElasticPoolState{ElasticPoolStateCreating, ElasticPoolStateDisabled, ElasticPoolStateReady}
+}
+
 // FailoverGroupReplicationRole enumerates the values for failover group replication role.
 type FailoverGroupReplicationRole string
 
@@ -282,6 +372,11 @@ const (
 	// Secondary ...
 	Secondary FailoverGroupReplicationRole = "Secondary"
 )
+
+// PossibleFailoverGroupReplicationRoleValues returns an array of possible values for the FailoverGroupReplicationRole const type.
+func PossibleFailoverGroupReplicationRoleValues() []FailoverGroupReplicationRole {
+	return []FailoverGroupReplicationRole{Primary, Secondary}
+}
 
 // GeoBackupPolicyState enumerates the values for geo backup policy state.
 type GeoBackupPolicyState string
@@ -293,6 +388,11 @@ const (
 	GeoBackupPolicyStateEnabled GeoBackupPolicyState = "Enabled"
 )
 
+// PossibleGeoBackupPolicyStateValues returns an array of possible values for the GeoBackupPolicyState const type.
+func PossibleGeoBackupPolicyStateValues() []GeoBackupPolicyState {
+	return []GeoBackupPolicyState{GeoBackupPolicyStateDisabled, GeoBackupPolicyStateEnabled}
+}
+
 // IdentityType enumerates the values for identity type.
 type IdentityType string
 
@@ -300,6 +400,11 @@ const (
 	// SystemAssigned ...
 	SystemAssigned IdentityType = "SystemAssigned"
 )
+
+// PossibleIdentityTypeValues returns an array of possible values for the IdentityType const type.
+func PossibleIdentityTypeValues() []IdentityType {
+	return []IdentityType{SystemAssigned}
+}
 
 // ManagementOperationState enumerates the values for management operation state.
 type ManagementOperationState string
@@ -319,6 +424,11 @@ const (
 	Succeeded ManagementOperationState = "Succeeded"
 )
 
+// PossibleManagementOperationStateValues returns an array of possible values for the ManagementOperationState const type.
+func PossibleManagementOperationStateValues() []ManagementOperationState {
+	return []ManagementOperationState{CancelInProgress, Cancelled, Failed, InProgress, Pending, Succeeded}
+}
+
 // MaxSizeUnits enumerates the values for max size units.
 type MaxSizeUnits string
 
@@ -333,6 +443,11 @@ const (
 	Terabytes MaxSizeUnits = "Terabytes"
 )
 
+// PossibleMaxSizeUnitsValues returns an array of possible values for the MaxSizeUnits const type.
+func PossibleMaxSizeUnitsValues() []MaxSizeUnits {
+	return []MaxSizeUnits{Gigabytes, Megabytes, Petabytes, Terabytes}
+}
+
 // OperationOrigin enumerates the values for operation origin.
 type OperationOrigin string
 
@@ -343,6 +458,11 @@ const (
 	OperationOriginUser OperationOrigin = "user"
 )
 
+// PossibleOperationOriginValues returns an array of possible values for the OperationOrigin const type.
+func PossibleOperationOriginValues() []OperationOrigin {
+	return []OperationOrigin{OperationOriginSystem, OperationOriginUser}
+}
+
 // PerformanceLevelUnit enumerates the values for performance level unit.
 type PerformanceLevelUnit string
 
@@ -350,6 +470,11 @@ const (
 	// DTU ...
 	DTU PerformanceLevelUnit = "DTU"
 )
+
+// PossiblePerformanceLevelUnitValues returns an array of possible values for the PerformanceLevelUnit const type.
+func PossiblePerformanceLevelUnitValues() []PerformanceLevelUnit {
+	return []PerformanceLevelUnit{DTU}
+}
 
 // PrimaryAggregationType enumerates the values for primary aggregation type.
 type PrimaryAggregationType string
@@ -369,6 +494,11 @@ const (
 	Total PrimaryAggregationType = "Total"
 )
 
+// PossiblePrimaryAggregationTypeValues returns an array of possible values for the PrimaryAggregationType const type.
+func PossiblePrimaryAggregationTypeValues() []PrimaryAggregationType {
+	return []PrimaryAggregationType{Average, Count, Maximum, Minimum, None, Total}
+}
+
 // ReadOnlyEndpointFailoverPolicy enumerates the values for read only endpoint failover policy.
 type ReadOnlyEndpointFailoverPolicy string
 
@@ -378,6 +508,11 @@ const (
 	// ReadOnlyEndpointFailoverPolicyEnabled ...
 	ReadOnlyEndpointFailoverPolicyEnabled ReadOnlyEndpointFailoverPolicy = "Enabled"
 )
+
+// PossibleReadOnlyEndpointFailoverPolicyValues returns an array of possible values for the ReadOnlyEndpointFailoverPolicy const type.
+func PossibleReadOnlyEndpointFailoverPolicyValues() []ReadOnlyEndpointFailoverPolicy {
+	return []ReadOnlyEndpointFailoverPolicy{ReadOnlyEndpointFailoverPolicyDisabled, ReadOnlyEndpointFailoverPolicyEnabled}
+}
 
 // ReadScale enumerates the values for read scale.
 type ReadScale string
@@ -389,6 +524,11 @@ const (
 	ReadScaleEnabled ReadScale = "Enabled"
 )
 
+// PossibleReadScaleValues returns an array of possible values for the ReadScale const type.
+func PossibleReadScaleValues() []ReadScale {
+	return []ReadScale{ReadScaleDisabled, ReadScaleEnabled}
+}
+
 // ReadWriteEndpointFailoverPolicy enumerates the values for read write endpoint failover policy.
 type ReadWriteEndpointFailoverPolicy string
 
@@ -398,6 +538,11 @@ const (
 	// Manual ...
 	Manual ReadWriteEndpointFailoverPolicy = "Manual"
 )
+
+// PossibleReadWriteEndpointFailoverPolicyValues returns an array of possible values for the ReadWriteEndpointFailoverPolicy const type.
+func PossibleReadWriteEndpointFailoverPolicyValues() []ReadWriteEndpointFailoverPolicy {
+	return []ReadWriteEndpointFailoverPolicy{Automatic, Manual}
+}
 
 // RecommendedIndexAction enumerates the values for recommended index action.
 type RecommendedIndexAction string
@@ -410,6 +555,11 @@ const (
 	// Rebuild ...
 	Rebuild RecommendedIndexAction = "Rebuild"
 )
+
+// PossibleRecommendedIndexActionValues returns an array of possible values for the RecommendedIndexAction const type.
+func PossibleRecommendedIndexActionValues() []RecommendedIndexAction {
+	return []RecommendedIndexAction{Create, Drop, Rebuild}
+}
 
 // RecommendedIndexState enumerates the values for recommended index state.
 type RecommendedIndexState string
@@ -439,6 +589,11 @@ const (
 	RecommendedIndexStateVerifying RecommendedIndexState = "Verifying"
 )
 
+// PossibleRecommendedIndexStateValues returns an array of possible values for the RecommendedIndexState const type.
+func PossibleRecommendedIndexStateValues() []RecommendedIndexState {
+	return []RecommendedIndexState{RecommendedIndexStateActive, RecommendedIndexStateBlocked, RecommendedIndexStateExecuting, RecommendedIndexStateExpired, RecommendedIndexStateIgnored, RecommendedIndexStatePending, RecommendedIndexStatePendingRevert, RecommendedIndexStateReverted, RecommendedIndexStateReverting, RecommendedIndexStateSuccess, RecommendedIndexStateVerifying}
+}
+
 // RecommendedIndexType enumerates the values for recommended index type.
 type RecommendedIndexType string
 
@@ -452,6 +607,11 @@ const (
 	// NONCLUSTERED ...
 	NONCLUSTERED RecommendedIndexType = "NONCLUSTERED"
 )
+
+// PossibleRecommendedIndexTypeValues returns an array of possible values for the RecommendedIndexType const type.
+func PossibleRecommendedIndexTypeValues() []RecommendedIndexType {
+	return []RecommendedIndexType{CLUSTERED, CLUSTEREDCOLUMNSTORE, COLUMNSTORE, NONCLUSTERED}
+}
 
 // ReplicationRole enumerates the values for replication role.
 type ReplicationRole string
@@ -469,6 +629,11 @@ const (
 	ReplicationRoleSource ReplicationRole = "Source"
 )
 
+// PossibleReplicationRoleValues returns an array of possible values for the ReplicationRole const type.
+func PossibleReplicationRoleValues() []ReplicationRole {
+	return []ReplicationRole{ReplicationRoleCopy, ReplicationRoleNonReadableSecondary, ReplicationRolePrimary, ReplicationRoleSecondary, ReplicationRoleSource}
+}
+
 // ReplicationState enumerates the values for replication state.
 type ReplicationState string
 
@@ -483,6 +648,11 @@ const (
 	SUSPENDED ReplicationState = "SUSPENDED"
 )
 
+// PossibleReplicationStateValues returns an array of possible values for the ReplicationState const type.
+func PossibleReplicationStateValues() []ReplicationState {
+	return []ReplicationState{CATCHUP, PENDING, SEEDING, SUSPENDED}
+}
+
 // RestorePointType enumerates the values for restore point type.
 type RestorePointType string
 
@@ -493,6 +663,11 @@ const (
 	DISCRETE RestorePointType = "DISCRETE"
 )
 
+// PossibleRestorePointTypeValues returns an array of possible values for the RestorePointType const type.
+func PossibleRestorePointTypeValues() []RestorePointType {
+	return []RestorePointType{CONTINUOUS, DISCRETE}
+}
+
 // SampleName enumerates the values for sample name.
 type SampleName string
 
@@ -500,6 +675,11 @@ const (
 	// AdventureWorksLT ...
 	AdventureWorksLT SampleName = "AdventureWorksLT"
 )
+
+// PossibleSampleNameValues returns an array of possible values for the SampleName const type.
+func PossibleSampleNameValues() []SampleName {
+	return []SampleName{AdventureWorksLT}
+}
 
 // SecurityAlertPolicyEmailAccountAdmins enumerates the values for security alert policy email account admins.
 type SecurityAlertPolicyEmailAccountAdmins string
@@ -510,6 +690,11 @@ const (
 	// SecurityAlertPolicyEmailAccountAdminsEnabled ...
 	SecurityAlertPolicyEmailAccountAdminsEnabled SecurityAlertPolicyEmailAccountAdmins = "Enabled"
 )
+
+// PossibleSecurityAlertPolicyEmailAccountAdminsValues returns an array of possible values for the SecurityAlertPolicyEmailAccountAdmins const type.
+func PossibleSecurityAlertPolicyEmailAccountAdminsValues() []SecurityAlertPolicyEmailAccountAdmins {
+	return []SecurityAlertPolicyEmailAccountAdmins{SecurityAlertPolicyEmailAccountAdminsDisabled, SecurityAlertPolicyEmailAccountAdminsEnabled}
+}
 
 // SecurityAlertPolicyState enumerates the values for security alert policy state.
 type SecurityAlertPolicyState string
@@ -523,6 +708,11 @@ const (
 	SecurityAlertPolicyStateNew SecurityAlertPolicyState = "New"
 )
 
+// PossibleSecurityAlertPolicyStateValues returns an array of possible values for the SecurityAlertPolicyState const type.
+func PossibleSecurityAlertPolicyStateValues() []SecurityAlertPolicyState {
+	return []SecurityAlertPolicyState{SecurityAlertPolicyStateDisabled, SecurityAlertPolicyStateEnabled, SecurityAlertPolicyStateNew}
+}
+
 // SecurityAlertPolicyUseServerDefault enumerates the values for security alert policy use server default.
 type SecurityAlertPolicyUseServerDefault string
 
@@ -532,6 +722,11 @@ const (
 	// SecurityAlertPolicyUseServerDefaultEnabled ...
 	SecurityAlertPolicyUseServerDefaultEnabled SecurityAlertPolicyUseServerDefault = "Enabled"
 )
+
+// PossibleSecurityAlertPolicyUseServerDefaultValues returns an array of possible values for the SecurityAlertPolicyUseServerDefault const type.
+func PossibleSecurityAlertPolicyUseServerDefaultValues() []SecurityAlertPolicyUseServerDefault {
+	return []SecurityAlertPolicyUseServerDefault{SecurityAlertPolicyUseServerDefaultDisabled, SecurityAlertPolicyUseServerDefaultEnabled}
+}
 
 // ServerConnectionType enumerates the values for server connection type.
 type ServerConnectionType string
@@ -545,6 +740,11 @@ const (
 	ServerConnectionTypeRedirect ServerConnectionType = "Redirect"
 )
 
+// PossibleServerConnectionTypeValues returns an array of possible values for the ServerConnectionType const type.
+func PossibleServerConnectionTypeValues() []ServerConnectionType {
+	return []ServerConnectionType{ServerConnectionTypeDefault, ServerConnectionTypeProxy, ServerConnectionTypeRedirect}
+}
+
 // ServerKeyType enumerates the values for server key type.
 type ServerKeyType string
 
@@ -554,6 +754,11 @@ const (
 	// ServiceManaged ...
 	ServiceManaged ServerKeyType = "ServiceManaged"
 )
+
+// PossibleServerKeyTypeValues returns an array of possible values for the ServerKeyType const type.
+func PossibleServerKeyTypeValues() []ServerKeyType {
+	return []ServerKeyType{AzureKeyVault, ServiceManaged}
+}
 
 // ServiceObjectiveName enumerates the values for service objective name.
 type ServiceObjectiveName string
@@ -691,6 +896,11 @@ const (
 	ServiceObjectiveNameSystem4L ServiceObjectiveName = "System4L"
 )
 
+// PossibleServiceObjectiveNameValues returns an array of possible values for the ServiceObjectiveName const type.
+func PossibleServiceObjectiveNameValues() []ServiceObjectiveName {
+	return []ServiceObjectiveName{ServiceObjectiveNameBasic, ServiceObjectiveNameDS100, ServiceObjectiveNameDS1000, ServiceObjectiveNameDS1200, ServiceObjectiveNameDS1500, ServiceObjectiveNameDS200, ServiceObjectiveNameDS2000, ServiceObjectiveNameDS300, ServiceObjectiveNameDS400, ServiceObjectiveNameDS500, ServiceObjectiveNameDS600, ServiceObjectiveNameDW100, ServiceObjectiveNameDW1000, ServiceObjectiveNameDW10000c, ServiceObjectiveNameDW1000c, ServiceObjectiveNameDW1200, ServiceObjectiveNameDW1500, ServiceObjectiveNameDW15000c, ServiceObjectiveNameDW1500c, ServiceObjectiveNameDW200, ServiceObjectiveNameDW2000, ServiceObjectiveNameDW2000c, ServiceObjectiveNameDW2500c, ServiceObjectiveNameDW300, ServiceObjectiveNameDW3000, ServiceObjectiveNameDW30000c, ServiceObjectiveNameDW3000c, ServiceObjectiveNameDW400, ServiceObjectiveNameDW500, ServiceObjectiveNameDW5000c, ServiceObjectiveNameDW600, ServiceObjectiveNameDW6000, ServiceObjectiveNameDW6000c, ServiceObjectiveNameDW7500c, ServiceObjectiveNameElasticPool, ServiceObjectiveNameFree, ServiceObjectiveNameP1, ServiceObjectiveNameP11, ServiceObjectiveNameP15, ServiceObjectiveNameP2, ServiceObjectiveNameP3, ServiceObjectiveNameP4, ServiceObjectiveNameP6, ServiceObjectiveNamePRS1, ServiceObjectiveNamePRS2, ServiceObjectiveNamePRS4, ServiceObjectiveNamePRS6, ServiceObjectiveNameS0, ServiceObjectiveNameS1, ServiceObjectiveNameS12, ServiceObjectiveNameS2, ServiceObjectiveNameS3, ServiceObjectiveNameS4, ServiceObjectiveNameS6, ServiceObjectiveNameS7, ServiceObjectiveNameS9, ServiceObjectiveNameSystem, ServiceObjectiveNameSystem0, ServiceObjectiveNameSystem1, ServiceObjectiveNameSystem2, ServiceObjectiveNameSystem2L, ServiceObjectiveNameSystem3, ServiceObjectiveNameSystem3L, ServiceObjectiveNameSystem4, ServiceObjectiveNameSystem4L}
+}
+
 // StorageKeyType enumerates the values for storage key type.
 type StorageKeyType string
 
@@ -700,6 +910,11 @@ const (
 	// StorageAccessKey ...
 	StorageAccessKey StorageKeyType = "StorageAccessKey"
 )
+
+// PossibleStorageKeyTypeValues returns an array of possible values for the StorageKeyType const type.
+func PossibleStorageKeyTypeValues() []StorageKeyType {
+	return []StorageKeyType{SharedAccessKey, StorageAccessKey}
+}
 
 // SyncAgentState enumerates the values for sync agent state.
 type SyncAgentState string
@@ -713,6 +928,11 @@ const (
 	Online SyncAgentState = "Online"
 )
 
+// PossibleSyncAgentStateValues returns an array of possible values for the SyncAgentState const type.
+func PossibleSyncAgentStateValues() []SyncAgentState {
+	return []SyncAgentState{NeverConnected, Offline, Online}
+}
+
 // SyncConflictResolutionPolicy enumerates the values for sync conflict resolution policy.
 type SyncConflictResolutionPolicy string
 
@@ -722,6 +942,11 @@ const (
 	// MemberWin ...
 	MemberWin SyncConflictResolutionPolicy = "MemberWin"
 )
+
+// PossibleSyncConflictResolutionPolicyValues returns an array of possible values for the SyncConflictResolutionPolicy const type.
+func PossibleSyncConflictResolutionPolicyValues() []SyncConflictResolutionPolicy {
+	return []SyncConflictResolutionPolicy{HubWin, MemberWin}
+}
 
 // SyncDirection enumerates the values for sync direction.
 type SyncDirection string
@@ -734,6 +959,11 @@ const (
 	// OneWayMemberToHub ...
 	OneWayMemberToHub SyncDirection = "OneWayMemberToHub"
 )
+
+// PossibleSyncDirectionValues returns an array of possible values for the SyncDirection const type.
+func PossibleSyncDirectionValues() []SyncDirection {
+	return []SyncDirection{Bidirectional, OneWayHubToMember, OneWayMemberToHub}
+}
 
 // SyncGroupLogType enumerates the values for sync group log type.
 type SyncGroupLogType string
@@ -748,6 +978,11 @@ const (
 	// Warning ...
 	Warning SyncGroupLogType = "Warning"
 )
+
+// PossibleSyncGroupLogTypeValues returns an array of possible values for the SyncGroupLogType const type.
+func PossibleSyncGroupLogTypeValues() []SyncGroupLogType {
+	return []SyncGroupLogType{All, Error, Success, Warning}
+}
 
 // SyncGroupState enumerates the values for sync group state.
 type SyncGroupState string
@@ -765,6 +1000,11 @@ const (
 	SyncGroupStateWarning SyncGroupState = "Warning"
 )
 
+// PossibleSyncGroupStateValues returns an array of possible values for the SyncGroupState const type.
+func PossibleSyncGroupStateValues() []SyncGroupState {
+	return []SyncGroupState{SyncGroupStateError, SyncGroupStateGood, SyncGroupStateNotReady, SyncGroupStateProgressing, SyncGroupStateWarning}
+}
+
 // SyncMemberDbType enumerates the values for sync member db type.
 type SyncMemberDbType string
 
@@ -774,6 +1014,11 @@ const (
 	// SQLServerDatabase ...
 	SQLServerDatabase SyncMemberDbType = "SqlServerDatabase"
 )
+
+// PossibleSyncMemberDbTypeValues returns an array of possible values for the SyncMemberDbType const type.
+func PossibleSyncMemberDbTypeValues() []SyncMemberDbType {
+	return []SyncMemberDbType{AzureSQLDatabase, SQLServerDatabase}
+}
 
 // SyncMemberState enumerates the values for sync member state.
 type SyncMemberState string
@@ -817,6 +1062,11 @@ const (
 	UnReprovisioned SyncMemberState = "UnReprovisioned"
 )
 
+// PossibleSyncMemberStateValues returns an array of possible values for the SyncMemberState const type.
+func PossibleSyncMemberStateValues() []SyncMemberState {
+	return []SyncMemberState{DeProvisioned, DeProvisionFailed, DeProvisioning, DisabledBackupRestore, DisabledTombstoneCleanup, Provisioned, ProvisionFailed, Provisioning, ReprovisionFailed, Reprovisioning, SyncCancelled, SyncCancelling, SyncFailed, SyncInProgress, SyncSucceeded, SyncSucceededWithWarnings, UnProvisioned, UnReprovisioned}
+}
+
 // TransparentDataEncryptionActivityStatus enumerates the values for transparent data encryption activity
 // status.
 type TransparentDataEncryptionActivityStatus string
@@ -828,6 +1078,11 @@ const (
 	Encrypting TransparentDataEncryptionActivityStatus = "Encrypting"
 )
 
+// PossibleTransparentDataEncryptionActivityStatusValues returns an array of possible values for the TransparentDataEncryptionActivityStatus const type.
+func PossibleTransparentDataEncryptionActivityStatusValues() []TransparentDataEncryptionActivityStatus {
+	return []TransparentDataEncryptionActivityStatus{Decrypting, Encrypting}
+}
+
 // TransparentDataEncryptionStatus enumerates the values for transparent data encryption status.
 type TransparentDataEncryptionStatus string
 
@@ -837,6 +1092,11 @@ const (
 	// TransparentDataEncryptionStatusEnabled ...
 	TransparentDataEncryptionStatusEnabled TransparentDataEncryptionStatus = "Enabled"
 )
+
+// PossibleTransparentDataEncryptionStatusValues returns an array of possible values for the TransparentDataEncryptionStatus const type.
+func PossibleTransparentDataEncryptionStatusValues() []TransparentDataEncryptionStatus {
+	return []TransparentDataEncryptionStatus{TransparentDataEncryptionStatusDisabled, TransparentDataEncryptionStatusEnabled}
+}
 
 // UnitDefinitionType enumerates the values for unit definition type.
 type UnitDefinitionType string
@@ -856,6 +1116,11 @@ const (
 	UnitDefinitionTypeSeconds UnitDefinitionType = "Seconds"
 )
 
+// PossibleUnitDefinitionTypeValues returns an array of possible values for the UnitDefinitionType const type.
+func PossibleUnitDefinitionTypeValues() []UnitDefinitionType {
+	return []UnitDefinitionType{UnitDefinitionTypeBytes, UnitDefinitionTypeBytesPerSecond, UnitDefinitionTypeCount, UnitDefinitionTypeCountPerSecond, UnitDefinitionTypePercent, UnitDefinitionTypeSeconds}
+}
+
 // UnitType enumerates the values for unit type.
 type UnitType string
 
@@ -874,6 +1139,11 @@ const (
 	UnitTypeSeconds UnitType = "seconds"
 )
 
+// PossibleUnitTypeValues returns an array of possible values for the UnitType const type.
+func PossibleUnitTypeValues() []UnitType {
+	return []UnitType{UnitTypeBytes, UnitTypeBytesPerSecond, UnitTypeCount, UnitTypeCountPerSecond, UnitTypePercent, UnitTypeSeconds}
+}
+
 // VirtualNetworkRuleState enumerates the values for virtual network rule state.
 type VirtualNetworkRuleState string
 
@@ -889,6 +1159,11 @@ const (
 	// VirtualNetworkRuleStateUnknown ...
 	VirtualNetworkRuleStateUnknown VirtualNetworkRuleState = "Unknown"
 )
+
+// PossibleVirtualNetworkRuleStateValues returns an array of possible values for the VirtualNetworkRuleState const type.
+func PossibleVirtualNetworkRuleStateValues() []VirtualNetworkRuleState {
+	return []VirtualNetworkRuleState{VirtualNetworkRuleStateDeleting, VirtualNetworkRuleStateInitializing, VirtualNetworkRuleStateInProgress, VirtualNetworkRuleStateReady, VirtualNetworkRuleStateUnknown}
+}
 
 // AutomaticTuningOptions automatic tuning properties for individual advisors.
 type AutomaticTuningOptions struct {
@@ -927,8 +1202,12 @@ type AutomaticTuningServerProperties struct {
 // MarshalJSON is the custom marshaler for AutomaticTuningServerProperties.
 func (atsp AutomaticTuningServerProperties) MarshalJSON() ([]byte, error) {
 	objectMap := make(map[string]interface{})
-	objectMap["desiredState"] = atsp.DesiredState
-	objectMap["actualState"] = atsp.ActualState
+	if atsp.DesiredState != "" {
+		objectMap["desiredState"] = atsp.DesiredState
+	}
+	if atsp.ActualState != "" {
+		objectMap["actualState"] = atsp.ActualState
+	}
 	if atsp.Options != nil {
 		objectMap["options"] = atsp.Options
 	}
@@ -997,6 +1276,27 @@ type BackupLongTermRetentionPolicy struct {
 	Name *string `json:"name,omitempty"`
 	// Type - Resource type.
 	Type *string `json:"type,omitempty"`
+}
+
+// MarshalJSON is the custom marshaler for BackupLongTermRetentionPolicy.
+func (bltrp BackupLongTermRetentionPolicy) MarshalJSON() ([]byte, error) {
+	objectMap := make(map[string]interface{})
+	if bltrp.Location != nil {
+		objectMap["location"] = bltrp.Location
+	}
+	if bltrp.BackupLongTermRetentionPolicyProperties != nil {
+		objectMap["properties"] = bltrp.BackupLongTermRetentionPolicyProperties
+	}
+	if bltrp.ID != nil {
+		objectMap["id"] = bltrp.ID
+	}
+	if bltrp.Name != nil {
+		objectMap["name"] = bltrp.Name
+	}
+	if bltrp.Type != nil {
+		objectMap["type"] = bltrp.Type
+	}
+	return json.Marshal(objectMap)
 }
 
 // UnmarshalJSON is the custom unmarshaler for BackupLongTermRetentionPolicy struct.
@@ -1087,6 +1387,27 @@ type BackupLongTermRetentionVault struct {
 	Name *string `json:"name,omitempty"`
 	// Type - Resource type.
 	Type *string `json:"type,omitempty"`
+}
+
+// MarshalJSON is the custom marshaler for BackupLongTermRetentionVault.
+func (bltrv BackupLongTermRetentionVault) MarshalJSON() ([]byte, error) {
+	objectMap := make(map[string]interface{})
+	if bltrv.Location != nil {
+		objectMap["location"] = bltrv.Location
+	}
+	if bltrv.BackupLongTermRetentionVaultProperties != nil {
+		objectMap["properties"] = bltrv.BackupLongTermRetentionVaultProperties
+	}
+	if bltrv.ID != nil {
+		objectMap["id"] = bltrv.ID
+	}
+	if bltrv.Name != nil {
+		objectMap["name"] = bltrv.Name
+	}
+	if bltrv.Type != nil {
+		objectMap["type"] = bltrv.Type
+	}
+	return json.Marshal(objectMap)
 }
 
 // UnmarshalJSON is the custom unmarshaler for BackupLongTermRetentionVault struct.
@@ -1376,6 +1697,24 @@ type DatabaseAutomaticTuning struct {
 	Type *string `json:"type,omitempty"`
 }
 
+// MarshalJSON is the custom marshaler for DatabaseAutomaticTuning.
+func (dat DatabaseAutomaticTuning) MarshalJSON() ([]byte, error) {
+	objectMap := make(map[string]interface{})
+	if dat.DatabaseAutomaticTuningProperties != nil {
+		objectMap["properties"] = dat.DatabaseAutomaticTuningProperties
+	}
+	if dat.ID != nil {
+		objectMap["id"] = dat.ID
+	}
+	if dat.Name != nil {
+		objectMap["name"] = dat.Name
+	}
+	if dat.Type != nil {
+		objectMap["type"] = dat.Type
+	}
+	return json.Marshal(objectMap)
+}
+
 // UnmarshalJSON is the custom unmarshaler for DatabaseAutomaticTuning struct.
 func (dat *DatabaseAutomaticTuning) UnmarshalJSON(body []byte) error {
 	var m map[string]*json.RawMessage
@@ -1440,8 +1779,12 @@ type DatabaseAutomaticTuningProperties struct {
 // MarshalJSON is the custom marshaler for DatabaseAutomaticTuningProperties.
 func (datp DatabaseAutomaticTuningProperties) MarshalJSON() ([]byte, error) {
 	objectMap := make(map[string]interface{})
-	objectMap["desiredState"] = datp.DesiredState
-	objectMap["actualState"] = datp.ActualState
+	if datp.DesiredState != "" {
+		objectMap["desiredState"] = datp.DesiredState
+	}
+	if datp.ActualState != "" {
+		objectMap["actualState"] = datp.ActualState
+	}
 	if datp.Options != nil {
 		objectMap["options"] = datp.Options
 	}
@@ -1461,6 +1804,27 @@ type DatabaseBlobAuditingPolicy struct {
 	Name *string `json:"name,omitempty"`
 	// Type - Resource type.
 	Type *string `json:"type,omitempty"`
+}
+
+// MarshalJSON is the custom marshaler for DatabaseBlobAuditingPolicy.
+func (dbap DatabaseBlobAuditingPolicy) MarshalJSON() ([]byte, error) {
+	objectMap := make(map[string]interface{})
+	if dbap.Kind != nil {
+		objectMap["kind"] = dbap.Kind
+	}
+	if dbap.DatabaseBlobAuditingPolicyProperties != nil {
+		objectMap["properties"] = dbap.DatabaseBlobAuditingPolicyProperties
+	}
+	if dbap.ID != nil {
+		objectMap["id"] = dbap.ID
+	}
+	if dbap.Name != nil {
+		objectMap["name"] = dbap.Name
+	}
+	if dbap.Type != nil {
+		objectMap["type"] = dbap.Type
+	}
+	return json.Marshal(objectMap)
 }
 
 // UnmarshalJSON is the custom unmarshaler for DatabaseBlobAuditingPolicy struct.
@@ -1558,6 +1922,24 @@ type DatabaseOperation struct {
 	Name *string `json:"name,omitempty"`
 	// Type - Resource type.
 	Type *string `json:"type,omitempty"`
+}
+
+// MarshalJSON is the custom marshaler for DatabaseOperation.
+func (do DatabaseOperation) MarshalJSON() ([]byte, error) {
+	objectMap := make(map[string]interface{})
+	if do.DatabaseOperationProperties != nil {
+		objectMap["properties"] = do.DatabaseOperationProperties
+	}
+	if do.ID != nil {
+		objectMap["id"] = do.ID
+	}
+	if do.Name != nil {
+		objectMap["name"] = do.Name
+	}
+	if do.Type != nil {
+		objectMap["type"] = do.Type
+	}
+	return json.Marshal(objectMap)
 }
 
 // UnmarshalJSON is the custom unmarshaler for DatabaseOperation struct.
@@ -1737,6 +2119,12 @@ type DatabaseOperationProperties struct {
 	ErrorSeverity *int32 `json:"errorSeverity,omitempty"`
 	// IsUserError - Whether or not the error is a user error.
 	IsUserError *bool `json:"isUserError,omitempty"`
+	// EstimatedCompletionTime - The estimated completion time of the operation.
+	EstimatedCompletionTime *date.Time `json:"estimatedCompletionTime,omitempty"`
+	// Description - The operation description.
+	Description *string `json:"description,omitempty"`
+	// IsCancellable - Whether the operation can be cancelled.
+	IsCancellable *bool `json:"isCancellable,omitempty"`
 }
 
 // DatabaseProperties represents the properties of a database.
@@ -1916,6 +2304,30 @@ type DatabaseSecurityAlertPolicy struct {
 	Name *string `json:"name,omitempty"`
 	// Type - Resource type.
 	Type *string `json:"type,omitempty"`
+}
+
+// MarshalJSON is the custom marshaler for DatabaseSecurityAlertPolicy.
+func (dsap DatabaseSecurityAlertPolicy) MarshalJSON() ([]byte, error) {
+	objectMap := make(map[string]interface{})
+	if dsap.Location != nil {
+		objectMap["location"] = dsap.Location
+	}
+	if dsap.Kind != nil {
+		objectMap["kind"] = dsap.Kind
+	}
+	if dsap.DatabaseSecurityAlertPolicyProperties != nil {
+		objectMap["properties"] = dsap.DatabaseSecurityAlertPolicyProperties
+	}
+	if dsap.ID != nil {
+		objectMap["id"] = dsap.ID
+	}
+	if dsap.Name != nil {
+		objectMap["name"] = dsap.Name
+	}
+	if dsap.Type != nil {
+		objectMap["type"] = dsap.Type
+	}
+	return json.Marshal(objectMap)
 }
 
 // UnmarshalJSON is the custom unmarshaler for DatabaseSecurityAlertPolicy struct.
@@ -2384,6 +2796,30 @@ type DataMaskingPolicy struct {
 	Type *string `json:"type,omitempty"`
 }
 
+// MarshalJSON is the custom marshaler for DataMaskingPolicy.
+func (dmp DataMaskingPolicy) MarshalJSON() ([]byte, error) {
+	objectMap := make(map[string]interface{})
+	if dmp.DataMaskingPolicyProperties != nil {
+		objectMap["properties"] = dmp.DataMaskingPolicyProperties
+	}
+	if dmp.Location != nil {
+		objectMap["location"] = dmp.Location
+	}
+	if dmp.Kind != nil {
+		objectMap["kind"] = dmp.Kind
+	}
+	if dmp.ID != nil {
+		objectMap["id"] = dmp.ID
+	}
+	if dmp.Name != nil {
+		objectMap["name"] = dmp.Name
+	}
+	if dmp.Type != nil {
+		objectMap["type"] = dmp.Type
+	}
+	return json.Marshal(objectMap)
+}
+
 // UnmarshalJSON is the custom unmarshaler for DataMaskingPolicy struct.
 func (dmp *DataMaskingPolicy) UnmarshalJSON(body []byte) error {
 	var m map[string]*json.RawMessage
@@ -2480,6 +2916,30 @@ type DataMaskingRule struct {
 	Name *string `json:"name,omitempty"`
 	// Type - Resource type.
 	Type *string `json:"type,omitempty"`
+}
+
+// MarshalJSON is the custom marshaler for DataMaskingRule.
+func (dmr DataMaskingRule) MarshalJSON() ([]byte, error) {
+	objectMap := make(map[string]interface{})
+	if dmr.DataMaskingRuleProperties != nil {
+		objectMap["properties"] = dmr.DataMaskingRuleProperties
+	}
+	if dmr.Location != nil {
+		objectMap["location"] = dmr.Location
+	}
+	if dmr.Kind != nil {
+		objectMap["kind"] = dmr.Kind
+	}
+	if dmr.ID != nil {
+		objectMap["id"] = dmr.ID
+	}
+	if dmr.Name != nil {
+		objectMap["name"] = dmr.Name
+	}
+	if dmr.Type != nil {
+		objectMap["type"] = dmr.Type
+	}
+	return json.Marshal(objectMap)
 }
 
 // UnmarshalJSON is the custom unmarshaler for DataMaskingRule struct.
@@ -2584,6 +3044,96 @@ type DataMaskingRuleProperties struct {
 	SuffixSize *string `json:"suffixSize,omitempty"`
 	// ReplacementString - If maskingFunction is set to Text, the character to use for masking the unexposed part of the string. Otherwise, this parameter will be ignored.
 	ReplacementString *string `json:"replacementString,omitempty"`
+}
+
+// DataWarehouseUserActivities user activities of a data warehouse
+type DataWarehouseUserActivities struct {
+	autorest.Response `json:"-"`
+	// DataWarehouseUserActivitiesProperties - Resource properties.
+	*DataWarehouseUserActivitiesProperties `json:"properties,omitempty"`
+	// ID - Resource ID.
+	ID *string `json:"id,omitempty"`
+	// Name - Resource name.
+	Name *string `json:"name,omitempty"`
+	// Type - Resource type.
+	Type *string `json:"type,omitempty"`
+}
+
+// MarshalJSON is the custom marshaler for DataWarehouseUserActivities.
+func (dwua DataWarehouseUserActivities) MarshalJSON() ([]byte, error) {
+	objectMap := make(map[string]interface{})
+	if dwua.DataWarehouseUserActivitiesProperties != nil {
+		objectMap["properties"] = dwua.DataWarehouseUserActivitiesProperties
+	}
+	if dwua.ID != nil {
+		objectMap["id"] = dwua.ID
+	}
+	if dwua.Name != nil {
+		objectMap["name"] = dwua.Name
+	}
+	if dwua.Type != nil {
+		objectMap["type"] = dwua.Type
+	}
+	return json.Marshal(objectMap)
+}
+
+// UnmarshalJSON is the custom unmarshaler for DataWarehouseUserActivities struct.
+func (dwua *DataWarehouseUserActivities) UnmarshalJSON(body []byte) error {
+	var m map[string]*json.RawMessage
+	err := json.Unmarshal(body, &m)
+	if err != nil {
+		return err
+	}
+	for k, v := range m {
+		switch k {
+		case "properties":
+			if v != nil {
+				var dataWarehouseUserActivitiesProperties DataWarehouseUserActivitiesProperties
+				err = json.Unmarshal(*v, &dataWarehouseUserActivitiesProperties)
+				if err != nil {
+					return err
+				}
+				dwua.DataWarehouseUserActivitiesProperties = &dataWarehouseUserActivitiesProperties
+			}
+		case "id":
+			if v != nil {
+				var ID string
+				err = json.Unmarshal(*v, &ID)
+				if err != nil {
+					return err
+				}
+				dwua.ID = &ID
+			}
+		case "name":
+			if v != nil {
+				var name string
+				err = json.Unmarshal(*v, &name)
+				if err != nil {
+					return err
+				}
+				dwua.Name = &name
+			}
+		case "type":
+			if v != nil {
+				var typeVar string
+				err = json.Unmarshal(*v, &typeVar)
+				if err != nil {
+					return err
+				}
+				dwua.Type = &typeVar
+			}
+		}
+	}
+
+	return nil
+}
+
+// DataWarehouseUserActivitiesProperties user activities of a data warehouse. This currently includes the count of
+// running or suspended queries. For more information, please view the sys.dm_pdw_exec_requests dynamic management
+// view (DMV).
+type DataWarehouseUserActivitiesProperties struct {
+	// ActiveQueriesCount - Count of running and suspended queries.
+	ActiveQueriesCount *int32 `json:"activeQueriesCount,omitempty"`
 }
 
 // EditionCapability the database edition capabilities.
@@ -2736,6 +3286,27 @@ type ElasticPoolActivity struct {
 	Type *string `json:"type,omitempty"`
 }
 
+// MarshalJSON is the custom marshaler for ElasticPoolActivity.
+func (epa ElasticPoolActivity) MarshalJSON() ([]byte, error) {
+	objectMap := make(map[string]interface{})
+	if epa.Location != nil {
+		objectMap["location"] = epa.Location
+	}
+	if epa.ElasticPoolActivityProperties != nil {
+		objectMap["properties"] = epa.ElasticPoolActivityProperties
+	}
+	if epa.ID != nil {
+		objectMap["id"] = epa.ID
+	}
+	if epa.Name != nil {
+		objectMap["name"] = epa.Name
+	}
+	if epa.Type != nil {
+		objectMap["type"] = epa.Type
+	}
+	return json.Marshal(objectMap)
+}
+
 // UnmarshalJSON is the custom unmarshaler for ElasticPoolActivity struct.
 func (epa *ElasticPoolActivity) UnmarshalJSON(body []byte) error {
 	var m map[string]*json.RawMessage
@@ -2859,6 +3430,27 @@ type ElasticPoolDatabaseActivity struct {
 	Name *string `json:"name,omitempty"`
 	// Type - Resource type.
 	Type *string `json:"type,omitempty"`
+}
+
+// MarshalJSON is the custom marshaler for ElasticPoolDatabaseActivity.
+func (epda ElasticPoolDatabaseActivity) MarshalJSON() ([]byte, error) {
+	objectMap := make(map[string]interface{})
+	if epda.Location != nil {
+		objectMap["location"] = epda.Location
+	}
+	if epda.ElasticPoolDatabaseActivityProperties != nil {
+		objectMap["properties"] = epda.ElasticPoolDatabaseActivityProperties
+	}
+	if epda.ID != nil {
+		objectMap["id"] = epda.ID
+	}
+	if epda.Name != nil {
+		objectMap["name"] = epda.Name
+	}
+	if epda.Type != nil {
+		objectMap["type"] = epda.Type
+	}
+	return json.Marshal(objectMap)
 }
 
 // UnmarshalJSON is the custom unmarshaler for ElasticPoolDatabaseActivity struct.
@@ -3244,6 +3836,30 @@ type EncryptionProtector struct {
 	Name *string `json:"name,omitempty"`
 	// Type - Resource type.
 	Type *string `json:"type,omitempty"`
+}
+
+// MarshalJSON is the custom marshaler for EncryptionProtector.
+func (ep EncryptionProtector) MarshalJSON() ([]byte, error) {
+	objectMap := make(map[string]interface{})
+	if ep.Kind != nil {
+		objectMap["kind"] = ep.Kind
+	}
+	if ep.Location != nil {
+		objectMap["location"] = ep.Location
+	}
+	if ep.EncryptionProtectorProperties != nil {
+		objectMap["properties"] = ep.EncryptionProtectorProperties
+	}
+	if ep.ID != nil {
+		objectMap["id"] = ep.ID
+	}
+	if ep.Name != nil {
+		objectMap["name"] = ep.Name
+	}
+	if ep.Type != nil {
+		objectMap["type"] = ep.Type
+	}
+	return json.Marshal(objectMap)
 }
 
 // UnmarshalJSON is the custom unmarshaler for EncryptionProtector struct.
@@ -4061,6 +4677,30 @@ type FirewallRule struct {
 	Type *string `json:"type,omitempty"`
 }
 
+// MarshalJSON is the custom marshaler for FirewallRule.
+func (fr FirewallRule) MarshalJSON() ([]byte, error) {
+	objectMap := make(map[string]interface{})
+	if fr.Kind != nil {
+		objectMap["kind"] = fr.Kind
+	}
+	if fr.Location != nil {
+		objectMap["location"] = fr.Location
+	}
+	if fr.FirewallRuleProperties != nil {
+		objectMap["properties"] = fr.FirewallRuleProperties
+	}
+	if fr.ID != nil {
+		objectMap["id"] = fr.ID
+	}
+	if fr.Name != nil {
+		objectMap["name"] = fr.Name
+	}
+	if fr.Type != nil {
+		objectMap["type"] = fr.Type
+	}
+	return json.Marshal(objectMap)
+}
+
 // UnmarshalJSON is the custom unmarshaler for FirewallRule struct.
 func (fr *FirewallRule) UnmarshalJSON(body []byte) error {
 	var m map[string]*json.RawMessage
@@ -4162,6 +4802,30 @@ type GeoBackupPolicy struct {
 	Type *string `json:"type,omitempty"`
 }
 
+// MarshalJSON is the custom marshaler for GeoBackupPolicy.
+func (gbp GeoBackupPolicy) MarshalJSON() ([]byte, error) {
+	objectMap := make(map[string]interface{})
+	if gbp.GeoBackupPolicyProperties != nil {
+		objectMap["properties"] = gbp.GeoBackupPolicyProperties
+	}
+	if gbp.Kind != nil {
+		objectMap["kind"] = gbp.Kind
+	}
+	if gbp.Location != nil {
+		objectMap["location"] = gbp.Location
+	}
+	if gbp.ID != nil {
+		objectMap["id"] = gbp.ID
+	}
+	if gbp.Name != nil {
+		objectMap["name"] = gbp.Name
+	}
+	if gbp.Type != nil {
+		objectMap["type"] = gbp.Type
+	}
+	return json.Marshal(objectMap)
+}
+
 // UnmarshalJSON is the custom unmarshaler for GeoBackupPolicy struct.
 func (gbp *GeoBackupPolicy) UnmarshalJSON(body []byte) error {
 	var m map[string]*json.RawMessage
@@ -4257,6 +4921,24 @@ type ImportExportResponse struct {
 	Name *string `json:"name,omitempty"`
 	// Type - Resource type.
 	Type *string `json:"type,omitempty"`
+}
+
+// MarshalJSON is the custom marshaler for ImportExportResponse.
+func (ier ImportExportResponse) MarshalJSON() ([]byte, error) {
+	objectMap := make(map[string]interface{})
+	if ier.ImportExportResponseProperties != nil {
+		objectMap["properties"] = ier.ImportExportResponseProperties
+	}
+	if ier.ID != nil {
+		objectMap["id"] = ier.ID
+	}
+	if ier.Name != nil {
+		objectMap["name"] = ier.Name
+	}
+	if ier.Type != nil {
+		objectMap["type"] = ier.Type
+	}
+	return json.Marshal(objectMap)
 }
 
 // UnmarshalJSON is the custom unmarshaler for ImportExportResponse struct.
@@ -4358,6 +5040,21 @@ type ImportExtensionRequest struct {
 	Type *string `json:"type,omitempty"`
 	// ImportExtensionProperties - Represents the properties of the resource.
 	*ImportExtensionProperties `json:"properties,omitempty"`
+}
+
+// MarshalJSON is the custom marshaler for ImportExtensionRequest.
+func (ier ImportExtensionRequest) MarshalJSON() ([]byte, error) {
+	objectMap := make(map[string]interface{})
+	if ier.Name != nil {
+		objectMap["name"] = ier.Name
+	}
+	if ier.Type != nil {
+		objectMap["type"] = ier.Type
+	}
+	if ier.ImportExtensionProperties != nil {
+		objectMap["properties"] = ier.ImportExtensionProperties
+	}
+	return json.Marshal(objectMap)
 }
 
 // UnmarshalJSON is the custom unmarshaler for ImportExtensionRequest struct.
@@ -4544,7 +5241,9 @@ func (o Operation) MarshalJSON() ([]byte, error) {
 	if o.Display != nil {
 		objectMap["display"] = o.Display
 	}
-	objectMap["origin"] = o.Origin
+	if o.Origin != "" {
+		objectMap["origin"] = o.Origin
+	}
 	if o.Properties != nil {
 		objectMap["properties"] = o.Properties
 	}
@@ -4718,6 +5417,24 @@ type RecommendedElasticPool struct {
 	Type *string `json:"type,omitempty"`
 }
 
+// MarshalJSON is the custom marshaler for RecommendedElasticPool.
+func (rep RecommendedElasticPool) MarshalJSON() ([]byte, error) {
+	objectMap := make(map[string]interface{})
+	if rep.RecommendedElasticPoolProperties != nil {
+		objectMap["properties"] = rep.RecommendedElasticPoolProperties
+	}
+	if rep.ID != nil {
+		objectMap["id"] = rep.ID
+	}
+	if rep.Name != nil {
+		objectMap["name"] = rep.Name
+	}
+	if rep.Type != nil {
+		objectMap["type"] = rep.Type
+	}
+	return json.Marshal(objectMap)
+}
+
 // UnmarshalJSON is the custom unmarshaler for RecommendedElasticPool struct.
 func (rep *RecommendedElasticPool) UnmarshalJSON(body []byte) error {
 	var m map[string]*json.RawMessage
@@ -4832,6 +5549,24 @@ type RecommendedIndex struct {
 	Type *string `json:"type,omitempty"`
 }
 
+// MarshalJSON is the custom marshaler for RecommendedIndex.
+func (ri RecommendedIndex) MarshalJSON() ([]byte, error) {
+	objectMap := make(map[string]interface{})
+	if ri.RecommendedIndexProperties != nil {
+		objectMap["properties"] = ri.RecommendedIndexProperties
+	}
+	if ri.ID != nil {
+		objectMap["id"] = ri.ID
+	}
+	if ri.Name != nil {
+		objectMap["name"] = ri.Name
+	}
+	if ri.Type != nil {
+		objectMap["type"] = ri.Type
+	}
+	return json.Marshal(objectMap)
+}
+
 // UnmarshalJSON is the custom unmarshaler for RecommendedIndex struct.
 func (ri *RecommendedIndex) UnmarshalJSON(body []byte) error {
 	var m map[string]*json.RawMessage
@@ -4924,6 +5659,24 @@ type RecoverableDatabase struct {
 	Type *string `json:"type,omitempty"`
 }
 
+// MarshalJSON is the custom marshaler for RecoverableDatabase.
+func (rd RecoverableDatabase) MarshalJSON() ([]byte, error) {
+	objectMap := make(map[string]interface{})
+	if rd.RecoverableDatabaseProperties != nil {
+		objectMap["properties"] = rd.RecoverableDatabaseProperties
+	}
+	if rd.ID != nil {
+		objectMap["id"] = rd.ID
+	}
+	if rd.Name != nil {
+		objectMap["name"] = rd.Name
+	}
+	if rd.Type != nil {
+		objectMap["type"] = rd.Type
+	}
+	return json.Marshal(objectMap)
+}
+
 // UnmarshalJSON is the custom unmarshaler for RecoverableDatabase struct.
 func (rd *RecoverableDatabase) UnmarshalJSON(body []byte) error {
 	var m map[string]*json.RawMessage
@@ -5007,6 +5760,27 @@ type ReplicationLink struct {
 	Name *string `json:"name,omitempty"`
 	// Type - Resource type.
 	Type *string `json:"type,omitempty"`
+}
+
+// MarshalJSON is the custom marshaler for ReplicationLink.
+func (rl ReplicationLink) MarshalJSON() ([]byte, error) {
+	objectMap := make(map[string]interface{})
+	if rl.Location != nil {
+		objectMap["location"] = rl.Location
+	}
+	if rl.ReplicationLinkProperties != nil {
+		objectMap["properties"] = rl.ReplicationLinkProperties
+	}
+	if rl.ID != nil {
+		objectMap["id"] = rl.ID
+	}
+	if rl.Name != nil {
+		objectMap["name"] = rl.Name
+	}
+	if rl.Type != nil {
+		objectMap["type"] = rl.Type
+	}
+	return json.Marshal(objectMap)
 }
 
 // UnmarshalJSON is the custom unmarshaler for ReplicationLink struct.
@@ -5239,6 +6013,27 @@ type RestorableDroppedDatabase struct {
 	Type *string `json:"type,omitempty"`
 }
 
+// MarshalJSON is the custom marshaler for RestorableDroppedDatabase.
+func (rdd RestorableDroppedDatabase) MarshalJSON() ([]byte, error) {
+	objectMap := make(map[string]interface{})
+	if rdd.Location != nil {
+		objectMap["location"] = rdd.Location
+	}
+	if rdd.RestorableDroppedDatabaseProperties != nil {
+		objectMap["properties"] = rdd.RestorableDroppedDatabaseProperties
+	}
+	if rdd.ID != nil {
+		objectMap["id"] = rdd.ID
+	}
+	if rdd.Name != nil {
+		objectMap["name"] = rdd.Name
+	}
+	if rdd.Type != nil {
+		objectMap["type"] = rdd.Type
+	}
+	return json.Marshal(objectMap)
+}
+
 // UnmarshalJSON is the custom unmarshaler for RestorableDroppedDatabase struct.
 func (rdd *RestorableDroppedDatabase) UnmarshalJSON(body []byte) error {
 	var m map[string]*json.RawMessage
@@ -5339,6 +6134,27 @@ type RestorePoint struct {
 	Name *string `json:"name,omitempty"`
 	// Type - Resource type.
 	Type *string `json:"type,omitempty"`
+}
+
+// MarshalJSON is the custom marshaler for RestorePoint.
+func (rp RestorePoint) MarshalJSON() ([]byte, error) {
+	objectMap := make(map[string]interface{})
+	if rp.Location != nil {
+		objectMap["location"] = rp.Location
+	}
+	if rp.RestorePointProperties != nil {
+		objectMap["properties"] = rp.RestorePointProperties
+	}
+	if rp.ID != nil {
+		objectMap["id"] = rp.ID
+	}
+	if rp.Name != nil {
+		objectMap["name"] = rp.Name
+	}
+	if rp.Type != nil {
+		objectMap["type"] = rp.Type
+	}
+	return json.Marshal(objectMap)
 }
 
 // UnmarshalJSON is the custom unmarshaler for RestorePoint struct.
@@ -5640,6 +6456,24 @@ type ServerAutomaticTuning struct {
 	Type *string `json:"type,omitempty"`
 }
 
+// MarshalJSON is the custom marshaler for ServerAutomaticTuning.
+func (sat ServerAutomaticTuning) MarshalJSON() ([]byte, error) {
+	objectMap := make(map[string]interface{})
+	if sat.AutomaticTuningServerProperties != nil {
+		objectMap["properties"] = sat.AutomaticTuningServerProperties
+	}
+	if sat.ID != nil {
+		objectMap["id"] = sat.ID
+	}
+	if sat.Name != nil {
+		objectMap["name"] = sat.Name
+	}
+	if sat.Type != nil {
+		objectMap["type"] = sat.Type
+	}
+	return json.Marshal(objectMap)
+}
+
 // UnmarshalJSON is the custom unmarshaler for ServerAutomaticTuning struct.
 func (sat *ServerAutomaticTuning) UnmarshalJSON(body []byte) error {
 	var m map[string]*json.RawMessage
@@ -5702,6 +6536,24 @@ type ServerAzureADAdministrator struct {
 	Name *string `json:"name,omitempty"`
 	// Type - Resource type.
 	Type *string `json:"type,omitempty"`
+}
+
+// MarshalJSON is the custom marshaler for ServerAzureADAdministrator.
+func (saaa ServerAzureADAdministrator) MarshalJSON() ([]byte, error) {
+	objectMap := make(map[string]interface{})
+	if saaa.ServerAdministratorProperties != nil {
+		objectMap["properties"] = saaa.ServerAdministratorProperties
+	}
+	if saaa.ID != nil {
+		objectMap["id"] = saaa.ID
+	}
+	if saaa.Name != nil {
+		objectMap["name"] = saaa.Name
+	}
+	if saaa.Type != nil {
+		objectMap["type"] = saaa.Type
+	}
+	return json.Marshal(objectMap)
 }
 
 // UnmarshalJSON is the custom unmarshaler for ServerAzureADAdministrator struct.
@@ -5870,6 +6722,30 @@ type ServerCommunicationLink struct {
 	Type *string `json:"type,omitempty"`
 }
 
+// MarshalJSON is the custom marshaler for ServerCommunicationLink.
+func (scl ServerCommunicationLink) MarshalJSON() ([]byte, error) {
+	objectMap := make(map[string]interface{})
+	if scl.ServerCommunicationLinkProperties != nil {
+		objectMap["properties"] = scl.ServerCommunicationLinkProperties
+	}
+	if scl.Location != nil {
+		objectMap["location"] = scl.Location
+	}
+	if scl.Kind != nil {
+		objectMap["kind"] = scl.Kind
+	}
+	if scl.ID != nil {
+		objectMap["id"] = scl.ID
+	}
+	if scl.Name != nil {
+		objectMap["name"] = scl.Name
+	}
+	if scl.Type != nil {
+		objectMap["type"] = scl.Type
+	}
+	return json.Marshal(objectMap)
+}
+
 // UnmarshalJSON is the custom unmarshaler for ServerCommunicationLink struct.
 func (scl *ServerCommunicationLink) UnmarshalJSON(body []byte) error {
 	var m map[string]*json.RawMessage
@@ -6020,6 +6896,30 @@ type ServerConnectionPolicy struct {
 	Type *string `json:"type,omitempty"`
 }
 
+// MarshalJSON is the custom marshaler for ServerConnectionPolicy.
+func (scp ServerConnectionPolicy) MarshalJSON() ([]byte, error) {
+	objectMap := make(map[string]interface{})
+	if scp.Kind != nil {
+		objectMap["kind"] = scp.Kind
+	}
+	if scp.Location != nil {
+		objectMap["location"] = scp.Location
+	}
+	if scp.ServerConnectionPolicyProperties != nil {
+		objectMap["properties"] = scp.ServerConnectionPolicyProperties
+	}
+	if scp.ID != nil {
+		objectMap["id"] = scp.ID
+	}
+	if scp.Name != nil {
+		objectMap["name"] = scp.Name
+	}
+	if scp.Type != nil {
+		objectMap["type"] = scp.Type
+	}
+	return json.Marshal(objectMap)
+}
+
 // UnmarshalJSON is the custom unmarshaler for ServerConnectionPolicy struct.
 func (scp *ServerConnectionPolicy) UnmarshalJSON(body []byte) error {
 	var m map[string]*json.RawMessage
@@ -6106,6 +7006,24 @@ type ServerDNSAlias struct {
 	Name *string `json:"name,omitempty"`
 	// Type - Resource type.
 	Type *string `json:"type,omitempty"`
+}
+
+// MarshalJSON is the custom marshaler for ServerDNSAlias.
+func (sda ServerDNSAlias) MarshalJSON() ([]byte, error) {
+	objectMap := make(map[string]interface{})
+	if sda.ServerDNSAliasProperties != nil {
+		objectMap["properties"] = sda.ServerDNSAliasProperties
+	}
+	if sda.ID != nil {
+		objectMap["id"] = sda.ID
+	}
+	if sda.Name != nil {
+		objectMap["name"] = sda.Name
+	}
+	if sda.Type != nil {
+		objectMap["type"] = sda.Type
+	}
+	return json.Marshal(objectMap)
 }
 
 // UnmarshalJSON is the custom unmarshaler for ServerDNSAlias struct.
@@ -6435,6 +7353,30 @@ type ServerKey struct {
 	Name *string `json:"name,omitempty"`
 	// Type - Resource type.
 	Type *string `json:"type,omitempty"`
+}
+
+// MarshalJSON is the custom marshaler for ServerKey.
+func (sk ServerKey) MarshalJSON() ([]byte, error) {
+	objectMap := make(map[string]interface{})
+	if sk.Kind != nil {
+		objectMap["kind"] = sk.Kind
+	}
+	if sk.Location != nil {
+		objectMap["location"] = sk.Location
+	}
+	if sk.ServerKeyProperties != nil {
+		objectMap["properties"] = sk.ServerKeyProperties
+	}
+	if sk.ID != nil {
+		objectMap["id"] = sk.ID
+	}
+	if sk.Name != nil {
+		objectMap["name"] = sk.Name
+	}
+	if sk.Type != nil {
+		objectMap["type"] = sk.Type
+	}
+	return json.Marshal(objectMap)
 }
 
 // UnmarshalJSON is the custom unmarshaler for ServerKey struct.
@@ -7083,6 +8025,24 @@ type ServiceObjective struct {
 	Type *string `json:"type,omitempty"`
 }
 
+// MarshalJSON is the custom marshaler for ServiceObjective.
+func (so ServiceObjective) MarshalJSON() ([]byte, error) {
+	objectMap := make(map[string]interface{})
+	if so.ServiceObjectiveProperties != nil {
+		objectMap["properties"] = so.ServiceObjectiveProperties
+	}
+	if so.ID != nil {
+		objectMap["id"] = so.ID
+	}
+	if so.Name != nil {
+		objectMap["name"] = so.Name
+	}
+	if so.Type != nil {
+		objectMap["type"] = so.Type
+	}
+	return json.Marshal(objectMap)
+}
+
 // UnmarshalJSON is the custom unmarshaler for ServiceObjective struct.
 func (so *ServiceObjective) UnmarshalJSON(body []byte) error {
 	var m map[string]*json.RawMessage
@@ -7148,6 +8108,30 @@ type ServiceObjectiveCapability struct {
 	SupportedMaxSizes *[]MaxSizeCapability `json:"supportedMaxSizes,omitempty"`
 	// IncludedMaxSize - The included (free) max size for this service level objective.
 	IncludedMaxSize *MaxSizeCapability `json:"includedMaxSize,omitempty"`
+}
+
+// MarshalJSON is the custom marshaler for ServiceObjectiveCapability.
+func (soc ServiceObjectiveCapability) MarshalJSON() ([]byte, error) {
+	objectMap := make(map[string]interface{})
+	if soc.Name != nil {
+		objectMap["name"] = soc.Name
+	}
+	if soc.Status != "" {
+		objectMap["status"] = soc.Status
+	}
+	if soc.PerformanceLevel != nil {
+		objectMap["performanceLevel"] = soc.PerformanceLevel
+	}
+	if soc.ID != nil {
+		objectMap["id"] = soc.ID
+	}
+	if soc.SupportedMaxSizes != nil {
+		objectMap["supportedMaxSizes"] = soc.SupportedMaxSizes
+	}
+	if soc.IncludedMaxSize != nil {
+		objectMap["includedMaxSize"] = soc.IncludedMaxSize
+	}
+	return json.Marshal(objectMap)
 }
 
 // UnmarshalJSON is the custom unmarshaler for ServiceObjectiveCapability struct.
@@ -7251,6 +8235,24 @@ type ServiceTierAdvisor struct {
 	Name *string `json:"name,omitempty"`
 	// Type - Resource type.
 	Type *string `json:"type,omitempty"`
+}
+
+// MarshalJSON is the custom marshaler for ServiceTierAdvisor.
+func (sta ServiceTierAdvisor) MarshalJSON() ([]byte, error) {
+	objectMap := make(map[string]interface{})
+	if sta.ServiceTierAdvisorProperties != nil {
+		objectMap["properties"] = sta.ServiceTierAdvisorProperties
+	}
+	if sta.ID != nil {
+		objectMap["id"] = sta.ID
+	}
+	if sta.Name != nil {
+		objectMap["name"] = sta.Name
+	}
+	if sta.Type != nil {
+		objectMap["type"] = sta.Type
+	}
+	return json.Marshal(objectMap)
 }
 
 // UnmarshalJSON is the custom unmarshaler for ServiceTierAdvisor struct.
@@ -7374,6 +8376,24 @@ type SubscriptionUsage struct {
 	Name *string `json:"name,omitempty"`
 	// Type - Resource type.
 	Type *string `json:"type,omitempty"`
+}
+
+// MarshalJSON is the custom marshaler for SubscriptionUsage.
+func (su SubscriptionUsage) MarshalJSON() ([]byte, error) {
+	objectMap := make(map[string]interface{})
+	if su.SubscriptionUsageProperties != nil {
+		objectMap["properties"] = su.SubscriptionUsageProperties
+	}
+	if su.ID != nil {
+		objectMap["id"] = su.ID
+	}
+	if su.Name != nil {
+		objectMap["name"] = su.Name
+	}
+	if su.Type != nil {
+		objectMap["type"] = su.Type
+	}
+	return json.Marshal(objectMap)
 }
 
 // UnmarshalJSON is the custom unmarshaler for SubscriptionUsage struct.
@@ -7554,6 +8574,24 @@ type SyncAgent struct {
 	Type *string `json:"type,omitempty"`
 }
 
+// MarshalJSON is the custom marshaler for SyncAgent.
+func (sa SyncAgent) MarshalJSON() ([]byte, error) {
+	objectMap := make(map[string]interface{})
+	if sa.SyncAgentProperties != nil {
+		objectMap["properties"] = sa.SyncAgentProperties
+	}
+	if sa.ID != nil {
+		objectMap["id"] = sa.ID
+	}
+	if sa.Name != nil {
+		objectMap["name"] = sa.Name
+	}
+	if sa.Type != nil {
+		objectMap["type"] = sa.Type
+	}
+	return json.Marshal(objectMap)
+}
+
 // UnmarshalJSON is the custom unmarshaler for SyncAgent struct.
 func (sa *SyncAgent) UnmarshalJSON(body []byte) error {
 	var m map[string]*json.RawMessage
@@ -7622,6 +8660,24 @@ type SyncAgentLinkedDatabase struct {
 	Name *string `json:"name,omitempty"`
 	// Type - Resource type.
 	Type *string `json:"type,omitempty"`
+}
+
+// MarshalJSON is the custom marshaler for SyncAgentLinkedDatabase.
+func (sald SyncAgentLinkedDatabase) MarshalJSON() ([]byte, error) {
+	objectMap := make(map[string]interface{})
+	if sald.SyncAgentLinkedDatabaseProperties != nil {
+		objectMap["properties"] = sald.SyncAgentLinkedDatabaseProperties
+	}
+	if sald.ID != nil {
+		objectMap["id"] = sald.ID
+	}
+	if sald.Name != nil {
+		objectMap["name"] = sald.Name
+	}
+	if sald.Type != nil {
+		objectMap["type"] = sald.Type
+	}
+	return json.Marshal(objectMap)
 }
 
 // UnmarshalJSON is the custom unmarshaler for SyncAgentLinkedDatabase struct.
@@ -8275,6 +9331,24 @@ type SyncGroup struct {
 	Type *string `json:"type,omitempty"`
 }
 
+// MarshalJSON is the custom marshaler for SyncGroup.
+func (sg SyncGroup) MarshalJSON() ([]byte, error) {
+	objectMap := make(map[string]interface{})
+	if sg.SyncGroupProperties != nil {
+		objectMap["properties"] = sg.SyncGroupProperties
+	}
+	if sg.ID != nil {
+		objectMap["id"] = sg.ID
+	}
+	if sg.Name != nil {
+		objectMap["name"] = sg.Name
+	}
+	if sg.Type != nil {
+		objectMap["type"] = sg.Type
+	}
+	return json.Marshal(objectMap)
+}
+
 // UnmarshalJSON is the custom unmarshaler for SyncGroup struct.
 func (sg *SyncGroup) UnmarshalJSON(body []byte) error {
 	var m map[string]*json.RawMessage
@@ -8799,6 +9873,24 @@ type SyncMember struct {
 	Type *string `json:"type,omitempty"`
 }
 
+// MarshalJSON is the custom marshaler for SyncMember.
+func (sm SyncMember) MarshalJSON() ([]byte, error) {
+	objectMap := make(map[string]interface{})
+	if sm.SyncMemberProperties != nil {
+		objectMap["properties"] = sm.SyncMemberProperties
+	}
+	if sm.ID != nil {
+		objectMap["id"] = sm.ID
+	}
+	if sm.Name != nil {
+		objectMap["name"] = sm.Name
+	}
+	if sm.Type != nil {
+		objectMap["type"] = sm.Type
+	}
+	return json.Marshal(objectMap)
+}
+
 // UnmarshalJSON is the custom unmarshaler for SyncMember struct.
 func (sm *SyncMember) UnmarshalJSON(body []byte) error {
 	var m map[string]*json.RawMessage
@@ -9218,6 +10310,27 @@ type TransparentDataEncryption struct {
 	Type *string `json:"type,omitempty"`
 }
 
+// MarshalJSON is the custom marshaler for TransparentDataEncryption.
+func (tde TransparentDataEncryption) MarshalJSON() ([]byte, error) {
+	objectMap := make(map[string]interface{})
+	if tde.Location != nil {
+		objectMap["location"] = tde.Location
+	}
+	if tde.TransparentDataEncryptionProperties != nil {
+		objectMap["properties"] = tde.TransparentDataEncryptionProperties
+	}
+	if tde.ID != nil {
+		objectMap["id"] = tde.ID
+	}
+	if tde.Name != nil {
+		objectMap["name"] = tde.Name
+	}
+	if tde.Type != nil {
+		objectMap["type"] = tde.Type
+	}
+	return json.Marshal(objectMap)
+}
+
 // UnmarshalJSON is the custom unmarshaler for TransparentDataEncryption struct.
 func (tde *TransparentDataEncryption) UnmarshalJSON(body []byte) error {
 	var m map[string]*json.RawMessage
@@ -9290,6 +10403,27 @@ type TransparentDataEncryptionActivity struct {
 	Name *string `json:"name,omitempty"`
 	// Type - Resource type.
 	Type *string `json:"type,omitempty"`
+}
+
+// MarshalJSON is the custom marshaler for TransparentDataEncryptionActivity.
+func (tdea TransparentDataEncryptionActivity) MarshalJSON() ([]byte, error) {
+	objectMap := make(map[string]interface{})
+	if tdea.Location != nil {
+		objectMap["location"] = tdea.Location
+	}
+	if tdea.TransparentDataEncryptionActivityProperties != nil {
+		objectMap["properties"] = tdea.TransparentDataEncryptionActivityProperties
+	}
+	if tdea.ID != nil {
+		objectMap["id"] = tdea.ID
+	}
+	if tdea.Name != nil {
+		objectMap["name"] = tdea.Name
+	}
+	if tdea.Type != nil {
+		objectMap["type"] = tdea.Type
+	}
+	return json.Marshal(objectMap)
 }
 
 // UnmarshalJSON is the custom unmarshaler for TransparentDataEncryptionActivity struct.
@@ -9386,6 +10520,24 @@ type VirtualNetworkRule struct {
 	Name *string `json:"name,omitempty"`
 	// Type - Resource type.
 	Type *string `json:"type,omitempty"`
+}
+
+// MarshalJSON is the custom marshaler for VirtualNetworkRule.
+func (vnr VirtualNetworkRule) MarshalJSON() ([]byte, error) {
+	objectMap := make(map[string]interface{})
+	if vnr.VirtualNetworkRuleProperties != nil {
+		objectMap["properties"] = vnr.VirtualNetworkRuleProperties
+	}
+	if vnr.ID != nil {
+		objectMap["id"] = vnr.ID
+	}
+	if vnr.Name != nil {
+		objectMap["name"] = vnr.Name
+	}
+	if vnr.Type != nil {
+		objectMap["type"] = vnr.Type
+	}
+	return json.Marshal(objectMap)
 }
 
 // UnmarshalJSON is the custom unmarshaler for VirtualNetworkRule struct.

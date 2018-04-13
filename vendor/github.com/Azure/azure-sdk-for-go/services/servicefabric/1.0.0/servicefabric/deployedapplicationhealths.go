@@ -158,7 +158,7 @@ func (client DeployedApplicationHealthsClient) SendPreparer(ctx context.Context,
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPost(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/Nodes/{nodeName}/$/GetApplications/{applicationName}/$/ReportHealth", pathParameters),

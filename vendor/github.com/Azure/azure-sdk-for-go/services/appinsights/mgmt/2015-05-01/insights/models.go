@@ -35,6 +35,53 @@ const (
 	Web ApplicationType = "web"
 )
 
+// PossibleApplicationTypeValues returns an array of possible values for the ApplicationType const type.
+func PossibleApplicationTypeValues() []ApplicationType {
+	return []ApplicationType{Other, Web}
+}
+
+// FavoriteSourceType enumerates the values for favorite source type.
+type FavoriteSourceType string
+
+const (
+	// Events ...
+	Events FavoriteSourceType = "events"
+	// Funnel ...
+	Funnel FavoriteSourceType = "funnel"
+	// Impact ...
+	Impact FavoriteSourceType = "impact"
+	// Notebook ...
+	Notebook FavoriteSourceType = "notebook"
+	// Retention ...
+	Retention FavoriteSourceType = "retention"
+	// Segmentation ...
+	Segmentation FavoriteSourceType = "segmentation"
+	// Sessions ...
+	Sessions FavoriteSourceType = "sessions"
+	// Userflows ...
+	Userflows FavoriteSourceType = "userflows"
+)
+
+// PossibleFavoriteSourceTypeValues returns an array of possible values for the FavoriteSourceType const type.
+func PossibleFavoriteSourceTypeValues() []FavoriteSourceType {
+	return []FavoriteSourceType{Events, Funnel, Impact, Notebook, Retention, Segmentation, Sessions, Userflows}
+}
+
+// FavoriteType enumerates the values for favorite type.
+type FavoriteType string
+
+const (
+	// Shared ...
+	Shared FavoriteType = "shared"
+	// User ...
+	User FavoriteType = "user"
+)
+
+// PossibleFavoriteTypeValues returns an array of possible values for the FavoriteType const type.
+func PossibleFavoriteTypeValues() []FavoriteType {
+	return []FavoriteType{Shared, User}
+}
+
 // FlowType enumerates the values for flow type.
 type FlowType string
 
@@ -43,6 +90,26 @@ const (
 	Bluefield FlowType = "Bluefield"
 )
 
+// PossibleFlowTypeValues returns an array of possible values for the FlowType const type.
+func PossibleFlowTypeValues() []FlowType {
+	return []FlowType{Bluefield}
+}
+
+// PurgeState enumerates the values for purge state.
+type PurgeState string
+
+const (
+	// Completed ...
+	Completed PurgeState = "Completed"
+	// Pending ...
+	Pending PurgeState = "Pending"
+)
+
+// PossiblePurgeStateValues returns an array of possible values for the PurgeState const type.
+func PossiblePurgeStateValues() []PurgeState {
+	return []PurgeState{Completed, Pending}
+}
+
 // RequestSource enumerates the values for request source.
 type RequestSource string
 
@@ -50,6 +117,11 @@ const (
 	// Rest ...
 	Rest RequestSource = "rest"
 )
+
+// PossibleRequestSourceValues returns an array of possible values for the RequestSource const type.
+func PossibleRequestSourceValues() []RequestSource {
+	return []RequestSource{Rest}
+}
 
 // WebTestKind enumerates the values for web test kind.
 type WebTestKind string
@@ -60,6 +132,36 @@ const (
 	// Ping ...
 	Ping WebTestKind = "ping"
 )
+
+// PossibleWebTestKindValues returns an array of possible values for the WebTestKind const type.
+func PossibleWebTestKindValues() []WebTestKind {
+	return []WebTestKind{Multistep, Ping}
+}
+
+// Annotation annotation associated with an application insights resource.
+type Annotation struct {
+	// AnnotationName - Name of annotation
+	AnnotationName *string `json:"AnnotationName,omitempty"`
+	// Category - Category of annotation, free form
+	Category *string `json:"Category,omitempty"`
+	// EventTime - Time when event occurred
+	EventTime *date.Time `json:"EventTime,omitempty"`
+	// ID - Unique Id for annotation
+	ID *string `json:"Id,omitempty"`
+	// Properties - Serialized JSON object for detailed properties
+	Properties *string `json:"Properties,omitempty"`
+	// RelatedAnnotation - Related parent annotation if any
+	RelatedAnnotation *string `json:"RelatedAnnotation,omitempty"`
+}
+
+// AnnotationError error associated with trying to create annotation with Id that already exist
+type AnnotationError struct {
+	// Code - Error detail code and explanation
+	Code *string `json:"code,omitempty"`
+	// Message - Error message
+	Message    *string     `json:"message,omitempty"`
+	Innererror *InnerError `json:"innererror,omitempty"`
+}
 
 // APIKeyRequest an Application Insights component API Key createion request definition.
 type APIKeyRequest struct {
@@ -318,6 +420,34 @@ type ApplicationInsightsComponentExportRequest struct {
 	DestinationAccountID *string `json:"DestinationAccountId,omitempty"`
 }
 
+// ApplicationInsightsComponentFavorite properties that define a favorite that is associated to an Application
+// Insights component.
+type ApplicationInsightsComponentFavorite struct {
+	autorest.Response `json:"-"`
+	// Name - The user-defined name of the favorite.
+	Name *string `json:"Name,omitempty"`
+	// Config - Configuration of this particular favorite, which are driven by the Azure portal UX. Configuration data is a string containing valid JSON
+	Config *string `json:"Config,omitempty"`
+	// Version - This instance's version of the data model. This can change as new features are added that can be marked favorite. Current examples include MetricsExplorer (ME) and Search.
+	Version *string `json:"Version,omitempty"`
+	// FavoriteID - Internally assigned unique id of the favorite definition.
+	FavoriteID *string `json:"FavoriteId,omitempty"`
+	// FavoriteType - Enum indicating if this favorite definition is owned by a specific user or is shared between all users with access to the Application Insights component. Possible values include: 'Shared', 'User'
+	FavoriteType FavoriteType `json:"FavoriteType,omitempty"`
+	// SourceType - The source of the favorite definition.
+	SourceType *string `json:"SourceType,omitempty"`
+	// TimeModified - Date and time in UTC of the last modification that was made to this favorite definition.
+	TimeModified *string `json:"TimeModified,omitempty"`
+	// Tags - A list of 0 or more tags that are associated with this favorite definition
+	Tags *[]string `json:"Tags,omitempty"`
+	// Category - Favorite category, as defined by the user at creation time.
+	Category *string `json:"Category,omitempty"`
+	// IsGeneratedFromTemplate - Flag denoting wether or not this favorite was generated from a template.
+	IsGeneratedFromTemplate *bool `json:"IsGeneratedFromTemplate,omitempty"`
+	// UserID - Unique user id of the specific user that owns this favorite.
+	UserID *string `json:"UserId,omitempty"`
+}
+
 // ApplicationInsightsComponentFeature an Application Insights component daily data volume cap status
 type ApplicationInsightsComponentFeature struct {
 	// FeatureName - The pricing feature name.
@@ -574,6 +704,53 @@ type ApplicationInsightsComponentQuotaStatus struct {
 	ExpirationTime *string `json:"ExpirationTime,omitempty"`
 }
 
+// ApplicationInsightsComponentWebTestLocation properties that define a web test location available to an
+// Application Insights Component.
+type ApplicationInsightsComponentWebTestLocation struct {
+	// DisplayName - The display name of the web test location.
+	DisplayName *string `json:"DisplayName,omitempty"`
+	// Tag - Internally defined geographic location tag.
+	Tag *string `json:"Tag,omitempty"`
+}
+
+// ApplicationInsightsWebTestLocationsListResult describes the list of web test locations available to an
+// Application Insights Component.
+type ApplicationInsightsWebTestLocationsListResult struct {
+	autorest.Response `json:"-"`
+	// Value - List of web test locations.
+	Value *[]ApplicationInsightsComponentWebTestLocation `json:"value,omitempty"`
+}
+
+// ComponentPurgeBody describes the body of a purge request for an App Insights component
+type ComponentPurgeBody struct {
+	// Table - Table from which to purge data.
+	Table *string `json:"table,omitempty"`
+	// Filters - The set of columns and filters (queries) to run over them to purge the resulting data.
+	Filters *[]ComponentPurgeBodyFilters `json:"filters,omitempty"`
+}
+
+// ComponentPurgeBodyFilters user-defined filters to return data which will be purged from the table.
+type ComponentPurgeBodyFilters struct {
+	// Column - The column of the table over which the given query should run
+	Column *string `json:"column,omitempty"`
+	// Filter - A query to to run over the provided table and column to purge the corresponding data.
+	Filter *string `json:"filter,omitempty"`
+}
+
+// ComponentPurgeResponse response containing operationId for a specific purge action.
+type ComponentPurgeResponse struct {
+	autorest.Response `json:"-"`
+	// OperationID - Id to use when querying for status for a particular purge operation.
+	OperationID *string `json:"operationId,omitempty"`
+}
+
+// ComponentPurgeStatusResponse response containing status for a specific purge operation.
+type ComponentPurgeStatusResponse struct {
+	autorest.Response `json:"-"`
+	// Status - Status of the operation represented by the requested Id. Possible values include: 'Pending', 'Completed'
+	Status PurgeState `json:"status,omitempty"`
+}
+
 // ErrorResponse error reponse indicates Insights service is not able to process the incoming request. The reason
 // is provided in the error message.
 type ErrorResponse struct {
@@ -583,16 +760,42 @@ type ErrorResponse struct {
 	Message *string `json:"message,omitempty"`
 }
 
+// InnerError inner error
+type InnerError struct {
+	// Diagnosticcontext - Provides correlation for request
+	Diagnosticcontext *string `json:"diagnosticcontext,omitempty"`
+	// Time - Request time
+	Time *date.Time `json:"time,omitempty"`
+}
+
+// ListAnnotation ...
+type ListAnnotation struct {
+	autorest.Response `json:"-"`
+	Value             *[]Annotation `json:"value,omitempty"`
+}
+
 // ListApplicationInsightsComponentExportConfiguration ...
 type ListApplicationInsightsComponentExportConfiguration struct {
 	autorest.Response `json:"-"`
 	Value             *[]ApplicationInsightsComponentExportConfiguration `json:"value,omitempty"`
 }
 
+// ListApplicationInsightsComponentFavorite ...
+type ListApplicationInsightsComponentFavorite struct {
+	autorest.Response `json:"-"`
+	Value             *[]ApplicationInsightsComponentFavorite `json:"value,omitempty"`
+}
+
 // ListApplicationInsightsComponentProactiveDetectionConfiguration ...
 type ListApplicationInsightsComponentProactiveDetectionConfiguration struct {
 	autorest.Response `json:"-"`
 	Value             *[]ApplicationInsightsComponentProactiveDetectionConfiguration `json:"value,omitempty"`
+}
+
+// ListWorkItemConfiguration ...
+type ListWorkItemConfiguration struct {
+	autorest.Response `json:"-"`
+	Value             *[]WorkItemConfiguration `json:"value,omitempty"`
 }
 
 // Operation CDN REST API operation
@@ -751,6 +954,12 @@ func (r Resource) MarshalJSON() ([]byte, error) {
 	return json.Marshal(objectMap)
 }
 
+// SetObject ...
+type SetObject struct {
+	autorest.Response `json:"-"`
+	Value             interface{} `json:"value,omitempty"`
+}
+
 // TagsResource a container holding only the Tags for a resource, allowing the user to update the tags on a WebTest
 // instance.
 type TagsResource struct {
@@ -789,7 +998,9 @@ type WebTest struct {
 // MarshalJSON is the custom marshaler for WebTest.
 func (wt WebTest) MarshalJSON() ([]byte, error) {
 	objectMap := make(map[string]interface{})
-	objectMap["kind"] = wt.Kind
+	if wt.Kind != "" {
+		objectMap["kind"] = wt.Kind
+	}
 	if wt.WebTestProperties != nil {
 		objectMap["properties"] = wt.WebTestProperties
 	}
@@ -1028,4 +1239,40 @@ type WebTestProperties struct {
 type WebTestPropertiesConfiguration struct {
 	// WebTest - The XML specification of a WebTest to run against an application.
 	WebTest *string `json:"WebTest,omitempty"`
+}
+
+// WorkItemConfiguration work item configuration associated with an application insights resource.
+type WorkItemConfiguration struct {
+	autorest.Response `json:"-"`
+	// ConnectorID - Connector identifier where work item is created
+	ConnectorID *string `json:"ConnectorId,omitempty"`
+	// ConfigDisplayName - Configuration friendly name
+	ConfigDisplayName *string `json:"ConfigDisplayName,omitempty"`
+	// IsDefault - Boolean value indicating whether configuration is default
+	IsDefault *bool `json:"IsDefault,omitempty"`
+	// ID - Unique Id for work item
+	ID *string `json:"Id,omitempty"`
+	// ConfigProperties - Serialized JSON object for detailed properties
+	ConfigProperties *string `json:"ConfigProperties,omitempty"`
+}
+
+// WorkItemConfigurationError error associated with trying to get work item configuration or configurations
+type WorkItemConfigurationError struct {
+	// Code - Error detail code and explanation
+	Code *string `json:"code,omitempty"`
+	// Message - Error message
+	Message    *string     `json:"message,omitempty"`
+	Innererror *InnerError `json:"innererror,omitempty"`
+}
+
+// WorkItemCreateConfiguration work item configuration creation payload
+type WorkItemCreateConfiguration struct {
+	// ConnectorID - Unique connector id
+	ConnectorID *string `json:"ConnectorId,omitempty"`
+	// ConnectorDataConfiguration - Serialized JSON object for detaile d properties
+	ConnectorDataConfiguration *string `json:"ConnectorDataConfiguration,omitempty"`
+	// ValidateOnly - Boolean indicating validate only
+	ValidateOnly *bool `json:"ValidateOnly,omitempty"`
+	// WorkItemProperties - Custom work item properties
+	WorkItemProperties *string `json:"WorkItemProperties,omitempty"`
 }

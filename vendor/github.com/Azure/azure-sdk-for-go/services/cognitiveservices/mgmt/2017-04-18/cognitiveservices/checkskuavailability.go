@@ -31,13 +31,13 @@ type CheckSkuAvailabilityClient struct {
 }
 
 // NewCheckSkuAvailabilityClient creates an instance of the CheckSkuAvailabilityClient client.
-func NewCheckSkuAvailabilityClient(subscriptionID string) CheckSkuAvailabilityClient {
-	return NewCheckSkuAvailabilityClientWithBaseURI(DefaultBaseURI, subscriptionID)
+func NewCheckSkuAvailabilityClient(subscriptionID string, filter string) CheckSkuAvailabilityClient {
+	return NewCheckSkuAvailabilityClientWithBaseURI(DefaultBaseURI, subscriptionID, filter)
 }
 
 // NewCheckSkuAvailabilityClientWithBaseURI creates an instance of the CheckSkuAvailabilityClient client.
-func NewCheckSkuAvailabilityClientWithBaseURI(baseURI string, subscriptionID string) CheckSkuAvailabilityClient {
-	return CheckSkuAvailabilityClient{NewWithBaseURI(baseURI, subscriptionID)}
+func NewCheckSkuAvailabilityClientWithBaseURI(baseURI string, subscriptionID string, filter string) CheckSkuAvailabilityClient {
+	return CheckSkuAvailabilityClient{NewWithBaseURI(baseURI, subscriptionID, filter)}
 }
 
 // List check available SKUs.
@@ -85,7 +85,7 @@ func (client CheckSkuAvailabilityClient) ListPreparer(ctx context.Context, locat
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPost(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/subscriptions/{subscriptionId}/providers/Microsoft.CognitiveServices/locations/{location}/checkSkuAvailability", pathParameters),

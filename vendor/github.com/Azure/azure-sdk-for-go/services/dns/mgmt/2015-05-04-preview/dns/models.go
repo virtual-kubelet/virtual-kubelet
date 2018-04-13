@@ -48,6 +48,11 @@ const (
 	TXT RecordType = "TXT"
 )
 
+// PossibleRecordTypeValues returns an array of possible values for the RecordType const type.
+func PossibleRecordTypeValues() []RecordType {
+	return []RecordType{A, AAAA, CNAME, MX, NS, PTR, SOA, SRV, TXT}
+}
+
 // AaaaRecord an AAAA record.
 type AaaaRecord struct {
 	// Ipv6Address - Gets or sets the IPv6 address of this AAAA record in string notation.

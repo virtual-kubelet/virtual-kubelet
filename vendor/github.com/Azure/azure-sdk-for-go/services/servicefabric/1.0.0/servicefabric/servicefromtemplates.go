@@ -80,7 +80,7 @@ func (client ServiceFromTemplatesClient) CreatePreparer(ctx context.Context, app
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPost(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/Applications/{applicationName}/$/GetServices/$/CreateFromTemplate", pathParameters),

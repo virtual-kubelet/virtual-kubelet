@@ -37,6 +37,10 @@ const (
 	EmailContacts ActionType = original.EmailContacts
 )
 
+func PossibleActionTypeValues() []ActionType {
+	return original.PossibleActionTypeValues()
+}
+
 type DeletionRecoveryLevel = original.DeletionRecoveryLevel
 
 const (
@@ -45,6 +49,10 @@ const (
 	RecoverableProtectedSubscription DeletionRecoveryLevel = original.RecoverableProtectedSubscription
 	RecoverablePurgeable             DeletionRecoveryLevel = original.RecoverablePurgeable
 )
+
+func PossibleDeletionRecoveryLevelValues() []DeletionRecoveryLevel {
+	return original.PossibleDeletionRecoveryLevelValues()
+}
 
 type JSONWebKeyCurveName = original.JSONWebKeyCurveName
 
@@ -55,6 +63,10 @@ const (
 	SECP256K1 JSONWebKeyCurveName = original.SECP256K1
 )
 
+func PossibleJSONWebKeyCurveNameValues() []JSONWebKeyCurveName {
+	return original.PossibleJSONWebKeyCurveNameValues()
+}
+
 type JSONWebKeyEncryptionAlgorithm = original.JSONWebKeyEncryptionAlgorithm
 
 const (
@@ -62,6 +74,10 @@ const (
 	RSAOAEP    JSONWebKeyEncryptionAlgorithm = original.RSAOAEP
 	RSAOAEP256 JSONWebKeyEncryptionAlgorithm = original.RSAOAEP256
 )
+
+func PossibleJSONWebKeyEncryptionAlgorithmValues() []JSONWebKeyEncryptionAlgorithm {
+	return original.PossibleJSONWebKeyEncryptionAlgorithmValues()
+}
 
 type JSONWebKeyOperation = original.JSONWebKeyOperation
 
@@ -73,6 +89,10 @@ const (
 	Verify    JSONWebKeyOperation = original.Verify
 	WrapKey   JSONWebKeyOperation = original.WrapKey
 )
+
+func PossibleJSONWebKeyOperationValues() []JSONWebKeyOperation {
+	return original.PossibleJSONWebKeyOperationValues()
+}
 
 type JSONWebKeySignatureAlgorithm = original.JSONWebKeySignatureAlgorithm
 
@@ -90,6 +110,10 @@ const (
 	RSNULL   JSONWebKeySignatureAlgorithm = original.RSNULL
 )
 
+func PossibleJSONWebKeySignatureAlgorithmValues() []JSONWebKeySignatureAlgorithm {
+	return original.PossibleJSONWebKeySignatureAlgorithmValues()
+}
+
 type JSONWebKeyType = original.JSONWebKeyType
 
 const (
@@ -99,6 +123,10 @@ const (
 	RSA    JSONWebKeyType = original.RSA
 	RSAHSM JSONWebKeyType = original.RSAHSM
 )
+
+func PossibleJSONWebKeyTypeValues() []JSONWebKeyType {
+	return original.PossibleJSONWebKeyTypeValues()
+}
 
 type KeyUsageType = original.KeyUsageType
 
@@ -113,6 +141,10 @@ const (
 	KeyEncipherment  KeyUsageType = original.KeyEncipherment
 	NonRepudiation   KeyUsageType = original.NonRepudiation
 )
+
+func PossibleKeyUsageTypeValues() []KeyUsageType {
+	return original.PossibleKeyUsageTypeValues()
+}
 
 type Action = original.Action
 type AdministratorDetails = original.AdministratorDetails

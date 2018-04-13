@@ -87,7 +87,7 @@ func (client GroupsClient) AddMemberPreparer(ctx context.Context, groupObjectID 
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPost(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/{tenantID}/groups/{groupObjectId}/$links/members", pathParameters),
@@ -161,7 +161,7 @@ func (client GroupsClient) CreatePreparer(ctx context.Context, parameters GroupC
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPost(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/{tenantID}/groups", pathParameters),
@@ -506,7 +506,7 @@ func (client GroupsClient) GetMemberGroupsPreparer(ctx context.Context, objectID
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPost(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/{tenantID}/groups/{objectId}/getMemberGroups", pathParameters),
@@ -580,7 +580,7 @@ func (client GroupsClient) IsMemberOfPreparer(ctx context.Context, parameters Ch
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPost(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/{tenantID}/isMemberOf", pathParameters),

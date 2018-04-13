@@ -89,7 +89,7 @@ func (client UsersClient) CreatePreparer(ctx context.Context, parameters UserCre
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPost(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/{tenantID}/users", pathParameters),
@@ -292,7 +292,7 @@ func (client UsersClient) GetMemberGroupsPreparer(ctx context.Context, objectID 
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPost(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/{tenantID}/users/{objectId}/getMemberGroups", pathParameters),
@@ -504,7 +504,7 @@ func (client UsersClient) UpdatePreparer(ctx context.Context, upnOrObjectID stri
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPatch(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/{tenantID}/users/{upnOrObjectId}", pathParameters),

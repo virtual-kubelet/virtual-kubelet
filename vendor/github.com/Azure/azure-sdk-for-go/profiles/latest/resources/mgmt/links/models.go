@@ -40,6 +40,10 @@ const (
 	AtScope Filter = original.AtScope
 )
 
+func PossibleFilterValues() []Filter {
+	return original.PossibleFilterValues()
+}
+
 type ResourceLink = original.ResourceLink
 type ResourceLinkFilter = original.ResourceLinkFilter
 type ResourceLinkProperties = original.ResourceLinkProperties

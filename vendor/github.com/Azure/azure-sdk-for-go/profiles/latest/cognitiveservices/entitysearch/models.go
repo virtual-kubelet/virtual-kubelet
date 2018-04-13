@@ -50,6 +50,10 @@ const (
 	AnswerTypePlaces   AnswerType = original.AnswerTypePlaces
 )
 
+func PossibleAnswerTypeValues() []AnswerType {
+	return original.PossibleAnswerTypeValues()
+}
+
 type EntityQueryScenario = original.EntityQueryScenario
 
 const (
@@ -60,6 +64,10 @@ const (
 	ListWithPivot                    EntityQueryScenario = original.ListWithPivot
 )
 
+func PossibleEntityQueryScenarioValues() []EntityQueryScenario {
+	return original.PossibleEntityQueryScenarioValues()
+}
+
 type EntityScenario = original.EntityScenario
 
 const (
@@ -67,6 +75,10 @@ const (
 	EntityScenarioDominantEntity     EntityScenario = original.EntityScenarioDominantEntity
 	EntityScenarioListItem           EntityScenario = original.EntityScenarioListItem
 )
+
+func PossibleEntityScenarioValues() []EntityScenario {
+	return original.PossibleEntityScenarioValues()
+}
 
 type EntityType = original.EntityType
 
@@ -122,6 +134,10 @@ const (
 	EntityTypeVideoGame           EntityType = original.EntityTypeVideoGame
 )
 
+func PossibleEntityTypeValues() []EntityType {
+	return original.PossibleEntityTypeValues()
+}
+
 type ErrorCode = original.ErrorCode
 
 const (
@@ -132,6 +148,10 @@ const (
 	RateLimitExceeded         ErrorCode = original.RateLimitExceeded
 	ServerError               ErrorCode = original.ServerError
 )
+
+func PossibleErrorCodeValues() []ErrorCode {
+	return original.PossibleErrorCodeValues()
+}
 
 type ErrorSubCode = original.ErrorSubCode
 
@@ -149,12 +169,20 @@ const (
 	UnexpectedError         ErrorSubCode = original.UnexpectedError
 )
 
+func PossibleErrorSubCodeValues() []ErrorSubCode {
+	return original.PossibleErrorSubCodeValues()
+}
+
 type ResponseFormat = original.ResponseFormat
 
 const (
 	JSON   ResponseFormat = original.JSON
 	JSONLd ResponseFormat = original.JSONLd
 )
+
+func PossibleResponseFormatValues() []ResponseFormat {
+	return original.PossibleResponseFormatValues()
+}
 
 type SafeSearch = original.SafeSearch
 
@@ -163,6 +191,10 @@ const (
 	Off      SafeSearch = original.Off
 	Strict   SafeSearch = original.Strict
 )
+
+func PossibleSafeSearchValues() []SafeSearch {
+	return original.PossibleSafeSearchValues()
+}
 
 type Type = original.Type
 
@@ -174,6 +206,10 @@ const (
 	TypeContractualRulesMediaAttribution   Type = original.TypeContractualRulesMediaAttribution
 	TypeContractualRulesTextAttribution    Type = original.TypeContractualRulesTextAttribution
 )
+
+func PossibleTypeValues() []Type {
+	return original.PossibleTypeValues()
+}
 
 type TypeBasicResponseBase = original.TypeBasicResponseBase
 
@@ -208,6 +244,10 @@ const (
 	TypeThing                 TypeBasicResponseBase = original.TypeThing
 	TypeTouristAttraction     TypeBasicResponseBase = original.TypeTouristAttraction
 )
+
+func PossibleTypeBasicResponseBaseValues() []TypeBasicResponseBase {
+	return original.PossibleTypeBasicResponseBaseValues()
+}
 
 type Airport = original.Airport
 type BasicAnswer = original.BasicAnswer

@@ -19,7 +19,7 @@
 
 package redis
 
-import original "github.com/Azure/azure-sdk-for-go/services/redis/mgmt/2017-10-01/redis"
+import original "github.com/Azure/azure-sdk-for-go/services/redis/mgmt/2018-03-01/redis"
 
 const (
 	DefaultBaseURI = original.DefaultBaseURI
@@ -66,12 +66,41 @@ const (
 	Weekend   DayOfWeek = original.Weekend
 )
 
+func PossibleDayOfWeekValues() []DayOfWeek {
+	return original.PossibleDayOfWeekValues()
+}
+
 type KeyType = original.KeyType
 
 const (
 	Primary   KeyType = original.Primary
 	Secondary KeyType = original.Secondary
 )
+
+func PossibleKeyTypeValues() []KeyType {
+	return original.PossibleKeyTypeValues()
+}
+
+type ProvisioningState = original.ProvisioningState
+
+const (
+	Creating               ProvisioningState = original.Creating
+	Deleting               ProvisioningState = original.Deleting
+	Disabled               ProvisioningState = original.Disabled
+	Failed                 ProvisioningState = original.Failed
+	Linking                ProvisioningState = original.Linking
+	Provisioning           ProvisioningState = original.Provisioning
+	RecoveringScaleFailure ProvisioningState = original.RecoveringScaleFailure
+	Scaling                ProvisioningState = original.Scaling
+	Succeeded              ProvisioningState = original.Succeeded
+	Unlinking              ProvisioningState = original.Unlinking
+	Unprovisioning         ProvisioningState = original.Unprovisioning
+	Updating               ProvisioningState = original.Updating
+)
+
+func PossibleProvisioningStateValues() []ProvisioningState {
+	return original.PossibleProvisioningStateValues()
+}
 
 type RebootType = original.RebootType
 
@@ -81,6 +110,10 @@ const (
 	SecondaryNode RebootType = original.SecondaryNode
 )
 
+func PossibleRebootTypeValues() []RebootType {
+	return original.PossibleRebootTypeValues()
+}
+
 type ReplicationRole = original.ReplicationRole
 
 const (
@@ -88,12 +121,20 @@ const (
 	ReplicationRoleSecondary ReplicationRole = original.ReplicationRoleSecondary
 )
 
+func PossibleReplicationRoleValues() []ReplicationRole {
+	return original.PossibleReplicationRoleValues()
+}
+
 type SkuFamily = original.SkuFamily
 
 const (
 	C SkuFamily = original.C
 	P SkuFamily = original.P
 )
+
+func PossibleSkuFamilyValues() []SkuFamily {
+	return original.PossibleSkuFamilyValues()
+}
 
 type SkuName = original.SkuName
 
@@ -103,7 +144,24 @@ const (
 	Standard SkuName = original.Standard
 )
 
+func PossibleSkuNameValues() []SkuName {
+	return original.PossibleSkuNameValues()
+}
+
+type TLSVersion = original.TLSVersion
+
+const (
+	OneFullStopOne  TLSVersion = original.OneFullStopOne
+	OneFullStopTwo  TLSVersion = original.OneFullStopTwo
+	OneFullStopZero TLSVersion = original.OneFullStopZero
+)
+
+func PossibleTLSVersionValues() []TLSVersion {
+	return original.PossibleTLSVersionValues()
+}
+
 type AccessKeys = original.AccessKeys
+type CheckNameAvailabilityParameters = original.CheckNameAvailabilityParameters
 type CommonProperties = original.CommonProperties
 type CreateFuture = original.CreateFuture
 type CreateParameters = original.CreateParameters
@@ -132,6 +190,7 @@ type LinkedServerWithPropertiesListPage = original.LinkedServerWithPropertiesLis
 type ListResult = original.ListResult
 type ListResultIterator = original.ListResultIterator
 type ListResultPage = original.ListResultPage
+type NotificationListResponse = original.NotificationListResponse
 type Operation = original.Operation
 type OperationDisplay = original.OperationDisplay
 type OperationListResult = original.OperationListResult
@@ -150,6 +209,7 @@ type Sku = original.Sku
 type TrackedResource = original.TrackedResource
 type UpdateParameters = original.UpdateParameters
 type UpdateProperties = original.UpdateProperties
+type UpgradeNotification = original.UpgradeNotification
 type OperationsClient = original.OperationsClient
 
 func NewOperationsClient(subscriptionID string) OperationsClient {

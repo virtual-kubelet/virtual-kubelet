@@ -50,6 +50,10 @@ const (
 	Secondary KeyType = original.Secondary
 )
 
+func PossibleKeyTypeValues() []KeyType {
+	return original.PossibleKeyTypeValues()
+}
+
 type BasedServicesAccount = original.BasedServicesAccount
 type BasedServicesAccountCreateParameters = original.BasedServicesAccountCreateParameters
 type BasedServicesAccountKeys = original.BasedServicesAccountKeys

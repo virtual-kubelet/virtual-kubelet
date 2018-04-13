@@ -118,7 +118,7 @@ func (client BaseClient) AnalyzeImagePreparer(ctx context.Context, imageURL Imag
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPost(),
 		autorest.WithCustomBaseURL("https://{AzureRegion}.api.cognitive.microsoft.com/vision/v1.0", urlParameters),
 		autorest.WithPath("/analyze"),
@@ -194,7 +194,7 @@ func (client BaseClient) AnalyzeImageByDomainPreparer(ctx context.Context, model
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPost(),
 		autorest.WithCustomBaseURL("https://{AzureRegion}.api.cognitive.microsoft.com/vision/v1.0", urlParameters),
 		autorest.WithPathParameters("/models/{model}/analyze", pathParameters),
@@ -263,7 +263,7 @@ func (client BaseClient) AnalyzeImageByDomainInStreamPreparer(ctx context.Contex
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsOctetStream(),
+		autorest.AsContentType("application/octet-stream"),
 		autorest.AsPost(),
 		autorest.WithCustomBaseURL("https://{AzureRegion}.api.cognitive.microsoft.com/vision/v1.0", urlParameters),
 		autorest.WithPathParameters("/models/{model}/analyze", pathParameters),
@@ -348,7 +348,7 @@ func (client BaseClient) AnalyzeImageInStreamPreparer(ctx context.Context, image
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsOctetStream(),
+		autorest.AsContentType("application/octet-stream"),
 		autorest.AsPost(),
 		autorest.WithCustomBaseURL("https://{AzureRegion}.api.cognitive.microsoft.com/vision/v1.0", urlParameters),
 		autorest.WithPath("/analyze"),
@@ -428,7 +428,7 @@ func (client BaseClient) DescribeImagePreparer(ctx context.Context, imageURL Ima
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPost(),
 		autorest.WithCustomBaseURL("https://{AzureRegion}.api.cognitive.microsoft.com/vision/v1.0", urlParameters),
 		autorest.WithPath("/describe"),
@@ -503,7 +503,7 @@ func (client BaseClient) DescribeImageInStreamPreparer(ctx context.Context, imag
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsOctetStream(),
+		autorest.AsContentType("application/octet-stream"),
 		autorest.AsPost(),
 		autorest.WithCustomBaseURL("https://{AzureRegion}.api.cognitive.microsoft.com/vision/v1.0", urlParameters),
 		autorest.WithPath("/describe"),
@@ -592,7 +592,7 @@ func (client BaseClient) GenerateThumbnailPreparer(ctx context.Context, width in
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPost(),
 		autorest.WithCustomBaseURL("https://{AzureRegion}.api.cognitive.microsoft.com/vision/v1.0", urlParameters),
 		autorest.WithPath("/generateThumbnail"),
@@ -679,7 +679,7 @@ func (client BaseClient) GenerateThumbnailInStreamPreparer(ctx context.Context, 
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsOctetStream(),
+		autorest.AsContentType("application/octet-stream"),
 		autorest.AsPost(),
 		autorest.WithCustomBaseURL("https://{AzureRegion}.api.cognitive.microsoft.com/vision/v1.0", urlParameters),
 		autorest.WithPath("/generateThumbnail"),
@@ -883,7 +883,7 @@ func (client BaseClient) RecognizePrintedTextPreparer(ctx context.Context, detec
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPost(),
 		autorest.WithCustomBaseURL("https://{AzureRegion}.api.cognitive.microsoft.com/vision/v1.0", urlParameters),
 		autorest.WithPath("/ocr"),
@@ -961,7 +961,7 @@ func (client BaseClient) RecognizePrintedTextInStreamPreparer(ctx context.Contex
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsOctetStream(),
+		autorest.AsContentType("application/octet-stream"),
 		autorest.AsPost(),
 		autorest.WithCustomBaseURL("https://{AzureRegion}.api.cognitive.microsoft.com/vision/v1.0", urlParameters),
 		autorest.WithPath("/ocr"),
@@ -1039,7 +1039,7 @@ func (client BaseClient) RecognizeTextPreparer(ctx context.Context, imageURL Ima
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPost(),
 		autorest.WithCustomBaseURL("https://{AzureRegion}.api.cognitive.microsoft.com/vision/v1.0", urlParameters),
 		autorest.WithPath("/recognizeText"),
@@ -1110,7 +1110,7 @@ func (client BaseClient) RecognizeTextInStreamPreparer(ctx context.Context, imag
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsOctetStream(),
+		autorest.AsContentType("application/octet-stream"),
 		autorest.AsPost(),
 		autorest.WithCustomBaseURL("https://{AzureRegion}.api.cognitive.microsoft.com/vision/v1.0", urlParameters),
 		autorest.WithPath("/recognizeText"),
@@ -1180,7 +1180,7 @@ func (client BaseClient) TagImagePreparer(ctx context.Context, imageURL ImageURL
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPost(),
 		autorest.WithCustomBaseURL("https://{AzureRegion}.api.cognitive.microsoft.com/vision/v1.0", urlParameters),
 		autorest.WithPath("/tag"),
@@ -1245,7 +1245,7 @@ func (client BaseClient) TagImageInStreamPreparer(ctx context.Context, imagePara
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsOctetStream(),
+		autorest.AsContentType("application/octet-stream"),
 		autorest.AsPost(),
 		autorest.WithCustomBaseURL("https://{AzureRegion}.api.cognitive.microsoft.com/vision/v1.0", urlParameters),
 		autorest.WithPath("/tag"),

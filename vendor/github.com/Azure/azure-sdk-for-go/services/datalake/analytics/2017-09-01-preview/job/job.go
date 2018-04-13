@@ -76,7 +76,7 @@ func (client Client) BuildPreparer(ctx context.Context, accountName string, para
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPost(),
 		autorest.WithCustomBaseURL("https://{accountName}.{adlaJobDnsSuffix}", urlParameters),
 		autorest.WithPath("/buildJob"),
@@ -233,7 +233,7 @@ func (client Client) CreatePreparer(ctx context.Context, accountName string, job
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPut(),
 		autorest.WithCustomBaseURL("https://{accountName}.{adlaJobDnsSuffix}", urlParameters),
 		autorest.WithPathParameters("/jobs/{jobIdentity}", pathParameters),
@@ -638,7 +638,7 @@ func (client Client) UpdatePreparer(ctx context.Context, accountName string, job
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPatch(),
 		autorest.WithCustomBaseURL("https://{accountName}.{adlaJobDnsSuffix}", urlParameters),
 		autorest.WithPathParameters("/jobs/{jobIdentity}", pathParameters),

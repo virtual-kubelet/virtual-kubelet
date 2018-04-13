@@ -38,6 +38,11 @@ const (
 	Secondary KeyType = "Secondary"
 )
 
+// PossibleKeyTypeValues returns an array of possible values for the KeyType const type.
+func PossibleKeyTypeValues() []KeyType {
+	return []KeyType{NotSpecified, Primary, Secondary}
+}
+
 // ParameterType enumerates the values for parameter type.
 type ParameterType string
 
@@ -62,6 +67,11 @@ const (
 	ParameterTypeString ParameterType = "String"
 )
 
+// PossibleParameterTypeValues returns an array of possible values for the ParameterType const type.
+func PossibleParameterTypeValues() []ParameterType {
+	return []ParameterType{ParameterTypeArray, ParameterTypeBool, ParameterTypeFloat, ParameterTypeInt, ParameterTypeNotSpecified, ParameterTypeObject, ParameterTypeSecureObject, ParameterTypeSecureString, ParameterTypeString}
+}
+
 // RecurrenceFrequency enumerates the values for recurrence frequency.
 type RecurrenceFrequency string
 
@@ -82,6 +92,11 @@ const (
 	Year RecurrenceFrequency = "Year"
 )
 
+// PossibleRecurrenceFrequencyValues returns an array of possible values for the RecurrenceFrequency const type.
+func PossibleRecurrenceFrequencyValues() []RecurrenceFrequency {
+	return []RecurrenceFrequency{Day, Hour, Minute, Month, Second, Week, Year}
+}
+
 // SkuName enumerates the values for sku name.
 type SkuName string
 
@@ -100,6 +115,11 @@ const (
 	SkuNameStandard SkuName = "Standard"
 )
 
+// PossibleSkuNameValues returns an array of possible values for the SkuName const type.
+func PossibleSkuNameValues() []SkuName {
+	return []SkuName{SkuNameBasic, SkuNameFree, SkuNameNotSpecified, SkuNamePremium, SkuNameShared, SkuNameStandard}
+}
+
 // WorkflowProvisioningState enumerates the values for workflow provisioning state.
 type WorkflowProvisioningState string
 
@@ -111,6 +131,11 @@ const (
 	// WorkflowProvisioningStateSucceeded ...
 	WorkflowProvisioningStateSucceeded WorkflowProvisioningState = "Succeeded"
 )
+
+// PossibleWorkflowProvisioningStateValues returns an array of possible values for the WorkflowProvisioningState const type.
+func PossibleWorkflowProvisioningStateValues() []WorkflowProvisioningState {
+	return []WorkflowProvisioningState{WorkflowProvisioningStateMoving, WorkflowProvisioningStateNotSpecified, WorkflowProvisioningStateSucceeded}
+}
 
 // WorkflowState enumerates the values for workflow state.
 type WorkflowState string
@@ -127,6 +152,11 @@ const (
 	// WorkflowStateSuspended ...
 	WorkflowStateSuspended WorkflowState = "Suspended"
 )
+
+// PossibleWorkflowStateValues returns an array of possible values for the WorkflowState const type.
+func PossibleWorkflowStateValues() []WorkflowState {
+	return []WorkflowState{WorkflowStateDeleted, WorkflowStateDisabled, WorkflowStateEnabled, WorkflowStateNotSpecified, WorkflowStateSuspended}
+}
 
 // WorkflowStatus enumerates the values for workflow status.
 type WorkflowStatus string
@@ -158,6 +188,11 @@ const (
 	WorkflowStatusWaiting WorkflowStatus = "Waiting"
 )
 
+// PossibleWorkflowStatusValues returns an array of possible values for the WorkflowStatus const type.
+func PossibleWorkflowStatusValues() []WorkflowStatus {
+	return []WorkflowStatus{WorkflowStatusAborted, WorkflowStatusCancelled, WorkflowStatusFailed, WorkflowStatusFaulted, WorkflowStatusNotSpecified, WorkflowStatusPaused, WorkflowStatusRunning, WorkflowStatusSkipped, WorkflowStatusSucceeded, WorkflowStatusSuspended, WorkflowStatusTimedOut, WorkflowStatusWaiting}
+}
+
 // WorkflowTriggerProvisioningState enumerates the values for workflow trigger provisioning state.
 type WorkflowTriggerProvisioningState string
 
@@ -171,6 +206,11 @@ const (
 	// WorkflowTriggerProvisioningStateUpdating ...
 	WorkflowTriggerProvisioningStateUpdating WorkflowTriggerProvisioningState = "Updating"
 )
+
+// PossibleWorkflowTriggerProvisioningStateValues returns an array of possible values for the WorkflowTriggerProvisioningState const type.
+func PossibleWorkflowTriggerProvisioningStateValues() []WorkflowTriggerProvisioningState {
+	return []WorkflowTriggerProvisioningState{WorkflowTriggerProvisioningStateCreating, WorkflowTriggerProvisioningStateNotSpecified, WorkflowTriggerProvisioningStateSucceeded, WorkflowTriggerProvisioningStateUpdating}
+}
 
 // ContentHash ...
 type ContentHash struct {
@@ -388,6 +428,24 @@ type WorkflowAccessKey struct {
 	Type *string `json:"type,omitempty"`
 	// ID - Gets or sets the resource id.
 	ID *string `json:"id,omitempty"`
+}
+
+// MarshalJSON is the custom marshaler for WorkflowAccessKey.
+func (wak WorkflowAccessKey) MarshalJSON() ([]byte, error) {
+	objectMap := make(map[string]interface{})
+	if wak.WorkflowAccessKeyProperties != nil {
+		objectMap["properties"] = wak.WorkflowAccessKeyProperties
+	}
+	if wak.Name != nil {
+		objectMap["name"] = wak.Name
+	}
+	if wak.Type != nil {
+		objectMap["type"] = wak.Type
+	}
+	if wak.ID != nil {
+		objectMap["id"] = wak.ID
+	}
+	return json.Marshal(objectMap)
 }
 
 // UnmarshalJSON is the custom unmarshaler for WorkflowAccessKey struct.
@@ -710,14 +768,18 @@ type WorkflowProperties struct {
 // MarshalJSON is the custom marshaler for WorkflowProperties.
 func (wp WorkflowProperties) MarshalJSON() ([]byte, error) {
 	objectMap := make(map[string]interface{})
-	objectMap["provisioningState"] = wp.ProvisioningState
+	if wp.ProvisioningState != "" {
+		objectMap["provisioningState"] = wp.ProvisioningState
+	}
 	if wp.CreatedTime != nil {
 		objectMap["createdTime"] = wp.CreatedTime
 	}
 	if wp.ChangedTime != nil {
 		objectMap["changedTime"] = wp.ChangedTime
 	}
-	objectMap["state"] = wp.State
+	if wp.State != "" {
+		objectMap["state"] = wp.State
+	}
 	if wp.Version != nil {
 		objectMap["version"] = wp.Version
 	}
@@ -751,6 +813,24 @@ type WorkflowRun struct {
 	Type *string `json:"type,omitempty"`
 	// ID - Gets or sets the resource id.
 	ID *string `json:"id,omitempty"`
+}
+
+// MarshalJSON is the custom marshaler for WorkflowRun.
+func (wr WorkflowRun) MarshalJSON() ([]byte, error) {
+	objectMap := make(map[string]interface{})
+	if wr.WorkflowRunProperties != nil {
+		objectMap["properties"] = wr.WorkflowRunProperties
+	}
+	if wr.Name != nil {
+		objectMap["name"] = wr.Name
+	}
+	if wr.Type != nil {
+		objectMap["type"] = wr.Type
+	}
+	if wr.ID != nil {
+		objectMap["id"] = wr.ID
+	}
+	return json.Marshal(objectMap)
 }
 
 // UnmarshalJSON is the custom unmarshaler for WorkflowRun struct.
@@ -815,6 +895,24 @@ type WorkflowRunAction struct {
 	Type *string `json:"type,omitempty"`
 	// ID - Gets or sets the resource id.
 	ID *string `json:"id,omitempty"`
+}
+
+// MarshalJSON is the custom marshaler for WorkflowRunAction.
+func (wra WorkflowRunAction) MarshalJSON() ([]byte, error) {
+	objectMap := make(map[string]interface{})
+	if wra.WorkflowRunActionProperties != nil {
+		objectMap["properties"] = wra.WorkflowRunActionProperties
+	}
+	if wra.Name != nil {
+		objectMap["name"] = wra.Name
+	}
+	if wra.Type != nil {
+		objectMap["type"] = wra.Type
+	}
+	if wra.ID != nil {
+		objectMap["id"] = wra.ID
+	}
+	return json.Marshal(objectMap)
 }
 
 // UnmarshalJSON is the custom unmarshaler for WorkflowRunAction struct.
@@ -1135,7 +1233,9 @@ func (wrp WorkflowRunProperties) MarshalJSON() ([]byte, error) {
 	if wrp.EndTime != nil {
 		objectMap["endTime"] = wrp.EndTime
 	}
-	objectMap["status"] = wrp.Status
+	if wrp.Status != "" {
+		objectMap["status"] = wrp.Status
+	}
 	if wrp.Code != nil {
 		objectMap["code"] = wrp.Code
 	}
@@ -1251,6 +1351,24 @@ type WorkflowTrigger struct {
 	ID *string `json:"id,omitempty"`
 }
 
+// MarshalJSON is the custom marshaler for WorkflowTrigger.
+func (wt WorkflowTrigger) MarshalJSON() ([]byte, error) {
+	objectMap := make(map[string]interface{})
+	if wt.WorkflowTriggerProperties != nil {
+		objectMap["properties"] = wt.WorkflowTriggerProperties
+	}
+	if wt.Name != nil {
+		objectMap["name"] = wt.Name
+	}
+	if wt.Type != nil {
+		objectMap["type"] = wt.Type
+	}
+	if wt.ID != nil {
+		objectMap["id"] = wt.ID
+	}
+	return json.Marshal(objectMap)
+}
+
 // UnmarshalJSON is the custom unmarshaler for WorkflowTrigger struct.
 func (wt *WorkflowTrigger) UnmarshalJSON(body []byte) error {
 	var m map[string]*json.RawMessage
@@ -1319,6 +1437,24 @@ type WorkflowTriggerHistory struct {
 	Type *string `json:"type,omitempty"`
 	// ID - Gets or sets the resource id.
 	ID *string `json:"id,omitempty"`
+}
+
+// MarshalJSON is the custom marshaler for WorkflowTriggerHistory.
+func (wth WorkflowTriggerHistory) MarshalJSON() ([]byte, error) {
+	objectMap := make(map[string]interface{})
+	if wth.WorkflowTriggerHistoryProperties != nil {
+		objectMap["properties"] = wth.WorkflowTriggerHistoryProperties
+	}
+	if wth.Name != nil {
+		objectMap["name"] = wth.Name
+	}
+	if wth.Type != nil {
+		objectMap["type"] = wth.Type
+	}
+	if wth.ID != nil {
+		objectMap["id"] = wth.ID
+	}
+	return json.Marshal(objectMap)
 }
 
 // UnmarshalJSON is the custom unmarshaler for WorkflowTriggerHistory struct.
@@ -1783,7 +1919,9 @@ func (wvp WorkflowVersionProperties) MarshalJSON() ([]byte, error) {
 	if wvp.ChangedTime != nil {
 		objectMap["changedTime"] = wvp.ChangedTime
 	}
-	objectMap["state"] = wvp.State
+	if wvp.State != "" {
+		objectMap["state"] = wvp.State
+	}
 	if wvp.Version != nil {
 		objectMap["version"] = wvp.Version
 	}

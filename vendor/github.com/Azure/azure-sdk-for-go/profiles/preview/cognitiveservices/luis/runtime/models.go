@@ -47,6 +47,10 @@ const (
 	Westus2        AzureRegions = original.Westus2
 )
 
+func PossibleAzureRegionsValues() []AzureRegions {
+	return original.PossibleAzureRegionsValues()
+}
+
 type APIError = original.APIError
 type CompositeChildModel = original.CompositeChildModel
 type CompositeEntityModel = original.CompositeEntityModel

@@ -68,6 +68,10 @@ const (
 	Suspended DataLakeStoreAccountState = original.Suspended
 )
 
+func PossibleDataLakeStoreAccountStateValues() []DataLakeStoreAccountState {
+	return original.PossibleDataLakeStoreAccountStateValues()
+}
+
 type DataLakeStoreAccountStatus = original.DataLakeStoreAccountStatus
 
 const (
@@ -84,12 +88,20 @@ const (
 	Undeleting DataLakeStoreAccountStatus = original.Undeleting
 )
 
+func PossibleDataLakeStoreAccountStatusValues() []DataLakeStoreAccountStatus {
+	return original.PossibleDataLakeStoreAccountStatusValues()
+}
+
 type EncryptionConfigType = original.EncryptionConfigType
 
 const (
 	ServiceManaged EncryptionConfigType = original.ServiceManaged
 	UserManaged    EncryptionConfigType = original.UserManaged
 )
+
+func PossibleEncryptionConfigTypeValues() []EncryptionConfigType {
+	return original.PossibleEncryptionConfigTypeValues()
+}
 
 type EncryptionProvisioningState = original.EncryptionProvisioningState
 
@@ -98,12 +110,20 @@ const (
 	EncryptionProvisioningStateSucceeded EncryptionProvisioningState = original.EncryptionProvisioningStateSucceeded
 )
 
+func PossibleEncryptionProvisioningStateValues() []EncryptionProvisioningState {
+	return original.PossibleEncryptionProvisioningStateValues()
+}
+
 type EncryptionState = original.EncryptionState
 
 const (
 	Disabled EncryptionState = original.Disabled
 	Enabled  EncryptionState = original.Enabled
 )
+
+func PossibleEncryptionStateValues() []EncryptionState {
+	return original.PossibleEncryptionStateValues()
+}
 
 type FirewallAllowAzureIpsState = original.FirewallAllowAzureIpsState
 
@@ -112,12 +132,20 @@ const (
 	FirewallAllowAzureIpsStateEnabled  FirewallAllowAzureIpsState = original.FirewallAllowAzureIpsStateEnabled
 )
 
+func PossibleFirewallAllowAzureIpsStateValues() []FirewallAllowAzureIpsState {
+	return original.PossibleFirewallAllowAzureIpsStateValues()
+}
+
 type FirewallState = original.FirewallState
 
 const (
 	FirewallStateDisabled FirewallState = original.FirewallStateDisabled
 	FirewallStateEnabled  FirewallState = original.FirewallStateEnabled
 )
+
+func PossibleFirewallStateValues() []FirewallState {
+	return original.PossibleFirewallStateValues()
+}
 
 type OperationOrigin = original.OperationOrigin
 
@@ -126,6 +154,10 @@ const (
 	User       OperationOrigin = original.User
 	Usersystem OperationOrigin = original.Usersystem
 )
+
+func PossibleOperationOriginValues() []OperationOrigin {
+	return original.PossibleOperationOriginValues()
+}
 
 type SubscriptionState = original.SubscriptionState
 
@@ -136,6 +168,10 @@ const (
 	SubscriptionStateUnregistered SubscriptionState = original.SubscriptionStateUnregistered
 	SubscriptionStateWarned       SubscriptionState = original.SubscriptionStateWarned
 )
+
+func PossibleSubscriptionStateValues() []SubscriptionState {
+	return original.PossibleSubscriptionStateValues()
+}
 
 type TierType = original.TierType
 
@@ -149,12 +185,20 @@ const (
 	Consumption     TierType = original.Consumption
 )
 
+func PossibleTierTypeValues() []TierType {
+	return original.PossibleTierTypeValues()
+}
+
 type TrustedIDProviderState = original.TrustedIDProviderState
 
 const (
 	TrustedIDProviderStateDisabled TrustedIDProviderState = original.TrustedIDProviderStateDisabled
 	TrustedIDProviderStateEnabled  TrustedIDProviderState = original.TrustedIDProviderStateEnabled
 )
+
+func PossibleTrustedIDProviderStateValues() []TrustedIDProviderState {
+	return original.PossibleTrustedIDProviderStateValues()
+}
 
 type AccountsCreateFutureType = original.AccountsCreateFutureType
 type AccountsDeleteFutureType = original.AccountsDeleteFutureType

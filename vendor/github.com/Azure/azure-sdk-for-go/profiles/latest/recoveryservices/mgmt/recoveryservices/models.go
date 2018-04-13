@@ -44,6 +44,10 @@ const (
 	Invalid              AuthType = original.Invalid
 )
 
+func PossibleAuthTypeValues() []AuthType {
+	return original.PossibleAuthTypeValues()
+}
+
 type AuthTypeBasicResourceCertificateDetails = original.AuthTypeBasicResourceCertificateDetails
 
 const (
@@ -52,6 +56,10 @@ const (
 	AuthTypeResourceCertificateDetails AuthTypeBasicResourceCertificateDetails = original.AuthTypeResourceCertificateDetails
 )
 
+func PossibleAuthTypeBasicResourceCertificateDetailsValues() []AuthTypeBasicResourceCertificateDetails {
+	return original.PossibleAuthTypeBasicResourceCertificateDetailsValues()
+}
+
 type SkuName = original.SkuName
 
 const (
@@ -59,12 +67,20 @@ const (
 	Standard SkuName = original.Standard
 )
 
+func PossibleSkuNameValues() []SkuName {
+	return original.PossibleSkuNameValues()
+}
+
 type TriggerType = original.TriggerType
 
 const (
 	ForcedUpgrade TriggerType = original.ForcedUpgrade
 	UserTriggered TriggerType = original.UserTriggered
 )
+
+func PossibleTriggerTypeValues() []TriggerType {
+	return original.PossibleTriggerTypeValues()
+}
 
 type UsagesUnit = original.UsagesUnit
 
@@ -77,6 +93,10 @@ const (
 	Seconds        UsagesUnit = original.Seconds
 )
 
+func PossibleUsagesUnitValues() []UsagesUnit {
+	return original.PossibleUsagesUnitValues()
+}
+
 type VaultUpgradeState = original.VaultUpgradeState
 
 const (
@@ -85,6 +105,10 @@ const (
 	Unknown    VaultUpgradeState = original.Unknown
 	Upgraded   VaultUpgradeState = original.Upgraded
 )
+
+func PossibleVaultUpgradeStateValues() []VaultUpgradeState {
+	return original.PossibleVaultUpgradeStateValues()
+}
 
 type CertificateRequest = original.CertificateRequest
 type ClientDiscoveryDisplay = original.ClientDiscoveryDisplay

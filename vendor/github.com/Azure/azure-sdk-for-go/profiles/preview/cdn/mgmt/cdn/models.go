@@ -69,6 +69,10 @@ const (
 	SetIfMissing CacheBehavior = original.SetIfMissing
 )
 
+func PossibleCacheBehaviorValues() []CacheBehavior {
+	return original.PossibleCacheBehaviorValues()
+}
+
 type CustomDomainResourceState = original.CustomDomainResourceState
 
 const (
@@ -76,6 +80,10 @@ const (
 	Creating CustomDomainResourceState = original.Creating
 	Deleting CustomDomainResourceState = original.Deleting
 )
+
+func PossibleCustomDomainResourceStateValues() []CustomDomainResourceState {
+	return original.PossibleCustomDomainResourceStateValues()
+}
 
 type CustomHTTPSProvisioningState = original.CustomHTTPSProvisioningState
 
@@ -86,6 +94,10 @@ const (
 	Enabling  CustomHTTPSProvisioningState = original.Enabling
 	Failed    CustomHTTPSProvisioningState = original.Failed
 )
+
+func PossibleCustomHTTPSProvisioningStateValues() []CustomHTTPSProvisioningState {
+	return original.PossibleCustomHTTPSProvisioningStateValues()
+}
 
 type CustomHTTPSProvisioningSubstate = original.CustomHTTPSProvisioningSubstate
 
@@ -102,6 +114,10 @@ const (
 	SubmittingDomainControlValidationRequest      CustomHTTPSProvisioningSubstate = original.SubmittingDomainControlValidationRequest
 )
 
+func PossibleCustomHTTPSProvisioningSubstateValues() []CustomHTTPSProvisioningSubstate {
+	return original.PossibleCustomHTTPSProvisioningSubstateValues()
+}
+
 type EndpointResourceState = original.EndpointResourceState
 
 const (
@@ -113,12 +129,20 @@ const (
 	EndpointResourceStateStopping EndpointResourceState = original.EndpointResourceStateStopping
 )
 
+func PossibleEndpointResourceStateValues() []EndpointResourceState {
+	return original.PossibleEndpointResourceStateValues()
+}
+
 type GeoFilterActions = original.GeoFilterActions
 
 const (
 	Allow GeoFilterActions = original.Allow
 	Block GeoFilterActions = original.Block
 )
+
+func PossibleGeoFilterActionsValues() []GeoFilterActions {
+	return original.PossibleGeoFilterActionsValues()
+}
 
 type MatchType = original.MatchType
 
@@ -127,12 +151,20 @@ const (
 	Wildcard MatchType = original.Wildcard
 )
 
+func PossibleMatchTypeValues() []MatchType {
+	return original.PossibleMatchTypeValues()
+}
+
 type Name = original.Name
 
 const (
 	NameCacheExpiration    Name = original.NameCacheExpiration
 	NameDeliveryRuleAction Name = original.NameDeliveryRuleAction
 )
+
+func PossibleNameValues() []Name {
+	return original.PossibleNameValues()
+}
 
 type NameBasicDeliveryRuleCondition = original.NameBasicDeliveryRuleCondition
 
@@ -141,6 +173,10 @@ const (
 	NameURLFileExtension      NameBasicDeliveryRuleCondition = original.NameURLFileExtension
 	NameURLPath               NameBasicDeliveryRuleCondition = original.NameURLPath
 )
+
+func PossibleNameBasicDeliveryRuleConditionValues() []NameBasicDeliveryRuleCondition {
+	return original.PossibleNameBasicDeliveryRuleConditionValues()
+}
 
 type OptimizationType = original.OptimizationType
 
@@ -152,6 +188,10 @@ const (
 	VideoOnDemandMediaStreaming OptimizationType = original.VideoOnDemandMediaStreaming
 )
 
+func PossibleOptimizationTypeValues() []OptimizationType {
+	return original.PossibleOptimizationTypeValues()
+}
+
 type OriginResourceState = original.OriginResourceState
 
 const (
@@ -159,6 +199,10 @@ const (
 	OriginResourceStateCreating OriginResourceState = original.OriginResourceStateCreating
 	OriginResourceStateDeleting OriginResourceState = original.OriginResourceStateDeleting
 )
+
+func PossibleOriginResourceStateValues() []OriginResourceState {
+	return original.PossibleOriginResourceStateValues()
+}
 
 type ProfileResourceState = original.ProfileResourceState
 
@@ -169,6 +213,10 @@ const (
 	ProfileResourceStateDisabled ProfileResourceState = original.ProfileResourceStateDisabled
 )
 
+func PossibleProfileResourceStateValues() []ProfileResourceState {
+	return original.PossibleProfileResourceStateValues()
+}
+
 type QueryStringCachingBehavior = original.QueryStringCachingBehavior
 
 const (
@@ -178,11 +226,19 @@ const (
 	UseQueryString    QueryStringCachingBehavior = original.UseQueryString
 )
 
+func PossibleQueryStringCachingBehaviorValues() []QueryStringCachingBehavior {
+	return original.PossibleQueryStringCachingBehaviorValues()
+}
+
 type ResourceType = original.ResourceType
 
 const (
 	MicrosoftCdnProfilesEndpoints ResourceType = original.MicrosoftCdnProfilesEndpoints
 )
+
+func PossibleResourceTypeValues() []ResourceType {
+	return original.PossibleResourceTypeValues()
+}
 
 type SkuName = original.SkuName
 
@@ -193,6 +249,10 @@ const (
 	StandardChinaCdn SkuName = original.StandardChinaCdn
 	StandardVerizon  SkuName = original.StandardVerizon
 )
+
+func PossibleSkuNameValues() []SkuName {
+	return original.PossibleSkuNameValues()
+}
 
 type CacheExpirationActionParameters = original.CacheExpirationActionParameters
 type CheckNameAvailabilityInput = original.CheckNameAvailabilityInput

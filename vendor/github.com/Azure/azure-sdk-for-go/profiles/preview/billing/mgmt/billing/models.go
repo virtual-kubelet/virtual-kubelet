@@ -19,7 +19,7 @@
 
 package billing
 
-import original "github.com/Azure/azure-sdk-for-go/services/billing/mgmt/2017-04-24-preview/billing"
+import original "github.com/Azure/azure-sdk-for-go/services/billing/mgmt/2018-03-01-preview/billing"
 
 const (
 	DefaultBaseURI = original.DefaultBaseURI
@@ -34,6 +34,15 @@ func NewWithBaseURI(baseURI string, subscriptionID string) BaseClient {
 	return original.NewWithBaseURI(baseURI, subscriptionID)
 }
 
+type EnrollmentAccountsClient = original.EnrollmentAccountsClient
+
+func NewEnrollmentAccountsClient(subscriptionID string) EnrollmentAccountsClient {
+	return original.NewEnrollmentAccountsClient(subscriptionID)
+}
+func NewEnrollmentAccountsClientWithBaseURI(baseURI string, subscriptionID string) EnrollmentAccountsClient {
+	return original.NewEnrollmentAccountsClientWithBaseURI(baseURI, subscriptionID)
+}
+
 type InvoicesClient = original.InvoicesClient
 
 func NewInvoicesClient(subscriptionID string) InvoicesClient {
@@ -44,6 +53,9 @@ func NewInvoicesClientWithBaseURI(baseURI string, subscriptionID string) Invoice
 }
 
 type DownloadURL = original.DownloadURL
+type EnrollmentAccount = original.EnrollmentAccount
+type EnrollmentAccountListResult = original.EnrollmentAccountListResult
+type EnrollmentAccountProperties = original.EnrollmentAccountProperties
 type ErrorDetails = original.ErrorDetails
 type ErrorResponse = original.ErrorResponse
 type Invoice = original.Invoice

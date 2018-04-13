@@ -42,6 +42,10 @@ const (
 	None          EntityNameUnavailabilityReason = original.None
 )
 
+func PossibleEntityNameUnavailabilityReasonValues() []EntityNameUnavailabilityReason {
+	return original.PossibleEntityNameUnavailabilityReasonValues()
+}
+
 type KeyType = original.KeyType
 
 const (
@@ -49,11 +53,19 @@ const (
 	Secondary KeyType = original.Secondary
 )
 
+func PossibleKeyTypeValues() []KeyType {
+	return original.PossibleKeyTypeValues()
+}
+
 type ResourceType = original.ResourceType
 
 const (
 	Mediaservices ResourceType = original.Mediaservices
 )
+
+func PossibleResourceTypeValues() []ResourceType {
+	return original.PossibleResourceTypeValues()
+}
 
 type APIEndpoint = original.APIEndpoint
 type APIError = original.APIError

@@ -36,6 +36,11 @@ const (
 	Steady AllocationState = "steady"
 )
 
+// PossibleAllocationStateValues returns an array of possible values for the AllocationState const type.
+func PossibleAllocationStateValues() []AllocationState {
+	return []AllocationState{Resizing, Steady}
+}
+
 // CachingType enumerates the values for caching type.
 type CachingType string
 
@@ -47,6 +52,11 @@ const (
 	// Readwrite ...
 	Readwrite CachingType = "readwrite"
 )
+
+// PossibleCachingTypeValues returns an array of possible values for the CachingType const type.
+func PossibleCachingTypeValues() []CachingType {
+	return []CachingType{None, Readonly, Readwrite}
+}
 
 // DeallocationOption enumerates the values for deallocation option.
 type DeallocationOption string
@@ -61,6 +71,11 @@ const (
 	// Waitforjobcompletion ...
 	Waitforjobcompletion DeallocationOption = "waitforjobcompletion"
 )
+
+// PossibleDeallocationOptionValues returns an array of possible values for the DeallocationOption const type.
+func PossibleDeallocationOptionValues() []DeallocationOption {
+	return []DeallocationOption{Requeue, Terminate, Unknown, Waitforjobcompletion}
+}
 
 // ExecutionState enumerates the values for execution state.
 type ExecutionState string
@@ -78,6 +93,11 @@ const (
 	Terminating ExecutionState = "terminating"
 )
 
+// PossibleExecutionStateValues returns an array of possible values for the ExecutionState const type.
+func PossibleExecutionStateValues() []ExecutionState {
+	return []ExecutionState{Failed, Queued, Running, Succeeded, Terminating}
+}
+
 // FileServerProvisioningState enumerates the values for file server provisioning state.
 type FileServerProvisioningState string
 
@@ -94,6 +114,11 @@ const (
 	FileServerProvisioningStateUpdating FileServerProvisioningState = "updating"
 )
 
+// PossibleFileServerProvisioningStateValues returns an array of possible values for the FileServerProvisioningState const type.
+func PossibleFileServerProvisioningStateValues() []FileServerProvisioningState {
+	return []FileServerProvisioningState{FileServerProvisioningStateCreating, FileServerProvisioningStateDeleting, FileServerProvisioningStateFailed, FileServerProvisioningStateSucceeded, FileServerProvisioningStateUpdating}
+}
+
 // FileServerType enumerates the values for file server type.
 type FileServerType string
 
@@ -103,6 +128,11 @@ const (
 	// Nfs ...
 	Nfs FileServerType = "nfs"
 )
+
+// PossibleFileServerTypeValues returns an array of possible values for the FileServerType const type.
+func PossibleFileServerTypeValues() []FileServerType {
+	return []FileServerType{Glusterfs, Nfs}
+}
 
 // OutputType enumerates the values for output type.
 type OutputType string
@@ -118,6 +148,11 @@ const (
 	Summary OutputType = "summary"
 )
 
+// PossibleOutputTypeValues returns an array of possible values for the OutputType const type.
+func PossibleOutputTypeValues() []OutputType {
+	return []OutputType{Custom, Logs, Model, Summary}
+}
+
 // ProvisioningState enumerates the values for provisioning state.
 type ProvisioningState string
 
@@ -132,6 +167,11 @@ const (
 	ProvisioningStateSucceeded ProvisioningState = "succeeded"
 )
 
+// PossibleProvisioningStateValues returns an array of possible values for the ProvisioningState const type.
+func PossibleProvisioningStateValues() []ProvisioningState {
+	return []ProvisioningState{ProvisioningStateCreating, ProvisioningStateDeleting, ProvisioningStateFailed, ProvisioningStateSucceeded}
+}
+
 // StorageAccountType enumerates the values for storage account type.
 type StorageAccountType string
 
@@ -141,6 +181,11 @@ const (
 	// StandardLRS ...
 	StandardLRS StorageAccountType = "Standard_LRS"
 )
+
+// PossibleStorageAccountTypeValues returns an array of possible values for the StorageAccountType const type.
+func PossibleStorageAccountTypeValues() []StorageAccountType {
+	return []StorageAccountType{PremiumLRS, StandardLRS}
+}
 
 // ToolType enumerates the values for tool type.
 type ToolType string
@@ -160,6 +205,11 @@ const (
 	ToolTypeTensorflow ToolType = "tensorflow"
 )
 
+// PossibleToolTypeValues returns an array of possible values for the ToolType const type.
+func PossibleToolTypeValues() []ToolType {
+	return []ToolType{ToolTypeCaffe, ToolTypeCaffe2, ToolTypeChainer, ToolTypeCntk, ToolTypeCustom, ToolTypeTensorflow}
+}
+
 // VMPriority enumerates the values for vm priority.
 type VMPriority string
 
@@ -169,6 +219,11 @@ const (
 	// Lowpriority ...
 	Lowpriority VMPriority = "lowpriority"
 )
+
+// PossibleVMPriorityValues returns an array of possible values for the VMPriority const type.
+func PossibleVMPriorityValues() []VMPriority {
+	return []VMPriority{Dedicated, Lowpriority}
+}
 
 // AutoScaleSettings the system automatically scales the cluster up and down (within minimumNodeCount and
 // maximumNodeCount) based on the pending and running jobs on the cluster.
@@ -786,6 +841,21 @@ type File struct {
 	DownloadURL *string `json:"downloadUrl,omitempty"`
 	// FileProperties - The properties associated with the file.
 	*FileProperties `json:"properties,omitempty"`
+}
+
+// MarshalJSON is the custom marshaler for File.
+func (f File) MarshalJSON() ([]byte, error) {
+	objectMap := make(map[string]interface{})
+	if f.Name != nil {
+		objectMap["name"] = f.Name
+	}
+	if f.DownloadURL != nil {
+		objectMap["downloadUrl"] = f.DownloadURL
+	}
+	if f.FileProperties != nil {
+		objectMap["properties"] = f.FileProperties
+	}
+	return json.Marshal(objectMap)
 }
 
 // UnmarshalJSON is the custom unmarshaler for File struct.

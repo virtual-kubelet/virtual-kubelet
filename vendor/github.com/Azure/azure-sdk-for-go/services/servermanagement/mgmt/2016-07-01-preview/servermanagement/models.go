@@ -34,6 +34,11 @@ const (
 	RsaEncrypted CredentialDataFormat = "RsaEncrypted"
 )
 
+// PossibleCredentialDataFormatValues returns an array of possible values for the CredentialDataFormat const type.
+func PossibleCredentialDataFormatValues() []CredentialDataFormat {
+	return []CredentialDataFormat{RsaEncrypted}
+}
+
 // GatewayExpandOption enumerates the values for gateway expand option.
 type GatewayExpandOption string
 
@@ -44,6 +49,11 @@ const (
 	Status GatewayExpandOption = "status"
 )
 
+// PossibleGatewayExpandOptionValues returns an array of possible values for the GatewayExpandOption const type.
+func PossibleGatewayExpandOptionValues() []GatewayExpandOption {
+	return []GatewayExpandOption{Download, Status}
+}
+
 // PowerShellExpandOption enumerates the values for power shell expand option.
 type PowerShellExpandOption string
 
@@ -51,6 +61,11 @@ const (
 	// Output ...
 	Output PowerShellExpandOption = "output"
 )
+
+// PossiblePowerShellExpandOptionValues returns an array of possible values for the PowerShellExpandOption const type.
+func PossiblePowerShellExpandOptionValues() []PowerShellExpandOption {
+	return []PowerShellExpandOption{Output}
+}
 
 // PromptFieldType enumerates the values for prompt field type.
 type PromptFieldType string
@@ -64,6 +79,11 @@ const (
 	String PromptFieldType = "String"
 )
 
+// PossiblePromptFieldTypeValues returns an array of possible values for the PromptFieldType const type.
+func PossiblePromptFieldTypeValues() []PromptFieldType {
+	return []PromptFieldType{Credential, SecureString, String}
+}
+
 // RetentionPeriod enumerates the values for retention period.
 type RetentionPeriod string
 
@@ -74,6 +94,11 @@ const (
 	Session RetentionPeriod = "Session"
 )
 
+// PossibleRetentionPeriodValues returns an array of possible values for the RetentionPeriod const type.
+func PossibleRetentionPeriodValues() []RetentionPeriod {
+	return []RetentionPeriod{Persistent, Session}
+}
+
 // UpgradeMode enumerates the values for upgrade mode.
 type UpgradeMode string
 
@@ -83,6 +108,11 @@ const (
 	// Manual ...
 	Manual UpgradeMode = "Manual"
 )
+
+// PossibleUpgradeModeValues returns an array of possible values for the UpgradeMode const type.
+func PossibleUpgradeModeValues() []UpgradeMode {
+	return []UpgradeMode{Automatic, Manual}
+}
 
 // EncryptionJwkResource the public key of the gateway.
 type EncryptionJwkResource struct {
@@ -203,6 +233,19 @@ type GatewayParameters struct {
 	Tags interface{} `json:"tags,omitempty"`
 	// GatewayParametersProperties - Collection of properties.
 	*GatewayParametersProperties `json:"properties,omitempty"`
+}
+
+// MarshalJSON is the custom marshaler for GatewayParameters.
+func (gp GatewayParameters) MarshalJSON() ([]byte, error) {
+	objectMap := make(map[string]interface{})
+	if gp.Location != nil {
+		objectMap["location"] = gp.Location
+	}
+	objectMap["tags"] = gp.Tags
+	if gp.GatewayParametersProperties != nil {
+		objectMap["properties"] = gp.GatewayParametersProperties
+	}
+	return json.Marshal(objectMap)
 }
 
 // UnmarshalJSON is the custom unmarshaler for GatewayParameters struct.
@@ -776,6 +819,19 @@ type NodeParameters struct {
 	*NodeParametersProperties `json:"properties,omitempty"`
 }
 
+// MarshalJSON is the custom marshaler for NodeParameters.
+func (np NodeParameters) MarshalJSON() ([]byte, error) {
+	objectMap := make(map[string]interface{})
+	if np.Location != nil {
+		objectMap["location"] = np.Location
+	}
+	objectMap["tags"] = np.Tags
+	if np.NodeParametersProperties != nil {
+		objectMap["properties"] = np.NodeParametersProperties
+	}
+	return json.Marshal(objectMap)
+}
+
 // UnmarshalJSON is the custom unmarshaler for NodeParameters struct.
 func (np *NodeParameters) UnmarshalJSON(body []byte) error {
 	var m map[string]*json.RawMessage
@@ -1168,6 +1224,15 @@ func (future PowerShellCancelCommandFuture) Result(client PowerShellClient) (psc
 type PowerShellCommandParameters struct {
 	// PowerShellCommandParametersProperties - Collection of properties.
 	*PowerShellCommandParametersProperties `json:"properties,omitempty"`
+}
+
+// MarshalJSON is the custom marshaler for PowerShellCommandParameters.
+func (pscp PowerShellCommandParameters) MarshalJSON() ([]byte, error) {
+	objectMap := make(map[string]interface{})
+	if pscp.PowerShellCommandParametersProperties != nil {
+		objectMap["properties"] = pscp.PowerShellCommandParametersProperties
+	}
+	return json.Marshal(objectMap)
 }
 
 // UnmarshalJSON is the custom unmarshaler for PowerShellCommandParameters struct.
@@ -1775,6 +1840,15 @@ func (future SessionCreateFuture) Result(client SessionClient) (sr SessionResour
 type SessionParameters struct {
 	// SessionParametersProperties - Collection of properties
 	*SessionParametersProperties `json:"properties,omitempty"`
+}
+
+// MarshalJSON is the custom marshaler for SessionParameters.
+func (sp SessionParameters) MarshalJSON() ([]byte, error) {
+	objectMap := make(map[string]interface{})
+	if sp.SessionParametersProperties != nil {
+		objectMap["properties"] = sp.SessionParametersProperties
+	}
+	return json.Marshal(objectMap)
 }
 
 // UnmarshalJSON is the custom unmarshaler for SessionParameters struct.

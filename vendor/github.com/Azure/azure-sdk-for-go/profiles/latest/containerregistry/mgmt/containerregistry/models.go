@@ -41,6 +41,10 @@ const (
 	Password2 PasswordName = original.Password2
 )
 
+func PossiblePasswordNameValues() []PasswordName {
+	return original.PossiblePasswordNameValues()
+}
+
 type ProvisioningState = original.ProvisioningState
 
 const (
@@ -52,12 +56,20 @@ const (
 	Updating  ProvisioningState = original.Updating
 )
 
+func PossibleProvisioningStateValues() []ProvisioningState {
+	return original.PossibleProvisioningStateValues()
+}
+
 type RegistryUsageUnit = original.RegistryUsageUnit
 
 const (
 	Bytes RegistryUsageUnit = original.Bytes
 	Count RegistryUsageUnit = original.Count
 )
+
+func PossibleRegistryUsageUnitValues() []RegistryUsageUnit {
+	return original.PossibleRegistryUsageUnitValues()
+}
 
 type SkuName = original.SkuName
 
@@ -68,6 +80,10 @@ const (
 	Standard SkuName = original.Standard
 )
 
+func PossibleSkuNameValues() []SkuName {
+	return original.PossibleSkuNameValues()
+}
+
 type SkuTier = original.SkuTier
 
 const (
@@ -77,6 +93,10 @@ const (
 	SkuTierStandard SkuTier = original.SkuTierStandard
 )
 
+func PossibleSkuTierValues() []SkuTier {
+	return original.PossibleSkuTierValues()
+}
+
 type WebhookAction = original.WebhookAction
 
 const (
@@ -84,12 +104,20 @@ const (
 	Push   WebhookAction = original.Push
 )
 
+func PossibleWebhookActionValues() []WebhookAction {
+	return original.PossibleWebhookActionValues()
+}
+
 type WebhookStatus = original.WebhookStatus
 
 const (
 	Disabled WebhookStatus = original.Disabled
 	Enabled  WebhookStatus = original.Enabled
 )
+
+func PossibleWebhookStatusValues() []WebhookStatus {
+	return original.PossibleWebhookStatusValues()
+}
 
 type Actor = original.Actor
 type CallbackConfig = original.CallbackConfig

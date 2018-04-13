@@ -85,7 +85,7 @@ func (client RoleAssignmentsClient) CreatePreparer(ctx context.Context, scope st
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPut(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/{scope}/providers/Microsoft.Authorization/roleAssignments/{roleAssignmentName}", pathParameters),
@@ -151,7 +151,7 @@ func (client RoleAssignmentsClient) CreateByIDPreparer(ctx context.Context, role
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPut(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/{roleAssignmentId}", pathParameters),

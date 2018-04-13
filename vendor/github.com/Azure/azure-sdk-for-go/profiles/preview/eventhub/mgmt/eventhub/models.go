@@ -61,6 +61,15 @@ func NewEventHubsClientWithBaseURI(baseURI string, subscriptionID string) EventH
 	return original.NewEventHubsClientWithBaseURI(baseURI, subscriptionID)
 }
 
+type MessagingPlanClient = original.MessagingPlanClient
+
+func NewMessagingPlanClient(subscriptionID string) MessagingPlanClient {
+	return original.NewMessagingPlanClient(subscriptionID)
+}
+func NewMessagingPlanClientWithBaseURI(baseURI string, subscriptionID string) MessagingPlanClient {
+	return original.NewMessagingPlanClientWithBaseURI(baseURI, subscriptionID)
+}
+
 type AccessRights = original.AccessRights
 
 const (
@@ -69,12 +78,20 @@ const (
 	Send   AccessRights = original.Send
 )
 
+func PossibleAccessRightsValues() []AccessRights {
+	return original.PossibleAccessRightsValues()
+}
+
 type EncodingCaptureDescription = original.EncodingCaptureDescription
 
 const (
 	Avro        EncodingCaptureDescription = original.Avro
 	AvroDeflate EncodingCaptureDescription = original.AvroDeflate
 )
+
+func PossibleEncodingCaptureDescriptionValues() []EncodingCaptureDescription {
+	return original.PossibleEncodingCaptureDescriptionValues()
+}
 
 type EntityStatus = original.EntityStatus
 
@@ -90,12 +107,20 @@ const (
 	Unknown         EntityStatus = original.Unknown
 )
 
+func PossibleEntityStatusValues() []EntityStatus {
+	return original.PossibleEntityStatusValues()
+}
+
 type KeyType = original.KeyType
 
 const (
 	PrimaryKey   KeyType = original.PrimaryKey
 	SecondaryKey KeyType = original.SecondaryKey
 )
+
+func PossibleKeyTypeValues() []KeyType {
+	return original.PossibleKeyTypeValues()
+}
 
 type ProvisioningStateDR = original.ProvisioningStateDR
 
@@ -105,6 +130,10 @@ const (
 	Succeeded ProvisioningStateDR = original.Succeeded
 )
 
+func PossibleProvisioningStateDRValues() []ProvisioningStateDR {
+	return original.PossibleProvisioningStateDRValues()
+}
+
 type RoleDisasterRecovery = original.RoleDisasterRecovery
 
 const (
@@ -113,6 +142,10 @@ const (
 	Secondary             RoleDisasterRecovery = original.Secondary
 )
 
+func PossibleRoleDisasterRecoveryValues() []RoleDisasterRecovery {
+	return original.PossibleRoleDisasterRecoveryValues()
+}
+
 type SkuName = original.SkuName
 
 const (
@@ -120,12 +153,20 @@ const (
 	Standard SkuName = original.Standard
 )
 
+func PossibleSkuNameValues() []SkuName {
+	return original.PossibleSkuNameValues()
+}
+
 type SkuTier = original.SkuTier
 
 const (
 	SkuTierBasic    SkuTier = original.SkuTierBasic
 	SkuTierStandard SkuTier = original.SkuTierStandard
 )
+
+func PossibleSkuTierValues() []SkuTier {
+	return original.PossibleSkuTierValues()
+}
 
 type UnavailableReason = original.UnavailableReason
 
@@ -137,6 +178,10 @@ const (
 	SubscriptionIsDisabled                UnavailableReason = original.SubscriptionIsDisabled
 	TooManyNamespaceInCurrentSubscription UnavailableReason = original.TooManyNamespaceInCurrentSubscription
 )
+
+func PossibleUnavailableReasonValues() []UnavailableReason {
+	return original.PossibleUnavailableReasonValues()
+}
 
 type AccessKeys = original.AccessKeys
 type ArmDisasterRecovery = original.ArmDisasterRecovery
@@ -168,6 +213,13 @@ type ErrorResponse = original.ErrorResponse
 type ListResult = original.ListResult
 type ListResultIterator = original.ListResultIterator
 type ListResultPage = original.ListResultPage
+type MessagingPlan = original.MessagingPlan
+type MessagingPlanproperties = original.MessagingPlanproperties
+type MessagingRegions = original.MessagingRegions
+type MessagingRegionsListResult = original.MessagingRegionsListResult
+type MessagingRegionsListResultIterator = original.MessagingRegionsListResultIterator
+type MessagingRegionsListResultPage = original.MessagingRegionsListResultPage
+type MessagingRegionsProperties = original.MessagingRegionsProperties
 type Model = original.Model
 type NamespacesCreateOrUpdateFuture = original.NamespacesCreateOrUpdateFuture
 type NamespacesDeleteFuture = original.NamespacesDeleteFuture
@@ -197,6 +249,15 @@ func NewOperationsClient(subscriptionID string) OperationsClient {
 }
 func NewOperationsClientWithBaseURI(baseURI string, subscriptionID string) OperationsClient {
 	return original.NewOperationsClientWithBaseURI(baseURI, subscriptionID)
+}
+
+type RegionsClient = original.RegionsClient
+
+func NewRegionsClient(subscriptionID string) RegionsClient {
+	return original.NewRegionsClient(subscriptionID)
+}
+func NewRegionsClientWithBaseURI(baseURI string, subscriptionID string) RegionsClient {
+	return original.NewRegionsClientWithBaseURI(baseURI, subscriptionID)
 }
 func UserAgent() string {
 	return original.UserAgent() + " profiles/preview"

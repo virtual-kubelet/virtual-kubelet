@@ -61,6 +61,24 @@ type Invoice struct {
 	Type *string `json:"type,omitempty"`
 }
 
+// MarshalJSON is the custom marshaler for Invoice.
+func (i Invoice) MarshalJSON() ([]byte, error) {
+	objectMap := make(map[string]interface{})
+	if i.InvoiceProperties != nil {
+		objectMap["properties"] = i.InvoiceProperties
+	}
+	if i.ID != nil {
+		objectMap["id"] = i.ID
+	}
+	if i.Name != nil {
+		objectMap["name"] = i.Name
+	}
+	if i.Type != nil {
+		objectMap["type"] = i.Type
+	}
+	return json.Marshal(objectMap)
+}
+
 // UnmarshalJSON is the custom unmarshaler for Invoice struct.
 func (i *Invoice) UnmarshalJSON(body []byte) error {
 	var m map[string]*json.RawMessage

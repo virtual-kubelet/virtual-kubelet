@@ -38,6 +38,11 @@ const (
 	SingleBox CompileMode = "SingleBox"
 )
 
+// PossibleCompileModeValues returns an array of possible values for the CompileMode const type.
+func PossibleCompileModeValues() []CompileMode {
+	return []CompileMode{Full, Semantic, SingleBox}
+}
+
 // ResourceType enumerates the values for resource type.
 type ResourceType string
 
@@ -47,6 +52,11 @@ const (
 	// VertexResource ...
 	VertexResource ResourceType = "VertexResource"
 )
+
+// PossibleResourceTypeValues returns an array of possible values for the ResourceType const type.
+func PossibleResourceTypeValues() []ResourceType {
+	return []ResourceType{StatisticsResource, VertexResource}
+}
 
 // Result enumerates the values for result.
 type Result string
@@ -62,6 +72,11 @@ const (
 	Succeeded Result = "Succeeded"
 )
 
+// PossibleResultValues returns an array of possible values for the Result const type.
+func PossibleResultValues() []Result {
+	return []Result{Cancelled, Failed, None, Succeeded}
+}
+
 // SeverityTypes enumerates the values for severity types.
 type SeverityTypes string
 
@@ -71,6 +86,11 @@ const (
 	// Warning ...
 	Warning SeverityTypes = "Warning"
 )
+
+// PossibleSeverityTypesValues returns an array of possible values for the SeverityTypes const type.
+func PossibleSeverityTypesValues() []SeverityTypes {
+	return []SeverityTypes{Error, Warning}
+}
 
 // State enumerates the values for state.
 type State string
@@ -98,6 +118,11 @@ const (
 	StateWaitingForCapacity State = "WaitingForCapacity"
 )
 
+// PossibleStateValues returns an array of possible values for the State const type.
+func PossibleStateValues() []State {
+	return []State{StateAccepted, StateCompiling, StateEnded, StateNew, StatePaused, StateQueued, StateRunning, StateScheduling, StateStarting, StateWaitingForCapacity}
+}
+
 // Type enumerates the values for type.
 type Type string
 
@@ -110,6 +135,11 @@ const (
 	TypeUSQL Type = "USql"
 )
 
+// PossibleTypeValues returns an array of possible values for the Type const type.
+func PossibleTypeValues() []Type {
+	return []Type{TypeHive, TypeJobProperties, TypeUSQL}
+}
+
 // TypeEnum enumerates the values for type enum.
 type TypeEnum string
 
@@ -119,6 +149,11 @@ const (
 	// USQL ...
 	USQL TypeEnum = "USql"
 )
+
+// PossibleTypeEnumValues returns an array of possible values for the TypeEnum const type.
+func PossibleTypeEnumValues() []TypeEnum {
+	return []TypeEnum{Hive, USQL}
+}
 
 // DataPath a Data Lake Analytics U-SQL job data path item.
 type DataPath struct {
@@ -208,7 +243,9 @@ func (hjp HiveJobProperties) MarshalJSON() ([]byte, error) {
 	if hjp.Script != nil {
 		objectMap["script"] = hjp.Script
 	}
-	objectMap["type"] = hjp.Type
+	if hjp.Type != "" {
+		objectMap["type"] = hjp.Type
+	}
 	return json.Marshal(objectMap)
 }
 
@@ -615,7 +652,9 @@ func (p Properties) MarshalJSON() ([]byte, error) {
 	if p.Script != nil {
 		objectMap["script"] = p.Script
 	}
-	objectMap["type"] = p.Type
+	if p.Type != "" {
+		objectMap["type"] = p.Type
+	}
 	return json.Marshal(objectMap)
 }
 
@@ -785,14 +824,18 @@ func (usjp USQLJobProperties) MarshalJSON() ([]byte, error) {
 	if usjp.YarnApplicationTimeStamp != nil {
 		objectMap["yarnApplicationTimeStamp"] = usjp.YarnApplicationTimeStamp
 	}
-	objectMap["compileMode"] = usjp.CompileMode
+	if usjp.CompileMode != "" {
+		objectMap["compileMode"] = usjp.CompileMode
+	}
 	if usjp.RuntimeVersion != nil {
 		objectMap["runtimeVersion"] = usjp.RuntimeVersion
 	}
 	if usjp.Script != nil {
 		objectMap["script"] = usjp.Script
 	}
-	objectMap["type"] = usjp.Type
+	if usjp.Type != "" {
+		objectMap["type"] = usjp.Type
+	}
 	return json.Marshal(objectMap)
 }
 

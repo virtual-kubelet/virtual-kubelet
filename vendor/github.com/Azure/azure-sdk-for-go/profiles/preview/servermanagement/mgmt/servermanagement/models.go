@@ -49,6 +49,10 @@ const (
 	RsaEncrypted CredentialDataFormat = original.RsaEncrypted
 )
 
+func PossibleCredentialDataFormatValues() []CredentialDataFormat {
+	return original.PossibleCredentialDataFormatValues()
+}
+
 type GatewayExpandOption = original.GatewayExpandOption
 
 const (
@@ -56,11 +60,19 @@ const (
 	Status   GatewayExpandOption = original.Status
 )
 
+func PossibleGatewayExpandOptionValues() []GatewayExpandOption {
+	return original.PossibleGatewayExpandOptionValues()
+}
+
 type PowerShellExpandOption = original.PowerShellExpandOption
 
 const (
 	Output PowerShellExpandOption = original.Output
 )
+
+func PossiblePowerShellExpandOptionValues() []PowerShellExpandOption {
+	return original.PossiblePowerShellExpandOptionValues()
+}
 
 type PromptFieldType = original.PromptFieldType
 
@@ -70,6 +82,10 @@ const (
 	String       PromptFieldType = original.String
 )
 
+func PossiblePromptFieldTypeValues() []PromptFieldType {
+	return original.PossiblePromptFieldTypeValues()
+}
+
 type RetentionPeriod = original.RetentionPeriod
 
 const (
@@ -77,12 +93,20 @@ const (
 	Session    RetentionPeriod = original.Session
 )
 
+func PossibleRetentionPeriodValues() []RetentionPeriod {
+	return original.PossibleRetentionPeriodValues()
+}
+
 type UpgradeMode = original.UpgradeMode
 
 const (
 	Automatic UpgradeMode = original.Automatic
 	Manual    UpgradeMode = original.Manual
 )
+
+func PossibleUpgradeModeValues() []UpgradeMode {
+	return original.PossibleUpgradeModeValues()
+}
 
 type EncryptionJwkResource = original.EncryptionJwkResource
 type Error = original.Error

@@ -87,6 +87,10 @@ const (
 	Succeeded  AsyncOperationState = original.Succeeded
 )
 
+func PossibleAsyncOperationStateValues() []AsyncOperationState {
+	return original.PossibleAsyncOperationStateValues()
+}
+
 type ClusterProvisioningState = original.ClusterProvisioningState
 
 const (
@@ -97,11 +101,19 @@ const (
 	ClusterProvisioningStateSucceeded  ClusterProvisioningState = original.ClusterProvisioningStateSucceeded
 )
 
+func PossibleClusterProvisioningStateValues() []ClusterProvisioningState {
+	return original.PossibleClusterProvisioningStateValues()
+}
+
 type DirectoryType = original.DirectoryType
 
 const (
 	ActiveDirectory DirectoryType = original.ActiveDirectory
 )
+
+func PossibleDirectoryTypeValues() []DirectoryType {
+	return original.PossibleDirectoryTypeValues()
+}
 
 type EnabledCredential = original.EnabledCredential
 
@@ -110,6 +122,10 @@ const (
 	True  EnabledCredential = original.True
 )
 
+func PossibleEnabledCredentialValues() []EnabledCredential {
+	return original.PossibleEnabledCredentialValues()
+}
+
 type OSType = original.OSType
 
 const (
@@ -117,12 +133,20 @@ const (
 	Windows OSType = original.Windows
 )
 
+func PossibleOSTypeValues() []OSType {
+	return original.PossibleOSTypeValues()
+}
+
 type Tier = original.Tier
 
 const (
 	Premium  Tier = original.Premium
 	Standard Tier = original.Standard
 )
+
+func PossibleTierValues() []Tier {
+	return original.PossibleTierValues()
+}
 
 type Application = original.Application
 type ApplicationGetEndpoint = original.ApplicationGetEndpoint

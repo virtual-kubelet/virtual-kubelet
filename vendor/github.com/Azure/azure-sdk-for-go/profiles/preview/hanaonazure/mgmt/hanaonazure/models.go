@@ -49,6 +49,10 @@ const (
 	CiscoUCS HanaHardwareTypeNamesEnum = original.CiscoUCS
 )
 
+func PossibleHanaHardwareTypeNamesEnumValues() []HanaHardwareTypeNamesEnum {
+	return original.PossibleHanaHardwareTypeNamesEnumValues()
+}
+
 type HanaInstanceSizeNamesEnum = original.HanaInstanceSizeNamesEnum
 
 const (
@@ -60,6 +64,11 @@ const (
 	S72m  HanaInstanceSizeNamesEnum = original.S72m
 )
 
+func PossibleHanaInstanceSizeNamesEnumValues() []HanaInstanceSizeNamesEnum {
+	return original.PossibleHanaInstanceSizeNamesEnumValues()
+}
+
+type Disk = original.Disk
 type Display = original.Display
 type ErrorResponse = original.ErrorResponse
 type HanaInstance = original.HanaInstance

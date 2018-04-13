@@ -94,11 +94,12 @@ func (c *Container) GetSASURI(options ContainerSASOptions) (string, error) {
 // ContainerProperties contains various properties of a container returned from
 // various endpoints like ListContainers.
 type ContainerProperties struct {
-	LastModified  string `xml:"Last-Modified"`
-	Etag          string `xml:"Etag"`
-	LeaseStatus   string `xml:"LeaseStatus"`
-	LeaseState    string `xml:"LeaseState"`
-	LeaseDuration string `xml:"LeaseDuration"`
+	LastModified  string              `xml:"Last-Modified"`
+	Etag          string              `xml:"Etag"`
+	LeaseStatus   string              `xml:"LeaseStatus"`
+	LeaseState    string              `xml:"LeaseState"`
+	LeaseDuration string              `xml:"LeaseDuration"`
+	PublicAccess  ContainerAccessType `xml:"PublicAccess"`
 }
 
 // ContainerListResponse contains the response fields from
@@ -257,7 +258,7 @@ func (c *Container) Create(options *CreateContainerOptions) error {
 	if err != nil {
 		return err
 	}
-	defer readAndCloseBody(resp.Body)
+	defer drainRespBody(resp)
 	return checkRespCode(resp, []int{http.StatusCreated})
 }
 
@@ -266,7 +267,7 @@ func (c *Container) Create(options *CreateContainerOptions) error {
 func (c *Container) CreateIfNotExists(options *CreateContainerOptions) (bool, error) {
 	resp, err := c.create(options)
 	if resp != nil {
-		defer readAndCloseBody(resp.Body)
+		defer drainRespBody(resp)
 		if resp.StatusCode == http.StatusCreated || resp.StatusCode == http.StatusConflict {
 			return resp.StatusCode == http.StatusCreated, nil
 		}
@@ -306,7 +307,7 @@ func (c *Container) Exists() (bool, error) {
 
 	resp, err := c.bsc.client.exec(http.MethodHead, uri, headers, nil, c.bsc.auth)
 	if resp != nil {
-		defer readAndCloseBody(resp.Body)
+		defer drainRespBody(resp)
 		if resp.StatusCode == http.StatusOK || resp.StatusCode == http.StatusNotFound {
 			return resp.StatusCode == http.StatusOK, nil
 		}
@@ -348,7 +349,7 @@ func (c *Container) SetPermissions(permissions ContainerPermissions, options *Se
 	if err != nil {
 		return err
 	}
-	defer readAndCloseBody(resp.Body)
+	defer drainRespBody(resp)
 	return checkRespCode(resp, []int{http.StatusOK})
 }
 
@@ -430,7 +431,7 @@ func (c *Container) Delete(options *DeleteContainerOptions) error {
 	if err != nil {
 		return err
 	}
-	defer readAndCloseBody(resp.Body)
+	defer drainRespBody(resp)
 	return checkRespCode(resp, []int{http.StatusAccepted})
 }
 
@@ -443,7 +444,7 @@ func (c *Container) Delete(options *DeleteContainerOptions) error {
 func (c *Container) DeleteIfExists(options *DeleteContainerOptions) (bool, error) {
 	resp, err := c.delete(options)
 	if resp != nil {
-		defer readAndCloseBody(resp.Body)
+		defer drainRespBody(resp)
 		if resp.StatusCode == http.StatusAccepted || resp.StatusCode == http.StatusNotFound {
 			return resp.StatusCode == http.StatusAccepted, nil
 		}
@@ -534,7 +535,7 @@ func (c *Container) SetMetadata(options *ContainerMetadataOptions) error {
 	if err != nil {
 		return err
 	}
-	defer readAndCloseBody(resp.Body)
+	defer drainRespBody(resp)
 	return checkRespCode(resp, []int{http.StatusOK})
 }
 
@@ -562,7 +563,7 @@ func (c *Container) GetMetadata(options *ContainerMetadataOptions) error {
 	if err != nil {
 		return err
 	}
-	defer readAndCloseBody(resp.Body)
+	defer drainRespBody(resp)
 	if err := checkRespCode(resp, []int{http.StatusOK}); err != nil {
 		return err
 	}
@@ -605,4 +606,35 @@ func (capd *ContainerAccessPolicy) generateContainerPermissions() (permissions s
 	}
 
 	return permissions
+}
+
+// GetProperties updated the properties of the container.
+//
+// See https://docs.microsoft.com/en-us/rest/api/storageservices/get-container-properties
+func (c *Container) GetProperties() error {
+	params := url.Values{
+		"restype": {"container"},
+	}
+	headers := c.bsc.client.getStandardHeaders()
+
+	uri := c.bsc.client.getEndpoint(blobServiceName, c.buildPath(), params)
+
+	resp, err := c.bsc.client.exec(http.MethodGet, uri, headers, nil, c.bsc.auth)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	if err := checkRespCode(resp, []int{http.StatusOK}); err != nil {
+		return err
+	}
+
+	// update properties
+	c.Properties.Etag = resp.Header.Get(headerEtag)
+	c.Properties.LeaseStatus = resp.Header.Get("x-ms-lease-status")
+	c.Properties.LeaseState = resp.Header.Get("x-ms-lease-state")
+	c.Properties.LeaseDuration = resp.Header.Get("x-ms-lease-duration")
+	c.Properties.LastModified = resp.Header.Get("Last-Modified")
+	c.Properties.PublicAccess = ContainerAccessType(resp.Header.Get(ContainerAccessHeader))
+
+	return nil
 }

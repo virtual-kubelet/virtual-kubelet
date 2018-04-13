@@ -50,12 +50,20 @@ const (
 	Secondary AdminKeyKind = original.Secondary
 )
 
+func PossibleAdminKeyKindValues() []AdminKeyKind {
+	return original.PossibleAdminKeyKindValues()
+}
+
 type HostingMode = original.HostingMode
 
 const (
 	Default     HostingMode = original.Default
 	HighDensity HostingMode = original.HighDensity
 )
+
+func PossibleHostingModeValues() []HostingMode {
+	return original.PossibleHostingModeValues()
+}
 
 type ProvisioningState = original.ProvisioningState
 
@@ -64,6 +72,10 @@ const (
 	Provisioning ProvisioningState = original.Provisioning
 	Succeeded    ProvisioningState = original.Succeeded
 )
+
+func PossibleProvisioningStateValues() []ProvisioningState {
+	return original.PossibleProvisioningStateValues()
+}
 
 type ServiceStatus = original.ServiceStatus
 
@@ -76,6 +88,10 @@ const (
 	ServiceStatusRunning      ServiceStatus = original.ServiceStatusRunning
 )
 
+func PossibleServiceStatusValues() []ServiceStatus {
+	return original.PossibleServiceStatusValues()
+}
+
 type SkuName = original.SkuName
 
 const (
@@ -86,12 +102,20 @@ const (
 	Standard3 SkuName = original.Standard3
 )
 
+func PossibleSkuNameValues() []SkuName {
+	return original.PossibleSkuNameValues()
+}
+
 type UnavailableNameReason = original.UnavailableNameReason
 
 const (
 	AlreadyExists UnavailableNameReason = original.AlreadyExists
 	Invalid       UnavailableNameReason = original.Invalid
 )
+
+func PossibleUnavailableNameReasonValues() []UnavailableNameReason {
+	return original.PossibleUnavailableNameReasonValues()
+}
 
 type AdminKeyResult = original.AdminKeyResult
 type CheckNameAvailabilityInput = original.CheckNameAvailabilityInput

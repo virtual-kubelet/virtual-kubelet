@@ -83,7 +83,7 @@ func (client VirtualMachinesClient) CapturePreparer(ctx context.Context, resourc
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPost(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Compute/virtualMachines/{vmName}/capture", pathParameters),
@@ -244,7 +244,7 @@ func (client VirtualMachinesClient) CreateOrUpdatePreparer(ctx context.Context, 
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPut(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Compute/virtualMachines/{vmName}", pathParameters),
@@ -544,6 +544,76 @@ func (client VirtualMachinesClient) GetSender(req *http.Request) (*http.Response
 // GetResponder handles the response to the Get request. The method always
 // closes the http.Response Body.
 func (client VirtualMachinesClient) GetResponder(resp *http.Response) (result VirtualMachine, err error) {
+	err = autorest.Respond(
+		resp,
+		client.ByInspecting(),
+		azure.WithErrorUnlessStatusCode(http.StatusOK),
+		autorest.ByUnmarshallingJSON(&result),
+		autorest.ByClosing())
+	result.Response = autorest.Response{Response: resp}
+	return
+}
+
+// GetExtensions the operation to get all extensions of a Virtual Machine.
+//
+// resourceGroupName is the name of the resource group. VMName is the name of the virtual machine containing the
+// extension. expand is the expand expression to apply on the operation.
+func (client VirtualMachinesClient) GetExtensions(ctx context.Context, resourceGroupName string, VMName string, expand string) (result VirtualMachineExtensionsListResult, err error) {
+	req, err := client.GetExtensionsPreparer(ctx, resourceGroupName, VMName, expand)
+	if err != nil {
+		err = autorest.NewErrorWithError(err, "compute.VirtualMachinesClient", "GetExtensions", nil, "Failure preparing request")
+		return
+	}
+
+	resp, err := client.GetExtensionsSender(req)
+	if err != nil {
+		result.Response = autorest.Response{Response: resp}
+		err = autorest.NewErrorWithError(err, "compute.VirtualMachinesClient", "GetExtensions", resp, "Failure sending request")
+		return
+	}
+
+	result, err = client.GetExtensionsResponder(resp)
+	if err != nil {
+		err = autorest.NewErrorWithError(err, "compute.VirtualMachinesClient", "GetExtensions", resp, "Failure responding to request")
+	}
+
+	return
+}
+
+// GetExtensionsPreparer prepares the GetExtensions request.
+func (client VirtualMachinesClient) GetExtensionsPreparer(ctx context.Context, resourceGroupName string, VMName string, expand string) (*http.Request, error) {
+	pathParameters := map[string]interface{}{
+		"resourceGroupName": autorest.Encode("path", resourceGroupName),
+		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
+		"vmName":            autorest.Encode("path", VMName),
+	}
+
+	const APIVersion = "2017-03-30"
+	queryParameters := map[string]interface{}{
+		"api-version": APIVersion,
+	}
+	if len(expand) > 0 {
+		queryParameters["$expand"] = autorest.Encode("query", expand)
+	}
+
+	preparer := autorest.CreatePreparer(
+		autorest.AsGet(),
+		autorest.WithBaseURL(client.BaseURI),
+		autorest.WithPathParameters("/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Compute/virtualMachines/{vmName}/extensions", pathParameters),
+		autorest.WithQueryParameters(queryParameters))
+	return preparer.Prepare((&http.Request{}).WithContext(ctx))
+}
+
+// GetExtensionsSender sends the GetExtensions request. The method will close the
+// http.Response Body if it receives an error.
+func (client VirtualMachinesClient) GetExtensionsSender(req *http.Request) (*http.Response, error) {
+	return autorest.SendWithSender(client, req,
+		azure.DoRetryWithRegistration(client.Client))
+}
+
+// GetExtensionsResponder handles the response to the GetExtensions request. The method always
+// closes the http.Response Body.
+func (client VirtualMachinesClient) GetExtensionsResponder(resp *http.Response) (result VirtualMachineExtensionsListResult, err error) {
 	err = autorest.Respond(
 		resp,
 		client.ByInspecting(),
@@ -1184,7 +1254,7 @@ func (client VirtualMachinesClient) RunCommandPreparer(ctx context.Context, reso
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPost(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Compute/virtualMachines/{vmName}/runCommand", pathParameters),

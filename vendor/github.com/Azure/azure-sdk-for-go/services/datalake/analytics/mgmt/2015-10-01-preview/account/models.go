@@ -36,6 +36,11 @@ const (
 	Suspended DataLakeAnalyticsAccountState = "suspended"
 )
 
+// PossibleDataLakeAnalyticsAccountStateValues returns an array of possible values for the DataLakeAnalyticsAccountState const type.
+func PossibleDataLakeAnalyticsAccountStateValues() []DataLakeAnalyticsAccountState {
+	return []DataLakeAnalyticsAccountState{Active, Suspended}
+}
+
 // DataLakeAnalyticsAccountStatus enumerates the values for data lake analytics account status.
 type DataLakeAnalyticsAccountStatus string
 
@@ -60,6 +65,11 @@ const (
 	Suspending DataLakeAnalyticsAccountStatus = "Suspending"
 )
 
+// PossibleDataLakeAnalyticsAccountStatusValues returns an array of possible values for the DataLakeAnalyticsAccountStatus const type.
+func PossibleDataLakeAnalyticsAccountStatusValues() []DataLakeAnalyticsAccountStatus {
+	return []DataLakeAnalyticsAccountStatus{Creating, Deleted, Deleting, Failed, Patching, Resuming, Running, Succeeded, Suspending}
+}
+
 // OperationStatus enumerates the values for operation status.
 type OperationStatus string
 
@@ -71,6 +81,11 @@ const (
 	// OperationStatusSucceeded ...
 	OperationStatusSucceeded OperationStatus = "Succeeded"
 )
+
+// PossibleOperationStatusValues returns an array of possible values for the OperationStatus const type.
+func PossibleOperationStatusValues() []OperationStatus {
+	return []OperationStatus{OperationStatusFailed, OperationStatusInProgress, OperationStatusSucceeded}
+}
 
 // AddDataLakeStoreParameters additional Data Lake Store parameters.
 type AddDataLakeStoreParameters struct {

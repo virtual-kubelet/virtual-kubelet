@@ -146,7 +146,7 @@ func (client ApplicationUpgradesClient) ResumePreparer(ctx context.Context, appl
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPost(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/Applications/{applicationName}/$/MoveNextUpgradeDomain", pathParameters),
@@ -216,7 +216,7 @@ func (client ApplicationUpgradesClient) StartPreparer(ctx context.Context, appli
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPost(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/Applications/{applicationName}/$/Upgrade", pathParameters),
@@ -286,7 +286,7 @@ func (client ApplicationUpgradesClient) UpdatePreparer(ctx context.Context, appl
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPost(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/Applications/{applicationName}/$/UpdateUpgrade", pathParameters),

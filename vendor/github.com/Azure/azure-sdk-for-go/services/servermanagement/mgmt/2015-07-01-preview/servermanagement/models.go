@@ -36,6 +36,11 @@ const (
 	On AutoUpgrade = "On"
 )
 
+// PossibleAutoUpgradeValues returns an array of possible values for the AutoUpgrade const type.
+func PossibleAutoUpgradeValues() []AutoUpgrade {
+	return []AutoUpgrade{Off, On}
+}
+
 // GatewayExpandOption enumerates the values for gateway expand option.
 type GatewayExpandOption string
 
@@ -44,6 +49,11 @@ const (
 	Status GatewayExpandOption = "status"
 )
 
+// PossibleGatewayExpandOptionValues returns an array of possible values for the GatewayExpandOption const type.
+func PossibleGatewayExpandOptionValues() []GatewayExpandOption {
+	return []GatewayExpandOption{Status}
+}
+
 // PowerShellExpandOption enumerates the values for power shell expand option.
 type PowerShellExpandOption string
 
@@ -51,6 +61,11 @@ const (
 	// Output ...
 	Output PowerShellExpandOption = "output"
 )
+
+// PossiblePowerShellExpandOptionValues returns an array of possible values for the PowerShellExpandOption const type.
+func PossiblePowerShellExpandOptionValues() []PowerShellExpandOption {
+	return []PowerShellExpandOption{Output}
+}
 
 // PromptFieldType enumerates the values for prompt field type.
 type PromptFieldType string
@@ -63,6 +78,11 @@ const (
 	// String ...
 	String PromptFieldType = "String"
 )
+
+// PossiblePromptFieldTypeValues returns an array of possible values for the PromptFieldType const type.
+func PossiblePromptFieldTypeValues() []PromptFieldType {
+	return []PromptFieldType{Credential, SecureString, String}
+}
 
 // Error error message.
 type Error struct {
@@ -174,6 +194,19 @@ type GatewayParameters struct {
 	// Tags - Resource tags.
 	Tags                         interface{} `json:"tags,omitempty"`
 	*GatewayParametersProperties `json:"properties,omitempty"`
+}
+
+// MarshalJSON is the custom marshaler for GatewayParameters.
+func (gp GatewayParameters) MarshalJSON() ([]byte, error) {
+	objectMap := make(map[string]interface{})
+	if gp.Location != nil {
+		objectMap["location"] = gp.Location
+	}
+	objectMap["tags"] = gp.Tags
+	if gp.GatewayParametersProperties != nil {
+		objectMap["properties"] = gp.GatewayParametersProperties
+	}
+	return json.Marshal(objectMap)
 }
 
 // UnmarshalJSON is the custom unmarshaler for GatewayParameters struct.
@@ -721,6 +754,19 @@ type NodeParameters struct {
 	*NodeParametersProperties `json:"properties,omitempty"`
 }
 
+// MarshalJSON is the custom marshaler for NodeParameters.
+func (np NodeParameters) MarshalJSON() ([]byte, error) {
+	objectMap := make(map[string]interface{})
+	if np.Location != nil {
+		objectMap["location"] = np.Location
+	}
+	objectMap["tags"] = np.Tags
+	if np.NodeParametersProperties != nil {
+		objectMap["properties"] = np.NodeParametersProperties
+	}
+	return json.Marshal(objectMap)
+}
+
 // UnmarshalJSON is the custom unmarshaler for NodeParameters struct.
 func (np *NodeParameters) UnmarshalJSON(body []byte) error {
 	var m map[string]*json.RawMessage
@@ -1111,6 +1157,15 @@ func (future PowerShellCancelCommandFuture) Result(client PowerShellClient) (psc
 // PowerShellCommandParameters the parameters to a PowerShell script execution command.
 type PowerShellCommandParameters struct {
 	*PowerShellCommandParametersProperties `json:"properties,omitempty"`
+}
+
+// MarshalJSON is the custom marshaler for PowerShellCommandParameters.
+func (pscp PowerShellCommandParameters) MarshalJSON() ([]byte, error) {
+	objectMap := make(map[string]interface{})
+	if pscp.PowerShellCommandParametersProperties != nil {
+		objectMap["properties"] = pscp.PowerShellCommandParametersProperties
+	}
+	return json.Marshal(objectMap)
 }
 
 // UnmarshalJSON is the custom unmarshaler for PowerShellCommandParameters struct.
@@ -1716,6 +1771,15 @@ func (future SessionCreateFuture) Result(client SessionClient) (sr SessionResour
 // SessionParameters ...
 type SessionParameters struct {
 	*SessionParametersProperties `json:"properties,omitempty"`
+}
+
+// MarshalJSON is the custom marshaler for SessionParameters.
+func (sp SessionParameters) MarshalJSON() ([]byte, error) {
+	objectMap := make(map[string]interface{})
+	if sp.SessionParametersProperties != nil {
+		objectMap["properties"] = sp.SessionParametersProperties
+	}
+	return json.Marshal(objectMap)
 }
 
 // UnmarshalJSON is the custom unmarshaler for SessionParameters struct.

@@ -19,7 +19,7 @@
 
 package compute
 
-import original "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2017-12-01/compute"
+import original "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2018-04-01/compute"
 
 type AvailabilitySetsClient = original.AvailabilitySetsClient
 
@@ -86,6 +86,10 @@ const (
 	Read AccessLevel = original.Read
 )
 
+func PossibleAccessLevelValues() []AccessLevel {
+	return original.PossibleAccessLevelValues()
+}
+
 type CachingTypes = original.CachingTypes
 
 const (
@@ -94,11 +98,19 @@ const (
 	CachingTypesReadWrite CachingTypes = original.CachingTypesReadWrite
 )
 
+func PossibleCachingTypesValues() []CachingTypes {
+	return original.PossibleCachingTypesValues()
+}
+
 type ComponentNames = original.ComponentNames
 
 const (
 	MicrosoftWindowsShellSetup ComponentNames = original.MicrosoftWindowsShellSetup
 )
+
+func PossibleComponentNamesValues() []ComponentNames {
+	return original.PossibleComponentNamesValues()
+}
 
 type ContainerServiceOrchestratorTypes = original.ContainerServiceOrchestratorTypes
 
@@ -108,6 +120,10 @@ const (
 	Kubernetes ContainerServiceOrchestratorTypes = original.Kubernetes
 	Swarm      ContainerServiceOrchestratorTypes = original.Swarm
 )
+
+func PossibleContainerServiceOrchestratorTypesValues() []ContainerServiceOrchestratorTypes {
+	return original.PossibleContainerServiceOrchestratorTypesValues()
+}
 
 type ContainerServiceVMSizeTypes = original.ContainerServiceVMSizeTypes
 
@@ -161,6 +177,10 @@ const (
 	StandardGS5   ContainerServiceVMSizeTypes = original.StandardGS5
 )
 
+func PossibleContainerServiceVMSizeTypesValues() []ContainerServiceVMSizeTypes {
+	return original.PossibleContainerServiceVMSizeTypesValues()
+}
+
 type DiskCreateOption = original.DiskCreateOption
 
 const (
@@ -169,7 +189,12 @@ const (
 	Empty     DiskCreateOption = original.Empty
 	FromImage DiskCreateOption = original.FromImage
 	Import    DiskCreateOption = original.Import
+	Restore   DiskCreateOption = original.Restore
 )
+
+func PossibleDiskCreateOptionValues() []DiskCreateOption {
+	return original.PossibleDiskCreateOptionValues()
+}
 
 type DiskCreateOptionTypes = original.DiskCreateOptionTypes
 
@@ -179,11 +204,19 @@ const (
 	DiskCreateOptionTypesFromImage DiskCreateOptionTypes = original.DiskCreateOptionTypesFromImage
 )
 
+func PossibleDiskCreateOptionTypesValues() []DiskCreateOptionTypes {
+	return original.PossibleDiskCreateOptionTypesValues()
+}
+
 type InstanceViewTypes = original.InstanceViewTypes
 
 const (
 	InstanceView InstanceViewTypes = original.InstanceView
 )
+
+func PossibleInstanceViewTypesValues() []InstanceViewTypes {
+	return original.PossibleInstanceViewTypesValues()
+}
 
 type IntervalInMins = original.IntervalInMins
 
@@ -194,12 +227,20 @@ const (
 	ThreeMins  IntervalInMins = original.ThreeMins
 )
 
+func PossibleIntervalInMinsValues() []IntervalInMins {
+	return original.PossibleIntervalInMinsValues()
+}
+
 type IPVersion = original.IPVersion
 
 const (
 	IPv4 IPVersion = original.IPv4
 	IPv6 IPVersion = original.IPv6
 )
+
+func PossibleIPVersionValues() []IPVersion {
+	return original.PossibleIPVersionValues()
+}
 
 type MaintenanceOperationResultCodeTypes = original.MaintenanceOperationResultCodeTypes
 
@@ -210,12 +251,20 @@ const (
 	MaintenanceOperationResultCodeTypesRetryLater           MaintenanceOperationResultCodeTypes = original.MaintenanceOperationResultCodeTypesRetryLater
 )
 
+func PossibleMaintenanceOperationResultCodeTypesValues() []MaintenanceOperationResultCodeTypes {
+	return original.PossibleMaintenanceOperationResultCodeTypesValues()
+}
+
 type OperatingSystemStateTypes = original.OperatingSystemStateTypes
 
 const (
 	Generalized OperatingSystemStateTypes = original.Generalized
 	Specialized OperatingSystemStateTypes = original.Specialized
 )
+
+func PossibleOperatingSystemStateTypesValues() []OperatingSystemStateTypes {
+	return original.PossibleOperatingSystemStateTypesValues()
+}
 
 type OperatingSystemTypes = original.OperatingSystemTypes
 
@@ -224,11 +273,19 @@ const (
 	Windows OperatingSystemTypes = original.Windows
 )
 
+func PossibleOperatingSystemTypesValues() []OperatingSystemTypes {
+	return original.PossibleOperatingSystemTypesValues()
+}
+
 type PassNames = original.PassNames
 
 const (
 	OobeSystem PassNames = original.OobeSystem
 )
+
+func PossiblePassNamesValues() []PassNames {
+	return original.PossiblePassNamesValues()
+}
 
 type ProtocolTypes = original.ProtocolTypes
 
@@ -236,6 +293,10 @@ const (
 	HTTP  ProtocolTypes = original.HTTP
 	HTTPS ProtocolTypes = original.HTTPS
 )
+
+func PossibleProtocolTypesValues() []ProtocolTypes {
+	return original.PossibleProtocolTypesValues()
+}
 
 type ResourceIdentityType = original.ResourceIdentityType
 
@@ -246,6 +307,10 @@ const (
 	ResourceIdentityTypeUserAssigned               ResourceIdentityType = original.ResourceIdentityTypeUserAssigned
 )
 
+func PossibleResourceIdentityTypeValues() []ResourceIdentityType {
+	return original.PossibleResourceIdentityTypeValues()
+}
+
 type ResourceSkuCapacityScaleType = original.ResourceSkuCapacityScaleType
 
 const (
@@ -254,12 +319,20 @@ const (
 	ResourceSkuCapacityScaleTypeNone      ResourceSkuCapacityScaleType = original.ResourceSkuCapacityScaleTypeNone
 )
 
+func PossibleResourceSkuCapacityScaleTypeValues() []ResourceSkuCapacityScaleType {
+	return original.PossibleResourceSkuCapacityScaleTypeValues()
+}
+
 type ResourceSkuRestrictionsReasonCode = original.ResourceSkuRestrictionsReasonCode
 
 const (
 	NotAvailableForSubscription ResourceSkuRestrictionsReasonCode = original.NotAvailableForSubscription
 	QuotaID                     ResourceSkuRestrictionsReasonCode = original.QuotaID
 )
+
+func PossibleResourceSkuRestrictionsReasonCodeValues() []ResourceSkuRestrictionsReasonCode {
+	return original.PossibleResourceSkuRestrictionsReasonCodeValues()
+}
 
 type ResourceSkuRestrictionsType = original.ResourceSkuRestrictionsType
 
@@ -268,12 +341,20 @@ const (
 	Zone     ResourceSkuRestrictionsType = original.Zone
 )
 
+func PossibleResourceSkuRestrictionsTypeValues() []ResourceSkuRestrictionsType {
+	return original.PossibleResourceSkuRestrictionsTypeValues()
+}
+
 type RollingUpgradeActionType = original.RollingUpgradeActionType
 
 const (
 	Cancel RollingUpgradeActionType = original.Cancel
 	Start  RollingUpgradeActionType = original.Start
 )
+
+func PossibleRollingUpgradeActionTypeValues() []RollingUpgradeActionType {
+	return original.PossibleRollingUpgradeActionTypeValues()
+}
 
 type RollingUpgradeStatusCode = original.RollingUpgradeStatusCode
 
@@ -284,12 +365,32 @@ const (
 	RollingForward RollingUpgradeStatusCode = original.RollingForward
 )
 
+func PossibleRollingUpgradeStatusCodeValues() []RollingUpgradeStatusCode {
+	return original.PossibleRollingUpgradeStatusCodeValues()
+}
+
 type SettingNames = original.SettingNames
 
 const (
 	AutoLogon          SettingNames = original.AutoLogon
 	FirstLogonCommands SettingNames = original.FirstLogonCommands
 )
+
+func PossibleSettingNamesValues() []SettingNames {
+	return original.PossibleSettingNamesValues()
+}
+
+type SnapshotStorageAccountTypes = original.SnapshotStorageAccountTypes
+
+const (
+	PremiumLRS  SnapshotStorageAccountTypes = original.PremiumLRS
+	StandardLRS SnapshotStorageAccountTypes = original.StandardLRS
+	StandardZRS SnapshotStorageAccountTypes = original.StandardZRS
+)
+
+func PossibleSnapshotStorageAccountTypesValues() []SnapshotStorageAccountTypes {
+	return original.PossibleSnapshotStorageAccountTypesValues()
+}
 
 type StatusLevelTypes = original.StatusLevelTypes
 
@@ -299,12 +400,20 @@ const (
 	Warning StatusLevelTypes = original.Warning
 )
 
+func PossibleStatusLevelTypesValues() []StatusLevelTypes {
+	return original.PossibleStatusLevelTypesValues()
+}
+
 type StorageAccountTypes = original.StorageAccountTypes
 
 const (
-	PremiumLRS  StorageAccountTypes = original.PremiumLRS
-	StandardLRS StorageAccountTypes = original.StandardLRS
+	StorageAccountTypesPremiumLRS  StorageAccountTypes = original.StorageAccountTypesPremiumLRS
+	StorageAccountTypesStandardLRS StorageAccountTypes = original.StorageAccountTypesStandardLRS
 )
+
+func PossibleStorageAccountTypesValues() []StorageAccountTypes {
+	return original.PossibleStorageAccountTypesValues()
+}
 
 type UpgradeMode = original.UpgradeMode
 
@@ -314,6 +423,10 @@ const (
 	Rolling   UpgradeMode = original.Rolling
 )
 
+func PossibleUpgradeModeValues() []UpgradeMode {
+	return original.PossibleUpgradeModeValues()
+}
+
 type VirtualMachinePriorityTypes = original.VirtualMachinePriorityTypes
 
 const (
@@ -321,12 +434,20 @@ const (
 	Regular VirtualMachinePriorityTypes = original.Regular
 )
 
+func PossibleVirtualMachinePriorityTypesValues() []VirtualMachinePriorityTypes {
+	return original.PossibleVirtualMachinePriorityTypesValues()
+}
+
 type VirtualMachineScaleSetSkuScaleType = original.VirtualMachineScaleSetSkuScaleType
 
 const (
 	VirtualMachineScaleSetSkuScaleTypeAutomatic VirtualMachineScaleSetSkuScaleType = original.VirtualMachineScaleSetSkuScaleTypeAutomatic
 	VirtualMachineScaleSetSkuScaleTypeNone      VirtualMachineScaleSetSkuScaleType = original.VirtualMachineScaleSetSkuScaleTypeNone
 )
+
+func PossibleVirtualMachineScaleSetSkuScaleTypeValues() []VirtualMachineScaleSetSkuScaleType {
+	return original.PossibleVirtualMachineScaleSetSkuScaleTypeValues()
+}
 
 type VirtualMachineSizeTypes = original.VirtualMachineSizeTypes
 
@@ -499,6 +620,10 @@ const (
 	VirtualMachineSizeTypesStandardNV6      VirtualMachineSizeTypes = original.VirtualMachineSizeTypesStandardNV6
 )
 
+func PossibleVirtualMachineSizeTypesValues() []VirtualMachineSizeTypes {
+	return original.PossibleVirtualMachineSizeTypesValues()
+}
+
 type AccessURI = original.AccessURI
 type AccessURIOutput = original.AccessURIOutput
 type AccessURIRaw = original.AccessURIRaw
@@ -509,6 +634,7 @@ type APIErrorBase = original.APIErrorBase
 type AvailabilitySet = original.AvailabilitySet
 type AvailabilitySetListResult = original.AvailabilitySetListResult
 type AvailabilitySetProperties = original.AvailabilitySetProperties
+type AvailabilitySetUpdate = original.AvailabilitySetUpdate
 type BootDiagnostics = original.BootDiagnostics
 type BootDiagnosticsInstanceView = original.BootDiagnosticsInstanceView
 type ContainerService = original.ContainerService
@@ -563,6 +689,8 @@ type ImageReference = original.ImageReference
 type ImagesCreateOrUpdateFuture = original.ImagesCreateOrUpdateFuture
 type ImagesDeleteFuture = original.ImagesDeleteFuture
 type ImageStorageProfile = original.ImageStorageProfile
+type ImagesUpdateFuture = original.ImagesUpdateFuture
+type ImageUpdate = original.ImageUpdate
 type InnerError = original.InnerError
 type InstanceViewStatus = original.InstanceViewStatus
 type KeyVaultAndKeyReference = original.KeyVaultAndKeyReference
@@ -586,7 +714,10 @@ type ManagedDiskParameters = original.ManagedDiskParameters
 type NetworkInterfaceReference = original.NetworkInterfaceReference
 type NetworkInterfaceReferenceProperties = original.NetworkInterfaceReferenceProperties
 type NetworkProfile = original.NetworkProfile
+type OperationListResult = original.OperationListResult
 type OperationStatusResponse = original.OperationStatusResponse
+type OperationValue = original.OperationValue
+type OperationValueDisplay = original.OperationValueDisplay
 type OSDisk = original.OSDisk
 type OSDiskImage = original.OSDiskImage
 type OSProfile = original.OSProfile
@@ -629,6 +760,7 @@ type SnapshotListPage = original.SnapshotListPage
 type SnapshotsCreateOrUpdateFuture = original.SnapshotsCreateOrUpdateFuture
 type SnapshotsDeleteFuture = original.SnapshotsDeleteFuture
 type SnapshotsGrantAccessFuture = original.SnapshotsGrantAccessFuture
+type SnapshotSku = original.SnapshotSku
 type SnapshotsRevokeAccessFuture = original.SnapshotsRevokeAccessFuture
 type SnapshotsUpdateFuture = original.SnapshotsUpdateFuture
 type SnapshotUpdate = original.SnapshotUpdate
@@ -659,6 +791,10 @@ type VirtualMachineExtensionInstanceView = original.VirtualMachineExtensionInsta
 type VirtualMachineExtensionProperties = original.VirtualMachineExtensionProperties
 type VirtualMachineExtensionsCreateOrUpdateFuture = original.VirtualMachineExtensionsCreateOrUpdateFuture
 type VirtualMachineExtensionsDeleteFuture = original.VirtualMachineExtensionsDeleteFuture
+type VirtualMachineExtensionsListResult = original.VirtualMachineExtensionsListResult
+type VirtualMachineExtensionsUpdateFuture = original.VirtualMachineExtensionsUpdateFuture
+type VirtualMachineExtensionUpdate = original.VirtualMachineExtensionUpdate
+type VirtualMachineExtensionUpdateProperties = original.VirtualMachineExtensionUpdateProperties
 type VirtualMachineHealthStatus = original.VirtualMachineHealthStatus
 type VirtualMachineIdentity = original.VirtualMachineIdentity
 type VirtualMachineImage = original.VirtualMachineImage
@@ -712,7 +848,9 @@ type VirtualMachineScaleSetsDeleteFuture = original.VirtualMachineScaleSetsDelet
 type VirtualMachineScaleSetsDeleteInstancesFuture = original.VirtualMachineScaleSetsDeleteInstancesFuture
 type VirtualMachineScaleSetSku = original.VirtualMachineScaleSetSku
 type VirtualMachineScaleSetSkuCapacity = original.VirtualMachineScaleSetSkuCapacity
+type VirtualMachineScaleSetsPerformMaintenanceFuture = original.VirtualMachineScaleSetsPerformMaintenanceFuture
 type VirtualMachineScaleSetsPowerOffFuture = original.VirtualMachineScaleSetsPowerOffFuture
+type VirtualMachineScaleSetsRedeployFuture = original.VirtualMachineScaleSetsRedeployFuture
 type VirtualMachineScaleSetsReimageAllFuture = original.VirtualMachineScaleSetsReimageAllFuture
 type VirtualMachineScaleSetsReimageFuture = original.VirtualMachineScaleSetsReimageFuture
 type VirtualMachineScaleSetsRestartFuture = original.VirtualMachineScaleSetsRestartFuture
@@ -745,7 +883,9 @@ type VirtualMachineScaleSetVMProfile = original.VirtualMachineScaleSetVMProfile
 type VirtualMachineScaleSetVMProperties = original.VirtualMachineScaleSetVMProperties
 type VirtualMachineScaleSetVMsDeallocateFuture = original.VirtualMachineScaleSetVMsDeallocateFuture
 type VirtualMachineScaleSetVMsDeleteFuture = original.VirtualMachineScaleSetVMsDeleteFuture
+type VirtualMachineScaleSetVMsPerformMaintenanceFuture = original.VirtualMachineScaleSetVMsPerformMaintenanceFuture
 type VirtualMachineScaleSetVMsPowerOffFuture = original.VirtualMachineScaleSetVMsPowerOffFuture
+type VirtualMachineScaleSetVMsRedeployFuture = original.VirtualMachineScaleSetVMsRedeployFuture
 type VirtualMachineScaleSetVMsReimageAllFuture = original.VirtualMachineScaleSetVMsReimageAllFuture
 type VirtualMachineScaleSetVMsReimageFuture = original.VirtualMachineScaleSetVMsReimageFuture
 type VirtualMachineScaleSetVMsRestartFuture = original.VirtualMachineScaleSetVMsRestartFuture
@@ -765,9 +905,20 @@ type VirtualMachinesRestartFuture = original.VirtualMachinesRestartFuture
 type VirtualMachinesRunCommandFuture = original.VirtualMachinesRunCommandFuture
 type VirtualMachinesStartFuture = original.VirtualMachinesStartFuture
 type VirtualMachineStatusCodeCount = original.VirtualMachineStatusCodeCount
+type VirtualMachinesUpdateFuture = original.VirtualMachinesUpdateFuture
+type VirtualMachineUpdate = original.VirtualMachineUpdate
 type WindowsConfiguration = original.WindowsConfiguration
 type WinRMConfiguration = original.WinRMConfiguration
 type WinRMListener = original.WinRMListener
+type OperationsClient = original.OperationsClient
+
+func NewOperationsClient(subscriptionID string) OperationsClient {
+	return original.NewOperationsClient(subscriptionID)
+}
+func NewOperationsClientWithBaseURI(baseURI string, subscriptionID string) OperationsClient {
+	return original.NewOperationsClientWithBaseURI(baseURI, subscriptionID)
+}
+
 type ResourceSkusClient = original.ResourceSkusClient
 
 func NewResourceSkusClient(subscriptionID string) ResourceSkusClient {

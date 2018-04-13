@@ -35,6 +35,11 @@ const (
 	UDP ContainerGroupNetworkProtocol = "UDP"
 )
 
+// PossibleContainerGroupNetworkProtocolValues returns an array of possible values for the ContainerGroupNetworkProtocol const type.
+func PossibleContainerGroupNetworkProtocolValues() []ContainerGroupNetworkProtocol {
+	return []ContainerGroupNetworkProtocol{TCP, UDP}
+}
+
 // ContainerGroupRestartPolicy enumerates the values for container group restart policy.
 type ContainerGroupRestartPolicy string
 
@@ -47,6 +52,11 @@ const (
 	OnFailure ContainerGroupRestartPolicy = "OnFailure"
 )
 
+// PossibleContainerGroupRestartPolicyValues returns an array of possible values for the ContainerGroupRestartPolicy const type.
+func PossibleContainerGroupRestartPolicyValues() []ContainerGroupRestartPolicy {
+	return []ContainerGroupRestartPolicy{Always, Never, OnFailure}
+}
+
 // ContainerNetworkProtocol enumerates the values for container network protocol.
 type ContainerNetworkProtocol string
 
@@ -56,6 +66,11 @@ const (
 	// ContainerNetworkProtocolUDP ...
 	ContainerNetworkProtocolUDP ContainerNetworkProtocol = "UDP"
 )
+
+// PossibleContainerNetworkProtocolValues returns an array of possible values for the ContainerNetworkProtocol const type.
+func PossibleContainerNetworkProtocolValues() []ContainerNetworkProtocol {
+	return []ContainerNetworkProtocol{ContainerNetworkProtocolTCP, ContainerNetworkProtocolUDP}
+}
 
 // OperatingSystemTypes enumerates the values for operating system types.
 type OperatingSystemTypes string
@@ -67,6 +82,11 @@ const (
 	Windows OperatingSystemTypes = "Windows"
 )
 
+// PossibleOperatingSystemTypesValues returns an array of possible values for the OperatingSystemTypes const type.
+func PossibleOperatingSystemTypesValues() []OperatingSystemTypes {
+	return []OperatingSystemTypes{Linux, Windows}
+}
+
 // OperationsOrigin enumerates the values for operations origin.
 type OperationsOrigin string
 
@@ -76,6 +96,11 @@ const (
 	// User ...
 	User OperationsOrigin = "User"
 )
+
+// PossibleOperationsOriginValues returns an array of possible values for the OperationsOrigin const type.
+func PossibleOperationsOriginValues() []OperationsOrigin {
+	return []OperationsOrigin{System, User}
+}
 
 // AzureFileVolume the properties of the Azure File volume. Azure File shares are mounted as volumes.
 type AzureFileVolume struct {
@@ -95,6 +120,18 @@ type Container struct {
 	Name *string `json:"name,omitempty"`
 	// ContainerProperties - The properties of the container instance.
 	*ContainerProperties `json:"properties,omitempty"`
+}
+
+// MarshalJSON is the custom marshaler for Container.
+func (c Container) MarshalJSON() ([]byte, error) {
+	objectMap := make(map[string]interface{})
+	if c.Name != nil {
+		objectMap["name"] = c.Name
+	}
+	if c.ContainerProperties != nil {
+		objectMap["properties"] = c.ContainerProperties
+	}
+	return json.Marshal(objectMap)
 }
 
 // UnmarshalJSON is the custom unmarshaler for Container struct.

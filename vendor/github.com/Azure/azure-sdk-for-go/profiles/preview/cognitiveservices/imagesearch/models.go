@@ -209,6 +209,10 @@ const (
 	ZMW Currency = original.ZMW
 )
 
+func PossibleCurrencyValues() []Currency {
+	return original.PossibleCurrencyValues()
+}
+
 type ErrorCode = original.ErrorCode
 
 const (
@@ -219,6 +223,10 @@ const (
 	RateLimitExceeded         ErrorCode = original.RateLimitExceeded
 	ServerError               ErrorCode = original.ServerError
 )
+
+func PossibleErrorCodeValues() []ErrorCode {
+	return original.PossibleErrorCodeValues()
+}
 
 type ErrorSubCode = original.ErrorSubCode
 
@@ -236,6 +244,10 @@ const (
 	UnexpectedError         ErrorSubCode = original.UnexpectedError
 )
 
+func PossibleErrorSubCodeValues() []ErrorSubCode {
+	return original.PossibleErrorSubCodeValues()
+}
+
 type Freshness = original.Freshness
 
 const (
@@ -243,6 +255,10 @@ const (
 	Month Freshness = original.Month
 	Week  Freshness = original.Week
 )
+
+func PossibleFreshnessValues() []Freshness {
+	return original.PossibleFreshnessValues()
+}
 
 type ImageAspect = original.ImageAspect
 
@@ -252,6 +268,10 @@ const (
 	Tall   ImageAspect = original.Tall
 	Wide   ImageAspect = original.Wide
 )
+
+func PossibleImageAspectValues() []ImageAspect {
+	return original.PossibleImageAspectValues()
+}
 
 type ImageColor = original.ImageColor
 
@@ -272,6 +292,10 @@ const (
 	Yellow     ImageColor = original.Yellow
 )
 
+func PossibleImageColorValues() []ImageColor {
+	return original.PossibleImageColorValues()
+}
+
 type ImageContent = original.ImageContent
 
 const (
@@ -279,11 +303,19 @@ const (
 	Portrait ImageContent = original.Portrait
 )
 
+func PossibleImageContentValues() []ImageContent {
+	return original.PossibleImageContentValues()
+}
+
 type ImageCropType = original.ImageCropType
 
 const (
 	Rectangular ImageCropType = original.Rectangular
 )
+
+func PossibleImageCropTypeValues() []ImageCropType {
+	return original.PossibleImageCropTypeValues()
+}
 
 type ImageInsightModule = original.ImageInsightModule
 
@@ -302,6 +334,10 @@ const (
 	ImageInsightModuleTags               ImageInsightModule = original.ImageInsightModuleTags
 )
 
+func PossibleImageInsightModuleValues() []ImageInsightModule {
+	return original.PossibleImageInsightModuleValues()
+}
+
 type ImageLicense = original.ImageLicense
 
 const (
@@ -314,6 +350,10 @@ const (
 	ImageLicenseShareCommercially  ImageLicense = original.ImageLicenseShareCommercially
 )
 
+func PossibleImageLicenseValues() []ImageLicense {
+	return original.PossibleImageLicenseValues()
+}
+
 type ImageSize = original.ImageSize
 
 const (
@@ -323,6 +363,10 @@ const (
 	ImageSizeSmall     ImageSize = original.ImageSizeSmall
 	ImageSizeWallpaper ImageSize = original.ImageSizeWallpaper
 )
+
+func PossibleImageSizeValues() []ImageSize {
+	return original.PossibleImageSizeValues()
+}
 
 type ImageType = original.ImageType
 
@@ -334,6 +378,10 @@ const (
 	Shopping    ImageType = original.Shopping
 	Transparent ImageType = original.Transparent
 )
+
+func PossibleImageTypeValues() []ImageType {
+	return original.PossibleImageTypeValues()
+}
 
 type ItemAvailability = original.ItemAvailability
 
@@ -348,6 +396,10 @@ const (
 	SoldOut             ItemAvailability = original.SoldOut
 )
 
+func PossibleItemAvailabilityValues() []ItemAvailability {
+	return original.PossibleItemAvailabilityValues()
+}
+
 type SafeSearch = original.SafeSearch
 
 const (
@@ -356,6 +408,10 @@ const (
 	Strict   SafeSearch = original.Strict
 )
 
+func PossibleSafeSearchValues() []SafeSearch {
+	return original.PossibleSafeSearchValues()
+}
+
 type Type = original.Type
 
 const (
@@ -363,6 +419,10 @@ const (
 	TypePropertiesItem  Type = original.TypePropertiesItem
 	TypeRating          Type = original.TypeRating
 )
+
+func PossibleTypeValues() []Type {
+	return original.PossibleTypeValues()
+}
 
 type TypeBasicResponseBase = original.TypeBasicResponseBase
 
@@ -394,6 +454,10 @@ const (
 	TypeTrendingImages         TypeBasicResponseBase = original.TypeTrendingImages
 	TypeWebPage                TypeBasicResponseBase = original.TypeWebPage
 )
+
+func PossibleTypeBasicResponseBaseValues() []TypeBasicResponseBase {
+	return original.PossibleTypeBasicResponseBaseValues()
+}
 
 type AggregateOffer = original.AggregateOffer
 type AggregateRating = original.AggregateRating

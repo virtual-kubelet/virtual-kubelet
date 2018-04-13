@@ -47,6 +47,10 @@ const (
 	Westus2        AzureRegions = original.Westus2
 )
 
+func PossibleAzureRegionsValues() []AzureRegions {
+	return original.PossibleAzureRegionsValues()
+}
+
 type Details = original.Details
 
 const (
@@ -54,12 +58,20 @@ const (
 	Landmarks   Details = original.Landmarks
 )
 
+func PossibleDetailsValues() []Details {
+	return original.PossibleDetailsValues()
+}
+
 type DomainModels = original.DomainModels
 
 const (
 	DomainModelsCelebrities DomainModels = original.DomainModelsCelebrities
 	DomainModelsLandmarks   DomainModels = original.DomainModelsLandmarks
 )
+
+func PossibleDomainModelsValues() []DomainModels {
+	return original.PossibleDomainModelsValues()
+}
 
 type ErrorCodes = original.ErrorCodes
 
@@ -79,6 +91,10 @@ const (
 	Unspecified               ErrorCodes = original.Unspecified
 )
 
+func PossibleErrorCodesValues() []ErrorCodes {
+	return original.PossibleErrorCodesValues()
+}
+
 type Gender = original.Gender
 
 const (
@@ -86,12 +102,20 @@ const (
 	Male   Gender = original.Male
 )
 
+func PossibleGenderValues() []Gender {
+	return original.PossibleGenderValues()
+}
+
 type Language1 = original.Language1
 
 const (
 	En Language1 = original.En
 	Zh Language1 = original.Zh
 )
+
+func PossibleLanguage1Values() []Language1 {
+	return original.PossibleLanguage1Values()
+}
 
 type OcrLanguages = original.OcrLanguages
 
@@ -125,6 +149,10 @@ const (
 	OcrLanguagesZhHant OcrLanguages = original.OcrLanguagesZhHant
 )
 
+func PossibleOcrLanguagesValues() []OcrLanguages {
+	return original.PossibleOcrLanguagesValues()
+}
+
 type TextOperationStatusCodes = original.TextOperationStatusCodes
 
 const (
@@ -133,6 +161,10 @@ const (
 	Running    TextOperationStatusCodes = original.Running
 	Succeeded  TextOperationStatusCodes = original.Succeeded
 )
+
+func PossibleTextOperationStatusCodesValues() []TextOperationStatusCodes {
+	return original.PossibleTextOperationStatusCodesValues()
+}
 
 type VisualFeatureTypes = original.VisualFeatureTypes
 
@@ -145,6 +177,10 @@ const (
 	VisualFeatureTypesImageType   VisualFeatureTypes = original.VisualFeatureTypesImageType
 	VisualFeatureTypesTags        VisualFeatureTypes = original.VisualFeatureTypesTags
 )
+
+func PossibleVisualFeatureTypesValues() []VisualFeatureTypes {
+	return original.PossibleVisualFeatureTypesValues()
+}
 
 type AdultInfo = original.AdultInfo
 type Category = original.Category

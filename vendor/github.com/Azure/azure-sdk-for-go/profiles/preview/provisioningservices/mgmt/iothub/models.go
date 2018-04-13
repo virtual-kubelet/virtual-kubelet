@@ -19,7 +19,7 @@
 
 package iothub
 
-import original "github.com/Azure/azure-sdk-for-go/services/provisioningservices/mgmt/2017-11-15/iothub"
+import original "github.com/Azure/azure-sdk-for-go/services/provisioningservices/mgmt/2018-01-22/iothub"
 
 const (
 	DefaultBaseURI = original.DefaultBaseURI
@@ -43,15 +43,6 @@ func NewDpsCertificateClientWithBaseURI(baseURI string, subscriptionID string) D
 	return original.NewDpsCertificateClientWithBaseURI(baseURI, subscriptionID)
 }
 
-type DpsCertificatesClient = original.DpsCertificatesClient
-
-func NewDpsCertificatesClient(subscriptionID string) DpsCertificatesClient {
-	return original.NewDpsCertificatesClient(subscriptionID)
-}
-func NewDpsCertificatesClientWithBaseURI(baseURI string, subscriptionID string) DpsCertificatesClient {
-	return original.NewDpsCertificatesClientWithBaseURI(baseURI, subscriptionID)
-}
-
 type IotDpsResourceClient = original.IotDpsResourceClient
 
 func NewIotDpsResourceClient(subscriptionID string) IotDpsResourceClient {
@@ -72,6 +63,10 @@ const (
 	ServiceConfig           AccessRightsDescription = original.ServiceConfig
 )
 
+func PossibleAccessRightsDescriptionValues() []AccessRightsDescription {
+	return original.PossibleAccessRightsDescriptionValues()
+}
+
 type AllocationPolicy = original.AllocationPolicy
 
 const (
@@ -80,6 +75,10 @@ const (
 	Static     AllocationPolicy = original.Static
 )
 
+func PossibleAllocationPolicyValues() []AllocationPolicy {
+	return original.PossibleAllocationPolicyValues()
+}
+
 type CertificatePurpose = original.CertificatePurpose
 
 const (
@@ -87,11 +86,19 @@ const (
 	ServerAuthentication CertificatePurpose = original.ServerAuthentication
 )
 
+func PossibleCertificatePurposeValues() []CertificatePurpose {
+	return original.PossibleCertificatePurposeValues()
+}
+
 type IotDpsSku = original.IotDpsSku
 
 const (
 	S1 IotDpsSku = original.S1
 )
+
+func PossibleIotDpsSkuValues() []IotDpsSku {
+	return original.PossibleIotDpsSkuValues()
+}
 
 type NameUnavailabilityReason = original.NameUnavailabilityReason
 
@@ -99,6 +106,10 @@ const (
 	AlreadyExists NameUnavailabilityReason = original.AlreadyExists
 	Invalid       NameUnavailabilityReason = original.Invalid
 )
+
+func PossibleNameUnavailabilityReasonValues() []NameUnavailabilityReason {
+	return original.PossibleNameUnavailabilityReasonValues()
+}
 
 type State = original.State
 
@@ -116,6 +127,10 @@ const (
 	Suspending       State = original.Suspending
 	Transitioning    State = original.Transitioning
 )
+
+func PossibleStateValues() []State {
+	return original.PossibleStateValues()
+}
 
 type AsyncOperationResult = original.AsyncOperationResult
 type CertificateBodyDescription = original.CertificateBodyDescription

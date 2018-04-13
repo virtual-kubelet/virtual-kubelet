@@ -95,12 +95,20 @@ const (
 	StandardGS5   AgentVMSizeTypes = original.StandardGS5
 )
 
+func PossibleAgentVMSizeTypesValues() []AgentVMSizeTypes {
+	return original.PossibleAgentVMSizeTypesValues()
+}
+
 type ClusterType = original.ClusterType
 
 const (
 	ACS   ClusterType = original.ACS
 	Local ClusterType = original.Local
 )
+
+func PossibleClusterTypeValues() []ClusterType {
+	return original.PossibleClusterTypeValues()
+}
 
 type OperationStatus = original.OperationStatus
 
@@ -114,6 +122,10 @@ const (
 	Updating  OperationStatus = original.Updating
 )
 
+func PossibleOperationStatusValues() []OperationStatus {
+	return original.PossibleOperationStatusValues()
+}
+
 type OrchestratorType = original.OrchestratorType
 
 const (
@@ -121,12 +133,20 @@ const (
 	None       OrchestratorType = original.None
 )
 
+func PossibleOrchestratorTypeValues() []OrchestratorType {
+	return original.PossibleOrchestratorTypeValues()
+}
+
 type Status = original.Status
 
 const (
 	Disabled Status = original.Disabled
 	Enabled  Status = original.Enabled
 )
+
+func PossibleStatusValues() []Status {
+	return original.PossibleStatusValues()
+}
 
 type SystemServiceType = original.SystemServiceType
 
@@ -136,12 +156,20 @@ const (
 	SystemServiceTypeScoringFrontEnd SystemServiceType = original.SystemServiceTypeScoringFrontEnd
 )
 
+func PossibleSystemServiceTypeValues() []SystemServiceType {
+	return original.PossibleSystemServiceTypeValues()
+}
+
 type UpdatesAvailable = original.UpdatesAvailable
 
 const (
 	No  UpdatesAvailable = original.No
 	Yes UpdatesAvailable = original.Yes
 )
+
+func PossibleUpdatesAvailableValues() []UpdatesAvailable {
+	return original.PossibleUpdatesAvailableValues()
+}
 
 type AcsClusterProperties = original.AcsClusterProperties
 type AppInsightsCredentials = original.AppInsightsCredentials

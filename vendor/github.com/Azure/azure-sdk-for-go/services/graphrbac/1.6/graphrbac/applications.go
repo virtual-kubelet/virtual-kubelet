@@ -87,7 +87,7 @@ func (client ApplicationsClient) AddOwnerPreparer(ctx context.Context, applicati
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPost(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/{tenantID}/applications/{applicationObjectId}/$links/owners", pathParameters),
@@ -160,7 +160,7 @@ func (client ApplicationsClient) CreatePreparer(ctx context.Context, parameters 
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPost(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/{tenantID}/applications", pathParameters),
@@ -695,7 +695,7 @@ func (client ApplicationsClient) PatchPreparer(ctx context.Context, applicationO
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPatch(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/{tenantID}/applications/{applicationObjectId}", pathParameters),
@@ -762,7 +762,7 @@ func (client ApplicationsClient) UpdateKeyCredentialsPreparer(ctx context.Contex
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPatch(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/{tenantID}/applications/{applicationObjectId}/keyCredentials", pathParameters),
@@ -829,7 +829,7 @@ func (client ApplicationsClient) UpdatePasswordCredentialsPreparer(ctx context.C
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPatch(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/{tenantID}/applications/{applicationObjectId}/passwordCredentials", pathParameters),

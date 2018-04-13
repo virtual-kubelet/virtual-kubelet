@@ -68,6 +68,10 @@ const (
 	UDP ContainerGroupNetworkProtocol = original.UDP
 )
 
+func PossibleContainerGroupNetworkProtocolValues() []ContainerGroupNetworkProtocol {
+	return original.PossibleContainerGroupNetworkProtocolValues()
+}
+
 type ContainerGroupRestartPolicy = original.ContainerGroupRestartPolicy
 
 const (
@@ -76,12 +80,20 @@ const (
 	OnFailure ContainerGroupRestartPolicy = original.OnFailure
 )
 
+func PossibleContainerGroupRestartPolicyValues() []ContainerGroupRestartPolicy {
+	return original.PossibleContainerGroupRestartPolicyValues()
+}
+
 type ContainerNetworkProtocol = original.ContainerNetworkProtocol
 
 const (
 	ContainerNetworkProtocolTCP ContainerNetworkProtocol = original.ContainerNetworkProtocolTCP
 	ContainerNetworkProtocolUDP ContainerNetworkProtocol = original.ContainerNetworkProtocolUDP
 )
+
+func PossibleContainerNetworkProtocolValues() []ContainerNetworkProtocol {
+	return original.PossibleContainerNetworkProtocolValues()
+}
 
 type OperatingSystemTypes = original.OperatingSystemTypes
 
@@ -90,6 +102,10 @@ const (
 	Windows OperatingSystemTypes = original.Windows
 )
 
+func PossibleOperatingSystemTypesValues() []OperatingSystemTypes {
+	return original.PossibleOperatingSystemTypesValues()
+}
+
 type OperationsOrigin = original.OperationsOrigin
 
 const (
@@ -97,14 +113,22 @@ const (
 	User   OperationsOrigin = original.User
 )
 
+func PossibleOperationsOriginValues() []OperationsOrigin {
+	return original.PossibleOperationsOriginValues()
+}
+
 type AzureFileVolume = original.AzureFileVolume
 type Container = original.Container
+type ContainerExecRequest = original.ContainerExecRequest
+type ContainerExecRequestTerminalSize = original.ContainerExecRequestTerminalSize
+type ContainerExecResponse = original.ContainerExecResponse
 type ContainerGroup = original.ContainerGroup
 type ContainerGroupListResult = original.ContainerGroupListResult
 type ContainerGroupListResultIterator = original.ContainerGroupListResultIterator
 type ContainerGroupListResultPage = original.ContainerGroupListResultPage
 type ContainerGroupProperties = original.ContainerGroupProperties
 type ContainerGroupPropertiesInstanceView = original.ContainerGroupPropertiesInstanceView
+type ContainerGroupsCreateOrUpdateFuture = original.ContainerGroupsCreateOrUpdateFuture
 type ContainerPort = original.ContainerPort
 type ContainerProperties = original.ContainerProperties
 type ContainerPropertiesInstanceView = original.ContainerPropertiesInstanceView
@@ -135,6 +159,15 @@ func NewOperationsClient(subscriptionID string) OperationsClient {
 }
 func NewOperationsClientWithBaseURI(baseURI string, subscriptionID string) OperationsClient {
 	return original.NewOperationsClientWithBaseURI(baseURI, subscriptionID)
+}
+
+type StartContainerClient = original.StartContainerClient
+
+func NewStartContainerClient(subscriptionID string) StartContainerClient {
+	return original.NewStartContainerClient(subscriptionID)
+}
+func NewStartContainerClientWithBaseURI(baseURI string, subscriptionID string) StartContainerClient {
+	return original.NewStartContainerClientWithBaseURI(baseURI, subscriptionID)
 }
 func UserAgent() string {
 	return original.UserAgent() + " profiles/preview"

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/Azure/go-autorest/autorest/azure"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -11,10 +12,8 @@ import (
 	"github.com/Azure/go-autorest/autorest/to"
 
 	"github.com/Azure/azure-sdk-for-go/services/batch/2017-09-01.6.0/batch"
-	"github.com/Azure/go-autorest/autorest"
-	"github.com/golang/glog"
+	"github.com/lawrencegripper/pod2docker"
 	"github.com/virtual-kubelet/virtual-kubelet/manager"
-	"github.com/virtual-kubelet/virtual-kubelet/providers/azure/client/aci"
 	"k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -23,11 +22,12 @@ import (
 const (
 	stdoutFile string = "stdout.txt"
 	stderrFile string = "stderr.txt"
+	podJsonKey string = "virtualkubelet_pod"
 )
 
-// BatchProvider the base struct for the Azure Batch provider
-type BatchProvider struct {
-	batchConfig        *BatchConfig
+// Provider the base struct for the Azure Batch provider
+type Provider struct {
+	batchConfig        *Config
 	ctx                context.Context
 	cancelOps          context.CancelFunc
 	poolClient         *batch.PoolClient
@@ -35,6 +35,7 @@ type BatchProvider struct {
 	taskClient         *batch.TaskClient
 	fileClient         *batch.FileClient
 	resourceManager    *manager.ResourceManager
+	listTasks          func() (*[]batch.CloudTask, error)
 	resourceGroup      string
 	region             string
 	nodeName           string
@@ -46,8 +47,8 @@ type BatchProvider struct {
 	daemonEndpointPort int32
 }
 
-// BatchConfig - Basic azure config used to interact with ARM resources.
-type BatchConfig struct {
+// Config - Basic azure config used to interact with ARM resources.
+type Config struct {
 	ClientID        string
 	ClientSecret    string
 	SubscriptionID  string
@@ -59,31 +60,8 @@ type BatchConfig struct {
 	AccountLocation string
 }
 
-// BatchPodComponents provides details for the batch task wrapper
-// to run a pod
-type BatchPodComponents struct {
-	PullCredentials []aci.ImageRegistryCredential
-	Containers      []v1.Container
-	Volumes         []v1.Volume
-	PodName         string
-	TaskID          string
-}
-
-const batchManagementEndpoint = "https://batch.core.windows.net/"
-
-func fixContentTypeInspector() autorest.PrepareDecorator {
-	return func(p autorest.Preparer) autorest.Preparer {
-		return autorest.PreparerFunc(func(r *http.Request) (*http.Request, error) {
-			r.Header.Set("Content-Type", "application/json; odata=minimalmetadata")
-			// dump, _ := httputil.DumpRequestOut(r, true)
-			// log.Println(string(dump))
-			return r, nil
-		})
-	}
-}
-
 // NewBatchProvider Creates a batch provider
-func NewBatchProvider(config string, rm *manager.ResourceManager, nodeName, operatingSystem string, internalIP string, daemonEndpointPort int32) (*BatchProvider, error) {
+func NewBatchProvider(config string, rm *manager.ResourceManager, nodeName, operatingSystem string, internalIP string, daemonEndpointPort int32) (*Provider, error) {
 	fmt.Println("Starting create provider")
 
 	batchConfig, err := getAzureConfigFromEnv()
@@ -91,7 +69,7 @@ func NewBatchProvider(config string, rm *manager.ResourceManager, nodeName, oper
 		log.Println("Failed to get auth information")
 	}
 
-	p := BatchProvider{}
+	p := Provider{}
 	p.batchConfig = &batchConfig
 	// Set sane defaults for Capacity in case config is not supplied
 	p.cpu = "20"
@@ -104,50 +82,73 @@ func NewBatchProvider(config string, rm *manager.ResourceManager, nodeName, oper
 	p.daemonEndpointPort = daemonEndpointPort
 	p.ctx = context.Background()
 
-	spt, err := newServicePrincipalTokenFromCredentials(batchConfig, batchManagementEndpoint)
-
-	if err != nil {
-		glog.Fatalf("Failed creating service principal: %v", err)
-	}
-
-	auth := autorest.NewBearerAuthorizer(spt)
+	auth := getAzureADAuthorizer(p.batchConfig, azure.PublicCloud.BatchManagementEndpoint)
 
 	createOrGetPool(&p, auth)
 	createOrGetJob(&p, auth)
 
 	taskclient := batch.NewTaskClientWithBaseURI(getBatchBaseURL(p.batchConfig))
 	taskclient.Authorizer = auth
-	taskclient.RequestInspector = fixContentTypeInspector()
 	p.taskClient = &taskclient
+
+	p.listTasks = func() (*[]batch.CloudTask, error) {
+		res, err := p.taskClient.List(p.ctx, p.batchConfig.JobID, "", "", "", nil, nil, nil, nil, nil)
+		if err != nil {
+			return &[]batch.CloudTask{}, err
+		}
+		currentTasks := res.Values()
+		for res.NotDone() {
+			err = res.Next()
+			if err != nil {
+				return &[]batch.CloudTask{}, err
+			}
+			pageTasks := res.Values()
+			if pageTasks != nil || len(pageTasks) != 0 {
+				currentTasks = append(currentTasks, pageTasks...)
+			}
+		}
+
+		return &currentTasks, nil
+	}
 
 	fileClient := batch.NewFileClientWithBaseURI(getBatchBaseURL(p.batchConfig))
 	fileClient.Authorizer = auth
-	fileClient.RequestInspector = fixContentTypeInspector()
 	p.fileClient = &fileClient
 
 	return &p, nil
 }
 
 // CreatePod accepts a Pod definition
-func (p *BatchProvider) CreatePod(pod *v1.Pod) error {
+func (p *Provider) CreatePod(pod *v1.Pod) error {
 	log.Println("Creating pod...")
-	podCommand, err := getPodCommand(BatchPodComponents{
+	podCommand, err := pod2docker.GetBashCommand(pod2docker.PodComponents{
 		Containers: pod.Spec.Containers,
 		PodName:    pod.Name,
-		TaskID:     string(pod.UID),
 		Volumes:    pod.Spec.Volumes,
 	})
 	if err != nil {
 		return err
 	}
+
+	bytes, err := json.Marshal(pod)
+	if err != nil {
+		panic(err)
+	}
+
 	task := batch.TaskAddParameter{
 		DisplayName: to.StringPtr(string(pod.UID)),
-		ID:          to.StringPtr(getTaskIDForPod(pod)),
+		ID:          to.StringPtr(getTaskIDForPod(pod.Namespace, pod.Name)),
 		CommandLine: to.StringPtr(fmt.Sprintf(`/bin/bash -c "%s"`, podCommand)),
 		UserIdentity: &batch.UserIdentity{
 			AutoUser: &batch.AutoUserSpecification{
 				ElevationLevel: batch.Admin,
-				Scope:          batch.Task,
+				Scope:          batch.Pool,
+			},
+		},
+		EnvironmentSettings: &[]batch.EnvironmentSetting{
+			{
+				Name:  to.StringPtr(podJsonKey),
+				Value: to.StringPtr(string(bytes)),
 			},
 		},
 	}
@@ -156,29 +157,51 @@ func (p *BatchProvider) CreatePod(pod *v1.Pod) error {
 	return nil
 }
 
+// GetPodStatus retrieves the status of a given pod by name.
+func (p *Provider) GetPodStatus(namespace, name string) (*v1.PodStatus, error) {
+	log.Println("Getting pod status ....")
+	pod, err := p.GetPod(namespace, name)
+
+	if err != nil {
+		return nil, err
+	}
+	if pod == nil {
+		return nil, nil
+	}
+	return &pod.Status, nil
+}
+
 // UpdatePod accepts a Pod definition
-func (p *BatchProvider) UpdatePod(pod *v1.Pod) error {
-	log.Println("NOOP: Pod update not supported")
-	return fmt.Errorf("Failed to update pod %s as update not supported", pod.Name)
+func (p *Provider) UpdatePod(pod *v1.Pod) error {
+	err := p.DeletePod(pod)
+	if err != nil {
+		return err
+	}
+	err = p.CreatePod(pod)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 // DeletePod accepts a Pod definition
-func (p *BatchProvider) DeletePod(pod *v1.Pod) error {
-	task, err := p.taskClient.Delete(p.ctx, p.batchConfig.JobID, getTaskIDForPod(pod), nil, nil, nil, nil, "", "", nil, nil)
+func (p *Provider) DeletePod(pod *v1.Pod) error {
+	taskID := getTaskIDForPod(pod.Namespace, pod.Name)
+	task, err := p.taskClient.Delete(p.ctx, p.batchConfig.JobID, taskID, nil, nil, nil, nil, "", "", nil, nil)
 	if err != nil {
+		log.Println(task)
 		log.Println(err)
 		return err
 	}
 
-	log.Println(task)
+	log.Printf(fmt.Sprintf("Deleting task: %v", taskID))
 	return nil
 }
 
 // GetPod returns a pod by name
-func (p *BatchProvider) GetPod(namespace, name string) (*v1.Pod, error) {
+func (p *Provider) GetPod(namespace, name string) (*v1.Pod, error) {
 	log.Println("Getting Pod ...")
-	pod := p.resourceManager.GetPod(name)
-	task, err := p.taskClient.Get(p.ctx, p.batchConfig.JobID, getTaskIDForPod(pod), "", "", nil, nil, nil, nil, "", "", nil, nil)
+	task, err := p.taskClient.Get(p.ctx, p.batchConfig.JobID, getTaskIDForPod(namespace, name), "", "", nil, nil, nil, nil, "", "", nil, nil)
 	if err != nil {
 		if task.Response.StatusCode == http.StatusNotFound {
 			return nil, nil
@@ -187,26 +210,29 @@ func (p *BatchProvider) GetPod(namespace, name string) (*v1.Pod, error) {
 		return nil, err
 	}
 
-	jsonBytpes, _ := json.Marshal(task)
-	if pod.Labels == nil {
-		pod.Labels = make(map[string]string)
+	pod, err := getPodFromTask(&task)
+	if err != nil {
+		panic(err)
 	}
-	pod.Labels["batchStatus"] = string(jsonBytpes)
-	status, _ := p.GetPodStatus(namespace, name)
+
+	// jsonBytpes, _ := json.Marshal(task)
+	// if pod.Labels == nil {
+	// 	pod.Labels = make(map[string]string)
+	// }
+	// pod.Labels["batchStatus"] = string(jsonBytpes)
+	status, _ := convertTaskToPodStatus(&task)
 	pod.Status = *status
 
 	return pod, nil
 }
 
 // GetContainerLogs returns the logs of a container running in a pod by name.
-func (p *BatchProvider) GetContainerLogs(namespace, podName, containerName string, tail int) (string, error) {
+func (p *Provider) GetContainerLogs(namespace, podName, containerName string, tail int) (string, error) {
 	log.Println("Getting pod logs ....")
-
-	pod := p.resourceManager.GetPod(podName)
 
 	logFileLocation := fmt.Sprintf("wd/%s", containerName)
 	// todo: Log file is the json log from docker - deserialise and form at it before returning it.
-	reader, err := p.fileClient.GetFromTask(p.ctx, p.batchConfig.JobID, getTaskIDForPod(pod), logFileLocation, nil, nil, nil, nil, "", nil, nil)
+	reader, err := p.fileClient.GetFromTask(p.ctx, p.batchConfig.JobID, getTaskIDForPod(namespace, podName), logFileLocation, nil, nil, nil, nil, "", nil, nil)
 
 	if err != nil {
 		return "", err
@@ -221,60 +247,39 @@ func (p *BatchProvider) GetContainerLogs(namespace, podName, containerName strin
 	return string(bytes), nil
 }
 
-// GetPodStatus retrieves the status of a given pod by name.
-func (p *BatchProvider) GetPodStatus(namespace, name string) (*v1.PodStatus, error) {
-	log.Println("Getting pod status ....")
-	pod := p.resourceManager.GetPod(name)
-	task, err := p.taskClient.Get(p.ctx, p.batchConfig.JobID, getTaskIDForPod(pod), "", "", nil, nil, nil, nil, "", "", nil, nil)
-	if err != nil {
-		log.Println(err)
-		return nil, err
-	}
-
-	startTime := metav1.Time{}
-	retryCount := int32(0)
-	if task.ExecutionInfo != nil {
-		if task.ExecutionInfo.StartTime != nil {
-			startTime.Time = task.ExecutionInfo.StartTime.Time
-		}
-		if task.ExecutionInfo.RetryCount != nil {
-			retryCount = *task.ExecutionInfo.RetryCount
-		}
-	}
-
-	// Todo: Review indivudal container status response
-	return &v1.PodStatus{
-		Phase:     convertTaskStatusToPodPhase(task.State),
-		StartTime: &startTime,
-		ContainerStatuses: []v1.ContainerStatus{
-			v1.ContainerStatus{
-				Name:         pod.Spec.Containers[0].Name,
-				RestartCount: retryCount,
-				State: v1.ContainerState{
-					Running: &v1.ContainerStateRunning{
-						StartedAt: startTime,
-					},
-				},
-			},
-		},
-	}, nil
-}
-
 // GetPods retrieves a list of all pods scheduled to run.
-func (p *BatchProvider) GetPods() ([]*v1.Pod, error) {
+func (p *Provider) GetPods() ([]*v1.Pod, error) {
 	log.Println("Getting pods...")
-	pods := p.resourceManager.GetPods()
-	for _, pod := range pods {
-		status, _ := p.GetPodStatus(pod.Namespace, pod.Name)
-		if status != nil {
-			pod.Status = *status
-		}
+	tasksPtr, err := p.listTasks()
+	if err != nil {
+		panic(err)
 	}
+	if tasksPtr == nil {
+		return []*v1.Pod{}, nil
+	}
+
+	tasks := *tasksPtr
+
+	pods := make([]*v1.Pod, len(tasks), len(tasks))
+	for i, t := range tasks {
+		pod, err := getPodFromTask(&t)
+		if err != nil {
+			panic(err)
+		}
+		pods[i] = pod
+	}
+
+	// for _, pod := range pods {
+	// 	// status, _ := p.GetPodStatus(pod.Namespace, pod.Name)
+	// 	if status != nil {
+	// 		pod.Status = *status
+	// 	}
+	// }
 	return pods, nil
 }
 
 // Capacity returns a resource list containing the capacity limits
-func (p *BatchProvider) Capacity() v1.ResourceList {
+func (p *Provider) Capacity() v1.ResourceList {
 	return v1.ResourceList{
 		"cpu":    resource.MustParse(p.cpu),
 		"memory": resource.MustParse(p.memory),
@@ -284,8 +289,7 @@ func (p *BatchProvider) Capacity() v1.ResourceList {
 
 // NodeConditions returns a list of conditions (Ready, OutOfDisk, etc), for updates to the node status
 // within Kubernetes.
-func (p *BatchProvider) NodeConditions() []v1.NodeCondition {
-	// TODO: Make these dynamic and augment with custom ACI specific conditions of interest
+func (p *Provider) NodeConditions() []v1.NodeCondition {
 	return []v1.NodeCondition{
 		{
 			Type:               "Ready",
@@ -332,7 +336,7 @@ func (p *BatchProvider) NodeConditions() []v1.NodeCondition {
 
 // NodeAddresses returns a list of addresses for the node status
 // within Kubernetes.
-func (p *BatchProvider) NodeAddresses() []v1.NodeAddress {
+func (p *Provider) NodeAddresses() []v1.NodeAddress {
 	// TODO: Make these dynamic and augment with custom ACI specific conditions of interest
 	return []v1.NodeAddress{
 		{
@@ -344,7 +348,7 @@ func (p *BatchProvider) NodeAddresses() []v1.NodeAddress {
 
 // NodeDaemonEndpoints returns NodeDaemonEndpoints for the node status
 // within Kubernetes.
-func (p *BatchProvider) NodeDaemonEndpoints() *v1.NodeDaemonEndpoints {
+func (p *Provider) NodeDaemonEndpoints() *v1.NodeDaemonEndpoints {
 	return &v1.NodeDaemonEndpoints{
 		KubeletEndpoint: v1.DaemonEndpoint{
 			Port: p.daemonEndpointPort,
@@ -353,6 +357,6 @@ func (p *BatchProvider) NodeDaemonEndpoints() *v1.NodeDaemonEndpoints {
 }
 
 // OperatingSystem returns the operating system for this provider.
-func (p *BatchProvider) OperatingSystem() string {
+func (p *Provider) OperatingSystem() string {
 	return p.operatingSystem
 }

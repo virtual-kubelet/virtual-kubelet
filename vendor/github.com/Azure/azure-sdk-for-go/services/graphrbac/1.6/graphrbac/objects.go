@@ -152,7 +152,7 @@ func (client ObjectsClient) GetObjectsByObjectIdsPreparer(ctx context.Context, p
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPost(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/{tenantID}/getObjectsByObjectIds", pathParameters),

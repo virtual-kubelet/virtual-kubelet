@@ -96,7 +96,7 @@ func (client BaseClient) CheckNameAvailabilityPreparer(ctx context.Context, chec
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPost(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPath("/providers/Microsoft.Cdn/checkNameAvailability"),
@@ -170,7 +170,7 @@ func (client BaseClient) ValidateProbePreparer(ctx context.Context, validateProb
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPost(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/subscriptions/{subscriptionId}/providers/Microsoft.Cdn/validateProbe", pathParameters),

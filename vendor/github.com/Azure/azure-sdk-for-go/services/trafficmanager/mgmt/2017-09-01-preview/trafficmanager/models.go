@@ -41,6 +41,11 @@ const (
 	Stopped EndpointMonitorStatus = "Stopped"
 )
 
+// PossibleEndpointMonitorStatusValues returns an array of possible values for the EndpointMonitorStatus const type.
+func PossibleEndpointMonitorStatusValues() []EndpointMonitorStatus {
+	return []EndpointMonitorStatus{CheckingEndpoint, Degraded, Disabled, Inactive, Online, Stopped}
+}
+
 // EndpointStatus enumerates the values for endpoint status.
 type EndpointStatus string
 
@@ -50,6 +55,11 @@ const (
 	// EndpointStatusEnabled ...
 	EndpointStatusEnabled EndpointStatus = "Enabled"
 )
+
+// PossibleEndpointStatusValues returns an array of possible values for the EndpointStatus const type.
+func PossibleEndpointStatusValues() []EndpointStatus {
+	return []EndpointStatus{EndpointStatusDisabled, EndpointStatusEnabled}
+}
 
 // MonitorProtocol enumerates the values for monitor protocol.
 type MonitorProtocol string
@@ -62,6 +72,11 @@ const (
 	// TCP ...
 	TCP MonitorProtocol = "TCP"
 )
+
+// PossibleMonitorProtocolValues returns an array of possible values for the MonitorProtocol const type.
+func PossibleMonitorProtocolValues() []MonitorProtocol {
+	return []MonitorProtocol{HTTP, HTTPS, TCP}
+}
 
 // ProfileMonitorStatus enumerates the values for profile monitor status.
 type ProfileMonitorStatus string
@@ -79,6 +94,11 @@ const (
 	ProfileMonitorStatusOnline ProfileMonitorStatus = "Online"
 )
 
+// PossibleProfileMonitorStatusValues returns an array of possible values for the ProfileMonitorStatus const type.
+func PossibleProfileMonitorStatusValues() []ProfileMonitorStatus {
+	return []ProfileMonitorStatus{ProfileMonitorStatusCheckingEndpoints, ProfileMonitorStatusDegraded, ProfileMonitorStatusDisabled, ProfileMonitorStatusInactive, ProfileMonitorStatusOnline}
+}
+
 // ProfileStatus enumerates the values for profile status.
 type ProfileStatus string
 
@@ -88,6 +108,11 @@ const (
 	// ProfileStatusEnabled ...
 	ProfileStatusEnabled ProfileStatus = "Enabled"
 )
+
+// PossibleProfileStatusValues returns an array of possible values for the ProfileStatus const type.
+func PossibleProfileStatusValues() []ProfileStatus {
+	return []ProfileStatus{ProfileStatusDisabled, ProfileStatusEnabled}
+}
 
 // TrafficRoutingMethod enumerates the values for traffic routing method.
 type TrafficRoutingMethod string
@@ -102,6 +127,11 @@ const (
 	// Weighted ...
 	Weighted TrafficRoutingMethod = "Weighted"
 )
+
+// PossibleTrafficRoutingMethodValues returns an array of possible values for the TrafficRoutingMethod const type.
+func PossibleTrafficRoutingMethodValues() []TrafficRoutingMethod {
+	return []TrafficRoutingMethod{Geographic, Performance, Priority, Weighted}
+}
 
 // CheckTrafficManagerRelativeDNSNameAvailabilityParameters parameters supplied to check Traffic Manager name
 // operation.
@@ -158,6 +188,24 @@ type Endpoint struct {
 	Name *string `json:"name,omitempty"`
 	// Type - The type of the resource. Ex- Microsoft.Network/trafficmanagerProfiles.
 	Type *string `json:"type,omitempty"`
+}
+
+// MarshalJSON is the custom marshaler for Endpoint.
+func (e Endpoint) MarshalJSON() ([]byte, error) {
+	objectMap := make(map[string]interface{})
+	if e.EndpointProperties != nil {
+		objectMap["properties"] = e.EndpointProperties
+	}
+	if e.ID != nil {
+		objectMap["id"] = e.ID
+	}
+	if e.Name != nil {
+		objectMap["name"] = e.Name
+	}
+	if e.Type != nil {
+		objectMap["type"] = e.Type
+	}
+	return json.Marshal(objectMap)
 }
 
 // UnmarshalJSON is the custom unmarshaler for Endpoint struct.
@@ -246,6 +294,24 @@ type GeographicHierarchy struct {
 	Type *string `json:"type,omitempty"`
 }
 
+// MarshalJSON is the custom marshaler for GeographicHierarchy.
+func (gh GeographicHierarchy) MarshalJSON() ([]byte, error) {
+	objectMap := make(map[string]interface{})
+	if gh.GeographicHierarchyProperties != nil {
+		objectMap["properties"] = gh.GeographicHierarchyProperties
+	}
+	if gh.ID != nil {
+		objectMap["id"] = gh.ID
+	}
+	if gh.Name != nil {
+		objectMap["name"] = gh.Name
+	}
+	if gh.Type != nil {
+		objectMap["type"] = gh.Type
+	}
+	return json.Marshal(objectMap)
+}
+
 // UnmarshalJSON is the custom unmarshaler for GeographicHierarchy struct.
 func (gh *GeographicHierarchy) UnmarshalJSON(body []byte) error {
 	var m map[string]*json.RawMessage
@@ -323,6 +389,24 @@ type HeatMapModel struct {
 	Name *string `json:"name,omitempty"`
 	// Type - The type of the resource. Ex- Microsoft.Network/trafficmanagerProfiles.
 	Type *string `json:"type,omitempty"`
+}
+
+// MarshalJSON is the custom marshaler for HeatMapModel.
+func (hmm HeatMapModel) MarshalJSON() ([]byte, error) {
+	objectMap := make(map[string]interface{})
+	if hmm.HeatMapProperties != nil {
+		objectMap["properties"] = hmm.HeatMapProperties
+	}
+	if hmm.ID != nil {
+		objectMap["id"] = hmm.ID
+	}
+	if hmm.Name != nil {
+		objectMap["name"] = hmm.Name
+	}
+	if hmm.Type != nil {
+		objectMap["type"] = hmm.Type
+	}
+	return json.Marshal(objectMap)
 }
 
 // UnmarshalJSON is the custom unmarshaler for HeatMapModel struct.

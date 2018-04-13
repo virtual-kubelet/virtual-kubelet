@@ -37,6 +37,11 @@ const (
 	NotFound Code = "NotFound"
 )
 
+// PossibleCodeValues returns an array of possible values for the Code const type.
+func PossibleCodeValues() []Code {
+	return []Code{BadRequest, Conflict, NotFound}
+}
+
 // State enumerates the values for state.
 type State string
 
@@ -46,6 +51,11 @@ const (
 	// Deleted ...
 	Deleted State = "Deleted"
 )
+
+// PossibleStateValues returns an array of possible values for the State const type.
+func PossibleStateValues() []State {
+	return []State{Active, Deleted}
+}
 
 // Error this is the management partner operations error
 type Error struct {
@@ -189,6 +199,8 @@ type OperationResponse struct {
 type PartnerProperties struct {
 	// PartnerID - This is the partner id
 	PartnerID *string `json:"partnerId,omitempty"`
+	// PartnerName - This is the partner name
+	PartnerName *string `json:"partnerName,omitempty"`
 	// TenantID - This is the tenant id.
 	TenantID *string `json:"tenantId,omitempty"`
 	// ObjectID - This is the object id.
@@ -216,6 +228,27 @@ type PartnerResponse struct {
 	*PartnerProperties `json:"properties,omitempty"`
 	// Type - Type of resource. "Microsoft.ManagementPartner/partners"
 	Type *string `json:"type,omitempty"`
+}
+
+// MarshalJSON is the custom marshaler for PartnerResponse.
+func (pr PartnerResponse) MarshalJSON() ([]byte, error) {
+	objectMap := make(map[string]interface{})
+	if pr.Etag != nil {
+		objectMap["etag"] = pr.Etag
+	}
+	if pr.ID != nil {
+		objectMap["id"] = pr.ID
+	}
+	if pr.Name != nil {
+		objectMap["name"] = pr.Name
+	}
+	if pr.PartnerProperties != nil {
+		objectMap["properties"] = pr.PartnerProperties
+	}
+	if pr.Type != nil {
+		objectMap["type"] = pr.Type
+	}
+	return json.Marshal(objectMap)
 }
 
 // UnmarshalJSON is the custom unmarshaler for PartnerResponse struct.

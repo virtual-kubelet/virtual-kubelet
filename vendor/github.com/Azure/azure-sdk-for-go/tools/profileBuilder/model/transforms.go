@@ -23,7 +23,6 @@ package model
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
 	"go/ast"
 	"go/parser"
@@ -103,12 +102,6 @@ func BuildProfile(packageList collection.Enumerable, name, outputLocation string
 		}
 	}
 	outputLog.Print(generated, " packages generated.")
-
-	if err := exec.Command("gofmt", "-w", outputLocation).Run(); err == nil {
-		outputLog.Print("Success formatting profile.")
-	} else {
-		errLog.Print("Trouble formatting profile: ", err)
-	}
 }
 
 // GetAliasPath takes an existing API Version path and a package name, and converts the path
@@ -119,7 +112,7 @@ func GetAliasPath(subject, profile string) (transformed string, err error) {
 
 	matches := packageName.FindAllStringSubmatch(subject, -1)
 	if matches == nil {
-		err = errors.New("path does not resemble a known package path")
+		err = fmt.Errorf("path '%s' does not resemble a known package path", subject)
 		return
 	}
 
@@ -325,5 +318,12 @@ func writeAliasPackage(x interface{}, outputLocation string, outputLog, errLog *
 	printer.Fprint(&b, files, file)
 	res, _ := imports.Process(outputPath, b.Bytes(), nil)
 	fmt.Fprintf(outputFile, "%s", res)
+	outputFile.Close()
+
+	if err := exec.Command("gofmt", "-w", outputPath).Run(); err == nil {
+		outputLog.Print("Success formatting profile.")
+	} else {
+		errLog.Print("Trouble formatting profile: ", err)
+	}
 	return true
 }

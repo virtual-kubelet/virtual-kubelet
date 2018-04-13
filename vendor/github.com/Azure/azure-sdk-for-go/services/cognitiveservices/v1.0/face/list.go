@@ -96,7 +96,7 @@ func (client ListClient) AddFaceFromStreamPreparer(ctx context.Context, faceList
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsOctetStream(),
+		autorest.AsContentType("application/octet-stream"),
 		autorest.AsPost(),
 		autorest.WithCustomBaseURL("https://{AzureRegion}.api.cognitive.microsoft.com/face/v1.0", urlParameters),
 		autorest.WithPathParameters("/facelists/{faceListId}/persistedFaces", pathParameters),
@@ -186,7 +186,7 @@ func (client ListClient) AddFaceFromURLPreparer(ctx context.Context, faceListID 
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPost(),
 		autorest.WithCustomBaseURL("https://{AzureRegion}.api.cognitive.microsoft.com/face/v1.0", urlParameters),
 		autorest.WithPathParameters("/facelists/{faceListId}/persistedFaces", pathParameters),
@@ -263,7 +263,7 @@ func (client ListClient) CreatePreparer(ctx context.Context, faceListID string, 
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPut(),
 		autorest.WithCustomBaseURL("https://{AzureRegion}.api.cognitive.microsoft.com/face/v1.0", urlParameters),
 		autorest.WithPathParameters("/facelists/{faceListId}", pathParameters),
@@ -598,7 +598,7 @@ func (client ListClient) UpdatePreparer(ctx context.Context, faceListID string, 
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPatch(),
 		autorest.WithCustomBaseURL("https://{AzureRegion}.api.cognitive.microsoft.com/face/v1.0", urlParameters),
 		autorest.WithPathParameters("/facelists/{faceListId}", pathParameters),

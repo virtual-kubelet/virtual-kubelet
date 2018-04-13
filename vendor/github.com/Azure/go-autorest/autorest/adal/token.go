@@ -54,6 +54,9 @@ const (
 
 	// metadataHeader is the header required by MSI extension
 	metadataHeader = "Metadata"
+
+	// msiEndpoint is the well known endpoint for getting MSI authentications tokens
+	msiEndpoint = "http://169.254.169.254/metadata/identity/oauth2/token"
 )
 
 // OAuthTokenProvider is an interface which should be implemented by an access token retriever
@@ -441,24 +444,7 @@ func NewServicePrincipalTokenFromAuthorizationCode(oauthConfig OAuthConfig, clie
 
 // GetMSIVMEndpoint gets the MSI endpoint on Virtual Machines.
 func GetMSIVMEndpoint() (string, error) {
-	return getMSIVMEndpoint(msiPath)
-}
-
-func getMSIVMEndpoint(path string) (string, error) {
-	// Read MSI settings
-	bytes, err := ioutil.ReadFile(path)
-	if err != nil {
-		return "", err
-	}
-	msiSettings := struct {
-		URL string `json:"url"`
-	}{}
-	err = json.Unmarshal(bytes, &msiSettings)
-	if err != nil {
-		return "", err
-	}
-
-	return msiSettings.URL, nil
+	return msiEndpoint, nil
 }
 
 // NewServicePrincipalTokenFromMSI creates a ServicePrincipalToken via the MSI VM Extension.
@@ -491,13 +477,18 @@ func newServicePrincipalTokenFromMSI(msiEndpoint, resource string, userAssignedI
 		return nil, err
 	}
 
-	oauthConfig, err := NewOAuthConfig(msiEndpointURL.String(), "")
-	if err != nil {
-		return nil, err
+	v := url.Values{}
+	v.Set("resource", resource)
+	v.Set("api-version", "2018-02-01")
+	if userAssignedID != nil {
+		v.Set("client_id", *userAssignedID)
 	}
+	msiEndpointURL.RawQuery = v.Encode()
 
 	spt := &ServicePrincipalToken{
-		oauthConfig:      *oauthConfig,
+		oauthConfig: OAuthConfig{
+			TokenEndpoint: *msiEndpointURL,
+		},
 		secret:           &ServicePrincipalMSISecret{},
 		resource:         resource,
 		autoRefresh:      true,
@@ -588,34 +579,48 @@ func (spt *ServicePrincipalToken) getGrantType() string {
 	}
 }
 
-func (spt *ServicePrincipalToken) refreshInternal(resource string) error {
-	v := url.Values{}
-	v.Set("client_id", spt.clientID)
-	v.Set("resource", resource)
-
-	if spt.token.RefreshToken != "" {
-		v.Set("grant_type", OAuthGrantTypeRefreshToken)
-		v.Set("refresh_token", spt.token.RefreshToken)
-	} else {
-		v.Set("grant_type", spt.getGrantType())
-		err := spt.secret.SetAuthenticationValues(spt, &v)
-		if err != nil {
-			return err
-		}
+func isIMDS(u url.URL) bool {
+	imds, err := url.Parse(msiEndpoint)
+	if err != nil {
+		return false
 	}
+	return u.Host == imds.Host && u.Path == imds.Path
+}
 
-	s := v.Encode()
-	body := ioutil.NopCloser(strings.NewReader(s))
-	req, err := http.NewRequest(http.MethodPost, spt.oauthConfig.TokenEndpoint.String(), body)
+func (spt *ServicePrincipalToken) refreshInternal(resource string) error {
+	req, err := http.NewRequest(http.MethodPost, spt.oauthConfig.TokenEndpoint.String(), nil)
 	if err != nil {
 		return fmt.Errorf("adal: Failed to build the refresh request. Error = '%v'", err)
 	}
 
-	req.ContentLength = int64(len(s))
-	req.Header.Set(contentType, mimeTypeFormPost)
+	if !isIMDS(spt.oauthConfig.TokenEndpoint) {
+		v := url.Values{}
+		v.Set("client_id", spt.clientID)
+		v.Set("resource", resource)
+
+		if spt.token.RefreshToken != "" {
+			v.Set("grant_type", OAuthGrantTypeRefreshToken)
+			v.Set("refresh_token", spt.token.RefreshToken)
+		} else {
+			v.Set("grant_type", spt.getGrantType())
+			err := spt.secret.SetAuthenticationValues(spt, &v)
+			if err != nil {
+				return err
+			}
+		}
+
+		s := v.Encode()
+		body := ioutil.NopCloser(strings.NewReader(s))
+		req.ContentLength = int64(len(s))
+		req.Header.Set(contentType, mimeTypeFormPost)
+		req.Body = body
+	}
+
 	if _, ok := spt.secret.(*ServicePrincipalMSISecret); ok {
+		req.Method = http.MethodGet
 		req.Header.Set(metadataHeader, "true")
 	}
+
 	resp, err := spt.sender.Do(req)
 	if err != nil {
 		return fmt.Errorf("adal: Failed to execute the refresh request. Error = '%v'", err)

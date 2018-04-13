@@ -79,7 +79,7 @@ func (client ServicesClient) CreatePreparer(ctx context.Context, applicationName
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPost(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/Applications/{applicationName}/$/GetServices/$/Create", pathParameters),
@@ -427,7 +427,7 @@ func (client ServicesClient) UpdatePreparer(ctx context.Context, serviceName str
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPost(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/Services/{serviceName}/$/Update", pathParameters),

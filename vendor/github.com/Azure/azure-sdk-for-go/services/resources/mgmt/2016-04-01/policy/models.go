@@ -36,6 +36,11 @@ const (
 	NotSpecified Type = "NotSpecified"
 )
 
+// PossibleTypeValues returns an array of possible values for the Type const type.
+func PossibleTypeValues() []Type {
+	return []Type{BuiltIn, Custom, NotSpecified}
+}
+
 // Assignment the policy assignment.
 type Assignment struct {
 	autorest.Response `json:"-"`
@@ -47,6 +52,24 @@ type Assignment struct {
 	Type *string `json:"type,omitempty"`
 	// Name - The name of the policy assignment.
 	Name *string `json:"name,omitempty"`
+}
+
+// MarshalJSON is the custom marshaler for Assignment.
+func (a Assignment) MarshalJSON() ([]byte, error) {
+	objectMap := make(map[string]interface{})
+	if a.AssignmentProperties != nil {
+		objectMap["properties"] = a.AssignmentProperties
+	}
+	if a.ID != nil {
+		objectMap["id"] = a.ID
+	}
+	if a.Type != nil {
+		objectMap["type"] = a.Type
+	}
+	if a.Name != nil {
+		objectMap["name"] = a.Name
+	}
+	return json.Marshal(objectMap)
 }
 
 // UnmarshalJSON is the custom unmarshaler for Assignment struct.
@@ -221,6 +244,21 @@ type Definition struct {
 	ID *string `json:"id,omitempty"`
 	// Name - The name of the policy definition. If you do not specify a value for name, the value is inferred from the name value in the request URI.
 	Name *string `json:"name,omitempty"`
+}
+
+// MarshalJSON is the custom marshaler for Definition.
+func (d Definition) MarshalJSON() ([]byte, error) {
+	objectMap := make(map[string]interface{})
+	if d.DefinitionProperties != nil {
+		objectMap["properties"] = d.DefinitionProperties
+	}
+	if d.ID != nil {
+		objectMap["id"] = d.ID
+	}
+	if d.Name != nil {
+		objectMap["name"] = d.Name
+	}
+	return json.Marshal(objectMap)
 }
 
 // UnmarshalJSON is the custom unmarshaler for Definition struct.

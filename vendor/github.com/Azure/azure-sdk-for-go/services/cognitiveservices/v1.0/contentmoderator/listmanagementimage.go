@@ -167,7 +167,7 @@ func (client ListManagementImageClient) AddImageFileInputPreparer(ctx context.Co
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsOctetStream(),
+		autorest.AsContentType("image/gif"),
 		autorest.AsPost(),
 		autorest.WithCustomBaseURL("https://{baseUrl}", urlParameters),
 		autorest.WithPathParameters("/contentmoderator/lists/v1.0/imagelists/{listId}/images", pathParameters),
@@ -241,7 +241,7 @@ func (client ListManagementImageClient) AddImageURLInputPreparer(ctx context.Con
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPost(),
 		autorest.WithCustomBaseURL("https://{baseUrl}", urlParameters),
 		autorest.WithPathParameters("/contentmoderator/lists/v1.0/imagelists/{listId}/images", pathParameters),

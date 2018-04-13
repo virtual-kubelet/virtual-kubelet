@@ -41,6 +41,10 @@ const (
 	Load ActionType = original.Load
 )
 
+func PossibleActionTypeValues() []ActionType {
+	return original.PossibleActionTypeValues()
+}
+
 type ErrorCode = original.ErrorCode
 
 const (
@@ -51,6 +55,10 @@ const (
 	RateLimitExceeded         ErrorCode = original.RateLimitExceeded
 	ServerError               ErrorCode = original.ServerError
 )
+
+func PossibleErrorCodeValues() []ErrorCode {
+	return original.PossibleErrorCodeValues()
+}
 
 type ErrorSubCode = original.ErrorSubCode
 
@@ -68,12 +76,20 @@ const (
 	UnexpectedError         ErrorSubCode = original.UnexpectedError
 )
 
+func PossibleErrorSubCodeValues() []ErrorSubCode {
+	return original.PossibleErrorSubCodeValues()
+}
+
 type ErrorType = original.ErrorType
 
 const (
 	RepeatedToken ErrorType = original.RepeatedToken
 	UnknownToken  ErrorType = original.UnknownToken
 )
+
+func PossibleErrorTypeValues() []ErrorType {
+	return original.PossibleErrorTypeValues()
+}
 
 type Type = original.Type
 
@@ -85,6 +101,10 @@ const (
 	TypeResponseBase  Type = original.TypeResponseBase
 	TypeSpellCheck    Type = original.TypeSpellCheck
 )
+
+func PossibleTypeValues() []Type {
+	return original.PossibleTypeValues()
+}
 
 type BasicAnswer = original.BasicAnswer
 type Answer = original.Answer

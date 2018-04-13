@@ -89,7 +89,7 @@ func (client Client) CreateCredentialPreparer(ctx context.Context, accountName s
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPut(),
 		autorest.WithCustomBaseURL("https://{accountName}.{adlaCatalogDnsSuffix}", urlParameters),
 		autorest.WithPathParameters("/catalog/usql/databases/{databaseName}/credentials/{credentialName}", pathParameters),
@@ -169,7 +169,7 @@ func (client Client) CreateSecretPreparer(ctx context.Context, accountName strin
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPut(),
 		autorest.WithCustomBaseURL("https://{accountName}.{adlaCatalogDnsSuffix}", urlParameters),
 		autorest.WithPathParameters("/catalog/usql/databases/{databaseName}/secrets/{secretName}", pathParameters),
@@ -319,7 +319,7 @@ func (client Client) DeleteCredentialPreparer(ctx context.Context, accountName s
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPost(),
 		autorest.WithCustomBaseURL("https://{accountName}.{adlaCatalogDnsSuffix}", urlParameters),
 		autorest.WithPathParameters("/catalog/usql/databases/{databaseName}/credentials/{credentialName}", pathParameters),
@@ -1482,7 +1482,7 @@ func (client Client) GrantACLPreparer(ctx context.Context, accountName string, p
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPost(),
 		autorest.WithCustomBaseURL("https://{accountName}.{adlaCatalogDnsSuffix}", urlParameters),
 		autorest.WithPath("/catalog/usql/acl"),
@@ -1561,7 +1561,7 @@ func (client Client) GrantACLToDatabasePreparer(ctx context.Context, accountName
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPost(),
 		autorest.WithCustomBaseURL("https://{accountName}.{adlaCatalogDnsSuffix}", urlParameters),
 		autorest.WithPathParameters("/catalog/usql/databases/{databaseName}/acl", pathParameters),
@@ -4451,7 +4451,7 @@ func (client Client) RevokeACLPreparer(ctx context.Context, accountName string, 
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPost(),
 		autorest.WithCustomBaseURL("https://{accountName}.{adlaCatalogDnsSuffix}", urlParameters),
 		autorest.WithPath("/catalog/usql/acl"),
@@ -4531,7 +4531,7 @@ func (client Client) RevokeACLFromDatabasePreparer(ctx context.Context, accountN
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPost(),
 		autorest.WithCustomBaseURL("https://{accountName}.{adlaCatalogDnsSuffix}", urlParameters),
 		autorest.WithPathParameters("/catalog/usql/databases/{databaseName}/acl", pathParameters),
@@ -4604,7 +4604,7 @@ func (client Client) UpdateCredentialPreparer(ctx context.Context, accountName s
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPatch(),
 		autorest.WithCustomBaseURL("https://{accountName}.{adlaCatalogDnsSuffix}", urlParameters),
 		autorest.WithPathParameters("/catalog/usql/databases/{databaseName}/credentials/{credentialName}", pathParameters),
@@ -4678,7 +4678,7 @@ func (client Client) UpdateSecretPreparer(ctx context.Context, accountName strin
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPatch(),
 		autorest.WithCustomBaseURL("https://{accountName}.{adlaCatalogDnsSuffix}", urlParameters),
 		autorest.WithPathParameters("/catalog/usql/databases/{databaseName}/secrets/{secretName}", pathParameters),

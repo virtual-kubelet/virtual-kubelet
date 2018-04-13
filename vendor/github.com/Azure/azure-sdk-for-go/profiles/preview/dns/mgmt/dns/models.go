@@ -19,7 +19,7 @@
 
 package dns
 
-import original "github.com/Azure/azure-sdk-for-go/services/dns/mgmt/2017-09-01/dns"
+import original "github.com/Azure/azure-sdk-for-go/services/dns/mgmt/2018-03-01-preview/dns"
 
 const (
 	DefaultBaseURI = original.DefaultBaseURI
@@ -49,6 +49,21 @@ const (
 	TXT   RecordType = original.TXT
 )
 
+func PossibleRecordTypeValues() [10]RecordType {
+	return original.PossibleRecordTypeValues()
+}
+
+type ZoneType = original.ZoneType
+
+const (
+	Private ZoneType = original.Private
+	Public  ZoneType = original.Public
+)
+
+func PossibleZoneTypeValues() [2]ZoneType {
+	return original.PossibleZoneTypeValues()
+}
+
 type AaaaRecord = original.AaaaRecord
 type ARecord = original.ARecord
 type CaaRecord = original.CaaRecord
@@ -75,6 +90,7 @@ type ZoneListResultIterator = original.ZoneListResultIterator
 type ZoneListResultPage = original.ZoneListResultPage
 type ZoneProperties = original.ZoneProperties
 type ZonesDeleteFuture = original.ZonesDeleteFuture
+type ZoneUpdate = original.ZoneUpdate
 type RecordSetsClient = original.RecordSetsClient
 
 func NewRecordSetsClient(subscriptionID string) RecordSetsClient {

@@ -1,0 +1,10 @@
+language: generic
+sudo: required
+services:
+- docker
+
+notifications:
+  email: false
+  
+script:
+- chmod +x ci.sh && sudo ./ci.sh

@@ -19,7 +19,7 @@
 
 package batch
 
-import original "github.com/Azure/azure-sdk-for-go/services/batch/2017-09-01.6.0/batch"
+import original "github.com/Azure/azure-sdk-for-go/services/batch/2018-03-01.6.1/batch"
 
 type AccountClient = original.AccountClient
 
@@ -103,6 +103,10 @@ const (
 	Job AccessScope = original.Job
 )
 
+func PossibleAccessScopeValues() []AccessScope {
+	return original.PossibleAccessScopeValues()
+}
+
 type AllocationState = original.AllocationState
 
 const (
@@ -111,12 +115,20 @@ const (
 	Stopping AllocationState = original.Stopping
 )
 
+func PossibleAllocationStateValues() []AllocationState {
+	return original.PossibleAllocationStateValues()
+}
+
 type AutoUserScope = original.AutoUserScope
 
 const (
 	Pool AutoUserScope = original.Pool
 	Task AutoUserScope = original.Task
 )
+
+func PossibleAutoUserScopeValues() []AutoUserScope {
+	return original.PossibleAutoUserScopeValues()
+}
 
 type CachingType = original.CachingType
 
@@ -126,12 +138,20 @@ const (
 	ReadWrite CachingType = original.ReadWrite
 )
 
+func PossibleCachingTypeValues() []CachingType {
+	return original.PossibleCachingTypeValues()
+}
+
 type CertificateFormat = original.CertificateFormat
 
 const (
 	Cer CertificateFormat = original.Cer
 	Pfx CertificateFormat = original.Pfx
 )
+
+func PossibleCertificateFormatValues() []CertificateFormat {
+	return original.PossibleCertificateFormatValues()
+}
 
 type CertificateState = original.CertificateState
 
@@ -141,12 +161,20 @@ const (
 	Deleting     CertificateState = original.Deleting
 )
 
+func PossibleCertificateStateValues() []CertificateState {
+	return original.PossibleCertificateStateValues()
+}
+
 type CertificateStoreLocation = original.CertificateStoreLocation
 
 const (
 	CurrentUser  CertificateStoreLocation = original.CurrentUser
 	LocalMachine CertificateStoreLocation = original.LocalMachine
 )
+
+func PossibleCertificateStoreLocationValues() []CertificateStoreLocation {
+	return original.PossibleCertificateStoreLocationValues()
+}
 
 type CertificateVisibility = original.CertificateVisibility
 
@@ -155,6 +183,10 @@ const (
 	CertificateVisibilityStartTask  CertificateVisibility = original.CertificateVisibilityStartTask
 	CertificateVisibilityTask       CertificateVisibility = original.CertificateVisibilityTask
 )
+
+func PossibleCertificateVisibilityValues() []CertificateVisibility {
+	return original.PossibleCertificateVisibilityValues()
+}
 
 type ComputeNodeDeallocationOption = original.ComputeNodeDeallocationOption
 
@@ -165,12 +197,20 @@ const (
 	Terminate      ComputeNodeDeallocationOption = original.Terminate
 )
 
+func PossibleComputeNodeDeallocationOptionValues() []ComputeNodeDeallocationOption {
+	return original.PossibleComputeNodeDeallocationOptionValues()
+}
+
 type ComputeNodeFillType = original.ComputeNodeFillType
 
 const (
 	Pack   ComputeNodeFillType = original.Pack
 	Spread ComputeNodeFillType = original.Spread
 )
+
+func PossibleComputeNodeFillTypeValues() []ComputeNodeFillType {
+	return original.PossibleComputeNodeFillTypeValues()
+}
 
 type ComputeNodeRebootOption = original.ComputeNodeRebootOption
 
@@ -181,6 +221,10 @@ const (
 	ComputeNodeRebootOptionTerminate      ComputeNodeRebootOption = original.ComputeNodeRebootOptionTerminate
 )
 
+func PossibleComputeNodeRebootOptionValues() []ComputeNodeRebootOption {
+	return original.PossibleComputeNodeRebootOptionValues()
+}
+
 type ComputeNodeReimageOption = original.ComputeNodeReimageOption
 
 const (
@@ -189,6 +233,10 @@ const (
 	ComputeNodeReimageOptionTaskCompletion ComputeNodeReimageOption = original.ComputeNodeReimageOptionTaskCompletion
 	ComputeNodeReimageOptionTerminate      ComputeNodeReimageOption = original.ComputeNodeReimageOptionTerminate
 )
+
+func PossibleComputeNodeReimageOptionValues() []ComputeNodeReimageOption {
+	return original.PossibleComputeNodeReimageOptionValues()
+}
 
 type ComputeNodeState = original.ComputeNodeState
 
@@ -208,12 +256,20 @@ const (
 	WaitingForStartTask ComputeNodeState = original.WaitingForStartTask
 )
 
+func PossibleComputeNodeStateValues() []ComputeNodeState {
+	return original.PossibleComputeNodeStateValues()
+}
+
 type DependencyAction = original.DependencyAction
 
 const (
 	Block   DependencyAction = original.Block
 	Satisfy DependencyAction = original.Satisfy
 )
+
+func PossibleDependencyActionValues() []DependencyAction {
+	return original.PossibleDependencyActionValues()
+}
 
 type DisableComputeNodeSchedulingOption = original.DisableComputeNodeSchedulingOption
 
@@ -223,6 +279,10 @@ const (
 	DisableComputeNodeSchedulingOptionTerminate      DisableComputeNodeSchedulingOption = original.DisableComputeNodeSchedulingOptionTerminate
 )
 
+func PossibleDisableComputeNodeSchedulingOptionValues() []DisableComputeNodeSchedulingOption {
+	return original.PossibleDisableComputeNodeSchedulingOptionValues()
+}
+
 type DisableJobOption = original.DisableJobOption
 
 const (
@@ -231,12 +291,20 @@ const (
 	DisableJobOptionWait      DisableJobOption = original.DisableJobOptionWait
 )
 
+func PossibleDisableJobOptionValues() []DisableJobOption {
+	return original.PossibleDisableJobOptionValues()
+}
+
 type ElevationLevel = original.ElevationLevel
 
 const (
 	Admin    ElevationLevel = original.Admin
 	NonAdmin ElevationLevel = original.NonAdmin
 )
+
+func PossibleElevationLevelValues() []ElevationLevel {
+	return original.PossibleElevationLevelValues()
+}
 
 type ErrorCategory = original.ErrorCategory
 
@@ -245,12 +313,20 @@ const (
 	UserError   ErrorCategory = original.UserError
 )
 
+func PossibleErrorCategoryValues() []ErrorCategory {
+	return original.PossibleErrorCategoryValues()
+}
+
 type InboundEndpointProtocol = original.InboundEndpointProtocol
 
 const (
 	TCP InboundEndpointProtocol = original.TCP
 	UDP InboundEndpointProtocol = original.UDP
 )
+
+func PossibleInboundEndpointProtocolValues() []InboundEndpointProtocol {
+	return original.PossibleInboundEndpointProtocolValues()
+}
 
 type JobAction = original.JobAction
 
@@ -260,6 +336,10 @@ const (
 	JobActionTerminate JobAction = original.JobActionTerminate
 )
 
+func PossibleJobActionValues() []JobAction {
+	return original.PossibleJobActionValues()
+}
+
 type JobPreparationTaskState = original.JobPreparationTaskState
 
 const (
@@ -267,12 +347,20 @@ const (
 	JobPreparationTaskStateRunning   JobPreparationTaskState = original.JobPreparationTaskStateRunning
 )
 
+func PossibleJobPreparationTaskStateValues() []JobPreparationTaskState {
+	return original.PossibleJobPreparationTaskStateValues()
+}
+
 type JobReleaseTaskState = original.JobReleaseTaskState
 
 const (
 	JobReleaseTaskStateCompleted JobReleaseTaskState = original.JobReleaseTaskStateCompleted
 	JobReleaseTaskStateRunning   JobReleaseTaskState = original.JobReleaseTaskStateRunning
 )
+
+func PossibleJobReleaseTaskStateValues() []JobReleaseTaskState {
+	return original.PossibleJobReleaseTaskStateValues()
+}
 
 type JobScheduleState = original.JobScheduleState
 
@@ -283,6 +371,10 @@ const (
 	JobScheduleStateDisabled    JobScheduleState = original.JobScheduleStateDisabled
 	JobScheduleStateTerminating JobScheduleState = original.JobScheduleStateTerminating
 )
+
+func PossibleJobScheduleStateValues() []JobScheduleState {
+	return original.PossibleJobScheduleStateValues()
+}
 
 type JobState = original.JobState
 
@@ -296,12 +388,20 @@ const (
 	JobStateTerminating JobState = original.JobStateTerminating
 )
 
+func PossibleJobStateValues() []JobState {
+	return original.PossibleJobStateValues()
+}
+
 type NetworkSecurityGroupRuleAccess = original.NetworkSecurityGroupRuleAccess
 
 const (
 	Allow NetworkSecurityGroupRuleAccess = original.Allow
 	Deny  NetworkSecurityGroupRuleAccess = original.Deny
 )
+
+func PossibleNetworkSecurityGroupRuleAccessValues() []NetworkSecurityGroupRuleAccess {
+	return original.PossibleNetworkSecurityGroupRuleAccessValues()
+}
 
 type OnAllTasksComplete = original.OnAllTasksComplete
 
@@ -310,6 +410,10 @@ const (
 	TerminateJob OnAllTasksComplete = original.TerminateJob
 )
 
+func PossibleOnAllTasksCompleteValues() []OnAllTasksComplete {
+	return original.PossibleOnAllTasksCompleteValues()
+}
+
 type OnTaskFailure = original.OnTaskFailure
 
 const (
@@ -317,12 +421,20 @@ const (
 	OnTaskFailurePerformExitOptionsJobAction OnTaskFailure = original.OnTaskFailurePerformExitOptionsJobAction
 )
 
+func PossibleOnTaskFailureValues() []OnTaskFailure {
+	return original.PossibleOnTaskFailureValues()
+}
+
 type OSType = original.OSType
 
 const (
 	Linux   OSType = original.Linux
 	Windows OSType = original.Windows
 )
+
+func PossibleOSTypeValues() []OSType {
+	return original.PossibleOSTypeValues()
+}
 
 type OutputFileUploadCondition = original.OutputFileUploadCondition
 
@@ -332,12 +444,20 @@ const (
 	OutputFileUploadConditionTaskSuccess    OutputFileUploadCondition = original.OutputFileUploadConditionTaskSuccess
 )
 
+func PossibleOutputFileUploadConditionValues() []OutputFileUploadCondition {
+	return original.PossibleOutputFileUploadConditionValues()
+}
+
 type PoolLifetimeOption = original.PoolLifetimeOption
 
 const (
 	PoolLifetimeOptionJob         PoolLifetimeOption = original.PoolLifetimeOptionJob
 	PoolLifetimeOptionJobSchedule PoolLifetimeOption = original.PoolLifetimeOptionJobSchedule
 )
+
+func PossiblePoolLifetimeOptionValues() []PoolLifetimeOption {
+	return original.PossiblePoolLifetimeOptionValues()
+}
 
 type PoolState = original.PoolState
 
@@ -347,12 +467,20 @@ const (
 	PoolStateUpgrading PoolState = original.PoolStateUpgrading
 )
 
+func PossiblePoolStateValues() []PoolState {
+	return original.PossiblePoolStateValues()
+}
+
 type SchedulingState = original.SchedulingState
 
 const (
 	Disabled SchedulingState = original.Disabled
 	Enabled  SchedulingState = original.Enabled
 )
+
+func PossibleSchedulingStateValues() []SchedulingState {
+	return original.PossibleSchedulingStateValues()
+}
 
 type StartTaskState = original.StartTaskState
 
@@ -361,12 +489,20 @@ const (
 	StartTaskStateRunning   StartTaskState = original.StartTaskStateRunning
 )
 
+func PossibleStartTaskStateValues() []StartTaskState {
+	return original.PossibleStartTaskStateValues()
+}
+
 type StorageAccountType = original.StorageAccountType
 
 const (
 	PremiumLRS  StorageAccountType = original.PremiumLRS
 	StandardLRS StorageAccountType = original.StandardLRS
 )
+
+func PossibleStorageAccountTypeValues() []StorageAccountType {
+	return original.PossibleStorageAccountTypeValues()
+}
 
 type SubtaskState = original.SubtaskState
 
@@ -376,6 +512,10 @@ const (
 	SubtaskStateRunning   SubtaskState = original.SubtaskStateRunning
 )
 
+func PossibleSubtaskStateValues() []SubtaskState {
+	return original.PossibleSubtaskStateValues()
+}
+
 type TaskAddStatus = original.TaskAddStatus
 
 const (
@@ -384,6 +524,10 @@ const (
 	TaskAddStatusSuccess     TaskAddStatus = original.TaskAddStatusSuccess
 )
 
+func PossibleTaskAddStatusValues() []TaskAddStatus {
+	return original.PossibleTaskAddStatusValues()
+}
+
 type TaskCountValidationStatus = original.TaskCountValidationStatus
 
 const (
@@ -391,12 +535,20 @@ const (
 	Validated   TaskCountValidationStatus = original.Validated
 )
 
+func PossibleTaskCountValidationStatusValues() []TaskCountValidationStatus {
+	return original.PossibleTaskCountValidationStatusValues()
+}
+
 type TaskExecutionResult = original.TaskExecutionResult
 
 const (
 	Failure TaskExecutionResult = original.Failure
 	Success TaskExecutionResult = original.Success
 )
+
+func PossibleTaskExecutionResultValues() []TaskExecutionResult {
+	return original.PossibleTaskExecutionResultValues()
+}
 
 type TaskState = original.TaskState
 
@@ -406,6 +558,10 @@ const (
 	TaskStatePreparing TaskState = original.TaskStatePreparing
 	TaskStateRunning   TaskState = original.TaskStateRunning
 )
+
+func PossibleTaskStateValues() []TaskState {
+	return original.PossibleTaskStateValues()
+}
 
 type AccountListNodeAgentSkusResult = original.AccountListNodeAgentSkusResult
 type AccountListNodeAgentSkusResultIterator = original.AccountListNodeAgentSkusResultIterator
@@ -501,6 +657,7 @@ type NameValuePair = original.NameValuePair
 type NetworkConfiguration = original.NetworkConfiguration
 type NetworkSecurityGroupRule = original.NetworkSecurityGroupRule
 type NodeAgentSku = original.NodeAgentSku
+type NodeCounts = original.NodeCounts
 type NodeDisableSchedulingParameter = original.NodeDisableSchedulingParameter
 type NodeFile = original.NodeFile
 type NodeFileListResult = original.NodeFileListResult
@@ -523,6 +680,10 @@ type PoolInformation = original.PoolInformation
 type PoolListUsageMetricsResult = original.PoolListUsageMetricsResult
 type PoolListUsageMetricsResultIterator = original.PoolListUsageMetricsResultIterator
 type PoolListUsageMetricsResultPage = original.PoolListUsageMetricsResultPage
+type PoolNodeCounts = original.PoolNodeCounts
+type PoolNodeCountsListResult = original.PoolNodeCountsListResult
+type PoolNodeCountsListResultIterator = original.PoolNodeCountsListResultIterator
+type PoolNodeCountsListResultPage = original.PoolNodeCountsListResultPage
 type PoolPatchParameter = original.PoolPatchParameter
 type PoolResizeParameter = original.PoolResizeParameter
 type PoolSpecification = original.PoolSpecification
@@ -555,6 +716,8 @@ type TaskInformation = original.TaskInformation
 type TaskSchedulingPolicy = original.TaskSchedulingPolicy
 type TaskStatistics = original.TaskStatistics
 type TaskUpdateParameter = original.TaskUpdateParameter
+type UploadBatchServiceLogsConfiguration = original.UploadBatchServiceLogsConfiguration
+type UploadBatchServiceLogsResult = original.UploadBatchServiceLogsResult
 type UsageStatistics = original.UsageStatistics
 type UserAccount = original.UserAccount
 type UserIdentity = original.UserIdentity

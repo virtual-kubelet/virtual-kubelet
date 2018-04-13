@@ -247,7 +247,7 @@ func (client BaseClient) CreateCertificatePreparer(ctx context.Context, vaultBas
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPost(),
 		autorest.WithCustomBaseURL("{vaultBaseUrl}", urlParameters),
 		autorest.WithPathParameters("/certificates/{certificate-name}/create", pathParameters),
@@ -325,7 +325,7 @@ func (client BaseClient) CreateKeyPreparer(ctx context.Context, vaultBaseURL str
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPost(),
 		autorest.WithCustomBaseURL("{vaultBaseUrl}", urlParameters),
 		autorest.WithPathParameters("/keys/{key-name}/create", pathParameters),
@@ -407,7 +407,7 @@ func (client BaseClient) DecryptPreparer(ctx context.Context, vaultBaseURL strin
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPost(),
 		autorest.WithCustomBaseURL("{vaultBaseUrl}", urlParameters),
 		autorest.WithPathParameters("/keys/{key-name}/{key-version}/decrypt", pathParameters),
@@ -1062,7 +1062,7 @@ func (client BaseClient) EncryptPreparer(ctx context.Context, vaultBaseURL strin
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPost(),
 		autorest.WithCustomBaseURL("{vaultBaseUrl}", urlParameters),
 		autorest.WithPathParameters("/keys/{key-name}/{key-version}/encrypt", pathParameters),
@@ -3304,7 +3304,7 @@ func (client BaseClient) ImportCertificatePreparer(ctx context.Context, vaultBas
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPost(),
 		autorest.WithCustomBaseURL("{vaultBaseUrl}", urlParameters),
 		autorest.WithPathParameters("/certificates/{certificate-name}/import", pathParameters),
@@ -3385,7 +3385,7 @@ func (client BaseClient) ImportKeyPreparer(ctx context.Context, vaultBaseURL str
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPut(),
 		autorest.WithCustomBaseURL("{vaultBaseUrl}", urlParameters),
 		autorest.WithPathParameters("/keys/{key-name}", pathParameters),
@@ -3463,7 +3463,7 @@ func (client BaseClient) MergeCertificatePreparer(ctx context.Context, vaultBase
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPost(),
 		autorest.WithCustomBaseURL("{vaultBaseUrl}", urlParameters),
 		autorest.WithPathParameters("/certificates/{certificate-name}/pending/merge", pathParameters),
@@ -3965,7 +3965,7 @@ func (client BaseClient) RegenerateStorageAccountKeyPreparer(ctx context.Context
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPost(),
 		autorest.WithCustomBaseURL("{vaultBaseUrl}", urlParameters),
 		autorest.WithPathParameters("/storage/{storage-account-name}/regeneratekey", pathParameters),
@@ -4046,7 +4046,7 @@ func (client BaseClient) RestoreKeyPreparer(ctx context.Context, vaultBaseURL st
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPost(),
 		autorest.WithCustomBaseURL("{vaultBaseUrl}", urlParameters),
 		autorest.WithPath("/keys/restore"),
@@ -4120,7 +4120,7 @@ func (client BaseClient) RestoreSecretPreparer(ctx context.Context, vaultBaseURL
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPost(),
 		autorest.WithCustomBaseURL("{vaultBaseUrl}", urlParameters),
 		autorest.WithPath("/secrets/restore"),
@@ -4188,7 +4188,7 @@ func (client BaseClient) SetCertificateContactsPreparer(ctx context.Context, vau
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPut(),
 		autorest.WithCustomBaseURL("{vaultBaseUrl}", urlParameters),
 		autorest.WithPath("/certificates/contacts"),
@@ -4266,7 +4266,7 @@ func (client BaseClient) SetCertificateIssuerPreparer(ctx context.Context, vault
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPut(),
 		autorest.WithCustomBaseURL("{vaultBaseUrl}", urlParameters),
 		autorest.WithPathParameters("/certificates/issuers/{issuer-name}", pathParameters),
@@ -4350,7 +4350,7 @@ func (client BaseClient) SetSasDefinitionPreparer(ctx context.Context, vaultBase
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPut(),
 		autorest.WithCustomBaseURL("{vaultBaseUrl}", urlParameters),
 		autorest.WithPathParameters("/storage/{storage-account-name}/sas/{sas-definition-name}", pathParameters),
@@ -4430,7 +4430,7 @@ func (client BaseClient) SetSecretPreparer(ctx context.Context, vaultBaseURL str
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPut(),
 		autorest.WithCustomBaseURL("{vaultBaseUrl}", urlParameters),
 		autorest.WithPathParameters("/secrets/{secret-name}", pathParameters),
@@ -4511,7 +4511,7 @@ func (client BaseClient) SetStorageAccountPreparer(ctx context.Context, vaultBas
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPut(),
 		autorest.WithCustomBaseURL("{vaultBaseUrl}", urlParameters),
 		autorest.WithPathParameters("/storage/{storage-account-name}", pathParameters),
@@ -4590,7 +4590,7 @@ func (client BaseClient) SignPreparer(ctx context.Context, vaultBaseURL string, 
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPost(),
 		autorest.WithCustomBaseURL("{vaultBaseUrl}", urlParameters),
 		autorest.WithPathParameters("/keys/{key-name}/{key-version}/sign", pathParameters),
@@ -4671,7 +4671,7 @@ func (client BaseClient) UnwrapKeyPreparer(ctx context.Context, vaultBaseURL str
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPost(),
 		autorest.WithCustomBaseURL("{vaultBaseUrl}", urlParameters),
 		autorest.WithPathParameters("/keys/{key-name}/{key-version}/unwrapkey", pathParameters),
@@ -4745,7 +4745,7 @@ func (client BaseClient) UpdateCertificatePreparer(ctx context.Context, vaultBas
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPatch(),
 		autorest.WithCustomBaseURL("{vaultBaseUrl}", urlParameters),
 		autorest.WithPathParameters("/certificates/{certificate-name}/{certificate-version}", pathParameters),
@@ -4817,7 +4817,7 @@ func (client BaseClient) UpdateCertificateIssuerPreparer(ctx context.Context, va
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPatch(),
 		autorest.WithCustomBaseURL("{vaultBaseUrl}", urlParameters),
 		autorest.WithPathParameters("/certificates/issuers/{issuer-name}", pathParameters),
@@ -4889,7 +4889,7 @@ func (client BaseClient) UpdateCertificateOperationPreparer(ctx context.Context,
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPatch(),
 		autorest.WithCustomBaseURL("{vaultBaseUrl}", urlParameters),
 		autorest.WithPathParameters("/certificates/{certificate-name}/pending", pathParameters),
@@ -4961,7 +4961,7 @@ func (client BaseClient) UpdateCertificatePolicyPreparer(ctx context.Context, va
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPatch(),
 		autorest.WithCustomBaseURL("{vaultBaseUrl}", urlParameters),
 		autorest.WithPathParameters("/certificates/{certificate-name}/policy", pathParameters),
@@ -5034,7 +5034,7 @@ func (client BaseClient) UpdateKeyPreparer(ctx context.Context, vaultBaseURL str
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPatch(),
 		autorest.WithCustomBaseURL("{vaultBaseUrl}", urlParameters),
 		autorest.WithPathParameters("/keys/{key-name}/{key-version}", pathParameters),
@@ -5116,7 +5116,7 @@ func (client BaseClient) UpdateSasDefinitionPreparer(ctx context.Context, vaultB
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPatch(),
 		autorest.WithCustomBaseURL("{vaultBaseUrl}", urlParameters),
 		autorest.WithPathParameters("/storage/{storage-account-name}/sas/{sas-definition-name}", pathParameters),
@@ -5190,7 +5190,7 @@ func (client BaseClient) UpdateSecretPreparer(ctx context.Context, vaultBaseURL 
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPatch(),
 		autorest.WithCustomBaseURL("{vaultBaseUrl}", urlParameters),
 		autorest.WithPathParameters("/secrets/{secret-name}/{secret-version}", pathParameters),
@@ -5268,7 +5268,7 @@ func (client BaseClient) UpdateStorageAccountPreparer(ctx context.Context, vault
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPatch(),
 		autorest.WithCustomBaseURL("{vaultBaseUrl}", urlParameters),
 		autorest.WithPathParameters("/storage/{storage-account-name}", pathParameters),
@@ -5350,7 +5350,7 @@ func (client BaseClient) VerifyPreparer(ctx context.Context, vaultBaseURL string
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPost(),
 		autorest.WithCustomBaseURL("{vaultBaseUrl}", urlParameters),
 		autorest.WithPathParameters("/keys/{key-name}/{key-version}/verify", pathParameters),
@@ -5432,7 +5432,7 @@ func (client BaseClient) WrapKeyPreparer(ctx context.Context, vaultBaseURL strin
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPost(),
 		autorest.WithCustomBaseURL("{vaultBaseUrl}", urlParameters),
 		autorest.WithPathParameters("/keys/{key-name}/{key-version}/wrapkey", pathParameters),

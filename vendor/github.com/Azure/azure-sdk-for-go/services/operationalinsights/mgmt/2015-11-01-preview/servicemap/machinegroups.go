@@ -21,6 +21,7 @@ import (
 	"context"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
+	"github.com/Azure/go-autorest/autorest/date"
 	"github.com/Azure/go-autorest/autorest/validation"
 	"net/http"
 )
@@ -99,7 +100,7 @@ func (client MachineGroupsClient) CreatePreparer(ctx context.Context, resourceGr
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPost(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.OperationalInsights/workspaces/{workspaceName}/features/serviceMap/machineGroups", pathParameters),
@@ -210,11 +211,13 @@ func (client MachineGroupsClient) DeleteResponder(resp *http.Response) (result a
 	return
 }
 
-// Get returns the specified machine group.
+// Get returns the specified machine group as it existed during the specified time interval.
 //
 // resourceGroupName is resource group name within the specified subscriptionId. workspaceName is OMS workspace
-// containing the resources of interest. machineGroupName is machine Group resource name.
-func (client MachineGroupsClient) Get(ctx context.Context, resourceGroupName string, workspaceName string, machineGroupName string) (result MachineGroup, err error) {
+// containing the resources of interest. machineGroupName is machine Group resource name. startTime is UTC date and
+// time specifying the start time of an interval. When not specified the service uses DateTime.UtcNow - 10m endTime
+// is UTC date and time specifying the end time of an interval. When not specified the service uses DateTime.UtcNow
+func (client MachineGroupsClient) Get(ctx context.Context, resourceGroupName string, workspaceName string, machineGroupName string, startTime *date.Time, endTime *date.Time) (result MachineGroup, err error) {
 	if err := validation.Validate([]validation.Validation{
 		{TargetValue: resourceGroupName,
 			Constraints: []validation.Constraint{{Target: "resourceGroupName", Name: validation.MaxLength, Rule: 64, Chain: nil},
@@ -230,7 +233,7 @@ func (client MachineGroupsClient) Get(ctx context.Context, resourceGroupName str
 		return result, validation.NewError("servicemap.MachineGroupsClient", "Get", err.Error())
 	}
 
-	req, err := client.GetPreparer(ctx, resourceGroupName, workspaceName, machineGroupName)
+	req, err := client.GetPreparer(ctx, resourceGroupName, workspaceName, machineGroupName, startTime, endTime)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "servicemap.MachineGroupsClient", "Get", nil, "Failure preparing request")
 		return
@@ -252,7 +255,7 @@ func (client MachineGroupsClient) Get(ctx context.Context, resourceGroupName str
 }
 
 // GetPreparer prepares the Get request.
-func (client MachineGroupsClient) GetPreparer(ctx context.Context, resourceGroupName string, workspaceName string, machineGroupName string) (*http.Request, error) {
+func (client MachineGroupsClient) GetPreparer(ctx context.Context, resourceGroupName string, workspaceName string, machineGroupName string, startTime *date.Time, endTime *date.Time) (*http.Request, error) {
 	pathParameters := map[string]interface{}{
 		"machineGroupName":  autorest.Encode("path", machineGroupName),
 		"resourceGroupName": autorest.Encode("path", resourceGroupName),
@@ -263,6 +266,12 @@ func (client MachineGroupsClient) GetPreparer(ctx context.Context, resourceGroup
 	const APIVersion = "2015-11-01-preview"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
+	}
+	if startTime != nil {
+		queryParameters["startTime"] = autorest.Encode("query", *startTime)
+	}
+	if endTime != nil {
+		queryParameters["endTime"] = autorest.Encode("query", *endTime)
 	}
 
 	preparer := autorest.CreatePreparer(
@@ -293,11 +302,13 @@ func (client MachineGroupsClient) GetResponder(resp *http.Response) (result Mach
 	return
 }
 
-// ListByWorkspace returns all machine groups.
+// ListByWorkspace returns all machine groups during the specified time interval.
 //
 // resourceGroupName is resource group name within the specified subscriptionId. workspaceName is OMS workspace
-// containing the resources of interest.
-func (client MachineGroupsClient) ListByWorkspace(ctx context.Context, resourceGroupName string, workspaceName string) (result MachineGroupCollectionPage, err error) {
+// containing the resources of interest. startTime is UTC date and time specifying the start time of an interval.
+// When not specified the service uses DateTime.UtcNow - 10m endTime is UTC date and time specifying the end time
+// of an interval. When not specified the service uses DateTime.UtcNow
+func (client MachineGroupsClient) ListByWorkspace(ctx context.Context, resourceGroupName string, workspaceName string, startTime *date.Time, endTime *date.Time) (result MachineGroupCollectionPage, err error) {
 	if err := validation.Validate([]validation.Validation{
 		{TargetValue: resourceGroupName,
 			Constraints: []validation.Constraint{{Target: "resourceGroupName", Name: validation.MaxLength, Rule: 64, Chain: nil},
@@ -311,7 +322,7 @@ func (client MachineGroupsClient) ListByWorkspace(ctx context.Context, resourceG
 	}
 
 	result.fn = client.listByWorkspaceNextResults
-	req, err := client.ListByWorkspacePreparer(ctx, resourceGroupName, workspaceName)
+	req, err := client.ListByWorkspacePreparer(ctx, resourceGroupName, workspaceName, startTime, endTime)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "servicemap.MachineGroupsClient", "ListByWorkspace", nil, "Failure preparing request")
 		return
@@ -333,7 +344,7 @@ func (client MachineGroupsClient) ListByWorkspace(ctx context.Context, resourceG
 }
 
 // ListByWorkspacePreparer prepares the ListByWorkspace request.
-func (client MachineGroupsClient) ListByWorkspacePreparer(ctx context.Context, resourceGroupName string, workspaceName string) (*http.Request, error) {
+func (client MachineGroupsClient) ListByWorkspacePreparer(ctx context.Context, resourceGroupName string, workspaceName string, startTime *date.Time, endTime *date.Time) (*http.Request, error) {
 	pathParameters := map[string]interface{}{
 		"resourceGroupName": autorest.Encode("path", resourceGroupName),
 		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
@@ -343,6 +354,12 @@ func (client MachineGroupsClient) ListByWorkspacePreparer(ctx context.Context, r
 	const APIVersion = "2015-11-01-preview"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
+	}
+	if startTime != nil {
+		queryParameters["startTime"] = autorest.Encode("query", *startTime)
+	}
+	if endTime != nil {
+		queryParameters["endTime"] = autorest.Encode("query", *endTime)
 	}
 
 	preparer := autorest.CreatePreparer(
@@ -395,8 +412,8 @@ func (client MachineGroupsClient) listByWorkspaceNextResults(lastResults Machine
 }
 
 // ListByWorkspaceComplete enumerates all values, automatically crossing page boundaries as required.
-func (client MachineGroupsClient) ListByWorkspaceComplete(ctx context.Context, resourceGroupName string, workspaceName string) (result MachineGroupCollectionIterator, err error) {
-	result.page, err = client.ListByWorkspace(ctx, resourceGroupName, workspaceName)
+func (client MachineGroupsClient) ListByWorkspaceComplete(ctx context.Context, resourceGroupName string, workspaceName string, startTime *date.Time, endTime *date.Time) (result MachineGroupCollectionIterator, err error) {
+	result.page, err = client.ListByWorkspace(ctx, resourceGroupName, workspaceName, startTime, endTime)
 	return
 }
 
@@ -464,7 +481,7 @@ func (client MachineGroupsClient) UpdatePreparer(ctx context.Context, resourceGr
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPut(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.OperationalInsights/workspaces/{workspaceName}/features/serviceMap/machineGroups/{machineGroupName}", pathParameters),

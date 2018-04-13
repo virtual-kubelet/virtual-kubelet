@@ -63,12 +63,20 @@ const (
 	Stopped          EndpointMonitorStatus = original.Stopped
 )
 
+func PossibleEndpointMonitorStatusValues() []EndpointMonitorStatus {
+	return original.PossibleEndpointMonitorStatusValues()
+}
+
 type EndpointStatus = original.EndpointStatus
 
 const (
 	EndpointStatusDisabled EndpointStatus = original.EndpointStatusDisabled
 	EndpointStatusEnabled  EndpointStatus = original.EndpointStatusEnabled
 )
+
+func PossibleEndpointStatusValues() []EndpointStatus {
+	return original.PossibleEndpointStatusValues()
+}
 
 type MonitorProtocol = original.MonitorProtocol
 
@@ -77,6 +85,10 @@ const (
 	HTTPS MonitorProtocol = original.HTTPS
 	TCP   MonitorProtocol = original.TCP
 )
+
+func PossibleMonitorProtocolValues() []MonitorProtocol {
+	return original.PossibleMonitorProtocolValues()
+}
 
 type ProfileMonitorStatus = original.ProfileMonitorStatus
 
@@ -88,12 +100,20 @@ const (
 	ProfileMonitorStatusOnline            ProfileMonitorStatus = original.ProfileMonitorStatusOnline
 )
 
+func PossibleProfileMonitorStatusValues() []ProfileMonitorStatus {
+	return original.PossibleProfileMonitorStatusValues()
+}
+
 type ProfileStatus = original.ProfileStatus
 
 const (
 	ProfileStatusDisabled ProfileStatus = original.ProfileStatusDisabled
 	ProfileStatusEnabled  ProfileStatus = original.ProfileStatusEnabled
 )
+
+func PossibleProfileStatusValues() []ProfileStatus {
+	return original.PossibleProfileStatusValues()
+}
 
 type TrafficRoutingMethod = original.TrafficRoutingMethod
 
@@ -103,6 +123,10 @@ const (
 	Priority    TrafficRoutingMethod = original.Priority
 	Weighted    TrafficRoutingMethod = original.Weighted
 )
+
+func PossibleTrafficRoutingMethodValues() []TrafficRoutingMethod {
+	return original.PossibleTrafficRoutingMethodValues()
+}
 
 type CheckTrafficManagerRelativeDNSNameAvailabilityParameters = original.CheckTrafficManagerRelativeDNSNameAvailabilityParameters
 type CloudError = original.CloudError

@@ -78,6 +78,10 @@ const (
 	Westusapicognitivemicrosoftcom         AzureRegionBaseURL = original.Westusapicognitivemicrosoftcom
 )
 
+func PossibleAzureRegionBaseURLValues() []AzureRegionBaseURL {
+	return original.PossibleAzureRegionBaseURLValues()
+}
+
 type StatusEnum = original.StatusEnum
 
 const (
@@ -86,12 +90,20 @@ const (
 	Unpublished StatusEnum = original.Unpublished
 )
 
+func PossibleStatusEnumValues() []StatusEnum {
+	return original.PossibleStatusEnumValues()
+}
+
 type Type = original.Type
 
 const (
 	TypeImage Type = original.TypeImage
 	TypeText  Type = original.TypeText
 )
+
+func PossibleTypeValues() []Type {
+	return original.PossibleTypeValues()
+}
 
 type Address = original.Address
 type APIError = original.APIError

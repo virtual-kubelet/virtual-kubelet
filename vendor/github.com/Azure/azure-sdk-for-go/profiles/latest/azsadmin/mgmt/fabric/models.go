@@ -142,6 +142,10 @@ const (
 	Stopping InfraRoleInstanceState = original.Stopping
 )
 
+func PossibleInfraRoleInstanceStateValues() []InfraRoleInstanceState {
+	return original.PossibleInfraRoleInstanceStateValues()
+}
+
 type PowerState = original.PowerState
 
 const (
@@ -151,6 +155,10 @@ const (
 	PowerStateStopping PowerState = original.PowerStateStopping
 )
 
+func PossiblePowerStateValues() []PowerState {
+	return original.PossiblePowerStateValues()
+}
+
 type ScaleUnitNodeStatus = original.ScaleUnitNodeStatus
 
 const (
@@ -158,6 +166,10 @@ const (
 	ScaleUnitNodeStatusRunning     ScaleUnitNodeStatus = original.ScaleUnitNodeStatusRunning
 	ScaleUnitNodeStatusStopped     ScaleUnitNodeStatus = original.ScaleUnitNodeStatusStopped
 )
+
+func PossibleScaleUnitNodeStatusValues() []ScaleUnitNodeStatus {
+	return original.PossibleScaleUnitNodeStatusValues()
+}
 
 type ScaleUnitState = original.ScaleUnitState
 
@@ -169,6 +181,10 @@ const (
 	ScaleUnitStateUpgrading ScaleUnitState = original.ScaleUnitStateUpgrading
 )
 
+func PossibleScaleUnitStateValues() []ScaleUnitState {
+	return original.PossibleScaleUnitStateValues()
+}
+
 type ScaleUnitType = original.ScaleUnitType
 
 const (
@@ -177,6 +193,10 @@ const (
 	StorageOnly    ScaleUnitType = original.StorageOnly
 	Unknown        ScaleUnitType = original.Unknown
 )
+
+func PossibleScaleUnitTypeValues() []ScaleUnitType {
+	return original.PossibleScaleUnitTypeValues()
+}
 
 type EdgeGateway = original.EdgeGateway
 type EdgeGatewayList = original.EdgeGatewayList

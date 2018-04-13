@@ -46,6 +46,10 @@ const (
 	Autocreate AppendModeType = original.Autocreate
 )
 
+func PossibleAppendModeTypeValues() []AppendModeType {
+	return original.PossibleAppendModeTypeValues()
+}
+
 type Exception = original.Exception
 
 const (
@@ -62,6 +66,10 @@ const (
 	ExceptionUnsupportedOperationException Exception = original.ExceptionUnsupportedOperationException
 )
 
+func PossibleExceptionValues() []Exception {
+	return original.PossibleExceptionValues()
+}
+
 type ExpiryOptionType = original.ExpiryOptionType
 
 const (
@@ -71,12 +79,20 @@ const (
 	RelativeToNow          ExpiryOptionType = original.RelativeToNow
 )
 
+func PossibleExpiryOptionTypeValues() []ExpiryOptionType {
+	return original.PossibleExpiryOptionTypeValues()
+}
+
 type FileType = original.FileType
 
 const (
 	DIRECTORY FileType = original.DIRECTORY
 	FILE      FileType = original.FILE
 )
+
+func PossibleFileTypeValues() []FileType {
+	return original.PossibleFileTypeValues()
+}
 
 type SyncFlag = original.SyncFlag
 
@@ -85,6 +101,10 @@ const (
 	DATA     SyncFlag = original.DATA
 	METADATA SyncFlag = original.METADATA
 )
+
+func PossibleSyncFlagValues() []SyncFlag {
+	return original.PossibleSyncFlagValues()
+}
 
 type ACLStatus = original.ACLStatus
 type ACLStatusResult = original.ACLStatusResult

@@ -19,7 +19,7 @@
 
 package aad
 
-import original "github.com/Azure/azure-sdk-for-go/services/domainservices/mgmt/2017-06-01/aad"
+import original "github.com/Azure/azure-sdk-for-go/services/domainservices/mgmt/2017-01-01/aad"
 
 const (
 	DefaultBaseURI = original.DefaultBaseURI
@@ -59,12 +59,20 @@ const (
 	Enabled  ExternalAccess = original.Enabled
 )
 
+func PossibleExternalAccessValues() []ExternalAccess {
+	return original.PossibleExternalAccessValues()
+}
+
 type Ldaps = original.Ldaps
 
 const (
 	LdapsDisabled Ldaps = original.LdapsDisabled
 	LdapsEnabled  Ldaps = original.LdapsEnabled
 )
+
+func PossibleLdapsValues() []Ldaps {
+	return original.PossibleLdapsValues()
+}
 
 type DomainService = original.DomainService
 type DomainServiceListResult = original.DomainServiceListResult

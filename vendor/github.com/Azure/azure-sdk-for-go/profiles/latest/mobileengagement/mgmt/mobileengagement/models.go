@@ -98,6 +98,10 @@ const (
 	LT AudienceOperators = original.LT
 )
 
+func PossibleAudienceOperatorsValues() []AudienceOperators {
+	return original.PossibleAudienceOperatorsValues()
+}
+
 type CampaignFeedbacks = original.CampaignFeedbacks
 
 const (
@@ -107,6 +111,10 @@ const (
 	Replied  CampaignFeedbacks = original.Replied
 )
 
+func PossibleCampaignFeedbacksValues() []CampaignFeedbacks {
+	return original.PossibleCampaignFeedbacksValues()
+}
+
 type CampaignKinds = original.CampaignKinds
 
 const (
@@ -115,6 +123,10 @@ const (
 	NativePushes  CampaignKinds = original.NativePushes
 	Polls         CampaignKinds = original.Polls
 )
+
+func PossibleCampaignKindsValues() []CampaignKinds {
+	return original.PossibleCampaignKindsValues()
+}
 
 type CampaignStates = original.CampaignStates
 
@@ -126,6 +138,10 @@ const (
 	Scheduled  CampaignStates = original.Scheduled
 )
 
+func PossibleCampaignStatesValues() []CampaignStates {
+	return original.PossibleCampaignStatesValues()
+}
+
 type CampaignType = original.CampaignType
 
 const (
@@ -134,6 +150,10 @@ const (
 	NativePush   CampaignType = original.NativePush
 	Poll         CampaignType = original.Poll
 )
+
+func PossibleCampaignTypeValues() []CampaignType {
+	return original.PossibleCampaignTypeValues()
+}
 
 type CampaignTypes = original.CampaignTypes
 
@@ -144,6 +164,10 @@ const (
 	Textplain  CampaignTypes = original.Textplain
 )
 
+func PossibleCampaignTypesValues() []CampaignTypes {
+	return original.PossibleCampaignTypesValues()
+}
+
 type DeliveryTimes = original.DeliveryTimes
 
 const (
@@ -152,12 +176,20 @@ const (
 	Session    DeliveryTimes = original.Session
 )
 
+func PossibleDeliveryTimesValues() []DeliveryTimes {
+	return original.PossibleDeliveryTimesValues()
+}
+
 type ExportFormat = original.ExportFormat
 
 const (
 	CsvBlob  ExportFormat = original.CsvBlob
 	JSONBlob ExportFormat = original.JSONBlob
 )
+
+func PossibleExportFormatValues() []ExportFormat {
+	return original.PossibleExportFormatValues()
+}
 
 type ExportState = original.ExportState
 
@@ -167,6 +199,10 @@ const (
 	ExportStateStarted   ExportState = original.ExportStateStarted
 	ExportStateSucceeded ExportState = original.ExportStateSucceeded
 )
+
+func PossibleExportStateValues() []ExportState {
+	return original.PossibleExportStateValues()
+}
 
 type ExportType = original.ExportType
 
@@ -182,6 +218,10 @@ const (
 	ExportTypeToken    ExportType = original.ExportTypeToken
 )
 
+func PossibleExportTypeValues() []ExportType {
+	return original.PossibleExportTypeValues()
+}
+
 type JobStates = original.JobStates
 
 const (
@@ -191,12 +231,20 @@ const (
 	JobStatesSucceeded JobStates = original.JobStatesSucceeded
 )
 
+func PossibleJobStatesValues() []JobStates {
+	return original.PossibleJobStatesValues()
+}
+
 type NotificationTypes = original.NotificationTypes
 
 const (
 	Popup  NotificationTypes = original.Popup
 	System NotificationTypes = original.System
 )
+
+func PossibleNotificationTypesValues() []NotificationTypes {
+	return original.PossibleNotificationTypesValues()
+}
 
 type ProvisioningStates = original.ProvisioningStates
 
@@ -205,6 +253,10 @@ const (
 	Succeeded ProvisioningStates = original.Succeeded
 )
 
+func PossibleProvisioningStatesValues() []ProvisioningStates {
+	return original.PossibleProvisioningStatesValues()
+}
+
 type PushModes = original.PushModes
 
 const (
@@ -212,6 +264,10 @@ const (
 	OneShot  PushModes = original.OneShot
 	RealTime PushModes = original.RealTime
 )
+
+func PossiblePushModesValues() []PushModes {
+	return original.PossiblePushModesValues()
+}
 
 type Type = original.Type
 
@@ -239,6 +295,10 @@ const (
 	TypeStringTag            Type = original.TypeStringTag
 )
 
+func PossibleTypeValues() []Type {
+	return original.PossibleTypeValues()
+}
+
 type TypeBasicFilter = original.TypeBasicFilter
 
 const (
@@ -252,6 +312,10 @@ const (
 	TypeNativePushEnabled TypeBasicFilter = original.TypeNativePushEnabled
 	TypePushQuota         TypeBasicFilter = original.TypePushQuota
 )
+
+func PossibleTypeBasicFilterValues() []TypeBasicFilter {
+	return original.PossibleTypeBasicFilterValues()
+}
 
 type AnnouncementFeedbackCriterion = original.AnnouncementFeedbackCriterion
 type APIError = original.APIError

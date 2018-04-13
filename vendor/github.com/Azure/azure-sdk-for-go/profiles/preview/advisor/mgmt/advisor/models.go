@@ -52,6 +52,10 @@ const (
 	Security         Category = original.Security
 )
 
+func PossibleCategoryValues() []Category {
+	return original.PossibleCategoryValues()
+}
+
 type Impact = original.Impact
 
 const (
@@ -59,6 +63,10 @@ const (
 	Low    Impact = original.Low
 	Medium Impact = original.Medium
 )
+
+func PossibleImpactValues() []Impact {
+	return original.PossibleImpactValues()
+}
 
 type Risk = original.Risk
 
@@ -68,10 +76,16 @@ const (
 	Warning Risk = original.Warning
 )
 
+func PossibleRiskValues() []Risk {
+	return original.PossibleRiskValues()
+}
+
 type ARMErrorResponseBody = original.ARMErrorResponseBody
 type ConfigData = original.ConfigData
 type ConfigDataProperties = original.ConfigDataProperties
 type ConfigurationListResult = original.ConfigurationListResult
+type ConfigurationListResultIterator = original.ConfigurationListResultIterator
+type ConfigurationListResultPage = original.ConfigurationListResultPage
 type OperationDisplayInfo = original.OperationDisplayInfo
 type OperationEntity = original.OperationEntity
 type OperationEntityListResult = original.OperationEntityListResult

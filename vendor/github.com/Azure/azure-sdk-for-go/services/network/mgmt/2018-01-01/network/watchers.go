@@ -83,7 +83,7 @@ func (client WatchersClient) CheckConnectivityPreparer(ctx context.Context, reso
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPost(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Network/networkWatchers/{networkWatcherName}/connectivityCheck", pathParameters),
@@ -160,7 +160,7 @@ func (client WatchersClient) CreateOrUpdatePreparer(ctx context.Context, resourc
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPut(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Network/networkWatchers/{networkWatcherName}", pathParameters),
@@ -366,7 +366,7 @@ func (client WatchersClient) GetAzureReachabilityReportPreparer(ctx context.Cont
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPost(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Network/networkWatchers/{networkWatcherName}/azureReachabilityReport", pathParameters),
@@ -403,10 +403,11 @@ func (client WatchersClient) GetAzureReachabilityReportResponder(resp *http.Resp
 	return
 }
 
-// GetFlowLogStatus queries status of flow log on a specified resource.
+// GetFlowLogStatus queries status of flow log and traffic analytics (optional) on a specified resource.
 //
 // resourceGroupName is the name of the network watcher resource group. networkWatcherName is the name of the
-// network watcher resource. parameters is parameters that define a resource to query flow log status.
+// network watcher resource. parameters is parameters that define a resource to query flow log and traffic
+// analytics (optional) status.
 func (client WatchersClient) GetFlowLogStatus(ctx context.Context, resourceGroupName string, networkWatcherName string, parameters FlowLogStatusParameters) (result WatchersGetFlowLogStatusFuture, err error) {
 	if err := validation.Validate([]validation.Validation{
 		{TargetValue: parameters,
@@ -443,7 +444,7 @@ func (client WatchersClient) GetFlowLogStatusPreparer(ctx context.Context, resou
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPost(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Network/networkWatchers/{networkWatcherName}/queryFlowLogStatus", pathParameters),
@@ -522,7 +523,7 @@ func (client WatchersClient) GetNextHopPreparer(ctx context.Context, resourceGro
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPost(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Network/networkWatchers/{networkWatcherName}/nextHop", pathParameters),
@@ -599,7 +600,7 @@ func (client WatchersClient) GetTopologyPreparer(ctx context.Context, resourceGr
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPost(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Network/networkWatchers/{networkWatcherName}/topology", pathParameters),
@@ -672,7 +673,7 @@ func (client WatchersClient) GetTroubleshootingPreparer(ctx context.Context, res
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPost(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Network/networkWatchers/{networkWatcherName}/troubleshoot", pathParameters),
@@ -749,7 +750,7 @@ func (client WatchersClient) GetTroubleshootingResultPreparer(ctx context.Contex
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPost(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Network/networkWatchers/{networkWatcherName}/queryTroubleshootResult", pathParameters),
@@ -826,7 +827,7 @@ func (client WatchersClient) GetVMSecurityRulesPreparer(ctx context.Context, res
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPost(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Network/networkWatchers/{networkWatcherName}/securityGroupView", pathParameters),
@@ -1024,7 +1025,7 @@ func (client WatchersClient) ListAvailableProvidersPreparer(ctx context.Context,
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPost(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Network/networkWatchers/{networkWatcherName}/availableProvidersList", pathParameters),
@@ -1061,7 +1062,7 @@ func (client WatchersClient) ListAvailableProvidersResponder(resp *http.Response
 	return
 }
 
-// SetFlowLogConfiguration configures flow log on a specified resource.
+// SetFlowLogConfiguration configures flow log and traffic analytics (optional) on a specified resource.
 //
 // resourceGroupName is the name of the network watcher resource group. networkWatcherName is the name of the
 // network watcher resource. parameters is parameters that define the configuration of flow log.
@@ -1072,6 +1073,14 @@ func (client WatchersClient) SetFlowLogConfiguration(ctx context.Context, resour
 				{Target: "parameters.FlowLogProperties", Name: validation.Null, Rule: true,
 					Chain: []validation.Constraint{{Target: "parameters.FlowLogProperties.StorageID", Name: validation.Null, Rule: true, Chain: nil},
 						{Target: "parameters.FlowLogProperties.Enabled", Name: validation.Null, Rule: true, Chain: nil},
+					}},
+				{Target: "parameters.TrafficAnalyticsProperties", Name: validation.Null, Rule: false,
+					Chain: []validation.Constraint{{Target: "parameters.TrafficAnalyticsProperties.NetworkWatcherFlowAnalyticsConfiguration", Name: validation.Null, Rule: true,
+						Chain: []validation.Constraint{{Target: "parameters.TrafficAnalyticsProperties.NetworkWatcherFlowAnalyticsConfiguration.Enabled", Name: validation.Null, Rule: true, Chain: nil},
+							{Target: "parameters.TrafficAnalyticsProperties.NetworkWatcherFlowAnalyticsConfiguration.WorkspaceID", Name: validation.Null, Rule: true, Chain: nil},
+							{Target: "parameters.TrafficAnalyticsProperties.NetworkWatcherFlowAnalyticsConfiguration.WorkspaceRegion", Name: validation.Null, Rule: true, Chain: nil},
+							{Target: "parameters.TrafficAnalyticsProperties.NetworkWatcherFlowAnalyticsConfiguration.WorkspaceResourceID", Name: validation.Null, Rule: true, Chain: nil},
+						}},
 					}}}}}); err != nil {
 		return result, validation.NewError("network.WatchersClient", "SetFlowLogConfiguration", err.Error())
 	}
@@ -1105,7 +1114,7 @@ func (client WatchersClient) SetFlowLogConfigurationPreparer(ctx context.Context
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPost(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Network/networkWatchers/{networkWatcherName}/configureFlowLog", pathParameters),
@@ -1182,7 +1191,7 @@ func (client WatchersClient) UpdateTagsPreparer(ctx context.Context, resourceGro
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPatch(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Network/networkWatchers/{networkWatcherName}", pathParameters),
@@ -1255,7 +1264,7 @@ func (client WatchersClient) VerifyIPFlowPreparer(ctx context.Context, resourceG
 	}
 
 	preparer := autorest.CreatePreparer(
-		autorest.AsJSON(),
+		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPost(),
 		autorest.WithBaseURL(client.BaseURI),
 		autorest.WithPathParameters("/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Network/networkWatchers/{networkWatcherName}/ipFlowVerify", pathParameters),

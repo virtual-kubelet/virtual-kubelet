@@ -23,6 +23,7 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"os"
 	"strings"
 	"unicode/utf16"
@@ -89,10 +90,10 @@ func NewAuthorizerFromEnvironment() (autorest.Authorizer, error) {
 		return config.Authorizer()
 	}
 
-	//4. By default return MSI
+	// 4. MSI
 	config := NewMSIConfig()
 	config.Resource = resource
-
+	config.ClientID = clientID
 	return config.Authorizer()
 }
 
@@ -332,7 +333,7 @@ func (dfc DeviceFlowConfig) Authorizer() (autorest.Authorizer, error) {
 		return nil, fmt.Errorf("failed to start device auth flow: %s", err)
 	}
 
-	fmt.Println(*deviceCode.Message)
+	log.Println(*deviceCode.Message)
 
 	token, err := adal.WaitForUserCompletion(oauthClient, deviceCode)
 	if err != nil {
@@ -388,18 +389,17 @@ func (ups UsernamePasswordConfig) Authorizer() (autorest.Authorizer, error) {
 // MSIConfig provides the options to get a bearer authorizer through MSI.
 type MSIConfig struct {
 	Resource string
+	ClientID string
 }
 
 // Authorizer gets the authorizer from MSI.
 func (mc MSIConfig) Authorizer() (autorest.Authorizer, error) {
 	msiEndpoint, err := adal.GetMSIVMEndpoint()
-
 	if err != nil {
 		return nil, err
 	}
 
 	spToken, err := adal.NewServicePrincipalTokenFromMSI(msiEndpoint, mc.Resource)
-
 	if err != nil {
 		return nil, fmt.Errorf("failed to get oauth token from MSI: %v", err)
 	}
