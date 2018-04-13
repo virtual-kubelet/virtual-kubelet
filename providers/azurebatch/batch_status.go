@@ -96,33 +96,36 @@ func convertTaskStatusToContainerState(t *batch.CloudTask) (containerState apiv1
 	switch t.State {
 	case batch.TaskStatePreparing:
 		containerState = apiv1.ContainerState{
-			{
-			Waiting: apiv1.ContainerStateWaiting{
-			Message: "Waiting for machine in AzureBatch",
-			Reason:  "Preparing",
+			Waiting: &apiv1.ContainerStateWaiting{
+				Message: "Waiting for machine in AzureBatch",
+				Reason:  "Preparing",
 			},
 		}
-	}
 	case batch.TaskStateActive:
-		containerState = apiv1.ContainerStateWaiting{
-			Message: "Waiting for machine in AzureBatch",
-			Reason:  "Active",
+		containerState = apiv1.ContainerState{
+			Waiting: &apiv1.ContainerStateWaiting{
+				Message: "Waiting for machine in AzureBatch",
+				Reason:  "active",
+			},
 		}
 	case batch.TaskStateRunning:
-		containerState = apiv1.ContainerStateRunning{
-			StartedAt: startTime,
+		containerState = apiv1.ContainerState{
+			Running: &apiv1.ContainerStateRunning{
+				StartedAt: startTime,
+			},
 		}
 	case batch.TaskStateCompleted:
-		termStatus := apiv1.ContainerStateTerminated{
-			ExitCode: *t.ExecutionInfo.ExitCode,
-			FinishedAt: metav1.Time{
-				Time: t.StateTransitionTime,
+		termStatus := apiv1.ContainerState{
+			Terminated: &apiv1.ContainerStateTerminated{
+				ExitCode: *t.ExecutionInfo.ExitCode,
+				FinishedAt: metav1.Time{
+					Time: t.StateTransitionTime.Time,
+				},
+				StartedAt: startTime,
 			},
-			StartedAt: startTime,
 		}
 		if *t.ExecutionInfo.ExitCode != 0 {
-			termStatus.Reason = *t.ExecutionInfo.FailureInfo.Details
-			termStatus.Message = *t.ExecutionInfo.FailureInfo.Message
+			termStatus.Terminated.Message = *t.ExecutionInfo.FailureInfo.Message
 		}
 	}
 
