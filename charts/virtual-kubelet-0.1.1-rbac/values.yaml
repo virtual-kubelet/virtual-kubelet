@@ -1,0 +1,25 @@
+image:
+  repository: microsoft/virtual-kubelet
+  tag: latest
+  pullPolicy: Always
+env:
+  azureClientId: 
+  azureClientKey: 
+  azureTenantId: 
+  azureSubscriptionId: 
+  aciResourceGroup: 
+  aciRegion: 
+  nodeName: 
+  nodeTaint: 
+  nodeOsType: 
+  apiserverCert: 
+  apiserverKey: 
+
+# Install Default RBAC roles and bindings
+rbac:
+  install: false
+  serviceAccountName: virtual-kubelet
+  # RBAC api version (currently v1beta1)
+  apiVersion: v1beta1
+  # Cluster role reference
+  roleRef: cluster-admin

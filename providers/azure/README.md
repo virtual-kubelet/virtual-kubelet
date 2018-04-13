@@ -201,7 +201,7 @@ export VK_RELEASE=virtual-kubelet-for-aks-0.1.3
 For any other type of Kubernetes cluster:
 
 ```cli
-export VK_RELEASE=virtual-kubelet-0.1.0
+export VK_RELEASE=virtual-kubelet-0.1.1
 ```
 
 ```cli
@@ -214,8 +214,10 @@ chmod +x createCertAndKey.sh
 . ./createCertAndKey.sh
 
 helm install "$CHART_URL" --name "$RELEASE_NAME" \
-    --set env.azureClientId="$AZURE_CLIENT_ID",env.azureClientKey="$AZURE_CLIENT_SECRET",env.azureTenantId="$AZURE_TENANT_ID",env.azureSubscriptionId="$AZURE_SUBSCRIPTION_ID",env.aciResourceGroup="$AZURE_RG",env.nodeName="$NODE_NAME",env.nodeOsType=<Linux|Windows>,env.apiserverCert=$cert,env.apiserverKey=$key
+    --set env.azureClientId="$AZURE_CLIENT_ID",env.azureClientKey="$AZURE_CLIENT_SECRET",env.azureTenantId="$AZURE_TENANT_ID",env.azureSubscriptionId="$AZURE_SUBSCRIPTION_ID",env.aciResourceGroup="$AZURE_RG",env.nodeName="$NODE_NAME",env.nodeOsType=<Linux|Windows>,env.apiserverCert=$cert,env.apiserverKey=$key,rbac.install=false
 ```
+
+If your cluster has RBAC enabled set ```rbac.install=true```
 
 Output:
 
