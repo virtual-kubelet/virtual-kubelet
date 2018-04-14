@@ -214,7 +214,7 @@ chmod +x createCertAndKey.sh
 . ./createCertAndKey.sh
 
 helm install "$CHART_URL" --name "$RELEASE_NAME" \
-    --set env.azureClientId="$AZURE_CLIENT_ID",env.azureClientKey="$AZURE_CLIENT_SECRET",env.azureTenantId="$AZURE_TENANT_ID",env.azureSubscriptionId="$AZURE_SUBSCRIPTION_ID",env.aciResourceGroup="$AZURE_RG",env.nodeName="$NODE_NAME",env.nodeOsType=<Linux|Windows>,env.apiserverCert=$cert,env.apiserverKey=$key,rbac.install=false
+    --set env.azureClientId="$AZURE_CLIENT_ID",env.azureClientKey="$AZURE_CLIENT_SECRET",env.azureTenantId="$AZURE_TENANT_ID",env.azureSubscriptionId="$AZURE_SUBSCRIPTION_ID",env.aciRegion="$ACI_REGION",env.aciResourceGroup="$AZURE_RG",env.nodeName="$NODE_NAME",env.nodeOsType=<Linux|Windows>,env.apiserverCert=$cert,env.apiserverKey=$key,rbac.install=false
 ```
 
 If your cluster has RBAC enabled set ```rbac.install=true```
