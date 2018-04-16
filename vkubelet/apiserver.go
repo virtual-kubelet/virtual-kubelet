@@ -6,16 +6,16 @@ import (
 	"log"
 	"net/http"
 	"os"
-    "strconv"
+	"strconv"
 
 	"github.com/gorilla/mux"
 )
 var p Provider
 var r mux.Router
 
-func NotFound(w http.ResponseWriter, r *http.Request) { 
-	log.Println("404 request not found")
-	http.Error(w, "404 request not found", http.StatusNotFound) 
+func NotFound(w http.ResponseWriter, r *http.Request) {
+	log.Printf("404 request not found. \n %v", mux.Vars(r))
+	http.Error(w, "404 request not found", http.StatusNotFound)
 }
 
 func ApiserverStart(provider Provider) {
@@ -29,8 +29,7 @@ func ApiserverStart(provider Provider) {
 	r.HandleFunc("/containerLogs/{namespace}/{pod}/{container}", ApiServerHandler).Methods("GET")
 	r.NotFoundHandler = http.HandlerFunc(NotFound)
 
-	err := http.ListenAndServeTLS(addr, certFilePath, keyFilePath, r)
-	if err != nil {
+	if err := http.ListenAndServeTLS(addr, certFilePath, keyFilePath, r); err != nil {
 		log.Println(err)
 	}
 }
@@ -48,7 +47,7 @@ func ApiServerHandler(w http.ResponseWriter, req *http.Request) {
 			t, err := strconv.Atoi(queryTail)
 			if err != nil {
 				log.Println(err)
-			 	io.WriteString(w, err.Error())
+				io.WriteString(w, err.Error())
 			} else {
 				tail = t
 			}
@@ -56,7 +55,7 @@ func ApiServerHandler(w http.ResponseWriter, req *http.Request) {
 		podsLogs, err := p.GetContainerLogs(namespace, pod, container, tail)
 		if err != nil {
 			log.Println(err)
-			io.WriteString(w, err.Error()) 
+			io.WriteString(w, err.Error())
 		} else {
 			io.WriteString(w, podsLogs)
 		}
