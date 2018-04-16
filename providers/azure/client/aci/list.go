@@ -22,10 +22,10 @@ func (c *Client) ListContainerGroups(resourceGroup string) (*ContainerGroupListR
 	}
 
 	// Create the url.
-	uri := api.ResolveRelative(BaseURI, containerGroupListURLPath)
+	uri := api.ResolveRelative(c.auth.ResourceManagerEndpoint, containerGroupListURLPath)
 	// List by resource group if they passed one.
 	if resourceGroup != "" {
-		uri = api.ResolveRelative(BaseURI, containerGroupListByResourceGroupURLPath)
+		uri = api.ResolveRelative(c.auth.ResourceManagerEndpoint, containerGroupListByResourceGroupURLPath)
 
 	}
 	uri += "?" + url.Values(urlParams).Encode()

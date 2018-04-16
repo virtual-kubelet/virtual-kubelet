@@ -1,36 +1,21 @@
 package manager
 
 import (
-	"log"
 	"testing"
 
 	"github.com/google/uuid"
 	"k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/tools/clientcmd"
+	"k8s.io/client-go/kubernetes/fake"
 )
 
 var (
-	fakeClient *kubernetes.Clientset
+	fakeClient kubernetes.Interface
 )
 
 func init() {
-	loadingRules := clientcmd.NewDefaultClientConfigLoadingRules()
-	// if you want to change the loading rules (which files in which order), you can do so here
-
-	configOverrides := &clientcmd.ConfigOverrides{}
-	// if you want to change override values or bind them to flags, there are methods to help you
-
-	kubeConfig := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(loadingRules, configOverrides)
-	config, err := kubeConfig.ClientConfig()
-	if err != nil {
-		log.Fatal("unable to create client config")
-	}
-	fakeClient, err = kubernetes.NewForConfig(config)
-	if err != nil {
-		log.Fatal("unable to create new clientset")
-	}
+	fakeClient = fake.NewSimpleClientset()
 }
 
 func TestResourceManager(t *testing.T) {
