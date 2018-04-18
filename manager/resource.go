@@ -44,7 +44,7 @@ func NewResourceManager(k8sClient *kubernetes.Clientset) *ResourceManager {
 			rm.Lock()
 			for n, c := range rm.secretRef {
 				if c <= 0 {
-					delete(rm.secrets, n)
+					delete(rm.secretRef, n)
 				}
 			}
 			for n := range rm.secrets {
@@ -54,7 +54,7 @@ func NewResourceManager(k8sClient *kubernetes.Clientset) *ResourceManager {
 			}
 			for n, c := range rm.configMapRef {
 				if c <= 0 {
-					delete(rm.configMaps, n)
+					delete(rm.configMapRef, n)
 				}
 			}
 			for n := range rm.configMaps {
@@ -230,7 +230,7 @@ func (rm *ResourceManager) watchConfigMaps() {
 // it evicts them from the internal cache
 func (rm *ResourceManager) watchSecrets() {
 	var opts metav1.ListOptions
-	w, err := rm.k8sClient.CoreV1().ConfigMaps(v1.NamespaceAll).Watch(opts)
+	w, err := rm.k8sClient.CoreV1().Secrets(v1.NamespaceAll).Watch(opts)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -245,9 +245,9 @@ func (rm *ResourceManager) watchSecrets() {
 			rm.Lock()
 			switch ev.Type {
 			case watch.Modified:
-				delete(rm.configMaps, ev.Object.(*v1.ConfigMap).Name)
+				delete(rm.secrets, ev.Object.(*v1.Secret).Name)
 			case watch.Deleted:
-				delete(rm.configMaps, ev.Object.(*v1.ConfigMap).Name)
+				delete(rm.secrets, ev.Object.(*v1.Secret).Name)
 			}
 			rm.Unlock()
 		}
