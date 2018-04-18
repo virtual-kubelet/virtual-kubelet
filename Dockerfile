@@ -17,6 +17,7 @@ RUN set -x \
         make \
 	&& cd /go/src/github.com/virtual-kubelet/virtual-kubelet \
 	&& make build \ 
+	&& make test \
 	&& apk del .build-deps \
     && cp bin/virtual-kubelet /usr/bin/virtual-kubelet \
 	&& rm -rf /go \

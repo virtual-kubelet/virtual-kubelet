@@ -15,7 +15,7 @@ import (
 // New ResourceManagers should be created with the NewResourceManager() function.
 type ResourceManager struct {
 	sync.RWMutex
-	k8sClient *kubernetes.Clientset
+	k8sClient kubernetes.Interface
 
 	pods         map[string]*v1.Pod
 	configMapRef map[string]int64
@@ -25,7 +25,7 @@ type ResourceManager struct {
 }
 
 // NewResourceManager returns a ResourceManager with the internal maps initialized.
-func NewResourceManager(k8sClient *kubernetes.Clientset) *ResourceManager {
+func NewResourceManager(k8sClient kubernetes.Interface) *ResourceManager {
 	rm := ResourceManager{
 		pods:         make(map[string]*v1.Pod, 0),
 		configMapRef: make(map[string]int64, 0),
