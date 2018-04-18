@@ -84,9 +84,10 @@ func (rm *ResourceManager) SetPods(pods *v1.PodList) {
 		if p.Status.Phase == v1.PodSucceeded {
 			continue
 		}
-		rm.pods[p.Name] = &p
+		tmp := p
+		rm.pods[p.Name] = &tmp
 
-		rm.incrementRefCounters(&p)
+		rm.incrementRefCounters(&tmp)
 	}
 }
 
