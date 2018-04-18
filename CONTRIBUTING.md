@@ -90,6 +90,19 @@ follow the same general lifecycle. Differences are noted below.
 1. If you haven't already done so, sign a Contributor License Agreement
 (see details above).
 2. Fork the repository, develop and test your code changes.
+
+You can use the following command to clone your fork to your local
+```
+cd $GOPATH
+mkdir -p {src,bin,pkg}
+mkdir -p src/github.com/virtual-kubelet/
+cd src/github.com/virtual-kubelet/
+git clone git@github.com:<your-github-account-name>/virtual-kubelet.git # OR: git clone https://github.com/<your-github-account-name>/virtual-kubelet.git
+cd virtual-kubelet
+go get ./...
+# add the virtual-kubelet as the upstream
+git remote add upstream git@github.com:virtual-kubelet/virtual-kubelet.git
+```
 3. Submit a pull request.
 
 Your pull request will be reviewed according to the process defined in

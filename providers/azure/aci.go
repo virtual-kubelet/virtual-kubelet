@@ -54,12 +54,13 @@ type AuthConfig struct {
 	RegistryToken string `json:"registrytoken,omitempty"`
 }
 
-// See https://docs.microsoft.com/en-us/azure/container-instances/container-instances-quotas for valid regions.
+// See https://azure.microsoft.com/en-us/status/ for valid regions.
 var validAciRegions = []string{
 	"westeurope",
 	"westus",
 	"eastus",
 	"southeastasia",
+	"westus2",
 }
 
 // isValidACIRegion checks to make sure we're using a valid ACI region
@@ -562,10 +563,41 @@ func (p *ACIProvider) getContainers(pod *v1.Pod) ([]aci.Container, error) {
 			})
 		}
 
-		cpuLimit := float64(container.Resources.Limits.Cpu().Value())
-		memoryLimit := float64(container.Resources.Limits.Memory().Value()) / 1000000000.00
-		cpuRequest := float64(container.Resources.Requests.Cpu().Value())
-		memoryRequest := float64(container.Resources.Requests.Memory().Value()) / 1000000000.00
+		// NOTE(robbiezhang): ACI CPU limit must be times of 10m
+		cpuLimit := 1.00
+		if _, ok := container.Resources.Limits[v1.ResourceCPU]; ok {
+			cpuLimit = float64(container.Resources.Limits.Cpu().MilliValue() / 10.00) / 100.00
+			if cpuLimit < 0.01 {
+				cpuLimit = 0.01
+			}
+		}
+
+		// NOTE(robbiezhang): ACI Memory limit must be times of 0.1 GB
+		memoryLimit := 1.50
+		if _, ok := container.Resources.Limits[v1.ResourceMemory]; ok {
+			memoryLimit = float64(container.Resources.Limits.Memory().Value() / 100000000.00) / 10.00
+			if memoryLimit < 0.10 {
+				memoryLimit = 0.10
+			}
+		}
+
+		// NOTE(robbiezhang): ACI CPU request must be times of 10m
+		cpuRequest := 1.00
+		if _, ok := container.Resources.Requests[v1.ResourceCPU]; ok {
+			cpuRequest = float64(container.Resources.Requests.Cpu().MilliValue() / 10.00) / 100.00
+			if cpuRequest < 0.01 {
+				cpuRequest = 0.01
+			}
+		}
+
+		// NOTE(robbiezhang): ACI memory request must be times of 0.1 GB
+		memoryRequest := 1.50
+		if _, ok := container.Resources.Requests[v1.ResourceMemory]; ok {
+			memoryRequest = float64(container.Resources.Requests.Memory().Value() / 100000000.00) / 10.00
+			if memoryRequest < 0.10 {
+				memoryRequest = 0.10
+			}
+		}
 
 		c.Resources = aci.ResourceRequirements{
 			Limits: aci.ResourceLimits{
