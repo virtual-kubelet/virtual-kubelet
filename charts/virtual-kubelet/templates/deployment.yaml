@@ -40,3 +40,5 @@ spec:
         secret:
           secretName: {{ template "fullname" . }}
       serviceAccountName: {{ if .Values.rbac.install }} "{{ template "fullname" . }}-service-account" {{ end }}
+      nodeSelector:
+        beta.kubernetes.io/os: linux

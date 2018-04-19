@@ -56,3 +56,5 @@ spec:
         hostPath:
           path: /etc/kubernetes/azure.json
           type: File
+      nodeSelector:
+        beta.kubernetes.io/os: linux
