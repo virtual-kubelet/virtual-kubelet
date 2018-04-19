@@ -810,11 +810,9 @@ func containerGroupToPod(cg *aci.ContainerGroup) (*v1.Pod, error) {
 			Volumes:    []v1.Volume{},
 			Containers: containers,
 		},
-		// TODO: Make this dynamic, likely can translate the provisioningState or instanceView.ContainerState into a Phase,
-		// and some of the Events into Conditions
 		Status: v1.PodStatus{
 			Phase:             aciStateToPodPhase(aciState),
-			Conditions:        []v1.PodCondition{},
+			Conditions:        aciStateToPodConditions(aciState, podCreationTimestamp),
 			Message:           "",
 			Reason:            "",
 			HostIP:            "",
@@ -848,6 +846,28 @@ func aciStateToPodPhase(state string) v1.PodPhase {
 	}
 
 	return v1.PodUnknown
+}
+
+func aciStateToPodConditions(state string, transitiontime metav1.Time) []v1.PodCondition {
+	switch state {
+	case "Running", "Succeeded":
+		return []v1.PodCondition{
+			v1.PodCondition{
+				Type:               v1.PodReady,
+				Status:             v1.ConditionTrue,
+				LastTransitionTime: transitiontime,
+			}, v1.PodCondition{
+				Type:               v1.PodInitialized,
+				Status:             v1.ConditionTrue,
+				LastTransitionTime: transitiontime,
+			}, v1.PodCondition{
+				Type:               v1.PodScheduled,
+				Status:             v1.ConditionTrue,
+				LastTransitionTime: transitiontime,
+			},
+		}
+	}
+	return []v1.PodCondition{}
 }
 
 func aciContainerStateToContainerState(cs aci.ContainerState) v1.ContainerState {
