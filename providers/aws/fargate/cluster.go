@@ -20,6 +20,7 @@ type ClusterConfig struct {
 	Subnets                 []string
 	SecurityGroups          []string
 	AssignPublicIPv4Address bool
+	ExecutionRoleArn        string
 	PlatformVersion         string
 }
 
@@ -32,6 +33,7 @@ type Cluster struct {
 	subnets                 []string
 	securityGroups          []string
 	assignPublicIPv4Address bool
+	executionRoleArn        string
 	platformVersion         string
 	pods                    map[string]*Pod
 	sync.RWMutex
@@ -65,6 +67,7 @@ func NewCluster(config *ClusterConfig) (*Cluster, error) {
 		subnets:                 config.Subnets,
 		securityGroups:          config.SecurityGroups,
 		assignPublicIPv4Address: config.AssignPublicIPv4Address,
+		executionRoleArn:        config.ExecutionRoleArn,
 		platformVersion:         config.PlatformVersion,
 		pods:                    make(map[string]*Pod),
 	}

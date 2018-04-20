@@ -80,6 +80,10 @@ func NewPod(cluster *Cluster, pod *corev1.Pod) (*Pod, error) {
 		ContainerDefinitions:    []*ecs.ContainerDefinition{},
 	}
 
+	if cluster.executionRoleArn != "" {
+		taskDef.ExecutionRoleArn = aws.String(cluster.executionRoleArn)
+	}
+
 	// For each container in the pod...
 	for _, containerSpec := range pod.Spec.Containers {
 		// Create a container definition.
