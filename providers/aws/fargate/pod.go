@@ -33,6 +33,9 @@ const (
 
 	// Reason used for task state changes.
 	taskGenericReason = "Initiated by user"
+
+	// Annotation to configure the task role.
+	taskRoleAnnotation = "iam.amazonaws.com/role"
 )
 
 // Pod is the representation of a Kubernetes pod in Fargate.
@@ -46,6 +49,7 @@ type Pod struct {
 	cluster         *Cluster
 	taskDefArn      string
 	taskArn         string
+	taskRoleArn     string
 	taskStatus      string
 	taskRefreshTime time.Time
 	taskCPU         int64
@@ -103,6 +107,11 @@ func NewPod(cluster *Cluster, pod *corev1.Pod) (*Pod, error) {
 
 	taskDef.Cpu = aws.String(strconv.Itoa(int(fgPod.taskCPU)))
 	taskDef.Memory = aws.String(strconv.Itoa(int(fgPod.taskMemory)))
+
+	if val, ok := pod.Annotations[taskRoleAnnotation]; ok {
+		taskDef.TaskRoleArn = aws.String(val)
+		fgPod.taskRoleArn = *taskDef.TaskRoleArn
+	}
 
 	// Register the task definition with Fargate.
 	log.Printf("RegisterTaskDefinition input:%+v", taskDef)
@@ -372,15 +381,22 @@ func (pod *Pod) getSpec(task *ecs.Task) (*corev1.Pod, error) {
 		containers = append(containers, cntr)
 	}
 
+	annotations := make(map[string]string)
+
+	if pod.taskRoleArn != "" {
+		annotations[taskRoleAnnotation] = pod.taskRoleArn
+	}
+
 	podSpec := corev1.Pod{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "Pod",
 			APIVersion: "v1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace: pod.namespace,
-			Name:      pod.name,
-			UID:       pod.uid,
+			Namespace:   pod.namespace,
+			Name:        pod.name,
+			UID:         pod.uid,
+			Annotations: annotations,
 		},
 		Spec: corev1.PodSpec{
 			NodeName:   pod.cluster.nodeName,
