@@ -225,7 +225,7 @@
 [[projects]]
   name = "github.com/hyperhq/hypercli"
   packages = ["cliconfig","daemon/graphdriver","image","image/v1","layer","opts","pkg/archive","pkg/chrootarchive","pkg/fileutils","pkg/homedir","pkg/httputils","pkg/idtools","pkg/ioutils","pkg/jsonlog","pkg/jsonmessage","pkg/longpath","pkg/mflag","pkg/plugins","pkg/pools","pkg/promise","pkg/random","pkg/reexec","pkg/stringid","pkg/system","pkg/tarsum","pkg/term","pkg/term/windows","pkg/urlutil","pkg/version","reference","registry"]
-  revision = "3e4e4fa373cbf8672bded67688b4821cd30b37f9"
+  revision = "29217d318cab52815518a1126d57ca010de83e4d"
 
 [[projects]]
   name = "github.com/hyperhq/libcompose"
