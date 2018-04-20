@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/service/cloudwatchlogs"
 	"github.com/aws/aws-sdk-go/service/ecs"
 	k8sTypes "k8s.io/apimachinery/pkg/types"
 )
@@ -21,6 +22,7 @@ type ClusterConfig struct {
 	SecurityGroups          []string
 	AssignPublicIPv4Address bool
 	ExecutionRoleArn        string
+	CloudWatchLogGroupName  string
 	PlatformVersion         string
 }
 
@@ -34,6 +36,7 @@ type Cluster struct {
 	securityGroups          []string
 	assignPublicIPv4Address bool
 	executionRoleArn        string
+	cloudWatchLogGroupName  string
 	platformVersion         string
 	pods                    map[string]*Pod
 	sync.RWMutex
@@ -68,6 +71,7 @@ func NewCluster(config *ClusterConfig) (*Cluster, error) {
 		securityGroups:          config.SecurityGroups,
 		assignPublicIPv4Address: config.AssignPublicIPv4Address,
 		executionRoleArn:        config.ExecutionRoleArn,
+		cloudWatchLogGroupName:  config.CloudWatchLogGroupName,
 		platformVersion:         config.PlatformVersion,
 		pods:                    make(map[string]*Pod),
 	}
@@ -294,4 +298,49 @@ func (c *Cluster) RemovePod(tag string) {
 	defer c.Unlock()
 
 	delete(c.pods, tag)
+}
+
+// GetContainerLogs returns the logs of a container from this cluster.
+func (c *Cluster) GetContainerLogs(namespace, podName, containerName string, tail int) (string, error) {
+	if c.cloudWatchLogGroupName == "" {
+		return "", fmt.Errorf("logs not configured, please specify a \"CloudWatchLogGroupName\"")
+	}
+
+	prefix := fmt.Sprintf("%s_%s", buildTaskDefinitionTag(c.name, namespace, podName), containerName)
+	describeResult, err := client.logsapi.DescribeLogStreams(&cloudwatchlogs.DescribeLogStreamsInput{
+		LogGroupName:        aws.String(c.cloudWatchLogGroupName),
+		LogStreamNamePrefix: aws.String(prefix),
+	})
+	if err != nil {
+		return "", err
+	}
+
+	// Nothing logged yet.
+	if len(describeResult.LogStreams) == 0 {
+		return "", nil
+	}
+
+	logs := ""
+
+	err = client.logsapi.GetLogEventsPages(&cloudwatchlogs.GetLogEventsInput{
+		Limit:         aws.Int64(int64(tail)),
+		LogGroupName:  aws.String(c.cloudWatchLogGroupName),
+		LogStreamName: describeResult.LogStreams[0].LogStreamName,
+	}, func(page *cloudwatchlogs.GetLogEventsOutput, lastPage bool) bool {
+		for _, event := range page.Events {
+			logs += *event.Message
+			logs += "\n"
+		}
+
+		// Due to a issue in the aws-sdk last page is never true, but the we can stop
+		// as soon as no further results are returned.
+		// See https://github.com/aws/aws-sdk-ruby/pull/730.
+		return len(page.Events) > 0
+	})
+
+	if err != nil {
+		return "", err
+	}
+
+	return logs, nil
 }

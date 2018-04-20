@@ -32,6 +32,7 @@ type FargateProvider struct {
 	capacity                capacity
 	assignPublicIPv4Address bool
 	executionRoleArn        string
+	cloudWatchLogGroupName  string
 	platformVersion         string
 	lastTransitionTime      time.Time
 }
@@ -86,6 +87,7 @@ func NewFargateProvider(
 		SecurityGroups:          p.securityGroups,
 		AssignPublicIPv4Address: p.assignPublicIPv4Address,
 		ExecutionRoleArn:        p.executionRoleArn,
+		CloudWatchLogGroupName:  p.cloudWatchLogGroupName,
 		PlatformVersion:         p.platformVersion,
 	}
 
@@ -170,7 +172,7 @@ func (p *FargateProvider) GetPod(namespace, name string) (*corev1.Pod, error) {
 // GetContainerLogs retrieves the logs of a container by name from the provider.
 func (p *FargateProvider) GetContainerLogs(namespace, podName, containerName string, tail int) (string, error) {
 	log.Printf("Received GetContainerLogs request for %s/%s/%s.\n", namespace, podName, containerName)
-	return "", errNotImplemented
+	return p.cluster.GetContainerLogs(namespace, podName, containerName, tail)
 }
 
 // GetPodStatus retrieves the status of a pod by name from the provider.
