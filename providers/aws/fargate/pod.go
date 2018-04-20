@@ -92,6 +92,18 @@ func NewPod(cluster *Cluster, pod *corev1.Pod) (*Pod, error) {
 			return nil, err
 		}
 
+		if cluster.cloudWatchLogGroupName != "" {
+			// Configure container logs to be sent to the configured Cloudwatch Logs Log Group.
+			cntr.definition.LogConfiguration = &ecs.LogConfiguration{
+				LogDriver: aws.String(ecs.LogDriverAwslogs),
+				Options: map[string]*string{
+					"awslogs-group":         aws.String(cluster.cloudWatchLogGroupName),
+					"awslogs-region":        aws.String(cluster.region),
+					"awslogs-stream-prefix": aws.String(fmt.Sprintf("%s_%s", tag, containerSpec.Name)),
+				},
+			}
+		}
+
 		// Add the container's resource requirements to its pod's total resource requirements.
 		fgPod.taskCPU += *cntr.definition.Cpu
 		fgPod.taskMemory += *cntr.definition.Memory

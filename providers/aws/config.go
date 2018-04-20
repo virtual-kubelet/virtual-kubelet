@@ -42,6 +42,7 @@ type providerConfig struct {
 	SecurityGroups          []string
 	AssignPublicIPv4Address bool
 	ExecutionRoleArn        string
+	CloudWatchLogGroupName  string
 	PlatformVersion         string
 	OperatingSystem         string
 	CPU                     string
@@ -133,6 +134,7 @@ func (p *FargateProvider) loadConfig(r io.Reader) error {
 	p.clusterName = config.ClusterName
 	p.assignPublicIPv4Address = config.AssignPublicIPv4Address
 	p.executionRoleArn = config.ExecutionRoleArn
+	p.cloudWatchLogGroupName = config.CloudWatchLogGroupName
 	p.platformVersion = config.PlatformVersion
 	p.operatingSystem = config.OperatingSystem
 	p.capacity.cpu = config.CPU

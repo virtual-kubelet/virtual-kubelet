@@ -5,15 +5,18 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/cloudwatchlogs"
+	"github.com/aws/aws-sdk-go/service/cloudwatchlogs/cloudwatchlogsiface"
 	"github.com/aws/aws-sdk-go/service/ecs"
 	"github.com/aws/aws-sdk-go/service/ecs/ecsiface"
 )
 
 // Client communicates with the regional AWS Fargate service.
 type Client struct {
-	region string
-	svc    *ecs.ECS
-	api    ecsiface.ECSAPI
+	region  string
+	svc     *ecs.ECS
+	api     ecsiface.ECSAPI
+	logsapi cloudwatchlogsiface.CloudWatchLogsAPI
 }
 
 var client *Client
@@ -41,6 +44,9 @@ func newClient(region string) (*Client, error) {
 	client.region = region
 	client.svc = ecs.New(session)
 	client.api = client.svc
+
+	// Create the CloudWatch service client.
+	client.logsapi = cloudwatchlogs.New(session)
 
 	log.Println("Created Fargate service client.")
 
