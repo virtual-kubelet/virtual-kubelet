@@ -41,6 +41,7 @@ type providerConfig struct {
 	Subnets                 []string
 	SecurityGroups          []string
 	AssignPublicIPv4Address bool
+	ExecutionRoleArn        string
 	PlatformVersion         string
 	OperatingSystem         string
 	CPU                     string
@@ -131,6 +132,7 @@ func (p *FargateProvider) loadConfig(r io.Reader) error {
 
 	p.clusterName = config.ClusterName
 	p.assignPublicIPv4Address = config.AssignPublicIPv4Address
+	p.executionRoleArn = config.ExecutionRoleArn
 	p.platformVersion = config.PlatformVersion
 	p.operatingSystem = config.OperatingSystem
 	p.capacity.cpu = config.CPU

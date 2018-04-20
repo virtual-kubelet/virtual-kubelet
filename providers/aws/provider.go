@@ -31,6 +31,7 @@ type FargateProvider struct {
 	clusterName             string
 	capacity                capacity
 	assignPublicIPv4Address bool
+	executionRoleArn        string
 	platformVersion         string
 	lastTransitionTime      time.Time
 }
@@ -84,6 +85,7 @@ func NewFargateProvider(
 		Subnets:                 p.subnets,
 		SecurityGroups:          p.securityGroups,
 		AssignPublicIPv4Address: p.assignPublicIPv4Address,
+		ExecutionRoleArn:        p.executionRoleArn,
 		PlatformVersion:         p.platformVersion,
 	}
 
