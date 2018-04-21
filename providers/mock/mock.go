@@ -1,10 +1,11 @@
 package mock
 
 import (
+	"fmt"
 	"log"
+	"strconv"
 	"time"
 
-	"fmt"
 	"github.com/virtual-kubelet/virtual-kubelet/providers"
 	"k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -39,6 +40,10 @@ func (p *MockProvider) CreatePod(pod *v1.Pod) error {
 
 	key, err := buildKey(pod)
 	if err != nil {
+		return err
+	}
+
+	if err := p.CheckResourceLimit(pod); err != nil {
 		return err
 	}
 
@@ -244,6 +249,46 @@ func (p *MockProvider) NodeDaemonEndpoints() *v1.NodeDaemonEndpoints {
 // This is a noop to default to Linux for now.
 func (p *MockProvider) OperatingSystem() string {
 	return providers.OperatingSystemLinux
+}
+
+// CheckResourceLimit checks whether the new pod's request resources exceed
+// the node's current available resources.
+func (p *MockProvider) CheckResourceLimit(pod *v1.Pod) error {
+	var cpuUsed int64 = 0
+	var memoryUsed int64 = 0
+	var podNum int = len(p.pods)
+	for _, v := range p.pods {
+		for _, c := range v.Spec.Containers {
+			cpuUsed += c.Resources.Requests.Cpu().Value()
+			memoryUsed += c.Resources.Requests.Memory().Value()
+		}
+	}
+
+	usedResourceList := v1.ResourceList{
+		"cpu":    	resource.MustParse(strconv.FormatInt(cpuUsed, 10)),
+		"memory": 	resource.MustParse(strconv.FormatInt(memoryUsed, 10)),
+		"pods":   	resource.MustParse(strconv.Itoa(podNum)),
+	}
+
+	cpuUsed = 0; memoryUsed = 0; podNum = 1
+	for _, c := range pod.Spec.Containers {
+		cpuUsed = c.Resources.Requests.Cpu().Value()
+		memoryUsed = c.Resources.Requests.Memory().Value()
+	}
+	newPodResourceList := v1.ResourceList {
+		"cpu":		resource.MustParse(strconv.FormatInt(cpuUsed, 10)),
+		"memory": 	resource.MustParse(strconv.FormatInt(memoryUsed, 10)),
+		"pods": 	resource.MustParse(strconv.Itoa(1)),
+	}
+
+	for k := range usedResourceList {
+		total := p.Capacity()[k]; used := usedResourceList[k]; newPod := newPodResourceList[k];
+		if total.Value() < used.Value() + newPod.Value() {
+			return fmt.Errorf("pod %q's %q resource exceeds limit\n", pod.Name, k)
+		}
+	}
+
+	return nil
 }
 
 func buildKeyFromNames(namespace string, name string) (string, error) {
