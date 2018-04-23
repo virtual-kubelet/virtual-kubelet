@@ -221,6 +221,9 @@ func (c *Cluster) loadPodState() error {
 		pod.uid = k8sTypes.UID(*task.StartedBy)
 		pod.taskDefArn = *task.TaskDefinitionArn
 		pod.taskArn = *task.TaskArn
+		if taskDef.TaskRoleArn != nil {
+			pod.taskRoleArn = *taskDef.TaskRoleArn
+		}
 		pod.taskStatus = *task.LastStatus
 		pod.taskRefreshTime = time.Now()
 
