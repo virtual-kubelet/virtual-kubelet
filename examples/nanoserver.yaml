@@ -8,10 +8,6 @@ spec:
     imagePullPolicy: Always
     command: ["powershell.exe", "-Command", "while ($true) { Sleep 5; Write-Host 'helloworld' }"]
     name: nanoserver
-    resources:
-      requests:
-        memory: 1.5G
-        cpu: 1
   dnsPolicy: Default
   restartPolicy: OnFailure
   nodeName: virtual-kubelet-myaciconnector-win
