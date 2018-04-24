@@ -80,14 +80,13 @@ func (rm *ResourceManager) SetPods(pods *v1.PodList) {
 	rm.configMaps = make(map[string]*v1.ConfigMap, len(pods.Items))
 	rm.secrets = make(map[string]*v1.Secret, len(pods.Items))
 
-	for _, p := range pods.Items {
+	for k, p := range pods.Items {
 		if p.Status.Phase == v1.PodSucceeded {
 			continue
 		}
-		tmp := p
-		rm.pods[p.Name] = &tmp
+		rm.pods[p.Name] = &pods.Items[k]
 
-		rm.incrementRefCounters(&tmp)
+		rm.incrementRefCounters(&p)
 	}
 }
 
