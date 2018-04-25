@@ -284,7 +284,7 @@ func (p *FargateProvider) NodeConditions() []corev1.NodeCondition {
 			Message:            lastTransitionMessage,
 		},
 		{
-			Type:               corev1.NodeConfigOK,
+			Type:               corev1.NodeKubeletConfigOk,
 			Status:             corev1.ConditionTrue,
 			LastHeartbeatTime:  lastHeartbeatTime,
 			LastTransitionTime: lastTransitionTime,
