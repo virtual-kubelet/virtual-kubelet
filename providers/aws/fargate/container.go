@@ -1,6 +1,7 @@
 package fargate
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -17,6 +18,11 @@ const (
 	containerStatusPending      = "PENDING"
 	containerStatusRunning      = "RUNNING"
 	containerStatusStopped      = "STOPPED"
+
+	// Container log configuration options.
+	containerLogOptionRegion       = "awslogs-region"
+	containerLogOptionGroup        = "awslogs-group"
+	containerLogOptionStreamPrefix = "awslogs-stream-prefix"
 
 	// Default container resource limits.
 	containerDefaultCPULimit    = VCPU / 4
@@ -63,6 +69,21 @@ func newContainerFromDefinition(def *ecs.ContainerDefinition, startTime *time.Ti
 	}
 
 	return &cntr, nil
+}
+
+// ConfigureLogs configures container logs to be sent to the given CloudWatch log group.
+func (cntr *container) configureLogs(region string, logGroupName string, streamPrefix string) {
+	streamPrefix = fmt.Sprintf("%s_%s", streamPrefix, *cntr.definition.Name)
+
+	// Fargate requires awslogs log driver.
+	cntr.definition.LogConfiguration = &ecs.LogConfiguration{
+		LogDriver: aws.String(ecs.LogDriverAwslogs),
+		Options: map[string]*string{
+			containerLogOptionRegion:       aws.String(region),
+			containerLogOptionGroup:        aws.String(logGroupName),
+			containerLogOptionStreamPrefix: aws.String(streamPrefix),
+		},
+	}
 }
 
 // GetStatus returns the status of a container running in Fargate.

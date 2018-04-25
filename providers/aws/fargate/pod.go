@@ -80,10 +80,6 @@ func NewPod(cluster *Cluster, pod *corev1.Pod) (*Pod, error) {
 		ContainerDefinitions:    []*ecs.ContainerDefinition{},
 	}
 
-	if cluster.executionRoleArn != "" {
-		taskDef.ExecutionRoleArn = aws.String(cluster.executionRoleArn)
-	}
-
 	// For each container in the pod...
 	for _, containerSpec := range pod.Spec.Containers {
 		// Create a container definition.
@@ -92,16 +88,9 @@ func NewPod(cluster *Cluster, pod *corev1.Pod) (*Pod, error) {
 			return nil, err
 		}
 
+		// Configure container logs to be sent to CloudWatch Logs if enabled.
 		if cluster.cloudWatchLogGroupName != "" {
-			// Configure container logs to be sent to the configured Cloudwatch Logs Log Group.
-			cntr.definition.LogConfiguration = &ecs.LogConfiguration{
-				LogDriver: aws.String(ecs.LogDriverAwslogs),
-				Options: map[string]*string{
-					"awslogs-group":         aws.String(cluster.cloudWatchLogGroupName),
-					"awslogs-region":        aws.String(cluster.region),
-					"awslogs-stream-prefix": aws.String(fmt.Sprintf("%s_%s", tag, containerSpec.Name)),
-				},
-			}
+			cntr.configureLogs(cluster.region, cluster.cloudWatchLogGroupName, tag)
 		}
 
 		// Add the container's resource requirements to its pod's total resource requirements.
@@ -124,9 +113,15 @@ func NewPod(cluster *Cluster, pod *corev1.Pod) (*Pod, error) {
 	taskDef.Cpu = aws.String(strconv.Itoa(int(fgPod.taskCPU)))
 	taskDef.Memory = aws.String(strconv.Itoa(int(fgPod.taskMemory)))
 
+	// Set a custom task execution IAM role if configured.
+	if cluster.executionRoleArn != "" {
+		taskDef.ExecutionRoleArn = aws.String(cluster.executionRoleArn)
+	}
+
+	// Set a custom task IAM role if configured.
 	if val, ok := pod.Annotations[taskRoleAnnotation]; ok {
 		taskDef.TaskRoleArn = aws.String(val)
-		fgPod.taskRoleArn = *taskDef.TaskRoleArn
+		fgPod.taskRoleArn = val
 	}
 
 	// Register the task definition with Fargate.
