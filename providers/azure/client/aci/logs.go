@@ -20,7 +20,7 @@ func (c *Client) GetContainerLogs(resourceGroup, containerGroupName, containerNa
 	}
 
 	// Create the url.
-	uri := api.ResolveRelative(BaseURI, containerLogsURLPath)
+	uri := api.ResolveRelative(c.auth.ResourceManagerEndpoint, containerLogsURLPath)
 	uri += "?" + url.Values(urlParams).Encode()
 
 	// Create the request.

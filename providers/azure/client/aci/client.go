@@ -9,7 +9,7 @@ import (
 
 const (
 	// BaseURI is the default URI used for compute services.
-	BaseURI    = "https://management.azure.com"
+	baseURI    = "https://management.azure.com"
 	userAgent  = "virtual-kubelet/azure-arm-aci/2018-02-01"
 	apiVersion = "2018-02-01-preview"
 
@@ -34,7 +34,7 @@ func NewClient(auth *azure.Authentication) (*Client, error) {
 		return nil, fmt.Errorf("Authentication is not supplied for the Azure client")
 	}
 
-	client, err := azure.NewClient(auth, BaseURI, userAgent)
+	client, err := azure.NewClient(auth, baseURI, userAgent)
 	if err != nil {
 		return nil, fmt.Errorf("Creating Azure client failed: %v", err)
 	}

@@ -54,12 +54,13 @@ type AuthConfig struct {
 	RegistryToken string `json:"registrytoken,omitempty"`
 }
 
-// See https://docs.microsoft.com/en-us/azure/container-instances/container-instances-quotas for valid regions.
+// See https://azure.microsoft.com/en-us/status/ for valid regions.
 var validAciRegions = []string{
 	"westeurope",
 	"westus",
 	"eastus",
 	"southeastasia",
+	"westus2",
 }
 
 // isValidACIRegion checks to make sure we're using a valid ACI region
@@ -452,26 +453,78 @@ func (p *ACIProvider) getImagePullSecrets(pod *v1.Pod) ([]aci.ImageRegistryCrede
 		// TODO: Check if secret type is v1.SecretTypeDockercfg and use DockerConfigKey instead of hardcoded value
 		// TODO: Check if secret type is v1.SecretTypeDockerConfigJson and use DockerConfigJsonKey to determine if it's in json format
 		// TODO: Return error if it's not one of these two types
-		repoData, ok := secret.Data[".dockercfg"]
-		if !ok {
-			return ips, fmt.Errorf("no dockercfg present in secret")
+		switch secret.Type {
+		case v1.SecretTypeDockercfg:
+			ips, err = readDockerCfgSecret(secret, ips)
+		case v1.SecretTypeDockerConfigJson:
+			ips, err = readDockerConfigJSONSecret(secret, ips)
+		default:
+			return nil, fmt.Errorf("image pull secret type is not one of kubernetes.io/dockercfg or kubernetes.io/dockerconfigjson")
 		}
 
-		var authConfigs map[string]AuthConfig
-		err = json.Unmarshal(repoData, &authConfigs)
 		if err != nil {
 			return ips, err
 		}
 
-		for server, authConfig := range authConfigs {
-			ips = append(ips, aci.ImageRegistryCredential{
-				Password: authConfig.Password,
-				Server:   server,
-				Username: authConfig.Username,
-			})
-		}
 	}
 	return ips, nil
+}
+
+func readDockerCfgSecret(secret *v1.Secret, ips []aci.ImageRegistryCredential) ([]aci.ImageRegistryCredential, error) {
+	var err error
+	var authConfigs map[string]AuthConfig
+	repoData, ok := secret.Data[string(v1.DockerConfigKey)]
+
+	if !ok {
+		return ips, fmt.Errorf("no dockercfg present in secret")
+	}
+
+	err = json.Unmarshal(repoData, &authConfigs)
+	if err != nil {
+		return ips, err
+	}
+
+	for server, authConfig := range authConfigs {
+		ips = append(ips, aci.ImageRegistryCredential{
+			Password: authConfig.Password,
+			Server:   server,
+			Username: authConfig.Username,
+		})
+	}
+
+	return ips, err
+}
+
+func readDockerConfigJSONSecret(secret *v1.Secret, ips []aci.ImageRegistryCredential) ([]aci.ImageRegistryCredential, error) {
+	var err error
+	repoData, ok := secret.Data[string(v1.DockerConfigJsonKey)]
+
+	if !ok {
+		return ips, fmt.Errorf("no dockerconfigjson present in secret")
+	}
+
+	var authConfigs map[string]map[string]AuthConfig
+
+	err = json.Unmarshal(repoData, &authConfigs)
+	if err != nil {
+		return ips, err
+	}
+
+	auths, ok := authConfigs["auths"]
+
+	if !ok {
+		return ips, fmt.Errorf("malformed dockerconfigjson in secret")
+	}
+
+	for server, authConfig := range auths {
+		ips = append(ips, aci.ImageRegistryCredential{
+			Password: authConfig.Password,
+			Server:   server,
+			Username: authConfig.Username,
+		})
+	}
+
+	return ips, err
 }
 
 func (p *ACIProvider) getContainers(pod *v1.Pod) ([]aci.Container, error) {
@@ -510,10 +563,41 @@ func (p *ACIProvider) getContainers(pod *v1.Pod) ([]aci.Container, error) {
 			})
 		}
 
-		cpuLimit := float64(container.Resources.Limits.Cpu().Value())
-		memoryLimit := float64(container.Resources.Limits.Memory().Value()) / 1000000000.00
-		cpuRequest := float64(container.Resources.Requests.Cpu().Value())
-		memoryRequest := float64(container.Resources.Requests.Memory().Value()) / 1000000000.00
+		// NOTE(robbiezhang): ACI CPU limit must be times of 10m
+		cpuLimit := 1.00
+		if _, ok := container.Resources.Limits[v1.ResourceCPU]; ok {
+			cpuLimit = float64(container.Resources.Limits.Cpu().MilliValue() / 10.00) / 100.00
+			if cpuLimit < 0.01 {
+				cpuLimit = 0.01
+			}
+		}
+
+		// NOTE(robbiezhang): ACI Memory limit must be times of 0.1 GB
+		memoryLimit := 1.50
+		if _, ok := container.Resources.Limits[v1.ResourceMemory]; ok {
+			memoryLimit = float64(container.Resources.Limits.Memory().Value() / 100000000.00) / 10.00
+			if memoryLimit < 0.10 {
+				memoryLimit = 0.10
+			}
+		}
+
+		// NOTE(robbiezhang): ACI CPU request must be times of 10m
+		cpuRequest := 1.00
+		if _, ok := container.Resources.Requests[v1.ResourceCPU]; ok {
+			cpuRequest = float64(container.Resources.Requests.Cpu().MilliValue() / 10.00) / 100.00
+			if cpuRequest < 0.01 {
+				cpuRequest = 0.01
+			}
+		}
+
+		// NOTE(robbiezhang): ACI memory request must be times of 0.1 GB
+		memoryRequest := 1.50
+		if _, ok := container.Resources.Requests[v1.ResourceMemory]; ok {
+			memoryRequest = float64(container.Resources.Requests.Memory().Value() / 100000000.00) / 10.00
+			if memoryRequest < 0.10 {
+				memoryRequest = 0.10
+			}
+		}
 
 		c.Resources = aci.ResourceRequirements{
 			Limits: aci.ResourceLimits{
@@ -726,11 +810,9 @@ func containerGroupToPod(cg *aci.ContainerGroup) (*v1.Pod, error) {
 			Volumes:    []v1.Volume{},
 			Containers: containers,
 		},
-		// TODO: Make this dynamic, likely can translate the provisioningState or instanceView.ContainerState into a Phase,
-		// and some of the Events into Conditions
 		Status: v1.PodStatus{
 			Phase:             aciStateToPodPhase(aciState),
-			Conditions:        []v1.PodCondition{},
+			Conditions:        aciStateToPodConditions(aciState, podCreationTimestamp),
 			Message:           "",
 			Reason:            "",
 			HostIP:            "",
@@ -764,6 +846,28 @@ func aciStateToPodPhase(state string) v1.PodPhase {
 	}
 
 	return v1.PodUnknown
+}
+
+func aciStateToPodConditions(state string, transitiontime metav1.Time) []v1.PodCondition {
+	switch state {
+	case "Running", "Succeeded":
+		return []v1.PodCondition{
+			v1.PodCondition{
+				Type:               v1.PodReady,
+				Status:             v1.ConditionTrue,
+				LastTransitionTime: transitiontime,
+			}, v1.PodCondition{
+				Type:               v1.PodInitialized,
+				Status:             v1.ConditionTrue,
+				LastTransitionTime: transitiontime,
+			}, v1.PodCondition{
+				Type:               v1.PodScheduled,
+				Status:             v1.ConditionTrue,
+				LastTransitionTime: transitiontime,
+			},
+		}
+	}
+	return []v1.PodCondition{}
 }
 
 func aciContainerStateToContainerState(cs aci.ContainerState) v1.ContainerState {

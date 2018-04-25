@@ -19,7 +19,7 @@ func (c *Client) GetContainerGroup(resourceGroup, containerGroupName string) (*C
 	}
 
 	// Create the url.
-	uri := api.ResolveRelative(BaseURI, containerGroupURLPath)
+	uri := api.ResolveRelative(c.auth.ResourceManagerEndpoint, containerGroupURLPath)
 	uri += "?" + url.Values(urlParams).Encode()
 
 	// Create the request.

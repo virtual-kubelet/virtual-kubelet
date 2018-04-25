@@ -54,5 +54,9 @@
   version = "1.6.0"
 
 [[constraint]]
+  name = "k8s.io/client-go"
+  version = "6.0.0"
+
+[[constraint]]
   name = "github.com/hyperhq/hypercli"
-  revision = "3e4e4fa373cbf8672bded67688b4821cd30b37f9"
+  revision = "29217d318cab52815518a1126d57ca010de83e4d"

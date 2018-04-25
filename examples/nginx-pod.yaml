@@ -7,10 +7,6 @@ spec:
   - image: nginx
     imagePullPolicy: Always
     name: nginx
-    resources:
-      requests:
-        memory: 1G
-        cpu: 1
     ports:
     - containerPort: 80
       name: http
