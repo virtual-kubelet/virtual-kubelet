@@ -121,6 +121,16 @@ The config file is in TOML format, and an example lives in `providers/azure/exam
 
 See the [ACI Readme](providers/azure/README.md)
 
+### AWS Fargate Provider
+
+The AWS Fargate provider allows you to deploy pods to [AWS Fargate](https://aws.amazon.com/fargate/).
+Your pods on AWS Fargate have access to VPC networking with dedicated ENIs in your subnets, public
+IP addresses to connect to the internet, private IP addresses to connect to your Kubernetes cluster,
+security groups, IAM roles, CloudWatch Logs and many other AWS services. Pods on Fargate can
+co-exist with pods on regular worker nodes in the same Kubernetes cluster.
+
+Easy instructions and a sample configuration file is available in the [AWS Fargate provider documentation](providers/aws/README.md).
+
 ### Hyper.sh Provider
 
 The Hyper.sh Provider allows Kubernetes clusters to deploy Hyper.sh containers
