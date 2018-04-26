@@ -563,24 +563,6 @@ func (p *ACIProvider) getContainers(pod *v1.Pod) ([]aci.Container, error) {
 			})
 		}
 
-		// NOTE(robbiezhang): ACI CPU limit must be times of 10m
-		cpuLimit := 1.00
-		if _, ok := container.Resources.Limits[v1.ResourceCPU]; ok {
-			cpuLimit = float64(container.Resources.Limits.Cpu().MilliValue() / 10.00) / 100.00
-			if cpuLimit < 0.01 {
-				cpuLimit = 0.01
-			}
-		}
-
-		// NOTE(robbiezhang): ACI Memory limit must be times of 0.1 GB
-		memoryLimit := 1.50
-		if _, ok := container.Resources.Limits[v1.ResourceMemory]; ok {
-			memoryLimit = float64(container.Resources.Limits.Memory().Value() / 100000000.00) / 10.00
-			if memoryLimit < 0.10 {
-				memoryLimit = 0.10
-			}
-		}
-
 		// NOTE(robbiezhang): ACI CPU request must be times of 10m
 		cpuRequest := 1.00
 		if _, ok := container.Resources.Requests[v1.ResourceCPU]; ok {
@@ -600,14 +582,35 @@ func (p *ACIProvider) getContainers(pod *v1.Pod) ([]aci.Container, error) {
 		}
 
 		c.Resources = aci.ResourceRequirements{
-			Limits: aci.ResourceLimits{
-				CPU:        cpuLimit,
-				MemoryInGB: memoryLimit,
-			},
-			Requests: aci.ResourceRequests{
+			Requests: &aci.ResourceRequests{
 				CPU:        cpuRequest,
 				MemoryInGB: memoryRequest,
 			},
+		}
+
+		if container.Resources.Limits != nil {
+			// NOTE(robbiezhang): ACI CPU limit must be times of 10m
+			cpuLimit := cpuRequest
+			if _, ok := container.Resources.Limits[v1.ResourceCPU]; ok {
+				cpuLimit = float64(container.Resources.Limits.Cpu().MilliValue() / 10.00) / 100.00
+				if cpuLimit < 0.01 {
+					cpuLimit = 0.01
+				}
+			}
+
+			// NOTE(robbiezhang): ACI Memory limit must be times of 0.1 GB
+			memoryLimit := memoryRequest
+			if _, ok := container.Resources.Limits[v1.ResourceMemory]; ok {
+				memoryLimit = float64(container.Resources.Limits.Memory().Value() / 100000000.00) / 10.00
+				if memoryLimit < 0.10 {
+					memoryLimit = 0.10
+				}
+			}
+
+			c.Resources.Limits = &aci.ResourceLimits{
+				CPU:        cpuLimit,
+				MemoryInGB: memoryLimit,
+			}
 		}
 
 		containers = append(containers, c)

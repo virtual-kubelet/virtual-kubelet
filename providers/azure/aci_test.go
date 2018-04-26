@@ -55,8 +55,7 @@ func TestCreatePodWithoutResourceSpec(t *testing.T) {
 		assert.NotNil(t, cg.ContainerGroupProperties.Containers[0].Resources.Requests, "Container resource requests should not be nil")
 		assert.Equal(t, 1.0, cg.ContainerGroupProperties.Containers[0].Resources.Requests.CPU, "Request CPU is not expected")
 		assert.Equal(t, 1.5, cg.ContainerGroupProperties.Containers[0].Resources.Requests.MemoryInGB, "Request Memory is not expected")
-		assert.Equal(t, 1.0, cg.ContainerGroupProperties.Containers[0].Resources.Limits.CPU, "Limit CPU is not expected")
-		assert.Equal(t, 1.5, cg.ContainerGroupProperties.Containers[0].Resources.Limits.MemoryInGB, "Limit Memory is not expected")
+		assert.Nil(t, cg.ContainerGroupProperties.Containers[0].Resources.Limits, "Limits should be nil")
 
 		return http.StatusOK, cg
 	}
@@ -80,8 +79,62 @@ func TestCreatePodWithoutResourceSpec(t *testing.T) {
 	}
 }
 
-// Tests create pod without resource spec
-func TestCreatePodWithResourceSpec(t *testing.T) {
+// Tests create pod with resource request only
+func TestCreatePodWithResourceRequestOnly(t *testing.T) {
+	_, aciServerMocker, provider, err := prepareMocks()
+
+	if err != nil {
+		t.Fatal("Unable to prepare the mocks", err)
+	}
+
+	podName := "pod-" + uuid.New().String()
+	podNamespace := "ns-" + uuid.New().String()
+
+	aciServerMocker.OnCreate = func(subscription, resourceGroup, containerGroup string, cg *aci.ContainerGroup) (int, interface{}) {
+		assert.Equal(t, fakeSubscription, subscription, "Subscription doesn't match")
+		assert.Equal(t, fakeResourceGroup, resourceGroup, "Resource group doesn't match")
+		assert.NotNil(t, cg, "Container group is nil")
+		assert.Equal(t, podNamespace + "-" + podName, containerGroup, "Container group name is not expected")
+		assert.NotNil(t, cg.ContainerGroupProperties, "Container group properties should not be nil")
+		assert.NotNil(t, cg.ContainerGroupProperties.Containers, "Containers should not be nil")
+		assert.Equal(t, 1, len(cg.ContainerGroupProperties.Containers), "1 Container is expected")
+		assert.Equal(t, "nginx", cg.ContainerGroupProperties.Containers[0].Name, "Container nginx is expected")
+		assert.NotNil(t, cg.ContainerGroupProperties.Containers[0].Resources, "Container resources should not be nil")
+		assert.NotNil(t, cg.ContainerGroupProperties.Containers[0].Resources.Requests, "Container resource requests should not be nil")
+		assert.Equal(t, 1.98, cg.ContainerGroupProperties.Containers[0].Resources.Requests.CPU, "Request CPU is not expected")
+		assert.Equal(t, 3.4, cg.ContainerGroupProperties.Containers[0].Resources.Requests.MemoryInGB, "Request Memory is not expected")
+		assert.Nil(t, cg.ContainerGroupProperties.Containers[0].Resources.Limits, "Limits should be nil")
+
+		return http.StatusOK, cg
+	}
+
+	pod := &v1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      podName,
+			Namespace: podNamespace,
+		},
+		Spec: v1.PodSpec{
+			Containers: []v1.Container{
+				v1.Container{
+					Name: "nginx",
+					Resources: v1.ResourceRequirements{
+						Requests: v1.ResourceList{
+							"cpu": resource.MustParse("1.98"),
+							"memory": resource.MustParse("3.4G"),
+						},
+					},
+				},
+			},
+		},
+	}
+
+	if err := provider.CreatePod(pod); err != nil {
+		t.Fatal("Failed to create pod", err)
+	}
+}
+
+// Tests create pod with both resource request and limit.
+func TestCreatePodWithResourceRequestAndLimit(t *testing.T) {
 	_, aciServerMocker, provider, err := prepareMocks()
 
 	if err != nil {
