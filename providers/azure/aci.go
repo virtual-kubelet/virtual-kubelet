@@ -61,6 +61,7 @@ var validAciRegions = []string{
 	"eastus",
 	"southeastasia",
 	"westus2",
+	"northeurope",
 }
 
 // isValidACIRegion checks to make sure we're using a valid ACI region
@@ -566,7 +567,7 @@ func (p *ACIProvider) getContainers(pod *v1.Pod) ([]aci.Container, error) {
 		// NOTE(robbiezhang): ACI CPU request must be times of 10m
 		cpuRequest := 1.00
 		if _, ok := container.Resources.Requests[v1.ResourceCPU]; ok {
-			cpuRequest = float64(container.Resources.Requests.Cpu().MilliValue() / 10.00) / 100.00
+			cpuRequest = float64(container.Resources.Requests.Cpu().MilliValue()/10.00) / 100.00
 			if cpuRequest < 0.01 {
 				cpuRequest = 0.01
 			}
@@ -575,7 +576,7 @@ func (p *ACIProvider) getContainers(pod *v1.Pod) ([]aci.Container, error) {
 		// NOTE(robbiezhang): ACI memory request must be times of 0.1 GB
 		memoryRequest := 1.50
 		if _, ok := container.Resources.Requests[v1.ResourceMemory]; ok {
-			memoryRequest = float64(container.Resources.Requests.Memory().Value() / 100000000.00) / 10.00
+			memoryRequest = float64(container.Resources.Requests.Memory().Value()/100000000.00) / 10.00
 			if memoryRequest < 0.10 {
 				memoryRequest = 0.10
 			}
