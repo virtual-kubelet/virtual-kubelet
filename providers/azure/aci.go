@@ -589,22 +589,14 @@ func (p *ACIProvider) getContainers(pod *v1.Pod) ([]aci.Container, error) {
 		}
 
 		if container.Resources.Limits != nil {
-			// NOTE(robbiezhang): ACI CPU limit must be times of 10m
 			cpuLimit := cpuRequest
 			if _, ok := container.Resources.Limits[v1.ResourceCPU]; ok {
-				cpuLimit = float64(container.Resources.Limits.Cpu().MilliValue() / 10.00) / 100.00
-				if cpuLimit < 0.01 {
-					cpuLimit = 0.01
-				}
+				cpuLimit = float64(container.Resources.Limits.Cpu().MilliValue()) / 1000.00
 			}
 
-			// NOTE(robbiezhang): ACI Memory limit must be times of 0.1 GB
 			memoryLimit := memoryRequest
 			if _, ok := container.Resources.Limits[v1.ResourceMemory]; ok {
-				memoryLimit = float64(container.Resources.Limits.Memory().Value() / 100000000.00) / 10.00
-				if memoryLimit < 0.10 {
-					memoryLimit = 0.10
-				}
+				memoryLimit = float64(container.Resources.Limits.Memory().Value()) / 1000000000.00
 			}
 
 			c.Resources.Limits = &aci.ResourceLimits{

@@ -119,8 +119,8 @@ func TestCreatePodWithResourceRequestOnly(t *testing.T) {
 					Name: "nginx",
 					Resources: v1.ResourceRequirements{
 						Requests: v1.ResourceList{
-							"cpu": resource.MustParse("1.98"),
-							"memory": resource.MustParse("3.4G"),
+							"cpu": resource.MustParse("1.981"),
+							"memory": resource.MustParse("3.49G"),
 						},
 					},
 				},
@@ -157,8 +157,8 @@ func TestCreatePodWithResourceRequestAndLimit(t *testing.T) {
 		assert.NotNil(t, cg.ContainerGroupProperties.Containers[0].Resources.Requests, "Container resource requests should not be nil")
 		assert.Equal(t, 1.98, cg.ContainerGroupProperties.Containers[0].Resources.Requests.CPU, "Request CPU is not expected")
 		assert.Equal(t, 3.4, cg.ContainerGroupProperties.Containers[0].Resources.Requests.MemoryInGB, "Request Memory is not expected")
-		assert.Equal(t, 3.99, cg.ContainerGroupProperties.Containers[0].Resources.Limits.CPU, "Limit CPU is not expected")
-		assert.Equal(t, 8.0, cg.ContainerGroupProperties.Containers[0].Resources.Limits.MemoryInGB, "Limit Memory is not expected")
+		assert.Equal(t, 3.999, cg.ContainerGroupProperties.Containers[0].Resources.Limits.CPU, "Limit CPU is not expected")
+		assert.Equal(t, 8.01, cg.ContainerGroupProperties.Containers[0].Resources.Limits.MemoryInGB, "Limit Memory is not expected")
 
 		return http.StatusOK, cg
 	}
@@ -174,8 +174,8 @@ func TestCreatePodWithResourceRequestAndLimit(t *testing.T) {
 					Name: "nginx",
 					Resources: v1.ResourceRequirements{
 						Requests: v1.ResourceList{
-							"cpu": resource.MustParse("1.98"),
-							"memory": resource.MustParse("3.4G"),
+							"cpu": resource.MustParse("1.981"),
+							"memory": resource.MustParse("3.49G"),
 						},
 						Limits: v1.ResourceList{
 							"cpu": resource.MustParse("3999m"),
