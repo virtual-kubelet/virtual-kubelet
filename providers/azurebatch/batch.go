@@ -4,10 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/Azure/go-autorest/autorest/azure"
 	"io/ioutil"
 	"log"
 	"net/http"
+
+	"github.com/Azure/go-autorest/autorest/azure"
 
 	"github.com/Azure/go-autorest/autorest/to"
 
@@ -22,14 +23,14 @@ import (
 const (
 	stdoutFile string = "stdout.txt"
 	stderrFile string = "stderr.txt"
-	podJsonKey string = "virtualkubelet_pod"
+	podJSONKey string = "virtualkubelet_pod"
 )
 
 // Provider the base struct for the Azure Batch provider
 type Provider struct {
 	batchConfig        *Config
 	ctx                context.Context
-	cancelOps          context.CancelFunc
+	cancelCtx          context.CancelFunc
 	poolClient         *batch.PoolClient
 	jobClient          *batch.JobClient
 	taskClient         *batch.TaskClient
@@ -80,7 +81,7 @@ func NewBatchProvider(config string, rm *manager.ResourceManager, nodeName, oper
 	p.nodeName = nodeName
 	p.internalIP = internalIP
 	p.daemonEndpointPort = daemonEndpointPort
-	p.ctx = context.Background()
+	p.ctx, p.cancelCtx = context.WithCancel(context.Background())
 
 	auth := getAzureADAuthorizer(p.batchConfig, azure.PublicCloud.BatchManagementEndpoint)
 
@@ -147,7 +148,7 @@ func (p *Provider) CreatePod(pod *v1.Pod) error {
 		},
 		EnvironmentSettings: &[]batch.EnvironmentSetting{
 			{
-				Name:  to.StringPtr(podJsonKey),
+				Name:  to.StringPtr(podJSONKey),
 				Value: to.StringPtr(string(bytes)),
 			},
 		},
@@ -215,11 +216,6 @@ func (p *Provider) GetPod(namespace, name string) (*v1.Pod, error) {
 		panic(err)
 	}
 
-	// jsonBytpes, _ := json.Marshal(task)
-	// if pod.Labels == nil {
-	// 	pod.Labels = make(map[string]string)
-	// }
-	// pod.Labels["batchStatus"] = string(jsonBytpes)
 	status, _ := convertTaskToPodStatus(&task)
 	pod.Status = *status
 
@@ -268,13 +264,6 @@ func (p *Provider) GetPods() ([]*v1.Pod, error) {
 		}
 		pods[i] = pod
 	}
-
-	// for _, pod := range pods {
-	// 	// status, _ := p.GetPodStatus(pod.Namespace, pod.Name)
-	// 	if status != nil {
-	// 		pod.Status = *status
-	// 	}
-	// }
 	return pods, nil
 }
 

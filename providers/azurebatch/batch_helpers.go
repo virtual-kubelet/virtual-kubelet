@@ -41,7 +41,6 @@ func createOrGetPool(p *Provider, auth autorest.Authorizer) {
 	poolClient := batch.NewPoolClientWithBaseURI(getBatchBaseURL(p.batchConfig))
 	poolClient.Authorizer = auth
 	poolClient.RetryAttempts = 0
-	//	poolClient.RequestInspector = fixContentTypeInspector()
 	p.poolClient = &poolClient
 	pool, err := poolClient.Get(p.ctx, p.batchConfig.PoolID, "*", "", nil, nil, nil, nil, "", "", nil, nil)
 

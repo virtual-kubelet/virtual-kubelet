@@ -3,6 +3,7 @@ package azurebatch
 import (
 	"encoding/json"
 	"fmt"
+
 	"github.com/Azure/azure-sdk-for-go/services/batch/2017-09-01.6.0/batch"
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -17,7 +18,7 @@ func getPodFromTask(task *batch.CloudTask) (pod *apiv1.Pod, err error) {
 	jsonData := ""
 	settings := *task.EnvironmentSettings
 	for _, s := range settings {
-		if *s.Name == podJsonKey {
+		if *s.Name == podJSONKey {
 			ok = true
 			jsonData = *s.Value
 		}
