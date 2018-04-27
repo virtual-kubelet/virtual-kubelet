@@ -5,6 +5,7 @@ import (
 	"github.com/virtual-kubelet/virtual-kubelet/providers/azure"
 	"github.com/virtual-kubelet/virtual-kubelet/providers/hypersh"
 	"github.com/virtual-kubelet/virtual-kubelet/providers/web"
+	"github.com/virtual-kubelet/virtual-kubelet/providers/cri"
 	"k8s.io/api/core/v1"
 )
 
@@ -13,6 +14,7 @@ var _ Provider = (*aws.FargateProvider)(nil)
 var _ Provider = (*azure.ACIProvider)(nil)
 var _ Provider = (*hypersh.HyperProvider)(nil)
 var _ Provider = (*web.BrokerProvider)(nil)
+var _ Provider = (*cri.CRIProvider)(nil)
 
 // Provider contains the methods required to implement a virtual-kubelet provider.
 type Provider interface {
