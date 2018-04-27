@@ -16,6 +16,7 @@ import (
 	"github.com/virtual-kubelet/virtual-kubelet/providers/hypersh"
 	"github.com/virtual-kubelet/virtual-kubelet/providers/mock"
 	"github.com/virtual-kubelet/virtual-kubelet/providers/web"
+	"github.com/virtual-kubelet/virtual-kubelet/providers/cri"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -96,6 +97,11 @@ func New(nodeName, operatingSystem, namespace, kubeConfig, taint, provider, prov
 		}
 	case "mock":
 		p, err = mock.NewMockProvider(nodeName, operatingSystem, internalIP, daemonEndpointPort)
+		if err != nil {
+			return nil, err
+		}
+	case "cri":
+		p, err = cri.NewCRIProvider(nodeName, operatingSystem, internalIP, rm, daemonEndpointPort)
 		if err != nil {
 			return nil, err
 		}
