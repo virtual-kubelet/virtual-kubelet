@@ -67,7 +67,7 @@ func (cli *DockerCli) CmdFuncCreate(args ...string) error {
 	cmd := Cli.Subcmd("func create", []string{"IMAGE [COMMAND] [ARG...]"}, "Create a new function", false)
 	var (
 		flName          = cmd.String([]string{"-name"}, "", "Function name")
-		flContainerSize = cmd.String([]string{"-size"}, "s4", "The size of function containers to run the funciton (e.g. s1, s2, s3, s4, m1, m2, m3, l1, l2, l3)")
+		flContainerSize = cmd.String([]string{"-size"}, "s4", "The size of function containers to run the function (e.g. s1, s2, s3, s4, m1, m2, m3, l1, l2, l3)")
 		flTimeout       = cmd.Int([]string{"-timeout"}, 300, "The maximum execution duration of function call")
 
 		flEnv     = ropts.NewListOpts(opts.ValidateEnv)
