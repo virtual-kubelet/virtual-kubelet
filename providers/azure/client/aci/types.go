@@ -236,8 +236,8 @@ type ResourceRequests struct {
 
 // ResourceRequirements is the resource requirements.
 type ResourceRequirements struct {
-	Requests ResourceRequests `json:"requests,omitempty"`
-	Limits   ResourceLimits   `json:"limits,omitempty"`
+	Requests *ResourceRequests `json:"requests,omitempty"`
+	Limits   *ResourceLimits   `json:"limits,omitempty"`
 }
 
 // Usage is a single usage result
