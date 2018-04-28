@@ -1,6 +1,9 @@
 # Virtual Kubelet
 
-Virtual Kubelet is an open source [Kubernetes kubelet](https://kubernetes.io/docs/reference/generated/kubelet/) implementation that masquerades as a kubelet for the purposes of connecting Kubernetes to other APIs. This allows the nodes to be backed by other services like ACI, Hyper.sh, AWS, etc.  This connector features a pluggable architecture and direct use of Kubernetes primitives, making it much easier to build on.
+Virtual Kubelet is an open source [Kubernetes kubelet](https://kubernetes.io/docs/reference/generated/kubelet/)
+implementation that masquerades as a kubelet for the purposes of connecting Kubernetes to other APIs.
+This allows the nodes to be backed by other services like ACI, AWS Fargate, Hyper.sh, etc.
+Virtual Kubelet features a pluggable architecture and direct use of Kubernetes primitives, making it much easier to build on.
 
 We invite the Kubernetes ecosystem to join us in empowering developers to build
 upon our base. Join our slack channel named, virtual-kubelet, within the [Kubernetes slack group](https://kubernetes.slack.com/).
@@ -16,6 +19,7 @@ The best description is "Kubernetes API on top, programmable back."
 * [Usage](#usage)
 * [Providers](#providers)
     + [Azure Container Instances Provider](#azure-container-instances-provider)
+    + [AWS Fargate Provider](#aws-fargate-provider)
     + [Hyper.sh Provider](#hypersh-provider)
     + [Adding a New Provider via the Provider Interface](#adding-a-new-provider-via-the-provider-interface)
 * [Testing](#testing)
@@ -122,6 +126,9 @@ The config file is in TOML format, and an example lives in `providers/azure/exam
 See the [ACI Readme](providers/azure/README.md)
 
 ### AWS Fargate Provider
+
+[AWS Fargate](https://aws.amazon.com/fargate/) is a technology that allows you to run containers
+without having to manage servers or clusters.
 
 The AWS Fargate provider allows you to deploy pods to [AWS Fargate](https://aws.amazon.com/fargate/).
 Your pods on AWS Fargate have access to VPC networking with dedicated ENIs in your subnets, public
