@@ -7,7 +7,7 @@ accepted.
 
 If you are providing provider support for the Virtual Kubelet then we have to jump through some legal hurdles first.
 
-The [Microsoft CLA](https://cla.microsoft.com/) must be signed by all
+The [CNCF CLA](https://github.com/kubernetes/community/blob/master/CLA.md) must be signed by all
 contributors. Please fill out either the individual or corporate Contributor
 License Agreement (CLA). Once you are CLA'ed, we'll be able to accept your pull
 requests.
@@ -37,6 +37,10 @@ Robbie Zhang (junjiez@microsoft.com)
 Eric St. Martin (st.erik@microsoft.com)
 
 Robbie Zhang (junjiez@microsoft.com)
+
+**AWS Fargate**
+
+Onur Filiz (onfiliz@amazon.com)
 
 **Hyper.sh**
 
@@ -105,14 +109,6 @@ git remote add upstream git@github.com:virtual-kubelet/virtual-kubelet.git
 ```
 3. Submit a pull request.
 
-Your pull request will be reviewed according to the process defined in
-[reviewing.md](./reviewing.md).
-
 ## Code of conduct
 
-This project has adopted the
-[Microsoft Open Source Code of Conduct](https://opensource.microsoft.com/codeofconduct/).
-For more information see the
-[Code of Conduct FAQ](https://opensource.microsoft.com/codeofconduct/faq) or
-contact [opencode@microsoft.com](mailto:opencode@microsoft.com) with any
-additional questions or comments.
+Virtual Kubelet follows the [CNCF Code of Conduct](https://github.com/cncf/foundation/blob/master/code-of-conduct.md).
