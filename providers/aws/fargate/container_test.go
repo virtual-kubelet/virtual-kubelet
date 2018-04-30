@@ -124,16 +124,30 @@ func TestContainerResourceRequirementsWithRequestsAndLimits(t *testing.T) {
 // are translated to Fargate container resource requests correctly.
 func TestContainerResourceRequirementsTranslations(t *testing.T) {
 	type testCase struct {
-		requestedCPU          string
-		requestedMemoryInMiBs string
-		expectedCPU           int64
-		expectedMemoryInMiBs  int64
+		requestedCPU         string
+		requestedMemory      string
+		expectedCPU          int64
+		expectedMemoryInMiBs int64
 	}
 
 	// Expected and observed CPU quantities are in units of 1/1024th vCPUs.
 	var testCases = []testCase{
-		{"1m", "100Ki", 1, 1},
-		{"100m", "500Ki", 102, 1},
+		// Missing or partial resource requests.
+		{"", "", 256, 512},
+		{"100m", "", 102, 512},
+		{"", "256Mi", 256, 256},
+
+		// Minimum CPU request.
+		{"1m", "1Mi", 1, 1},
+
+		// Small memory request rounded up to the next MiB.
+		{"250m", "1Ki", 256, 1},
+		{"250m", "100Ki", 256, 1},
+		{"250m", "500Ki", 256, 1},
+		{"250m", "1024Ki", 256, 1},
+		{"250m", "1025Ki", 256, 2},
+
+		// Common combinations.
 		{"200m", "300Mi", 204, 300},
 		{"500m", "500Mi", 512, 500},
 		{"1000m", "512Mi", 1024, 512},
@@ -141,18 +155,27 @@ func TestContainerResourceRequirementsTranslations(t *testing.T) {
 		{"1500m", "1000Mi", 1536, 1000},
 		{"1500m", "1024Mi", 1536, 1024},
 		{"2", "2Gi", 2048, 2048},
-		{"8", "30Gi", 8192, 30 * 1024},
+		{"4", "30Gi", 4096, 30 * 1024},
+
+		// Very large requests.
+		{"8", "42Gi", 8192, 42 * 1024},
+		{"10", "128Gi", 10240, 128 * 1024},
 	}
 
 	for _, tc := range testCases {
 		t.Run(
-			fmt.Sprintf("cpu:%s,memory:%s", tc.requestedCPU, tc.requestedMemoryInMiBs),
+			fmt.Sprintf("cpu:%s,memory:%s", tc.requestedCPU, tc.requestedMemory),
 			func(t *testing.T) {
 				reqs := corev1.ResourceRequirements{
-					Limits: map[corev1.ResourceName]resource.Quantity{
-						corev1.ResourceCPU:    resource.MustParse(tc.requestedCPU),
-						corev1.ResourceMemory: resource.MustParse(tc.requestedMemoryInMiBs),
-					},
+					Limits: map[corev1.ResourceName]resource.Quantity{},
+				}
+
+				if tc.requestedCPU != "" {
+					reqs.Limits[corev1.ResourceCPU] = resource.MustParse(tc.requestedCPU)
+				}
+
+				if tc.requestedMemory != "" {
+					reqs.Limits[corev1.ResourceMemory] = resource.MustParse(tc.requestedMemory)
 				}
 
 				cntrSpec := anyContainerSpec
@@ -164,7 +187,7 @@ func TestContainerResourceRequirementsTranslations(t *testing.T) {
 				assert.Truef(t,
 					*cntr.definition.Cpu == tc.expectedCPU && *cntr.definition.Memory == tc.expectedMemoryInMiBs,
 					"requested (cpu:%v memory:%v) expected (cpu:%v memory:%v) observed (cpu:%v memory:%v)",
-					tc.requestedCPU, tc.requestedMemoryInMiBs,
+					tc.requestedCPU, tc.requestedMemory,
 					tc.expectedCPU, tc.expectedMemoryInMiBs,
 					*cntr.definition.Cpu, *cntr.definition.Memory)
 			})
