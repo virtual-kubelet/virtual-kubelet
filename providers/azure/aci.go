@@ -758,16 +758,20 @@ func containerGroupToPod(cg *aci.ContainerGroup) (*v1.Pod, error) {
 			Image:   c.Image,
 			Command: c.Command,
 			Resources: v1.ResourceRequirements{
-				Limits: v1.ResourceList{
-					v1.ResourceCPU:    resource.MustParse(fmt.Sprintf("%d", int64(c.Resources.Limits.CPU))),
-					v1.ResourceMemory: resource.MustParse(fmt.Sprintf("%gG", c.Resources.Limits.MemoryInGB)),
-				},
 				Requests: v1.ResourceList{
-					v1.ResourceCPU:    resource.MustParse(fmt.Sprintf("%d", int64(c.Resources.Requests.CPU))),
+					v1.ResourceCPU:    resource.MustParse(fmt.Sprintf("%g", c.Resources.Requests.CPU)),
 					v1.ResourceMemory: resource.MustParse(fmt.Sprintf("%gG", c.Resources.Requests.MemoryInGB)),
 				},
 			},
 		}
+
+		if c.Resources.Limits != nil {
+			container.Resources.Limits = v1.ResourceList{
+				v1.ResourceCPU:    resource.MustParse(fmt.Sprintf("%g", c.Resources.Limits.CPU)),
+				v1.ResourceMemory: resource.MustParse(fmt.Sprintf("%gG", c.Resources.Limits.MemoryInGB)),
+			}
+		}
+
 		containers = append(containers, container)
 		containerStatus := v1.ContainerStatus{
 			Name:                 c.Name,

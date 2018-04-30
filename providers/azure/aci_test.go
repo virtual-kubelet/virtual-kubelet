@@ -29,6 +29,7 @@ const (
 	fakeClientID      = "f14193ad-4c4c-4876-a18a-c0badb3bbd40"
 	fakeClientSecret  = "VGhpcyBpcyBhIHNlY3JldAo="
 	fakeTenantID      = "8cb81aca-83fe-4c6f-b667-4ec09c45a8bf"
+	fakeNodeName	  = "vk"
 )
 
 // Tests create pod without resource spec
@@ -192,6 +193,176 @@ func TestCreatePodWithResourceRequestAndLimit(t *testing.T) {
 	}
 }
 
+// Tests get pods with empty list.
+func TestGetPodsWithEmptyList(t *testing.T) {
+	_, aciServerMocker, provider, err := prepareMocks()
+
+	if err != nil {
+		t.Fatal("Unable to prepare the mocks", err)
+	}
+
+	aciServerMocker.OnGetContainerGroups = func(subscription, resourceGroup string) (int, interface{}) {
+		assert.Equal(t, fakeSubscription, subscription, "Subscription doesn't match")
+		assert.Equal(t, fakeResourceGroup, resourceGroup, "Resource group doesn't match")
+
+		return http.StatusOK, aci.ContainerGroupListResult{
+			Value: []aci.ContainerGroup{},
+		}
+	}
+
+	pods, err := provider.GetPods()
+	if err != nil {
+		t.Fatal("Failed to get pods", err)
+	}
+
+	assert.NotNil(t, pods, "Response pods should not be nil")
+	assert.Equal(t, 0, len(pods), "No pod should be returned")
+}
+
+// Tests get pods without requests limit.
+func TestGetPodsWithoutResourceRequestsLimits(t *testing.T) {
+	_, aciServerMocker, provider, err := prepareMocks()
+
+	if err != nil {
+		t.Fatal("Unable to prepare the mocks", err)
+	}
+
+	aciServerMocker.OnGetContainerGroups = func(subscription, resourceGroup string) (int, interface{}) {
+		assert.Equal(t, fakeSubscription, subscription, "Subscription doesn't match")
+		assert.Equal(t, fakeResourceGroup, resourceGroup, "Resource group doesn't match")
+
+		var cg = aci.ContainerGroup{
+			Name: "default-nginx",
+			Tags: map[string]string{
+				"NodeName": fakeNodeName,
+			},
+			ContainerGroupProperties: aci.ContainerGroupProperties{
+				ProvisioningState: "Creating",
+				Containers: []aci.Container{
+					aci.Container{
+						Name: "nginx",
+						ContainerProperties: aci.ContainerProperties{
+							Image:   "nginx",
+							Command: []string{"nginx", "-g", "daemon off;"},
+							Ports: []aci.ContainerPort{
+								{
+									Protocol: aci.ContainerNetworkProtocolTCP,
+									Port:     80,
+								},
+							},
+							Resources: aci.ResourceRequirements{
+								Requests: &aci.ResourceRequests{
+									CPU: 		0.99,
+									MemoryInGB:	1.5,
+								},
+							},
+						},
+					},
+				},
+			},
+		}
+
+		return http.StatusOK, aci.ContainerGroupListResult{
+			Value: []aci.ContainerGroup{cg},
+		}
+	}
+
+	pods, err := provider.GetPods()
+	if err != nil {
+		t.Fatal("Failed to get pods", err)
+	}
+
+	assert.NotNil(t, pods, "Response pods should not be nil")
+	assert.Equal(t, 1, len(pods), "No pod should be returned")
+
+	pod := pods[0]
+
+	assert.NotNil(t, pod, "Response pod should not be nil")
+	assert.NotNil(t, pod.Spec.Containers, "Containers should not be nil")
+	assert.NotNil(t, pod.Spec.Containers[0].Resources, "Containers[0].Resources should not be nil")
+	assert.Nil(t, pod.Spec.Containers[0].Resources.Limits, "Containers[0].Resources.Limits should be nil")
+	assert.NotNil(t, pod.Spec.Containers[0].Resources.Requests, "Containers[0].Resources.Requests should be nil")
+	assert.Equal(
+		t,
+		ptrQuantity(resource.MustParse("0.99")).Value(),
+		pod.Spec.Containers[0].Resources.Requests.Cpu().Value(),
+		"Containers[0].Resources.Requests.CPU doesn't match")
+	assert.Equal(
+		t,
+		ptrQuantity(resource.MustParse("1.5G")).Value(),
+		pod.Spec.Containers[0].Resources.Requests.Memory().Value(),
+		"Containers[0].Resources.Requests.Memory doesn't match")
+}
+
+// Tests get pod without requests limit.
+func TestGetPodWithoutResourceRequestsLimits(t *testing.T) {
+	_, aciServerMocker, provider, err := prepareMocks()
+
+	if err != nil {
+		t.Fatal("Unable to prepare the mocks", err)
+	}
+
+	podName := "pod-" + uuid.New().String()
+	podNamespace := "ns-" + uuid.New().String()
+
+	aciServerMocker.OnGetContainerGroup = func(subscription, resourceGroup, containerGroup string) (int, interface{}) {
+		assert.Equal(t, fakeSubscription, subscription, "Subscription doesn't match")
+		assert.Equal(t, fakeResourceGroup, resourceGroup, "Resource group doesn't match")
+		assert.Equal(t, podNamespace + "-" + podName, containerGroup, "Container group name is not expected")
+
+		return http.StatusOK, aci.ContainerGroup{
+			Tags: map[string]string{
+				"NodeName": fakeNodeName,
+			},
+			ContainerGroupProperties: aci.ContainerGroupProperties{
+				ProvisioningState: "Creating",
+				Containers: []aci.Container{
+					aci.Container{
+						Name: "nginx",
+						ContainerProperties: aci.ContainerProperties{
+							Image:   "nginx",
+							Command: []string{"nginx", "-g", "daemon off;"},
+							Ports: []aci.ContainerPort{
+								{
+									Protocol: aci.ContainerNetworkProtocolTCP,
+									Port:     80,
+								},
+							},
+							Resources: aci.ResourceRequirements{
+								Requests: &aci.ResourceRequests{
+									CPU: 		0.99,
+									MemoryInGB:	1.5,
+								},
+							},
+						},
+					},
+				},
+			},
+		}
+	}
+
+	pod, err := provider.GetPod(podNamespace, podName)
+	if err != nil {
+		t.Fatal("Failed to get pod", err)
+	}
+
+	assert.NotNil(t, pod, "Response pod should not be nil")
+	assert.NotNil(t, pod.Spec.Containers, "Containers should not be nil")
+	assert.NotNil(t, pod.Spec.Containers[0].Resources, "Containers[0].Resources should not be nil")
+	assert.Nil(t, pod.Spec.Containers[0].Resources.Limits, "Containers[0].Resources.Limits should be nil")
+	assert.NotNil(t, pod.Spec.Containers[0].Resources.Requests, "Containers[0].Resources.Requests should be nil")
+	assert.Equal(
+		t,
+		ptrQuantity(resource.MustParse("0.99")).Value(),
+		pod.Spec.Containers[0].Resources.Requests.Cpu().Value(),
+		"Containers[0].Resources.Requests.CPU doesn't match")
+	assert.Equal(
+		t,
+		ptrQuantity(resource.MustParse("1.5G")).Value(),
+		pod.Spec.Containers[0].Resources.Requests.Memory().Value(),
+		"Containers[0].Resources.Requests.Memory doesn't match")
+}
+
 func prepareMocks() (*AADMock, *ACIMock, *ACIProvider, error) {
 	aadServerMocker := NewAADMock()
 	aciServerMocker := NewACIMock()
@@ -226,7 +397,7 @@ func prepareMocks() (*AADMock, *ACIMock, *ACIProvider, error) {
 	clientset := fake.NewSimpleClientset()
 	rm := manager.NewResourceManager(clientset)
 
-	provider, err := NewACIProvider("example.toml", rm, "vk", "Linux", "0.0.0.0", 10250)
+	provider, err := NewACIProvider("example.toml", rm, fakeNodeName, "Linux", "0.0.0.0", 10250)
 	if err != nil {
 		return nil, nil, nil, err
 	}
@@ -234,3 +405,6 @@ func prepareMocks() (*AADMock, *ACIMock, *ACIProvider, error) {
 	return aadServerMocker, aciServerMocker, provider, nil
 }
 
+func ptrQuantity(q resource.Quantity) *resource.Quantity {
+	return &q
+}
