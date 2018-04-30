@@ -76,6 +76,11 @@ func NewCluster(config *ClusterConfig) (*Cluster, error) {
 		pods:                    make(map[string]*Pod),
 	}
 
+	// If a node name is not specified, use the Fargate cluster name.
+	if cluster.nodeName == "" {
+		cluster.nodeName = cluster.name
+	}
+
 	// Check if the cluster already exists.
 	err = cluster.describe()
 	if err != nil {
@@ -83,7 +88,7 @@ func NewCluster(config *ClusterConfig) (*Cluster, error) {
 	}
 
 	// If not, try to create it.
-	// This might fail if the role doesn't have the necessary permission.
+	// This might fail if the principal doesn't have the necessary permission.
 	if cluster.arn == "" {
 		err = cluster.create()
 		if err != nil {
@@ -215,7 +220,7 @@ func (c *Cluster) loadPodState() error {
 		taskDef := describeTaskDefinitionOutput.TaskDefinition
 
 		// A pod's tag is stored in its task definition's Family field.
-		tag := *taskDef.Family
+		tag := aws.StringValue(taskDef.Family)
 
 		// Rebuild the pod object.
 		// Not all tasks are necessarily pods. Skip tasks that do not have a valid tag.
@@ -225,22 +230,22 @@ func (c *Cluster) loadPodState() error {
 			continue
 		}
 
-		pod.uid = k8sTypes.UID(*task.StartedBy)
-		pod.taskDefArn = *task.TaskDefinitionArn
-		pod.taskArn = *task.TaskArn
+		pod.uid = k8sTypes.UID(aws.StringValue(task.StartedBy))
+		pod.taskDefArn = aws.StringValue(task.TaskDefinitionArn)
+		pod.taskArn = aws.StringValue(task.TaskArn)
 		if taskDef.TaskRoleArn != nil {
-			pod.taskRoleArn = *taskDef.TaskRoleArn
+			pod.taskRoleArn = aws.StringValue(taskDef.TaskRoleArn)
 		}
-		pod.taskStatus = *task.LastStatus
+		pod.taskStatus = aws.StringValue(task.LastStatus)
 		pod.taskRefreshTime = time.Now()
 
 		// Rebuild the container objects.
 		for _, cntrDef := range taskDef.ContainerDefinitions {
 			cntr, _ := newContainerFromDefinition(cntrDef, task.CreatedAt)
 
-			pod.taskCPU += *cntr.definition.Cpu
-			pod.taskMemory += *cntr.definition.Memory
-			pod.containers[*cntrDef.Name] = cntr
+			pod.taskCPU += aws.Int64Value(cntr.definition.Cpu)
+			pod.taskMemory += aws.Int64Value(cntr.definition.Memory)
+			pod.containers[aws.StringValue(cntrDef.Name)] = cntr
 
 			log.Printf("Found pod %s/%s on cluster %s.", pod.namespace, pod.name, c.name)
 		}
