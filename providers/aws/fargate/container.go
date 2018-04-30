@@ -25,8 +25,8 @@ const (
 	containerLogOptionStreamPrefix = "awslogs-stream-prefix"
 
 	// Default container resource limits.
-	containerDefaultCPULimit    = VCPU / 4
-	containerDefaultMemoryLimit = 512 * MiB
+	containerDefaultCPULimit    int64 = VCPU / 4
+	containerDefaultMemoryLimit int64 = 512 // * MiB
 )
 
 // Container is the representation of a Kubernetes container in Fargate.
@@ -166,12 +166,6 @@ func (cntr *container) setResourceRequirements(reqs *corev1.ResourceRequirements
 	// hard limit, which when exceeded, causes the container to be killed. MemoryReservation is a
 	// the amount of resources reserved for the container. At least one must be specified.
 	//
-	var quantity resource.Quantity
-	var reqQuantity resource.Quantity
-	var limQuantity resource.Quantity
-	var ok bool
-	var reqOk bool
-	var limOk bool
 
 	// Use the defaults if the container does not have any resource requirements.
 	cpu := containerDefaultCPULimit
@@ -180,6 +174,9 @@ func (cntr *container) setResourceRequirements(reqs *corev1.ResourceRequirements
 
 	// Compute CPU requirements.
 	if reqs != nil {
+		var quantity resource.Quantity
+		var ok bool
+
 		// Fargate tasks do not share resources with other tasks. Therefore the task and each
 		// container in it must be allocated their resource limits. Hence limits are preferred
 		// over requests.
@@ -200,6 +197,11 @@ func (cntr *container) setResourceRequirements(reqs *corev1.ResourceRequirements
 
 	// Compute memory requirements.
 	if reqs != nil {
+		var reqQuantity resource.Quantity
+		var limQuantity resource.Quantity
+		var reqOk bool
+		var limOk bool
+
 		// Find the memory request and limit, if available.
 		if reqs.Requests != nil {
 			reqQuantity, reqOk = reqs.Requests[corev1.ResourceMemory]
