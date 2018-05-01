@@ -1,0 +1,1064 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "vic-machine API",
+    "description": "An API for interacting with vic-machine as a RESTful web service.",
+    "license": {
+      "name": "Apache 2.0",
+      "url": "https://raw.githubusercontent.com/vmware/vic/master/LICENSE"
+    },
+    "version": "v0.1.0"
+  },
+  "basePath": "/container",
+  "schemes": [
+    "http",
+    "https"
+  ],
+  "consumes": [
+    "application/json"
+  ],
+  "produces": [
+    "application/json"
+  ],
+  "paths": {
+    "/": {
+      "get": {
+        "summary": "Show VIC metadata",
+        "description": "A `GET` request on the base resource will return a JSON object containing metadata including the version number of the service software and a list of known appliance ISOs.",
+        "responses": {
+          "200": { "$ref": "#/responses/metadata" }
+        },
+        "security": []
+      }
+    },
+    "/hello": {
+      "get": {
+        "summary": "Provide a welcome message",
+        "description": "The API server may deployed with self-signed certificates. JavaScript API clients may wish to direct users to this endpoint to view certificate validation errors in their browser.",
+        "produces": [
+          "text/plain"
+        ],
+        "responses": {
+          "200": { "$ref": "#/responses/hello" }
+        },
+        "security": []
+      }
+    },
+    "/version": {
+      "get": {
+        "summary": "Show VIC version information",
+        "description": "A `GET` request on the `version` sub-resource will return the version number of the service software.",
+        "produces": [
+          "text/plain"
+        ],
+        "responses": {
+          "200": { "$ref": "#/responses/version" }
+        },
+        "security": []
+      }
+    },
+    "/target/{target}": {
+      "get": {
+        "summary": "Show information about the specified vSphere resources",
+        "description": "Making a `GET` request on a vSphere target will return information about the state of the host firewall on those resources.",
+        "parameters": [
+          { "$ref": "#/parameters/target" },
+          { "$ref": "#/parameters/computeResource" },
+          { "$ref": "#/parameters/thumbprint" }
+        ],
+        "responses": {
+          "200": { "$ref": "#/responses/target" },
+          "default": { "$ref": "#/responses/error" }
+        }
+      },
+      "post": {
+        "summary": "Perform an action on the specified vSphere resources",
+        "description": "Making a `POST` request on a vSphere target with an action of `firewall:allow` or `firewall:deny` will update the host firewall on those resources.",
+        "parameters": [
+          { "$ref": "#/parameters/target" },
+          { "$ref": "#/parameters/computeResource" },
+          { "$ref": "#/parameters/target-action" },
+          { "$ref": "#/parameters/thumbprint" }
+        ],
+        "responses": {
+          "204": { "$ref": "#/responses/success" },
+          "default": { "$ref": "#/responses/error" }
+        }
+      }
+    },
+    "/target/{target}/vch": {
+      "get": {
+        "summary": "List VCHs on the target system",
+        "description": "Making a `GET` request on `/vch` under a target will return information about the VCHs on that target.",
+        "parameters": [
+          { "$ref": "#/parameters/target" },
+          { "$ref": "#/parameters/computeResource" },
+          { "$ref": "#/parameters/thumbprint" }
+        ],
+        "responses": {
+          "200": { "$ref": "#/responses/vch-list" },
+          "default": { "$ref": "#/responses/error" }
+        }
+      },
+      "post": {
+        "summary": "Create a VCH on the target system",
+        "description": "Making a `POST` request on `/vch` under a target will create a VCH on that target. Information about the VCH will be provided in the body of the request. Note that validation of the request will occur synchronously, with any errors being returned using an appropriate response code and status. The rest of creation will proceed asynchronously, with errors being reported via a vSphere task that is returned once the synchronous validation is complete.",
+        "parameters": [
+          { "$ref": "#/parameters/target" },
+          { "$ref": "#/parameters/vch" },
+          { "$ref": "#/parameters/thumbprint" }
+        ],
+        "responses": {
+          "201": { "$ref": "#/responses/vsphere-task" },
+          "default": { "$ref": "#/responses/error" }
+        }
+      }
+    },
+    "/target/{target}/vch/{vchId}": {
+      "get": {
+        "summary": "Get information about the target VCH",
+        "description": "Making a `GET` request on a VCH resource will return information about the VCH. Information about the VCH will be provided in the body of the response in the same format as create.",
+        "parameters": [
+          { "$ref": "#/parameters/target" },
+          { "$ref": "#/parameters/vch-id" },
+          { "$ref": "#/parameters/thumbprint" }
+        ],
+        "responses": {
+          "200": { "$ref": "#/responses/vch" },
+          "default": { "$ref": "#/responses/error" }
+        }
+      },
+      "put": {
+        "summary": "Reconfigure the target VCH",
+        "description": "Making a `PUT` request on a VCH resource will update that VCH's configuration. Information about the VCH will be provided in the body of the request in the same format as create. Fields which cannot be modified may appear in the body of a `PUT` as long as the value of those fields match the current state of the object. When the value of a field which cannot be modified does not match the current state, a `409 Conflict` will be returned.",
+        "parameters": [
+          { "$ref": "#/parameters/target" },
+          { "$ref": "#/parameters/vch-id" },
+          { "$ref": "#/parameters/vch" },
+          { "$ref": "#/parameters/thumbprint" }
+        ],
+        "responses": {
+          "202": { "$ref": "#/responses/vsphere-task" },
+          "default": { "$ref": "#/responses/error" }
+        }
+      },
+      "patch": {
+        "summary": "Reconfigure the target VCH",
+        "description": "Making a `PATCH` request on a VCH resource (with a body as described in RFC 7396) will update a subset of that VCH's configuration. As `PATCH` is an explicit request to update a set of fields, fields which cannot be modified must not appear in the body of the `PATCH` request, even if the modification would be a no-op.",
+        "consumes": [
+          "application/merge-patch+json"
+        ],
+        "parameters": [
+          { "$ref": "#/parameters/target" },
+          { "$ref": "#/parameters/vch-id" },
+          { "$ref": "#/parameters/vch" },
+          { "$ref": "#/parameters/thumbprint" }
+        ],
+        "responses": {
+          "202": { "$ref": "#/responses/vsphere-task" },
+          "default": { "$ref": "#/responses/error" }
+        }
+      },
+      "post": {
+        "summary": "Perform an action on the target VCH",
+        "description": "Making a `POST` request on a VCH resource with an action of `upgrade` will initiate an upgrade of the VCH. The body of the request will be a JSON object containing the following optional properties: `bootstrap-iso` (a reference to a known bootstrap ISO on the OVA) and `rollback` (a boolean value).",
+        "parameters": [
+          { "$ref": "#/parameters/target" },
+          { "$ref": "#/parameters/vch-id" },
+          { "$ref": "#/parameters/vch-action" },
+          { "$ref": "#/parameters/thumbprint" }
+        ],
+        "responses": {
+          "202": { "$ref": "#/responses/vsphere-task" },
+          "default": { "$ref": "#/responses/error" }
+        }
+      },
+      "delete": {
+        "summary": "Delete the target VCH",
+        "description": "Making a `DELETE` request on a VCH resource will delete that VCH.",
+        "parameters": [
+          { "$ref": "#/parameters/target" },
+          { "$ref": "#/parameters/vch-id" },
+          { "$ref": "#/parameters/deletion-specification" },
+          { "$ref": "#/parameters/thumbprint" }
+        ],
+        "responses": {
+          "202": { "$ref": "#/responses/vsphere-task" },
+          "default": { "$ref": "#/responses/error" }
+        }
+      }
+    },
+    "/target/{target}/vch/{vchId}/certificate": {
+      "get": {
+        "summary": "Access the host certificate for a VCH",
+        "description": "Making a GET request on /certificate under a VCH resource will return the certificate the VCH uses when acting as a server, which clients may wish to access to download and add to a trust store.",
+        "produces": [
+            "application/x-pem-file"
+        ],
+        "parameters": [
+          { "$ref": "#/parameters/target" },
+          { "$ref": "#/parameters/vch-id" },
+          { "$ref": "#/parameters/thumbprint" }
+        ],
+        "responses": {
+            "200": {
+                "$ref": "#/responses/vch-certificate"
+            },
+          "default": { "$ref": "#/responses/error" }
+        }
+      }
+    },
+    "/target/{target}/vch/{vchId}/log": {
+      "get": {
+        "summary": "Access log messages for a VCH",
+        "description": "Making a `GET` request on /log under a VCH resource will return the log messages for vic-machine processes on a VCH",
+        "produces": [ "text/plain" ],
+        "parameters": [
+          { "$ref": "#/parameters/target" },
+          { "$ref": "#/parameters/vch-id" },
+          { "$ref": "#/parameters/thumbprint" }
+        ],
+        "responses": {
+          "200": { "$ref": "#/responses/vch-log" },
+          "default": { "$ref": "#/responses/error-plain" }
+        }
+      }
+    },
+    "/target/{target}/datacenter/{datacenter}": {
+      "get": {
+        "summary": "Show information about the specified vSphere resources",
+        "description": "Making a `GET` request on a datacenter will return information about the state of the host firewall on those resources.",
+        "parameters": [
+          { "$ref": "#/parameters/target" },
+          { "$ref": "#/parameters/datacenter" },
+          { "$ref": "#/parameters/computeResource" },
+          { "$ref": "#/parameters/thumbprint" }
+        ],
+        "responses": {
+          "200": { "$ref": "#/responses/target" },
+          "default": { "$ref": "#/responses/error" }
+        }
+      },
+      "post": {
+        "summary": "Perform an action on the specified vSphere resources",
+        "description": "Making a `POST` request on a datacenter with an action of `firewall:allow` or `firewall:deny` will update the host firewall on those resources.",
+        "parameters": [
+          { "$ref": "#/parameters/target" },
+          { "$ref": "#/parameters/datacenter" },
+          { "$ref": "#/parameters/computeResource" },
+          { "$ref": "#/parameters/target-action" },
+          { "$ref": "#/parameters/thumbprint" }
+        ],
+        "responses": {
+          "204": { "$ref": "#/responses/success" },
+          "default": { "$ref": "#/responses/error" }
+        }
+      }
+    },
+    "/target/{target}/datacenter/{datacenter}/vch": {
+      "get": {
+        "summary": "List VCHs in the specified datacenter of the target system",
+        "description": "Making a `GET` request on `/vch` under a datacenter will return information about the VCHs in that datacenter.",
+        "parameters": [
+          { "$ref": "#/parameters/target" },
+          { "$ref": "#/parameters/datacenter" },
+          { "$ref": "#/parameters/computeResource" },
+          { "$ref": "#/parameters/thumbprint" }
+        ],
+        "responses": {
+          "200": { "$ref": "#/responses/vch-list" },
+          "default": { "$ref": "#/responses/error" }
+        }
+      },
+      "post": {
+        "summary": "Create a VCH on the target system",
+        "description": "Making a `POST` request on `/vch` under a datacenter will create a VCH in that datacenter. Information about the VCH will be provided in the body of the request. Note that validation of the request will occur synchronously, with any errors being returned using an appropriate response code and status. The rest of creation will proceed asynchronously, with errors being reported via a vSphere task that is returned once the synchronous validation is complete.",
+        "parameters": [
+          { "$ref": "#/parameters/target" },
+          { "$ref": "#/parameters/datacenter" },
+          { "$ref": "#/parameters/vch" },
+          { "$ref": "#/parameters/thumbprint" }
+        ],
+        "responses": {
+          "201": { "$ref": "#/responses/vsphere-task" },
+          "default": { "$ref": "#/responses/error" }
+        }
+      }
+    },
+    "/target/{target}/datacenter/{datacenter}/vch/{vchId}": {
+      "get": {
+        "summary": "Get information about the target VCH",
+        "description": "Making a `GET` request on a VCH resource will return information about the VCH. Information about the VCH will be provided in the body of the response in the same format as create.",
+        "parameters": [
+          { "$ref": "#/parameters/target" },
+          { "$ref": "#/parameters/datacenter" },
+          { "$ref": "#/parameters/vch-id" },
+          { "$ref": "#/parameters/thumbprint" }
+        ],
+        "responses": {
+          "200": { "$ref": "#/responses/vch" },
+          "default": { "$ref": "#/responses/error" }
+        }
+      },
+      "put": {
+        "summary": "Reconfigure the target VCH",
+        "description": "Making a `PUT` request on a VCH resource will update that VCH's configuration. Information about the VCH will be provided in the body of the request in the same format as create. Fields which cannot be modified may appear in the body of a `PUT` as long as the value of those fields match the current state of the object. When the value of a field which cannot be modified does not match the current state, a `409 Conflict` will be returned.",
+        "parameters": [
+          { "$ref": "#/parameters/target" },
+          { "$ref": "#/parameters/datacenter" },
+          { "$ref": "#/parameters/vch-id" },
+          { "$ref": "#/parameters/vch" },
+          { "$ref": "#/parameters/thumbprint" }
+        ],
+        "responses": {
+          "202": { "$ref": "#/responses/vsphere-task" },
+          "default": { "$ref": "#/responses/error" }
+        }
+      },
+      "patch": {
+        "summary": "Reconfigure the target VCH",
+        "description": "Making a `PATCH` request on a VCH resource (with a body as described in RFC 7396) will update a subset of that VCH's configuration. As `PATCH` is an explicit request to update a set of fields, fields which cannot be modified must not appear in the body of the `PATCH` request, even if the modification would be a no-op.",
+        "consumes": [
+          "application/merge-patch+json"
+        ],
+        "parameters": [
+          { "$ref": "#/parameters/target" },
+          { "$ref": "#/parameters/datacenter" },
+          { "$ref": "#/parameters/vch-id" },
+          { "$ref": "#/parameters/vch" },
+          { "$ref": "#/parameters/thumbprint" }
+        ],
+        "responses": {
+          "202": { "$ref": "#/responses/vsphere-task" },
+          "default": { "$ref": "#/responses/error" }
+        }
+      },
+      "post": {
+        "summary": "Perform an action on the target VCH",
+        "description": "Making a `POST` request on a VCH resource with an action of `upgrade` will initiate an upgrade of the VCH. The body of the request will be a JSON object containing the following optional properties: `bootstrap-iso` (a reference to a known bootstrap ISO on the OVA) and `rollback` (a boolean value).",
+        "parameters": [
+          { "$ref": "#/parameters/target" },
+          { "$ref": "#/parameters/datacenter" },
+          { "$ref": "#/parameters/vch-id" },
+          { "$ref": "#/parameters/vch-action" },
+          { "$ref": "#/parameters/thumbprint" }
+        ],
+        "responses": {
+          "202": { "$ref": "#/responses/vsphere-task" },
+          "default": { "$ref": "#/responses/error" }
+        }
+      },
+      "delete": {
+        "summary": "Delete the target VCH",
+        "description": "Making a `DELETE` request on a VCH resource will delete that VCH.",
+        "parameters": [
+          { "$ref": "#/parameters/target" },
+          { "$ref": "#/parameters/datacenter" },
+          { "$ref": "#/parameters/vch-id" },
+          { "$ref": "#/parameters/deletion-specification" },
+          { "$ref": "#/parameters/thumbprint" }
+        ],
+        "responses": {
+          "202": { "$ref": "#/responses/vsphere-task" },
+          "default": { "$ref": "#/responses/error" }
+        }
+      }
+    },
+    "/target/{target}/datacenter/{datacenter}/vch/{vchId}/certificate": {
+      "get": {
+        "summary": "Access the host certificate for a VCH in a particular datacenter",
+        "description": "Making a GET request on /certificate under a VCH resource will return the certificate the VCH uses when acting as a server, which clients may wish to access to download and add to a trust store.",
+        "produces": [
+            "application/x-pem-file"
+        ],
+        "parameters": [
+          { "$ref": "#/parameters/target" },
+          { "$ref": "#/parameters/datacenter" },
+          { "$ref": "#/parameters/vch-id" },
+          { "$ref": "#/parameters/thumbprint" }
+        ],
+        "responses": {
+            "200": {
+                "$ref": "#/responses/vch-certificate"
+            },
+          "default": { "$ref": "#/responses/error" }
+        }
+      }
+    },
+    "/target/{target}/datacenter/{datacenter}/vch/{vchId}/log": {
+      "get": {
+        "summary": "Access log messages for a VCH in a particular datacenter",
+        "description": "Making a `GET` request on /log under a VCH resource will return the log messages for vic-machine processes on a VCH.",
+        "produces": [ "text/plain" ],
+        "parameters": [
+          { "$ref": "#/parameters/target" },
+          { "$ref": "#/parameters/datacenter" },
+          { "$ref": "#/parameters/vch-id" },
+          { "$ref": "#/parameters/thumbprint" }
+        ],
+        "responses": {
+          "200": { "$ref": "#/responses/vch-log" },
+          "default": { "$ref": "#/responses/error-plain" }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "Error": {
+      "type": "object",
+      "properties": {
+        "message": {
+          "type": "string"
+        }
+      }
+    },
+    "Version": {
+      "type": "string",
+      "pattern": "^v[0-9]+.[0-9]+.[0-9]+-[a-z0-9]+-[0-9]+-[a-f0-9]{7,40}$"
+    },
+    "Bootstrap_Image": {
+      "type": "string"
+    },
+    "Bootstrap_Image_List": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/Bootstrap_Image" }
+    },
+    "Target": {
+      "type": "object",
+      "description": "Information about the current state of a vSphere target.",
+      "properties": {
+        "firewall": {
+          "type": "array",
+          "description": "Information about the firewall status on each host.",
+          "items": {
+            "type": "object",
+            "properties": {
+              "target": {
+                "type": "string"
+              },
+              "in_supported_state": {
+                "type": "boolean"
+              }
+            }
+          }
+        }
+      }
+    },
+    "Value": {
+      "type": "object",
+      "properties": {
+        "units": {
+          "type": "string"
+        },
+        "value": {
+          "type": "integer"
+        }
+      }
+    },
+    "Value_Bits": {
+      "type": "object",
+      "allOf": [
+        { "$ref" : "#/definitions/Value" }
+      ],
+      "properties": {
+        "units": {
+          "type": "string",
+          "enum": [
+            "bit"
+          ]
+        }
+      }
+    },
+    "Value_Bytes": {
+      "type": "object",
+      "allOf": [
+        { "$ref" : "#/definitions/Value" }
+      ],
+      "properties": {
+        "units": {
+          "type": "string",
+          "enum": [
+            "B",
+            "KiB",
+            "MiB",
+            "GiB",
+            "TiB",
+            "PiB"
+          ]
+        }
+      }
+    },
+    "Value_Bytes_Metric": {
+      "type": "object",
+      "allOf": [
+        { "$ref" : "#/definitions/Value" }
+      ],
+      "properties": {
+        "units": {
+          "type": "string",
+          "enum": [
+            "B",
+            "KB",
+            "MB",
+            "GB",
+            "TB",
+            "PB"
+          ]
+        }
+      }
+    },
+    "Value_Hertz": {
+      "type": "object",
+      "allOf": [
+        { "$ref" : "#/definitions/Value" }
+      ],
+      "properties": {
+        "units": {
+          "type": "string",
+          "enum": [
+            "Hz",
+            "KHz",
+            "MHz",
+            "GHz"
+          ]
+        }
+      }
+    },
+    "Shares": {
+      "type": "object",
+      "minProperties": 1,
+      "maxProperties": 1,
+      "properties": {
+        "number": {
+          "type": "integer"
+        },
+        "level": {
+          "type": "string",
+          "enum": [
+            "high",
+            "normal",
+            "low"
+          ]
+        }
+      }
+    },
+    "Managed_Object": {
+      "type": "object",
+      "minProperties": 1,
+      "maxProperties": 1,
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        }
+      }
+    },
+    "CIDR": {
+      "type": "string",
+      "description": "A range of IP addresses in CIDR notation (like 192.0.2.0/24).",
+      "pattern": "^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/([0-9]|[1-2][0-9]|3[0-2]))$"
+    },
+    "IP_Range": {
+      "type": "string",
+      "description": "A range of IP addresses in CIDR notation (like 192.0.2.0/24) or expressed as a simple range (like 198.51.100.10-198.51.100.20).",
+      "pattern": "^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/([0-9]|[1-2][0-9]|3[0-2])|\\-(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5]))$"
+    },
+    "IP_Address": {
+      "type": "string",
+      "description": "TODO: see if this can just be a string with a format that captures IPv4 and IPv6?",
+      "format": "ipv4"
+    },
+    "Gateway": {
+      "type": "object",
+      "properties": {
+        "routing_destinations": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/CIDR" }
+        },
+        "address": { "$ref": "#/definitions/IP_Address" }
+      }
+    },
+    "Network": {
+      "type": "object",
+      "properties": {
+        "port_group": { "$ref": "#/definitions/Managed_Object" },
+        "gateway": { "$ref": "#/definitions/Gateway" },
+        "nameservers": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/IP_Address" }
+        },
+        "static": { "$ref": "#/definitions/CIDR" }
+      }
+    },
+    "Container_Network" : {
+      "type": "object",
+      "properties": {
+        "alias": {
+          "type": "string"
+        },
+        "firewall": {
+          "type": "string",
+          "enum": [
+            "closed",
+            "outbound",
+            "peers",
+            "published",
+            "open"
+          ]
+        },
+        "nameservers": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/IP_Address" }
+        },
+        "port_group": { "$ref": "#/definitions/Managed_Object" },
+        "gateway": { "$ref": "#/definitions/Gateway" },
+        "ip_ranges": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/IP_Range" }
+        }
+      }
+    },
+    "PEM": {
+      "type": "string",
+      "pattern": "^.*-----BEGIN [A-Z ]+-----\\s+[A-Za-z0-9+\/\\s]+={0,2}\\s-----END [A-Z ]+-----\\s*$"
+    },
+    "X509_Data": {
+      "type": "object",
+      "minProperties": 1,
+      "maxProperties": 1,
+      "properties": {
+          "pem": { "$ref": "#/definitions/PEM" }
+      }
+    },
+    "VCH": {
+      "type": "object",
+      "properties": {
+        "version":  { "$ref": "#/definitions/Version" },
+        "name": {
+          "type": "string"
+        },
+        "debug": {
+          "type": "integer"
+        },
+        "compute": {
+          "type": "object",
+          "properties": {
+            "cpu": {
+              "type": "object",
+              "properties": {
+                "limit": { "$ref": "#/definitions/Value_Hertz" },
+                "reservation": { "$ref": "#/definitions/Value_Hertz" },
+                "shares": { "$ref": "#/definitions/Shares" }
+              }
+            },
+            "memory": {
+              "type": "object",
+              "properties": {
+                "limit": { "$ref": "#/definitions/Value_Bytes" },
+                "reservation": { "$ref": "#/definitions/Value_Bytes" },
+                "shares": { "$ref": "#/definitions/Shares" }
+              }
+            },
+            "resource": { "$ref": "#/definitions/Managed_Object" }
+          }
+        },
+        "network": {
+          "type": "object",
+          "properties": {
+            "bridge": {
+              "type": "object",
+              "properties": {
+                "ip_range": { "$ref": "#/definitions/CIDR" },
+                "port_group": { "$ref": "#/definitions/Managed_Object" }
+              }
+            },
+            "client": { "$ref": "#/definitions/Network" },
+            "management": { "$ref": "#/definitions/Network" },
+            "public": { "$ref": "#/definitions/Network" },
+            "container": {
+              "type": "array",
+              "items": { "$ref": "#/definitions/Container_Network" }
+            }
+          }
+        },
+        "storage": {
+          "type": "object",
+          "properties": {
+            "image_stores": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "volume_stores": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "datastore": {"type": "string"},
+                  "label": {"type": "string"}
+                }
+              }
+            },
+            "base_image_size": { "$ref": "#/definitions/Value_Bytes_Metric" }
+          }
+        },
+        "auth": {
+          "type": "object",
+          "description": "Either `no_tls` or both `client` and `server` must be present.",
+          "properties": {
+            "no_tls": {
+              "type": "boolean"
+            },
+            "client": {
+              "type": "object",
+              "minProperties": 1,
+              "maxProperties": 1,
+              "properties": {
+                "no_tls_verify": {
+                  "type": "boolean"
+                },
+                "certificate_authorities": {
+                  "type": "array",
+                  "items": { "$ref": "#/definitions/X509_Data" }
+                }
+              }
+            },
+            "server": {
+              "type": "object",
+              "description": "Either `generate` or both `certificate` and `private_key` must be provided when creating a VCH. Only `certificate` will be present when retrieving a VCH.",
+              "properties": {
+                "certificate": { "$ref": "#/definitions/X509_Data" },
+                "private_key": { "$ref": "#/definitions/X509_Data" },
+                "generate": {
+                  "type": "object",
+                  "properties": {
+                    "size": { "$ref": "#/definitions/Value_Bits" },
+                    "organization": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "cname": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "endpoint": {
+          "type": "object",
+          "properties": {
+            "memory": { "$ref": "#/definitions/Value_Bytes" },
+            "cpu": {
+              "type": "object",
+              "properties": {
+                "sockets": {
+                  "type": "integer"
+                }
+              }
+            },
+            "operations_credentials": {
+              "type": "object",
+              "properties": {
+                "password": {
+                  "type": "string",
+                  "format": "password"
+                },
+                "user": {
+                  "type": "string"
+                },
+                "grant_permissions": {
+                  "type": "boolean"
+                }
+              }
+            }
+          }
+        },
+        "registry": {
+          "type": "object",
+          "properties": {
+            "insecure": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "whitelist": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "certificate_authorities": {
+              "type": "array",
+              "items": { "$ref": "#/definitions/X509_Data" }
+            },
+            "image_fetch_proxy": {
+              "type": "object",
+              "properties": {
+                "http": {
+                  "type": "string",
+                  "format": "uri"
+                },
+                "https": {
+                  "type": "string",
+                  "format": "uri"
+                }
+              }
+            }
+          }
+        },
+        "runtime": {
+          "type": "object",
+          "properties": {
+            "power_state": {
+              "type": "string"
+            },
+            "upgrade_status": {
+              "type": "string"
+            },
+            "admin_portal": {
+              "type": "string"
+            },
+            "docker_host": {
+              "type": "string"
+            }
+          }
+        },
+        "syslog_addr": {
+          "type": "string",
+          "format": "uri",
+          "pattern": "^(tc|ud)p:\/\/.*"
+        },
+        "container": {
+          "type": "object",
+          "properties": {
+            "name_convention": {
+              "type": "string",
+              "pattern": "^.*(\\{id\\}|\\{name\\}).*"
+            }
+          }
+        }
+      }
+    },
+    "VCH_List_Item": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        },
+        "upgrade_status": {
+          "type": "string"
+        },
+        "admin_portal": {
+          "type": "string"
+        },
+        "docker_host": {
+          "type": "string"
+        }
+      }
+    },
+    "VCH_List": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/VCH_List_Item" }
+    },
+    "Deletion_Specification": {
+      "type": "object",
+      "properties": {
+        "containers": {
+          "type": "string",
+          "enum": [
+            "off",
+            "all"
+          ],
+          "default": "off"
+        },
+        "volume_stores": {
+          "type": "string",
+          "enum": [
+            "none",
+            "all"
+          ],
+          "default": "none"
+        }
+      }
+    }
+  },
+  "parameters": {
+    "target": {
+        "name": "target",
+        "in": "path",
+        "required": true,
+        "type": "string"
+    },
+    "datacenter": {
+      "name": "datacenter",
+      "in": "path",
+      "required": true,
+      "type": "string"
+    },
+    "target-action": {
+      "name": "action",
+      "in": "query",
+      "description": "The action to perform on the specified vSphere resources",
+      "required": true,
+      "type": "string",
+      "enum": [
+        "firewall:allow",
+        "firewall:deny"
+      ]
+    },
+    "computeResource": {
+      "name": "compute-resource",
+      "in": "query",
+      "description": "Compute resource path",
+      "type": "string"
+    },
+    "deletion-specification": {
+      "name": "deletion-specification",
+      "in": "body",
+      "description": "Information about the deletion operation",
+      "required": false,
+      "schema": {
+        "$ref": "#/definitions/Deletion_Specification"
+      }
+    },
+    "thumbprint": {
+      "name": "thumbprint",
+      "in": "query",
+      "description": "ESX or vCenter host certificate thumbprint",
+      "type": "string"
+    },
+    "vch-id": {
+      "name": "vchId",
+      "in": "path",
+      "required": true,
+      "type": "string"
+    },
+    "vch": {
+      "name": "vch",
+      "in": "body",
+      "description": "The VCH to create",
+      "required": true,
+      "schema": {
+        "$ref": "#/definitions/VCH"
+      }
+    },
+    "vch-action": {
+      "name": "action",
+      "in": "query",
+      "description": "The action to perform on a VCH",
+      "required": true,
+      "type": "string",
+      "enum": [
+        "debug",
+        "upgrade"
+      ]
+    }
+  },
+  "responses": {
+    "success": {
+      "description": "A successful operation"
+    },
+    "error": {
+      "description": "An error occurred",
+      "schema": { "$ref": "#/definitions/Error" }
+    },
+    "error-plain": {
+      "description": "An error occurred",
+      "schema": {
+        "type": "string"
+      }
+    },
+    "hello": {
+      "description": "A static welcome message",
+      "schema": {
+        "type": "string"
+      }
+    },
+    "metadata": {
+      "description": "VIC metadata information",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "version": { "$ref": "#/definitions/Version" },
+          "bootstrap-images": { "$ref": "#/definitions/Bootstrap_Image_List" }
+        }
+      }
+    },
+    "target": {
+      "description": "A vSphere target",
+      "schema": { "$ref": "#/definitions/Target" }
+    },
+    "vch": {
+      "description": "A VCH",
+      "schema": { "$ref": "#/definitions/VCH" }
+    },
+    "vch-list": {
+      "description": "A list of VCHs",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "vchs": { "$ref": "#/definitions/VCH_List" }
+        }
+      }
+    },
+    "vch-certificate": {
+      "description": "A VCH host certificate",
+      "schema": { "$ref": "#/definitions/PEM" }
+    },
+    "vch-log": {
+      "description": "Log messages for a VCH",
+      "schema": {
+        "type": "string"
+      }
+    },
+    "vsphere-task": {
+      "description": "A vSphere task for work that is occurring asynchronously, or null if the operation is complete.",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "task": {
+            "type": "string",
+            "format": "uri"
+          }
+        }
+      }
+    },
+    "version": {
+      "description": "VIC version information.",
+      "schema": {
+        "type": "string"
+      },
+      "examples": {
+        "text/plain": "v1.1.0-xxx-0-000000"
+      }
+    }
+  },
+  "securityDefinitions": {
+    "basic": {
+      "type": "basic"
+    },
+    "session": {
+      "type": "apiKey",
+      "in": "header",
+      "name": "X-VMWARE-TICKET"
+    }
+  },
+  "security": [
+    {"basic": []},
+    {"session": []}
+  ]
+}

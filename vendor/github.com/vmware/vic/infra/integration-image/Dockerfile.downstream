@@ -1,0 +1,21 @@
+# Building:
+# docker build --no-cache -t vic-downstream -f Dockerfile.downstream .
+# docker tag vic-downstream gcr.io/eminent-nation-87317/vic-downstream-trigger:1.x
+# gcloud auth login
+# gcloud docker -- push gcr.io/eminent-nation-87317/vic-downstream-trigger:1.x
+# open vpn to CI cluster then run:
+# docker tag vic-downstream 192.168.31.15/library/vic-downstream-trigger:1.x
+# docker push 192.168.31.15/library/vic-downstream-trigger:1.x
+FROM ubuntu
+
+RUN apt-get update && apt-get install -y --no-install-recommends curl ca-certificates
+
+RUN curl http://downloads.drone.io/release/linux/amd64/drone.tar.gz | tar zx && \
+    install -t /usr/bin drone
+
+RUN echo '#!/bin/bash' >> /usr/bin/trigger
+RUN echo 'num=$(drone build list --format "{{.Number}} {{.Status}}" vmware/vic-product | grep -v running | head -n1 | cut -d" " -f1)' >> /usr/bin/trigger
+RUN echo 'for i in {1..5}; do drone build start --fork vmware/vic-product $num && break || sleep 15; done' >> /usr/bin/trigger
+RUN chmod +x /usr/bin/trigger
+
+ENTRYPOINT ["trigger"]

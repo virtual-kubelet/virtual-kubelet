@@ -1,0 +1,11 @@
+#Begin /etc/pam.d/chpasswd
+
+# always allow root
+auth      sufficient  pam_rootok.so
+account   sufficient  pam_rootok.so
+
+# include system defaults for session and password
+session   include     system-session
+password  include     system-password
+
+# End /etc/pam.d/chpasswd
