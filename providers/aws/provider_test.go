@@ -22,8 +22,17 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 )
 
-const testRegion = "us-east-1"
+const (
+	// E2E test configuration.
+	testName          = "vk-fargate-e2e-test"
+	defaultTestRegion = "us-east-1"
 
+	// Environment variables that modify the test behavior.
+	envSkipTests  = "SKIP_AWS_E2E"
+	envTestRegion = "VK_TEST_FARGATE_REGION"
+)
+
+// executorRoleAssumePolicy is the policy used by task execution role.
 const executorRoleAssumePolicy = `{
   "Version": "2012-10-17",
   "Statement": [
@@ -38,70 +47,135 @@ const executorRoleAssumePolicy = `{
   ]
 }`
 
+// testConfig contains the Fargate provider test configuration template.
 const testConfig = `
 Region = "%s"
 ClusterName = "%s"
-CloudWatchLogGroupName = "%s"
-ExecutionRoleArn = "%s"
 Subnets = [ "%s" ]
 SecurityGroups = [ ]
-# Required to pull the busybox image
 AssignPublicIPv4Address = true
+ExecutionRoleArn = "%s"
+CloudWatchLogGroupName = "%s"
 `
 
-const testName = "vk-aws-e2e-test"
+var (
+	ecsClient        *ecs.ECS
+	testRegion       string
+	subnetID         *string
+	executorRoleName *string
+	logGroupName     *string
+)
 
-func TestAWS(t *testing.T) {
-	if os.Getenv("SKIP_AWS_E2E") == "1" {
-		t.Skip("skipping AWS e2e tests")
+// TestMain wraps the tests with the extra setup and teardown of AWS resources.
+func TestMain(m *testing.M) {
+	var err error
+
+	// Skip the tests in this package if the environment variable is set.
+	if os.Getenv(envSkipTests) == "1" {
+		fmt.Println("Skipping AWS E2E tests.")
+		os.Exit(0)
 	}
 
+	// Query the test region.
+	region, ok := os.LookupEnv(envTestRegion)
+	if ok {
+		testRegion = region
+	} else {
+		testRegion = defaultTestRegion
+	}
+	fmt.Printf("Starting provider tests in region %s\n", testRegion)
+
+	// Create the session and clients.
 	session := session.New(&aws.Config{
 		Region: aws.String(testRegion),
 	})
+
+	ecsClient = ecs.New(session)
 	ec2Client := ec2.New(session)
-	ecsClient := ecs.New(session)
 	cloudwatchClient := cloudwatchlogs.New(session)
 	iamClient := iam.New(session)
 
-	// Create a new VPC with one subnet and internet access
-	// Internet access is required to pull public images from the docker registry
-	subnetID, err := createVpcWithInternetAccess(ec2Client)
+	// Create a test VPC with one subnet and internet access.
+	// Internet access is required to pull public images from the docker registry.
+	subnetID, err = createVpcWithInternetAccess(ec2Client)
 	if err != nil {
-		t.Error(err)
+		fmt.Printf("Failed to create VPC: %+v\n", err)
+		os.Exit(-1)
 	}
 
-	// Create the Cloudwatch Logs Log Group used by container logs
-	logGroupdID := aws.String("/ecs/vk-aws-e2e-test")
+	// Create the AWS CloudWatch Logs log group used by containers.
+	logGroupName = aws.String("/ecs/" + testName)
 	_, err = cloudwatchClient.CreateLogGroup(&cloudwatchlogs.CreateLogGroupInput{
-		LogGroupName: logGroupdID,
+		LogGroupName: logGroupName,
 	})
 	if err != nil {
-		t.Error(err)
+		fmt.Printf("Failed to create CloudWatch Logs log group: %+v\n", err)
+		os.Exit(-1)
 	}
 
-	// Create the role used by Fargate to write logs and pull ECR images
-	executorRoleID := aws.String("vk-aws-e2e-test")
+	// Create the role used by Fargate to write logs and pull ECR images.
+	executorRoleName = aws.String(testName)
 	_, err = iamClient.CreateRole(&iam.CreateRoleInput{
-		RoleName:                 executorRoleID,
+		RoleName:                 executorRoleName,
 		AssumeRolePolicyDocument: aws.String(executorRoleAssumePolicy),
 	})
 	if err != nil {
-		t.Error(err)
+		fmt.Printf("Failed to create task execution role: %+v", err)
+		os.Exit(-1)
 	}
 
-	// Default policy allowing log writes and ECR pulls
+	// Attach the default policy allowing log writes and ECR pulls.
 	iamClient.AttachRolePolicy(&iam.AttachRolePolicyInput{
 		PolicyArn: aws.String("arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"),
-		RoleName:  executorRoleID,
+		RoleName:  executorRoleName,
 	})
 	if err != nil {
-		t.Error(err)
+		fmt.Printf("Failed to attach role policy: %+v", err)
+		os.Exit(-1)
 	}
 
-	// Create a cluster for the E2E test
+	// Run the tests.
+	exitCode := m.Run()
+
+	// Delete the task execution role.
+	iamClient.DetachRolePolicy(&iam.DetachRolePolicyInput{
+		PolicyArn: aws.String("arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"),
+		RoleName:  executorRoleName,
+	})
+	if err != nil {
+		fmt.Printf("Failed to delete task execution role: %+v", err)
+	}
+
+	// Delete the role.
+	_, err = iamClient.DeleteRole(&iam.DeleteRoleInput{
+		RoleName: executorRoleName,
+	})
+	if err != nil {
+		fmt.Printf("Failed to delete task execution role: %+v", err)
+	}
+
+	// Delete the log group.
+	_, err = cloudwatchClient.DeleteLogGroup(&cloudwatchlogs.DeleteLogGroupInput{
+		LogGroupName: logGroupName,
+	})
+	if err != nil {
+		fmt.Printf("Failed to delete CloudWatch Logs log group: %+v\n", err)
+	}
+
+	// Delete the test VPC.
+	err = deleteVpc(ec2Client)
+	if err != nil {
+		fmt.Printf("Failed to delete VPC: %+v\n", err)
+	}
+
+	os.Exit(exitCode)
+}
+
+// TestAWSFargateProviderPodLifecycle validates basic pod lifecycle by starting and stopping a pod.
+func TestAWSFargateProviderPodLifecycle(t *testing.T) {
+	// Create a cluster for the E2E test.
 	createResponse, err := ecsClient.CreateCluster(&ecs.CreateClusterInput{
-		ClusterName: aws.String("vk-aws-e2e-test"),
+		ClusterName: aws.String(testName),
 	})
 	if err != nil {
 		t.Error(err)
@@ -111,13 +185,9 @@ func TestAWS(t *testing.T) {
 	time.Sleep(10 * time.Second)
 
 	t.Run("Create, list and delete pod", func(t *testing.T) {
-		if clusterID == nil || logGroupdID == nil || executorRoleID == nil || subnetID == nil {
-			t.Fatal("Can't start tests without all requirements.")
-		}
-
-		// Write config file with our test configuration
-		config := fmt.Sprintf(testConfig, testRegion, "vk-aws-e2e-test", *logGroupdID, *executorRoleID, *subnetID)
-		fmt.Printf("Test with config:\n%s", config)
+		// Write provider config file with test configuration.
+		config := fmt.Sprintf(testConfig, testRegion, testName, *subnetID, *executorRoleName, *logGroupName)
+		fmt.Printf("Fargate provider test configuration:%s", config)
 
 		tmpfile, err := ioutil.TempFile("", "example")
 		if err != nil {
@@ -134,13 +204,14 @@ func TestAWS(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		// Start the FargateProvider
-		provider, err := vkAWS.NewFargateProvider(tmpfile.Name(), nil, "vk-aws-test", "Linux", "1.2.3.4", 10250)
+		// Start the Fargate provider.
+		provider, err := vkAWS.NewFargateProvider(
+			tmpfile.Name(), nil, testName, "Linux", "1.2.3.4", 10250)
 		if err != nil {
 			t.Fatal(err)
 		}
 
-		// Its a new cluster, there shouldn't be anything running
+		// Confirm that there are no pods on the cluster.
 		pods, err := provider.GetPods()
 		if err != nil {
 			t.Error(err)
@@ -149,7 +220,7 @@ func TestAWS(t *testing.T) {
 			t.Errorf("Expect zero pods, but received %d pods\n%v", len(pods), pods)
 		}
 
-		// Create a test pod
+		// Create a test pod.
 		podName := fmt.Sprintf("test_%d", time.Now().UnixNano()/1000)
 
 		pod := &v1.Pod{
@@ -187,8 +258,7 @@ func TestAWS(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		// Now there should be a pod running
-
+		// Now there should be exactly one pod.
 		pods, err = provider.GetPods()
 		if err != nil {
 			t.Error(err)
@@ -197,13 +267,13 @@ func TestAWS(t *testing.T) {
 			t.Errorf("Expect one pods, but received %d pods\n%v", len(pods), pods)
 		}
 
-		// Wait until its scheduled and running
+		// Wait until the pod is running.
 		err = waitUntilPodStatus(provider, podName, v1.PodRunning)
 		if err != nil {
 			t.Error(err)
 		}
 
-		// Some addition time for the logs to settle
+		// Wait a few seconds for the logs to settle.
 		time.Sleep(10 * time.Second)
 
 		logs, err := provider.GetContainerLogs("default", podName, "echo-container", 100)
@@ -215,7 +285,7 @@ func TestAWS(t *testing.T) {
 			t.Errorf("Expected logs to be \"Started\\n\", but received \"%v\"", logs)
 		}
 
-		// Remove the pod
+		// Delete the pod.
 		err = provider.DeletePod(pod)
 		if err != nil {
 			t.Fatal(err)
@@ -226,7 +296,7 @@ func TestAWS(t *testing.T) {
 			t.Error(err)
 		}
 
-		// The cluster should be empty again
+		// The cluster should be empty again.
 		pods, err = provider.GetPods()
 		if err != nil {
 			t.Error(err)
@@ -236,46 +306,16 @@ func TestAWS(t *testing.T) {
 		}
 	})
 
-	// Remove the cluster
+	// Delete the test cluster.
 	_, err = ecsClient.DeleteCluster(&ecs.DeleteClusterInput{
 		Cluster: clusterID,
 	})
 	if err != nil {
 		t.Error(err)
 	}
-
-	// Remove the execution role
-	iamClient.DetachRolePolicy(&iam.DetachRolePolicyInput{
-		PolicyArn: aws.String("arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"),
-		RoleName:  executorRoleID,
-	})
-	if err != nil {
-		t.Error(err)
-	}
-
-	_, err = iamClient.DeleteRole(&iam.DeleteRoleInput{
-		RoleName: executorRoleID,
-	})
-	if err != nil {
-		t.Error(err)
-	}
-
-	// Remove the log group
-	_, err = cloudwatchClient.DeleteLogGroup(&cloudwatchlogs.DeleteLogGroupInput{
-		LogGroupName: logGroupdID,
-	})
-	if err != nil {
-		t.Error(err)
-	}
-
-	// Remove the VPC
-	err = deleteVpc(ec2Client)
-	if err != nil {
-		t.Error(err)
-	}
 }
 
-// waitUntilPodStatus polls pod status until the desired state was reached
+// waitUntilPodStatus polls pod status until the desired state is reached.
 func waitUntilPodStatus(provider *vkAWS.FargateProvider, podName string, desiredStatus v1.PodPhase) error {
 	ctx := context.Background()
 	context.WithTimeout(ctx, time.Duration(time.Second*60))
