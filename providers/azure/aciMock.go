@@ -12,8 +12,10 @@ import (
 
 // ACIMock implements a Azure Container Instance mock server.
 type ACIMock struct {
-	server   *httptest.Server
-	OnCreate func(string, string, string, *aci.ContainerGroup) (int, interface{})
+	server                  *httptest.Server
+	OnCreate                func(string, string, string, *aci.ContainerGroup) (int, interface{})
+	OnGetContainerGroups    func(string, string) (int, interface{})
+	OnGetContainerGroup     func(string, string, string) (int, interface{})
 }
 
 const (
@@ -61,6 +63,45 @@ func (mock *ACIMock) start() {
 
 			w.WriteHeader(http.StatusNotImplemented)
 		}).Methods("PUT")
+
+	router.HandleFunc(
+		containerGroupRoute,
+		func(w http.ResponseWriter, r *http.Request) {
+			subscription, _ := mux.Vars(r)["subscriptionId"]
+			resourceGroup, _ := mux.Vars(r)["resourceGroup"]
+			containerGroup, _ := mux.Vars(r)["containerGroup"]
+
+			if mock.OnGetContainerGroup != nil {
+				statusCode, response := mock.OnGetContainerGroup(subscription, resourceGroup, containerGroup)
+				w.WriteHeader(statusCode)
+				b := new(bytes.Buffer)
+				json.NewEncoder(b).Encode(response)
+				w.Write(b.Bytes())
+
+				return
+			}
+
+			w.WriteHeader(http.StatusNotImplemented)
+		}).Methods("GET")
+
+	router.HandleFunc(
+		containerGroupsRoute,
+		func(w http.ResponseWriter, r *http.Request) {
+			subscription, _ := mux.Vars(r)["subscriptionId"]
+			resourceGroup, _ := mux.Vars(r)["resourceGroup"]
+
+			if mock.OnGetContainerGroups != nil {
+				statusCode, response := mock.OnGetContainerGroups(subscription, resourceGroup)
+				w.WriteHeader(statusCode)
+				b := new(bytes.Buffer)
+				json.NewEncoder(b).Encode(response)
+				w.Write(b.Bytes())
+
+				return
+			}
+
+			w.WriteHeader(http.StatusNotImplemented)
+		}).Methods("GET")
 
 	mock.server = httptest.NewServer(router)
 }
