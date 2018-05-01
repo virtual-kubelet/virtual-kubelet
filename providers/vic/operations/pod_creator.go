@@ -12,17 +12,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package vic
+package operations
 
 import (
 	"fmt"
 	"strings"
+	"sync"
+
+	"github.com/kr/pretty"
 
 	"github.com/virtual-kubelet/virtual-kubelet/providers/vic/cache"
 	vicpod "github.com/virtual-kubelet/virtual-kubelet/providers/vic/pod"
 	"github.com/virtual-kubelet/virtual-kubelet/providers/vic/proxy"
 
-	"github.com/vmware/vic/lib/apiservers/engine/errors"
+	vicerrors "github.com/vmware/vic/lib/apiservers/engine/errors"
 	"github.com/vmware/vic/lib/apiservers/portlayer/client"
 	"github.com/vmware/vic/lib/metadata"
 	"github.com/vmware/vic/pkg/trace"
@@ -43,9 +46,14 @@ type VicPodCreator struct {
 	portlayerAddr  string
 }
 
-type CreateResponse struct {
-	Id       string `json:"Id"`
-	Warnings string `json:"Warnings"`
+type VicPodCreatorError string
+
+func (e VicPodCreatorError) Error() string { return string(e) }
+func NewPodCreatorPullError(image, msg string) VicPodCreatorError {
+	return VicPodCreatorError(fmt.Sprintf("VicPodCreator failed to get image %s's config from the image store: %s", image, msg))
+}
+func NewPodCreatorNilImgConfigError(image string) VicPodCreatorError {
+	return VicPodCreatorError(fmt.Sprintf("VicPodCreator failed to get image %s's config from the image store", image))
 }
 
 const (
@@ -63,9 +71,33 @@ const (
 	MiBytesUnit   = 1024 * 1024
 
 	defaultEnvPath = "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+
+	// Errors
+	PodCreatorPortlayerClientError = VicPodCreatorError("PodCreator called with an invalid portlayer client")
+	PodCreatorImageStoreError      = VicPodCreatorError("PodCreator called with an invalid image store")
+	PodCreatorIsolationProxyError  = VicPodCreatorError("PodCreator called with an invalid isolation proxy")
+	PodCreatorPodCacheError        = VicPodCreatorError("PodCreator called with an invalid pod cache")
+	PodCreatorPersonaAddrError     = VicPodCreatorError("PodCreator called with an invalid VIC persona addr")
+	PodCreatorPortlayerAddrError   = VicPodCreatorError("PodCreator called with an invalid VIC portlayer addr")
+	PodCreatorNillPodSpecError     = VicPodCreatorError("CreatePod called with nil pod")
+	PodCreatorInvalidArgsError     = VicPodCreatorError("Invalid arguments")
 )
 
-func NewPodCreator(client *client.PortLayer, imageStore proxy.ImageStore, isolationProxy proxy.IsolationProxy, podCache cache.PodCache, personaAddr string, portlayerAddr string) *VicPodCreator {
+func NewPodCreator(client *client.PortLayer, imageStore proxy.ImageStore, isolationProxy proxy.IsolationProxy, podCache cache.PodCache, personaAddr string, portlayerAddr string) (*VicPodCreator, error) {
+	if client == nil {
+		return nil, PodCreatorPortlayerClientError
+	} else if imageStore == nil {
+		return nil, PodCreatorImageStoreError
+	} else if isolationProxy == nil {
+		return nil, PodCreatorIsolationProxyError
+	} else if podCache == nil {
+		return nil, PodCreatorPodCacheError
+	} else if personaAddr == "" {
+		return nil, PodCreatorPersonaAddrError
+	} else if portlayerAddr == "" {
+		return nil, PodCreatorPortlayerAddrError
+	}
+
 	return &VicPodCreator{
 		client:         client,
 		imageStore:     imageStore,
@@ -73,11 +105,33 @@ func NewPodCreator(client *client.PortLayer, imageStore proxy.ImageStore, isolat
 		personaAddr:    personaAddr,
 		portlayerAddr:  portlayerAddr,
 		isolationProxy: isolationProxy,
-	}
+	}, nil
 }
 
+// CreatePod creates the pod and potentially start it
+//
+// arguments:
+//		op		operation trace logger
+//		pod		pod spec
+//		start	start the pod after creation
+// returns:
+// 		error
 func (v *VicPodCreator) CreatePod(op trace.Operation, pod *v1.Pod, start bool) error {
+	defer trace.End(trace.Begin("", op))
+
+	if pod == nil {
+		op.Errorf(PodCreatorNillPodSpecError.Error())
+		return PodCreatorNillPodSpecError
+	}
+
 	defer trace.End(trace.Begin(pod.Name, op))
+
+	// Pull all containers simultaneously
+	err := v.pullPodContainers(op, pod)
+	if err != nil {
+		op.Errorf("PodCreator failed to pull containers: %s", err.Error())
+		return err
+	}
 
 	// Transform kube container config to docker create config
 	id, err := v.createPod(op, pod, start)
@@ -91,14 +145,19 @@ func (v *VicPodCreator) CreatePod(op trace.Operation, pod *v1.Pod, start bool) e
 		Pod: pod.DeepCopy(),
 	}
 
-	err = v.podCache.Add(op, pod.Name, vp)
+	err = v.podCache.Add(op, "", pod.Name, vp)
 	if err != nil {
 		//TODO:  What should we do if pod already exist?
 	}
 
 	if start {
-		ps := NewPodStarter(v.client, v.isolationProxy)
-		err := ps.Start(op, id, pod.Name)
+		ps, err := NewPodStarter(v.client, v.isolationProxy)
+		if err != nil {
+			op.Errorf("Error creating pod starter: %s", err.Error())
+			return err
+		}
+
+		err = ps.Start(op, id, pod.Name)
 		if err != nil {
 			return err
 		}
@@ -107,13 +166,74 @@ func (v *VicPodCreator) CreatePod(op trace.Operation, pod *v1.Pod, start bool) e
 	return nil
 }
 
-// portlayerCreatePod creates a pod using the VIC portlayer.
+// pullPodContainers simultaneously pulls all containers in a pod
 //
-//	returns id of pod as a string and error
+// arguments:
+//		op		operation trace logger
+//		pod		pod spec
+// returns:
+//		error
+func (v *VicPodCreator) pullPodContainers(op trace.Operation, pod *v1.Pod) error {
+	defer trace.End(trace.Begin("", op))
+
+	if pod == nil || pod.Spec.Containers == nil {
+		return PodCreatorNillPodSpecError
+	}
+
+	var pullGroup sync.WaitGroup
+
+	errChan := make(chan error, 2)
+
+	for _, c := range pod.Spec.Containers {
+		pullGroup.Add(1)
+
+		go func(img string) {
+			defer pullGroup.Done()
+
+			// Pull image config from VIC's image store if policy allows
+			var realize bool
+			if c.ImagePullPolicy == v1.PullIfNotPresent {
+				realize = true
+			} else {
+				realize = false
+			}
+
+			_, err := v.imageStore.Get(op, img, "", realize)
+			if err != nil {
+				err = fmt.Errorf("VicPodCreator failed to get image %s's config from the image store: %s", c.Image, err.Error())
+				op.Error(err)
+				errChan <- err
+			}
+		}(c.Image)
+	}
+
+	pullGroup.Wait()
+	close(errChan)
+
+	for err := range errChan {
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// createPod creates a pod using the VIC portlayer.  Images can be pulled serially if not already present.
+//
+// arguments:
+//		op		operation trace logger
+//		pod		pod spec
+//		start	start the pod after creation
+// returns:
+// 		(pod id, error)
 func (v *VicPodCreator) createPod(op trace.Operation, pod *v1.Pod, start bool) (string, error) {
 	defer trace.End(trace.Begin("", op))
 
-	//ip := proxy.NewIsolationProxy(v.client, v.portlayerAddr, v.imageStore, v.podCache)
+	if pod == nil || pod.Spec.Containers == nil {
+		op.Errorf(PodCreatorNillPodSpecError.Error())
+		return "", PodCreatorNillPodSpecError
+	}
 
 	id, h, err := v.isolationProxy.CreateHandle(op)
 	if err != nil {
@@ -131,17 +251,17 @@ func (v *VicPodCreator) createPod(op trace.Operation, pod *v1.Pod, start bool) (
 
 		imgConfig, err := v.imageStore.Get(op, c.Image, "", realize)
 		if err != nil {
-			err = fmt.Errorf("VicPodCreator failed to get image %s's config from the image store: %s", c.Image, err.Error())
+			err = NewPodCreatorPullError(c.Image, err.Error())
 			op.Error(err)
 			return "", err
 		}
 		if imgConfig == nil {
-			err = fmt.Errorf("VicPodCreator failed to get image %s's config from the image store", c.Image)
+			err = NewPodCreatorNilImgConfigError(c.Image)
 			op.Error(err)
 			return "", err
 		}
 
-		op.Info("** Receive image config from imagestore = %#v", imgConfig)
+		op.Debugf("Receive image config from imagestore = %# v", pretty.Formatter(imgConfig))
 
 		// Create the initial config
 		ic, err := IsolationContainerConfigFromKubeContainer(op, &c, imgConfig, pod)
@@ -149,15 +269,14 @@ func (v *VicPodCreator) createPod(op trace.Operation, pod *v1.Pod, start bool) (
 			return "", err
 		}
 
-		op.Infof("isolation config %#v", imgConfig)
+		op.Debugf("isolation config %# v", pretty.Formatter(ic))
 
 		h, err = v.isolationProxy.AddImageToHandle(op, h, c.Name, imgConfig.V1Image.ID, imgConfig.ImageID, imgConfig.Name)
 		if err != nil {
 			return "", err
 		}
 
-		//TODO: Fix this!
-		//HACK: We need one task with the container ID as the portlayer uses this to track session.  Longer term, we should figure out
+		//TODO: We need one task with the container ID as the portlayer uses this to track session.  Longer term, we should figure out
 		//	a way to fix this in the portlayer?
 		if idx == 0 {
 			h, err = v.isolationProxy.CreateHandleTask(op, h, id, imgConfig.V1Image.ID, ic)
@@ -190,7 +309,7 @@ func (v *VicPodCreator) createPod(op trace.Operation, pod *v1.Pod, start bool) (
 		return "", err
 	}
 
-	op.Infof("Created Pod: %s, Handle: %s, ID: %s", pod.Name, h, id)
+	op.Debugf("Created Pod: %s, Handle: %s, ID: %s", pod.Name, h, id)
 
 	return id, nil
 }
@@ -202,7 +321,12 @@ func (v *VicPodCreator) createPod(op trace.Operation, pod *v1.Pod, start bool) (
 func IsolationContainerConfigFromKubeContainer(op trace.Operation, cSpec *v1.Container, imgConfig *metadata.ImageConfig, pod *v1.Pod) (proxy.IsolationContainerConfig, error) {
 	defer trace.End(trace.Begin("", op))
 
-	op.Infof("** IsolationContainerConfig... imgConfig = %#v", imgConfig)
+	if cSpec == nil || imgConfig == nil || pod == nil {
+		op.Errorf("Invalid args to IsolationContainerConfigFromKubeContainer: cSpec(%#v), imgConfig(%#v), pod(%#v)", cSpec, imgConfig, pod)
+		return proxy.IsolationContainerConfig{}, PodCreatorInvalidArgsError
+	}
+
+	op.Debugf("** IsolationContainerConfig... imgConfig = %#v", imgConfig)
 	config := proxy.IsolationContainerConfig{
 		Name:       cSpec.Name,
 		WorkingDir: cSpec.WorkingDir,
@@ -222,20 +346,22 @@ func IsolationContainerConfigFromKubeContainer(op trace.Operation, cSpec *v1.Con
 		copy(config.Cmd, cSpec.Command)
 
 		config.Cmd = append(config.Cmd, cSpec.Args...)
-	} else {
+	} else if imgConfig.Config != nil {
 		config.Cmd = make([]string, len(imgConfig.Config.Cmd))
 		copy(config.Cmd, imgConfig.Config.Cmd)
 	}
 
 	config.User = ""
-	if imgConfig.Config.User != "" {
-		config.User = imgConfig.Config.User
+	if imgConfig.Config != nil {
+		if imgConfig.Config.User != "" {
+			config.User = imgConfig.Config.User
+		}
+
+		// set up environment
+		config.Env = setEnvFromImageConfig(config.Tty, config.Env, imgConfig.Config.Env)
 	}
 
-	// set up environment
-	config.Env = setEnvFromImageConfig(config.Tty, config.Env, imgConfig.Config.Env)
-
-	op.Infof("config = %#v", config)
+	op.Debugf("config = %#v", config)
 
 	// TODO:  Cache the container (so that they are shared with the persona)
 
@@ -303,7 +429,7 @@ func setPathFromImageConfig(env []string, imgEnv []string) []string {
 
 func setResourceFromKubeSpec(op trace.Operation, config *proxy.IsolationContainerConfig, cSpec *v1.Container) error {
 	if config == nil {
-		return errors.BadRequestError("invalid config")
+		return vicerrors.BadRequestError("invalid config")
 	}
 
 	// Get resource request.  If not specified, use the limits.  If that's not set, use default VIC values.
@@ -337,7 +463,7 @@ func setResourceFromKubeSpec(op trace.Operation, config *proxy.IsolationContaine
 	}
 
 	config.Memory = memoryMB
-	op.Infof("Container memory: %d MB", config.Memory)
+	op.Debugf("Container memory: %d MB", config.Memory)
 
 	return nil
 }

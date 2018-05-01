@@ -18,7 +18,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/vmware/vic/lib/apiservers/engine/errors"
+	vicerrors "github.com/vmware/vic/lib/apiservers/engine/errors"
 	"github.com/vmware/vic/lib/apiservers/portlayer/client"
 	"github.com/vmware/vic/lib/apiservers/portlayer/client/containers"
 	"github.com/vmware/vic/lib/apiservers/portlayer/client/interaction"
@@ -109,11 +109,16 @@ func NewIsolationProxy(plClient *client.PortLayer, portlayerAddr string, hostUUI
 	}
 }
 
+// CreateHandle creates a "manifest" that will be used by Commit() to create the actual
+// isolation vm.
+//
+// returns:
+//	(container/pod id, handle, error)
 func (v *VicIsolationProxy) CreateHandle(op trace.Operation) (string, string, error) {
 	defer trace.End(trace.Begin("CreateHandle", op))
 
 	if v.client == nil {
-		return "", "", errors.NillPortlayerClientError("IsolationProxy")
+		return "", "", vicerrors.NillPortlayerClientError("IsolationProxy")
 	}
 
 	// Call the Exec port layer to create the container
@@ -126,7 +131,7 @@ func (v *VicIsolationProxy) CreateHandle(op trace.Operation) (string, string, er
 	}
 
 	if err != nil {
-		return "", "", errors.InternalServerError("IsolationProxy.CreateContainerHandle got unexpected error getting VCH UUID")
+		return "", "", vicerrors.InternalServerError("IsolationProxy.CreateContainerHandle got unexpected error getting VCH UUID")
 	}
 
 	plCreateParams := initIsolationConfig(op, "", constants.DummyRepoName, constants.DummyImage, constants.DummyLayerID, hostUUID)
@@ -135,11 +140,11 @@ func (v *VicIsolationProxy) CreateHandle(op trace.Operation) (string, string, er
 		if _, ok := err.(*containers.CreateNotFound); ok {
 			cerr := fmt.Errorf("No such image: %s", constants.DummyImage)
 			op.Errorf("%s (%s)", cerr, err)
-			return "", "", errors.NotFoundError(cerr.Error())
+			return "", "", vicerrors.NotFoundError(cerr.Error())
 		}
 
 		// If we get here, most likely something went wrong with the port layer API server
-		return "", "", errors.InternalServerError(err.Error())
+		return "", "", vicerrors.InternalServerError(err.Error())
 	}
 
 	id := createResults.Payload.ID
@@ -154,18 +159,18 @@ func (v *VicIsolationProxy) CreateHandle(op trace.Operation) (string, string, er
 //	(handle string, error)
 func (v *VicIsolationProxy) Handle(op trace.Operation, id, name string) (string, error) {
 	if v.client == nil {
-		return "", errors.NillPortlayerClientError("IsolationProxy")
+		return "", vicerrors.NillPortlayerClientError("IsolationProxy")
 	}
 
 	resp, err := v.client.Containers.Get(containers.NewGetParamsWithContext(op).WithID(id))
 	if err != nil {
 		switch err := err.(type) {
 		case *containers.GetNotFound:
-			return "", errors.NotFoundError(name)
+			return "", vicerrors.NotFoundError(name)
 		case *containers.GetDefault:
-			return "", errors.InternalServerError(err.Payload.Message)
+			return "", vicerrors.InternalServerError(err.Payload.Message)
 		default:
-			return "", errors.InternalServerError(err.Error())
+			return "", vicerrors.InternalServerError(err.Error())
 		}
 	}
 	return resp.Payload, nil
@@ -175,7 +180,7 @@ func (v *VicIsolationProxy) AddImageToHandle(op trace.Operation, handle, deltaID
 	defer trace.End(trace.Begin(handle, op))
 
 	if v.client == nil {
-		return "", errors.InternalServerError("IsolationProxy.AddImageToContainer failed to get the portlayer client")
+		return "", vicerrors.InternalServerError("IsolationProxy.AddImageToContainer failed to get the portlayer client")
 	}
 
 	var err error
@@ -187,7 +192,7 @@ func (v *VicIsolationProxy) AddImageToHandle(op trace.Operation, handle, deltaID
 	}
 
 	if err != nil {
-		return "", errors.InternalServerError("IsolationProxy.AddImageToContainer got unexpected error getting VCH UUID")
+		return "", vicerrors.InternalServerError("IsolationProxy.AddImageToContainer got unexpected error getting VCH UUID")
 	}
 
 	response, err := v.client.Storage.ImageJoin(storage.NewImageJoinParamsWithContext(op).WithStoreName(hostUUID).WithID(layerID).
@@ -198,11 +203,11 @@ func (v *VicIsolationProxy) AddImageToHandle(op trace.Operation, handle, deltaID
 			RepoName: imageName,
 		}))
 	if err != nil {
-		return "", errors.InternalServerError(err.Error())
+		return "", vicerrors.InternalServerError(err.Error())
 	}
 	handle, ok := response.Payload.Handle.(string)
 	if !ok {
-		return "", errors.InternalServerError(fmt.Sprintf("Type assertion failed for %#+v", handle))
+		return "", vicerrors.InternalServerError(fmt.Sprintf("Type assertion failed for %#+v", handle))
 	}
 
 	return handle, nil
@@ -212,36 +217,36 @@ func (v *VicIsolationProxy) CreateHandleTask(op trace.Operation, handle, id, lay
 	defer trace.End(trace.Begin(handle, op))
 
 	if v.client == nil {
-		return "", errors.InternalServerError("IsolationProxy.CreateContainerTask failed to create a portlayer client")
+		return "", vicerrors.InternalServerError("IsolationProxy.CreateContainerTask failed to create a portlayer client")
 	}
 
-	op.Infof("*** CreateHandleTask - %#v", config)
+	op.Debugf("CreateHandleTask - %#v", config)
 
 	plTaskParams := IsolationContainerConfigToTask(op, id, layerID, config)
 	plTaskParams.Config.Handle = handle
 
-	op.Infof("*** CreateContainerTask - params = %#v", *plTaskParams.Config)
+	op.Debugf("*** CreateContainerTask - params = %#v", *plTaskParams.Config)
 	responseJoin, err := v.client.Tasks.Join(plTaskParams)
 	if err != nil {
 		op.Errorf("Unable to join primary task to container: %+v", err)
-		return "", errors.InternalServerError(err.Error())
+		return "", vicerrors.InternalServerError(err.Error())
 	}
 
 	handle, ok := responseJoin.Payload.Handle.(string)
 	if !ok {
-		return "", errors.InternalServerError(fmt.Sprintf("Type assertion failed on handle from task join: %#+v", handle))
+		return "", vicerrors.InternalServerError(fmt.Sprintf("Type assertion failed on handle from task join: %#+v", handle))
 	}
 
 	plBindParams := tasks.NewBindParamsWithContext(op).WithConfig(&models.TaskBindConfig{Handle: handle, ID: id})
 	responseBind, err := v.client.Tasks.Bind(plBindParams)
 	if err != nil {
 		op.Errorf("Unable to bind primary task to container: %+v", err)
-		return "", errors.InternalServerError(err.Error())
+		return "", vicerrors.InternalServerError(err.Error())
 	}
 
 	handle, ok = responseBind.Payload.Handle.(string)
 	if !ok {
-		return "", errors.InternalServerError(fmt.Sprintf("Type assertion failed on handle from task bind %#+v", handle))
+		return "", vicerrors.InternalServerError(fmt.Sprintf("Type assertion failed on handle from task bind %#+v", handle))
 	}
 
 	return handle, nil
@@ -256,7 +261,7 @@ func (v *VicIsolationProxy) AddHandleToScope(op trace.Operation, handle string, 
 	defer trace.End(trace.Begin(handle, op))
 
 	if v.client == nil {
-		return "", errors.NillPortlayerClientError("IsolationProxy")
+		return "", vicerrors.NillPortlayerClientError("IsolationProxy")
 	}
 
 	// configure network
@@ -271,7 +276,7 @@ func (v *VicIsolationProxy) AddHandleToScope(op trace.Operation, handle string, 
 
 		if err != nil {
 			op.Errorf("IsolationProxy.AddContainerToScope: Scopes error: %s", err.Error())
-			return handle, errors.InternalServerError(err.Error())
+			return handle, vicerrors.InternalServerError(err.Error())
 		}
 
 		defer func() {
@@ -299,7 +304,7 @@ func (v *VicIsolationProxy) AddLoggingToHandle(op trace.Operation, handle string
 	defer trace.End(trace.Begin(handle, op))
 
 	if v.client == nil {
-		return "", errors.NillPortlayerClientError("IsolationProxy")
+		return "", vicerrors.NillPortlayerClientError("IsolationProxy")
 	}
 
 	response, err := v.client.Logging.LoggingJoin(logging.NewLoggingJoinParamsWithContext(op).
@@ -307,11 +312,11 @@ func (v *VicIsolationProxy) AddLoggingToHandle(op trace.Operation, handle string
 			Handle: handle,
 		}))
 	if err != nil {
-		return "", errors.InternalServerError(err.Error())
+		return "", vicerrors.InternalServerError(err.Error())
 	}
 	handle, ok := response.Payload.Handle.(string)
 	if !ok {
-		return "", errors.InternalServerError(fmt.Sprintf("Type assertion failed for %#+v", handle))
+		return "", vicerrors.InternalServerError(fmt.Sprintf("Type assertion failed for %#+v", handle))
 	}
 
 	return handle, nil
@@ -326,7 +331,7 @@ func (v *VicIsolationProxy) AddInteractionToHandle(op trace.Operation, handle st
 	defer trace.End(trace.Begin(handle, op))
 
 	if v.client == nil {
-		return "", errors.NillPortlayerClientError("IsolationProxy")
+		return "", vicerrors.NillPortlayerClientError("IsolationProxy")
 	}
 
 	response, err := v.client.Interaction.InteractionJoin(interaction.NewInteractionJoinParamsWithContext(op).
@@ -334,11 +339,11 @@ func (v *VicIsolationProxy) AddInteractionToHandle(op trace.Operation, handle st
 			Handle: handle,
 		}))
 	if err != nil {
-		return "", errors.InternalServerError(err.Error())
+		return "", vicerrors.InternalServerError(err.Error())
 	}
 	handle, ok := response.Payload.Handle.(string)
 	if !ok {
-		return "", errors.InternalServerError(fmt.Sprintf("Type assertion failed for %#+v", handle))
+		return "", vicerrors.InternalServerError(fmt.Sprintf("Type assertion failed for %#+v", handle))
 	}
 
 	return handle, nil
@@ -348,7 +353,7 @@ func (v *VicIsolationProxy) CommitHandle(op trace.Operation, handle, containerID
 	defer trace.End(trace.Begin(handle, op))
 
 	if v.client == nil {
-		return errors.NillPortlayerClientError("IsolationProxy")
+		return vicerrors.NillPortlayerClientError("IsolationProxy")
 	}
 
 	var commitParams *containers.CommitParams
@@ -362,13 +367,13 @@ func (v *VicIsolationProxy) CommitHandle(op trace.Operation, handle, containerID
 	if err != nil {
 		switch err := err.(type) {
 		case *containers.CommitNotFound:
-			return errors.NotFoundError(containerID)
+			return vicerrors.NotFoundError(containerID)
 		case *containers.CommitConflict:
-			return errors.ConflictError(err.Error())
+			return vicerrors.ConflictError(err.Error())
 		case *containers.CommitDefault:
-			return errors.InternalServerError(err.Payload.Message)
+			return vicerrors.InternalServerError(err.Payload.Message)
 		default:
-			return errors.InternalServerError(err.Error())
+			return vicerrors.InternalServerError(err.Error())
 		}
 	}
 
@@ -382,7 +387,7 @@ func (v *VicIsolationProxy) BindScope(op trace.Operation, handle string, name st
 	defer trace.End(trace.Begin(handle, op))
 
 	if v.client == nil {
-		return "", nil, errors.NillPortlayerClientError("IsolationProxy")
+		return "", nil, vicerrors.NillPortlayerClientError("IsolationProxy")
 	}
 
 	bindParams := scopes.NewBindContainerParamsWithContext(op).WithHandle(handle)
@@ -390,11 +395,11 @@ func (v *VicIsolationProxy) BindScope(op trace.Operation, handle string, name st
 	if err != nil {
 		switch err := err.(type) {
 		case *scopes.BindContainerNotFound:
-			return "", nil, errors.NotFoundError(name)
+			return "", nil, vicerrors.NotFoundError(name)
 		case *scopes.BindContainerInternalServerError:
-			return "", nil, errors.InternalServerError(err.Payload.Message)
+			return "", nil, vicerrors.InternalServerError(err.Payload.Message)
 		default:
-			return "", nil, errors.InternalServerError(err.Error())
+			return "", nil, vicerrors.InternalServerError(err.Error())
 		}
 	}
 
@@ -405,7 +410,7 @@ func (v *VicIsolationProxy) UnbindScope(op trace.Operation, handle string, name 
 	defer trace.End(trace.Begin(handle, op))
 
 	if v.client == nil {
-		return "", nil, errors.NillPortlayerClientError("IsolationProxy")
+		return "", nil, vicerrors.NillPortlayerClientError("IsolationProxy")
 	}
 
 	unbindParams := scopes.NewUnbindContainerParamsWithContext(op).WithHandle(handle)
@@ -413,11 +418,11 @@ func (v *VicIsolationProxy) UnbindScope(op trace.Operation, handle string, name 
 	if err != nil {
 		switch err := err.(type) {
 		case *scopes.UnbindContainerNotFound:
-			return "", nil, errors.NotFoundError(name)
+			return "", nil, vicerrors.NotFoundError(name)
 		case *scopes.UnbindContainerInternalServerError:
-			return "", nil, errors.InternalServerError(err.Payload.Message)
+			return "", nil, vicerrors.InternalServerError(err.Payload.Message)
 		default:
-			return "", nil, errors.InternalServerError(err.Error())
+			return "", nil, vicerrors.InternalServerError(err.Error())
 		}
 	}
 
@@ -431,18 +436,18 @@ func (v *VicIsolationProxy) SetState(op trace.Operation, handle, name, state str
 	defer trace.End(trace.Begin(handle, op))
 
 	if v.client == nil {
-		return "", errors.NillPortlayerClientError("IsolationProxy")
+		return "", vicerrors.NillPortlayerClientError("IsolationProxy")
 	}
 
 	resp, err := v.client.Containers.StateChange(containers.NewStateChangeParamsWithContext(op).WithHandle(handle).WithState(state))
 	if err != nil {
 		switch err := err.(type) {
 		case *containers.StateChangeNotFound:
-			return "", errors.NotFoundError(name)
+			return "", vicerrors.NotFoundError(name)
 		case *containers.StateChangeDefault:
-			return "", errors.InternalServerError(err.Payload.Message)
+			return "", vicerrors.InternalServerError(err.Payload.Message)
 		default:
-			return "", errors.InternalServerError(err.Error())
+			return "", vicerrors.InternalServerError(err.Error())
 		}
 	}
 
@@ -453,18 +458,18 @@ func (v *VicIsolationProxy) State(op trace.Operation, id, name string) (string, 
 	defer trace.End(trace.Begin(id, op))
 
 	if v.client == nil {
-		return "", errors.NillPortlayerClientError("IsolationProxy")
+		return "", vicerrors.NillPortlayerClientError("IsolationProxy")
 	}
 
 	results, err := v.client.Containers.GetContainerInfo(containers.NewGetContainerInfoParamsWithContext(op).WithID(id))
 	if err != nil {
 		switch err := err.(type) {
 		case *containers.GetContainerInfoNotFound:
-			return "", errors.NotFoundError(name)
+			return "", vicerrors.NotFoundError(name)
 		case *containers.GetContainerInfoInternalServerError:
-			return "", errors.InternalServerError(err.Payload.Message)
+			return "", vicerrors.InternalServerError(err.Payload.Message)
 		default:
-			return "", errors.InternalServerError(fmt.Sprintf("Unknown error from the interaction port layer: %s", err))
+			return "", vicerrors.InternalServerError(fmt.Sprintf("Unknown error from the interaction port layer: %s", err))
 		}
 	}
 
@@ -476,7 +481,7 @@ func (v *VicIsolationProxy) Remove(op trace.Operation, id string, force bool) er
 	defer trace.End(trace.Begin(id, op))
 
 	if v.client == nil {
-		return errors.NillPortlayerClientError("IsolationProxy")
+		return vicerrors.NillPortlayerClientError("IsolationProxy")
 	}
 
 	pForce := force
@@ -486,7 +491,7 @@ func (v *VicIsolationProxy) Remove(op trace.Operation, id string, force bool) er
 		WithTimeout(120 * time.Second)
 
 	removeOK, err := v.client.Containers.ContainerRemove(params)
-	op.Infof("ContainerRemove returned %# +v", removeOK)
+	op.Debugf("ContainerRemove returned %# +v", removeOK)
 	return err
 }
 

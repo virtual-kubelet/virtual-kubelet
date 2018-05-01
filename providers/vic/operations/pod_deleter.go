@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package vic
+package operations
 
 import (
 	"fmt"
@@ -21,7 +21,7 @@ import (
 	vicpod "github.com/virtual-kubelet/virtual-kubelet/providers/vic/pod"
 	"github.com/virtual-kubelet/virtual-kubelet/providers/vic/proxy"
 
-	"github.com/vmware/vic/lib/apiservers/engine/errors"
+	vicerrors "github.com/vmware/vic/lib/apiservers/engine/errors"
 	"github.com/vmware/vic/lib/apiservers/portlayer/client"
 	"github.com/vmware/vic/pkg/retry"
 	"github.com/vmware/vic/pkg/trace"
@@ -42,23 +42,59 @@ type VicPodDeleter struct {
 	portlayerAddr  string
 }
 
+type VicPodDeleterError string
+
+func (e VicPodDeleterError) Error() string { return string(e) }
+
+const (
+	PodDeleterPortlayerClientError = VicPodDeleterError("PodDeleter called with an invalid portlayer client")
+	PodDeleterIsolationProxyError  = VicPodDeleterError("PodDeleter called with an invalid isolation proxy")
+	PodDeleterPodCacheError        = VicPodDeleterError("PodDeleter called with an invalid pod cache")
+	PodDeleterPersonaAddrError     = VicPodDeleterError("PodDeleter called with an invalid VIC persona addr")
+	PodDeleterPortlayerAddrError   = VicPodDeleterError("PodDeleter called with an invalid VIC portlayer addr")
+	PodDeleterNillPodSpecError     = VicPodDeleterError("PodDeleter called with nil pod")
+)
+
 type DeleteResponse struct {
 	Id       string `json:"Id"`
 	Warnings string `json:"Warnings"`
 }
 
-func NewPodDeleter(client *client.PortLayer, isolationProxy proxy.IsolationProxy, podCache cache.PodCache, personaAddr string, portlayerAddr string) *VicPodDeleter {
+func NewPodDeleter(client *client.PortLayer, isolationProxy proxy.IsolationProxy, podCache cache.PodCache, personaAddr string, portlayerAddr string) (*VicPodDeleter, error) {
+	if client == nil {
+		return nil, PodDeleterPortlayerClientError
+	} else if isolationProxy == nil {
+		return nil, PodDeleterIsolationProxyError
+	} else if podCache == nil {
+		return nil, PodDeleterPodCacheError
+	} else if personaAddr == "" {
+		return nil, PodDeleterPersonaAddrError
+	} else if portlayerAddr == "" {
+		return nil, PodDeleterPortlayerAddrError
+	}
+
 	return &VicPodDeleter{
 		client:         client,
 		podCache:       podCache,
 		personaAddr:    personaAddr,
 		portlayerAddr:  portlayerAddr,
 		isolationProxy: isolationProxy,
-	}
+	}, nil
 }
 
+// DeletePod deletes a pod
+//
+// arguments:
+//		op		operation trace logger
+//		pod		pod spec
+// returns:
+// 		error
 func (v *VicPodDeleter) DeletePod(op trace.Operation, pod *v1.Pod) error {
 	defer trace.End(trace.Begin(pod.Name, op))
+
+	if pod == nil {
+		return PodDeleterNillPodSpecError
+	}
 
 	// Get pod from cache
 	vp, err := v.podCache.Get(op, "", pod.Name)
@@ -77,22 +113,35 @@ func (v *VicPodDeleter) DeletePod(op trace.Operation, pod *v1.Pod) error {
 	}
 
 	op.Infof("PodDeleter deleting from cache, name: %s, ID: %s", pod.Name, vp.ID)
-	v.podCache.Delete(op, pod.Name)
+	v.podCache.Delete(op, "", pod.Name)
 
 	return nil
 }
 
-//  deletes a pod using the VIC portlayer.
+// deletePod deletes a pod
 //
-//	returns id of pod as a string and error
+// arguments:
+//		op		operation trace logger
+//		vp		VIC pod struct
+//		force	if set to true, the pod will be deleted even if it's still running
+// returns:
+// 		error
 func (v *VicPodDeleter) deletePod(op trace.Operation, vp *vicpod.VicPod, force bool) error {
 	defer trace.End(trace.Begin("", op))
+
+	if vp == nil {
+		return PodDeleterNillPodSpecError
+	}
 
 	id := vp.ID
 	name := vp.Pod.Name
 	running := false
 
-	stopper := NewPodStopper(v.client, v.isolationProxy)
+	stopper, err := NewPodStopper(v.client, v.isolationProxy)
+	if err != nil {
+		return err
+	}
+
 	// Use the force and stop the container first
 	if force {
 		if err := stopper.Stop(op, id, name); err != nil {
@@ -135,10 +184,10 @@ func (v *VicPodDeleter) deletePod(op trace.Operation, vp *vicpod.VicPod, force b
 			return v.isolationProxy.Remove(op, id, true)
 		}
 		op.Infof("Delete Pod, ID: %s, running: %v", vp.ID, running)
-		return retry.Do(operation, errors.IsConflictError)
+		return retry.Do(operation, vicerrors.IsConflictError)
 	}
 
-	err := v.isolationProxy.Remove(op, id, true)
+	err = v.isolationProxy.Remove(op, id, true)
 	op.Infof("Delete Pod, ID: %s, running: %v err: %v", vp.ID, running, err)
 	return err
 }

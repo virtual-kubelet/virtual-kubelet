@@ -26,7 +26,7 @@ import (
 	log "github.com/Sirupsen/logrus"
 	"github.com/kr/pretty"
 
-	"github.com/vmware/vic/lib/apiservers/engine/errors"
+	vicerrors "github.com/vmware/vic/lib/apiservers/engine/errors"
 	vicproxy "github.com/vmware/vic/lib/apiservers/engine/proxy"
 	"github.com/vmware/vic/lib/apiservers/portlayer/client"
 	"github.com/vmware/vic/lib/apiservers/portlayer/models"
@@ -38,6 +38,7 @@ import (
 
 	"github.com/virtual-kubelet/virtual-kubelet/manager"
 	"github.com/virtual-kubelet/virtual-kubelet/providers/vic/cache"
+	"github.com/virtual-kubelet/virtual-kubelet/providers/vic/operations"
 	"github.com/virtual-kubelet/virtual-kubelet/providers/vic/proxy"
 	"github.com/virtual-kubelet/virtual-kubelet/providers/vic/utils"
 
@@ -139,11 +140,11 @@ func waitForVCH(op trace.Operation, plClient *client.PortLayer, personaAddr stri
 	opWaitForPortlayer := func() error {
 		op.Infof("** Checking portlayer server is running")
 		if !systemProxy.PingPortlayer(context.Background()) {
-			return errors.ServerNotReadyError{Name: "Portlayer"}
+			return vicerrors.ServerNotReadyError{Name: "Portlayer"}
 		}
 		return nil
 	}
-	if err := retry.DoWithConfig(opWaitForPortlayer, errors.IsServerNotReady, backoffConf); err != nil {
+	if err := retry.DoWithConfig(opWaitForPortlayer, vicerrors.IsServerNotReady, backoffConf); err != nil {
 		op.Errorf("Wait for portlayer to be ready failed")
 		return false
 	}
@@ -153,11 +154,11 @@ func waitForVCH(op trace.Operation, plClient *client.PortLayer, personaAddr stri
 	opWaitForPersona := func() error {
 		op.Infof("** Checking persona server is running")
 		if err := dockerClient.Ping(op); err != nil {
-			return errors.ServerNotReadyError{Name: "Persona"}
+			return vicerrors.ServerNotReadyError{Name: "Persona"}
 		}
 		return nil
 	}
-	if err := retry.DoWithConfig(opWaitForPersona, errors.IsServerNotReady, backoffConf); err != nil {
+	if err := retry.DoWithConfig(opWaitForPersona, vicerrors.IsServerNotReady, backoffConf); err != nil {
 		op.Errorf("Wait for VIC docker server to be ready failed")
 		return false
 	}
@@ -203,17 +204,21 @@ func (v *VicProvider) CreatePod(pod *v1.Pod) error {
 	op := trace.NewOperation(context.Background(), "CreatePod - %s", pod.Name)
 	defer trace.End(trace.Begin(pod.Name, op))
 
-	op.Infof("Creating %s's pod spec = %#v", pod.Name, pod.Spec)
+	op.Debugf("Creating %s's pod = %# +v", pod.Name, pretty.Formatter(pod))
 
-	pc := NewPodCreator(v.client, v.imageStore, v.isolationProxy, v.podCache, v.config.PersonaAddr, v.config.PortlayerAddr)
-	err := pc.CreatePod(op, pod, true)
+	pc, err := operations.NewPodCreator(v.client, v.imageStore, v.isolationProxy, v.podCache, v.config.PersonaAddr, v.config.PortlayerAddr)
+	if err != nil {
+		return err
+	}
+
+	err = pc.CreatePod(op, pod, true)
 	if err != nil {
 		return err
 	}
 
 	//v.resourceManager.AddPod()
 
-	op.Infof("** pod created ok")
+	op.Debugf("** pod created ok")
 	return nil
 }
 
@@ -231,9 +236,13 @@ func (v *VicProvider) DeletePod(pod *v1.Pod) error {
 
 	op.Infof("Deleting %s's pod spec = %#v", pod.Name, pod.Spec)
 
-	pd := NewPodDeleter(v.client, v.isolationProxy, v.podCache, v.config.PersonaAddr, v.config.PortlayerAddr)
+	pd, err := operations.NewPodDeleter(v.client, v.isolationProxy, v.podCache, v.config.PersonaAddr, v.config.PortlayerAddr)
+	if err != nil {
+		return err
+	}
 
-	err := pd.DeletePod(op, pod)
+	err = pd.DeletePod(op, pod)
+
 	return err
 }
 

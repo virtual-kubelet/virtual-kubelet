@@ -12,6 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//TODO:  This image cache needs to hook into the VIC persona to receive an event when users pulled images
+// via docker.
+
 package proxy
 
 import (
@@ -39,7 +42,30 @@ type VicImageStore struct {
 	portlayerAddr string
 }
 
+type ImageStoreError string
+
+func (e ImageStoreError) Error() string { return string(e) }
+
+const (
+	ImageStorePortlayerClientError = ImageStoreError("ImageStore cannot be created without a valid portlayer client")
+	ImageStorePersonaAddrError     = ImageStoreError("ImageStore cannot be created without a valid VIC persona addr")
+	ImageStorePortlayerAddrError   = ImageStoreError("ImageStore cannot be created without a valid VIC portlayer addr")
+	ImageStoreContainerIDError     = ImageStoreError("ImageStore called with empty container ID")
+	ImageStoreEmptyUserNameError   = ImageStoreError("ImageStore called with empty username")
+	ImageStoreEmptyPasswordError   = ImageStoreError("ImageStore called with empty password")
+)
+
 func NewImageStore(plClient *client.PortLayer, personaAddr, portlayerAddr string) (ImageStore, error) {
+	if plClient == nil {
+		return nil, ImageStorePortlayerClientError
+	}
+	if personaAddr == "" {
+		return nil, ImageStorePersonaAddrError
+	}
+	if portlayerAddr == "" {
+		return nil, ImageStorePortlayerAddrError
+	}
+
 	err := cache.InitializeImageCache(plClient)
 	if err != nil {
 		return nil, err
@@ -54,10 +80,23 @@ func NewImageStore(plClient *client.PortLayer, personaAddr, portlayerAddr string
 	return vs, nil
 }
 
-// Get returns an ImageConfig.  If the config is not cached, VicImageStore can request
-// imagec to pull the image if actuate is set to true.
+// Get retrieves the VIC ImageConfig data structure.  If the config is not cached,
+// VicImageStore can request imagec to pull the image if actuate is set to true.
+//
+// arguments:
+//		op		operation trace logger
+//		idOrRef	docker image id or reference
+//		tag		docker image tag
+//		realize	determines whether the image is pulled if not in the cache
+// returns:
+// 		error
 func (v *VicImageStore) Get(op trace.Operation, idOrRef, tag string, realize bool) (*metadata.ImageConfig, error) {
 	defer trace.End(trace.Begin(fmt.Sprintf("Get - %s:%s", idOrRef, tag), op))
+
+	if idOrRef == "" {
+		op.Errorf(ImageStoreContainerIDError.Error())
+		return nil, ImageStoreContainerIDError
+	}
 
 	c, err := cache.ImageCache().Get(idOrRef)
 	if err != nil && realize {
@@ -78,17 +117,43 @@ func (v *VicImageStore) Get(op trace.Operation, idOrRef, tag string, realize boo
 	return c, nil
 }
 
+// Get retrieves all the VIC ImageConfig data structure.
+//
+// arguments:
+//		op		operation trace logger
+// returns:
+// 		array of ImageConfig
 func (v *VicImageStore) GetImages(op trace.Operation) []*metadata.ImageConfig {
 	defer trace.End(trace.Begin("", op))
 
 	return cache.ImageCache().GetImages()
 }
 
-// PullImage pulls images using the docker persona.  It simply issues a pull rest call to the persona.
-// This lets the persona be the imagec server and keeps both the kubelet and docker persona up to date
-// when the kubelet pulls an image.
+// PullImage makes a request to the VIC persona server (imageC component) to retrieve a container image.
+//
+// arguments:
+//		op			operation trace logger
+//		idOrRef		docker image id or reference
+//		tag			docker image tag
+//		username	user name for the registry server
+//		password	password for the registry server
+// returns:
+// 		array of ImageConfig
 func (v *VicImageStore) PullImage(op trace.Operation, image, tag, username, password string) error {
 	defer trace.End(trace.Begin(fmt.Sprintf("Get - %s:%s", image, tag), op))
+
+	if image == "" {
+		op.Errorf(ImageStoreContainerIDError.Error())
+		return ImageStoreContainerIDError
+	}
+	if username == "" {
+		op.Errorf(ImageStoreEmptyUserNameError.Error())
+		return ImageStoreEmptyUserNameError
+	}
+	if password == "" {
+		op.Errorf(ImageStoreEmptyPasswordError.Error())
+		return ImageStoreEmptyPasswordError
+	}
 
 	pullClient := &http.Client{Timeout: 60 * time.Second}
 	var personaServer string

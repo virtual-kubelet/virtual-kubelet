@@ -12,9 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package vic
+package operations
 
 import (
+	"context"
+	"fmt"
+
 	"github.com/virtual-kubelet/virtual-kubelet/providers/vic/proxy"
 
 	"github.com/vmware/vic/lib/apiservers/portlayer/client"
@@ -31,15 +34,52 @@ type VicPodStarter struct {
 	imageStore     proxy.ImageStore
 }
 
-func NewPodStarter(client *client.PortLayer, isolationProxy proxy.IsolationProxy) *VicPodStarter {
+type VicPodStarterError string
+
+func (e VicPodStarterError) Error() string { return string(e) }
+
+const (
+	PodStarterPortlayerClientError = VicPodStarterError("PodStarter called with an invalid portlayer client")
+	PodStarterIsolationProxyError  = VicPodStarterError("PodStarter called with an invalid isolation proxy")
+	PodStarterInvalidPodIDError    = VicPodStarterError("PodStarter called with invalid Pod ID")
+	PodStarterInvalidPodNameError  = VicPodStarterError("PodStarter called with invalid Pod name")
+)
+
+func NewPodStarter(client *client.PortLayer, isolationProxy proxy.IsolationProxy) (*VicPodStarter, error) {
+	defer trace.End(trace.Begin("", context.Background()))
+
+	if client == nil {
+		return nil, PodStarterPortlayerClientError
+	}
+	if isolationProxy == nil {
+		return nil, PodStarterIsolationProxyError
+	}
+
 	return &VicPodStarter{
 		client:         client,
 		isolationProxy: isolationProxy,
-	}
+	}, nil
 }
 
+// Start starts up the pod vm
+//
+// arguments:
+//		op		operation trace logger
+//		id		pod id
+//		name	pod name
+// returns:
+//		error
 func (v *VicPodStarter) Start(op trace.Operation, id, name string) error {
-	defer trace.End(trace.Begin(name, op))
+	defer trace.End(trace.Begin(fmt.Sprintf("id(%s), name(%s)", id, name), op))
+
+	if id == "" {
+		op.Errorf(PodStarterInvalidPodIDError.Error())
+		return PodStarterInvalidPodIDError
+	}
+	if name == "" {
+		op.Errorf(PodStarterInvalidPodNameError.Error())
+		return PodStarterInvalidPodNameError
+	}
 
 	h, err := v.isolationProxy.Handle(op, id, name)
 	if err != nil {
@@ -52,7 +92,7 @@ func (v *VicPodStarter) Start(op trace.Operation, id, name string) error {
 		return err
 	}
 
-	op.Infof("*** Scope bind returned endpoints %#v", ep)
+	op.Debugf("*** Scope bind returned endpoints %#v", ep)
 
 	defer func() {
 		if err != nil {
