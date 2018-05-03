@@ -195,6 +195,9 @@ func (pod *Pod) Start() error {
 	runTaskOutput, err := api.RunTask(runTaskInput)
 	log.Printf("RunTask err:%+v output:%+v", err, runTaskOutput)
 	if err != nil || len(runTaskOutput.Tasks) == 0 {
+		if len(runTaskOutput.Failures) != 0 {
+			err = fmt.Errorf("reason: %s", *runTaskOutput.Failures[0].Reason)
+		}
 		err = fmt.Errorf("failed to run task: %v", err)
 		return err
 	}
@@ -332,7 +335,11 @@ func (pod *Pod) describe() (*ecs.Task, error) {
 	}
 
 	describeTasksOutput, err := api.DescribeTasks(describeTasksInput)
-	if err != nil {
+	if err != nil || len(describeTasksOutput.Tasks) == 0 {
+		if len(describeTasksOutput.Failures) != 0 {
+			err = fmt.Errorf("reason: %s", *describeTasksOutput.Failures[0].Reason)
+		}
+		err = fmt.Errorf("failed to describe task: %v", err)
 		return nil, err
 	}
 
