@@ -299,6 +299,14 @@ spec:
     effect: NoSchedule
 ```
 
+Notice that Virtual-Kubelet nodes are tainted by default to avoid unexpected pods running on them, i.e. kube-proxy, other virtual-kubelet pods, etc. To schedule a pod to them, you need to add the tolerations to your pod spec:
+
+```
+  tolerations:
+  - key: azure.com/aci
+    effect: NoSchedule
+```
+
 Run the application with the [kubectl create][kubectl-create] command.
 
 ```cli
