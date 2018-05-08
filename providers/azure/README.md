@@ -7,13 +7,13 @@ The Azure Container Instances provider for the Virtual Kubelet configures an ACI
 This document details configuring the Virtual Kubelet ACI provider.
 #### Table of Contents
 
-* [Prerequiste](#Prerequisite)
-* [Quick set-up with the ACI Connector](#Quick-set-up-with-the-ACI-Connector)
-* [Manual set-up](#Manual-set-up)
-* [Validate the Virtual Kubelet ACI provider](#Validate-the-Virtual-Kubelet-ACI-provider)
-* [Schedule a pod in ACI](#Schedule-a-pod-in-ACI)
-* [Upgrade the ACI Connector ](#Upgrade-the-ACI-Connector)
-* [Remove the Virtual Kubelet](#Remove-the-Virtual-Kubelet)
+* [Prerequiste](#prerequisite)
+* [Quick set-up with the ACI Connector](#quick-set-up-with-the-aci-connector)
+* [Manual set-up](#manual-set-up)
+* [Validate the Virtual Kubelet ACI provider](#validate-the-virtual-kubelet-aci-provider)
+* [Schedule a pod in ACI](#schedule-a-pod-in-aci)
+* [Upgrade the ACI Connector ](#upgrade-the-aci-connector)
+* [Remove the Virtual Kubelet](#remove-the-virtual-kubelet)
 ## Prerequisite
 
 This guide assumes that you have a Kubernetes cluster up and running (can be `minikube`) and that `kubectl` is already configured to talk to it.
@@ -294,6 +294,14 @@ spec:
       name: https
   dnsPolicy: ClusterFirst
   nodeName: virtual-kubelet-myconnector-linux
+  tolerations:
+  - key: azure.com/aci
+    effect: NoSchedule
+```
+
+Notice that Virtual-Kubelet nodes are tainted by default to avoid unexpected pods running on them, i.e. kube-proxy, other virtual-kubelet pods, etc. To schedule a pod to them, you need to add the tolerations to your pod spec:
+
+```
   tolerations:
   - key: azure.com/aci
     effect: NoSchedule
