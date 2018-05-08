@@ -147,7 +147,7 @@ func (s *Server) registerNode() error {
 				"type":                  "virtual-kubelet",
 				"kubernetes.io/role":    "agent",
 				"beta.kubernetes.io/os": strings.ToLower(s.provider.OperatingSystem()),
-
+				"kubernetes.io/hostname": s.nodeName,
 				"alpha.service-controller.kubernetes.io/exclude-balancer": "true",
 			},
 		},
