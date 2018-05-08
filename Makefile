@@ -54,7 +54,7 @@ docker:
 	@echo "Docker Build..."
 	$Q docker build -t $(DOCKER_IMAGE) .
 
-clean: clean-build
+clean:
 	@echo "Clean..."
 	$Q rm -rf bin
 
