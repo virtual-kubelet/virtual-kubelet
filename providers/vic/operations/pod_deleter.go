@@ -30,7 +30,7 @@ import (
 )
 
 type PodDeleter interface {
-	DeletePod(op trace.Operation, pod *v1.Pod, start bool) error
+	DeletePod(op trace.Operation, pod *v1.Pod) error
 }
 
 type VicPodDeleter struct {
@@ -52,7 +52,7 @@ const (
 	PodDeleterPodCacheError        = VicPodDeleterError("PodDeleter called with an invalid pod cache")
 	PodDeleterPersonaAddrError     = VicPodDeleterError("PodDeleter called with an invalid VIC persona addr")
 	PodDeleterPortlayerAddrError   = VicPodDeleterError("PodDeleter called with an invalid VIC portlayer addr")
-	PodDeleterNillPodSpecError     = VicPodDeleterError("PodDeleter called with nil pod")
+	PodDeleterInvalidPodSpecError  = VicPodDeleterError("PodDeleter called with nil pod")
 )
 
 type DeleteResponse struct {
@@ -60,17 +60,13 @@ type DeleteResponse struct {
 	Warnings string `json:"Warnings"`
 }
 
-func NewPodDeleter(client *client.PortLayer, isolationProxy proxy.IsolationProxy, podCache cache.PodCache, personaAddr string, portlayerAddr string) (*VicPodDeleter, error) {
+func NewPodDeleter(client *client.PortLayer, isolationProxy proxy.IsolationProxy, podCache cache.PodCache, personaAddr string, portlayerAddr string) (PodDeleter, error) {
 	if client == nil {
 		return nil, PodDeleterPortlayerClientError
 	} else if isolationProxy == nil {
 		return nil, PodDeleterIsolationProxyError
 	} else if podCache == nil {
 		return nil, PodDeleterPodCacheError
-	} else if personaAddr == "" {
-		return nil, PodDeleterPersonaAddrError
-	} else if portlayerAddr == "" {
-		return nil, PodDeleterPortlayerAddrError
 	}
 
 	return &VicPodDeleter{
@@ -90,11 +86,10 @@ func NewPodDeleter(client *client.PortLayer, isolationProxy proxy.IsolationProxy
 // returns:
 // 		error
 func (v *VicPodDeleter) DeletePod(op trace.Operation, pod *v1.Pod) error {
-	defer trace.End(trace.Begin(pod.Name, op))
-
 	if pod == nil {
-		return PodDeleterNillPodSpecError
+		return PodDeleterInvalidPodSpecError
 	}
+	defer trace.End(trace.Begin(pod.Name, op))
 
 	// Get pod from cache
 	vp, err := v.podCache.Get(op, "", pod.Name)
@@ -130,7 +125,7 @@ func (v *VicPodDeleter) deletePod(op trace.Operation, vp *vicpod.VicPod, force b
 	defer trace.End(trace.Begin("", op))
 
 	if vp == nil {
-		return PodDeleterNillPodSpecError
+		return PodDeleterInvalidPodSpecError
 	}
 
 	id := vp.ID

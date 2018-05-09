@@ -79,11 +79,11 @@ const (
 	PodCreatorPodCacheError        = VicPodCreatorError("PodCreator called with an invalid pod cache")
 	PodCreatorPersonaAddrError     = VicPodCreatorError("PodCreator called with an invalid VIC persona addr")
 	PodCreatorPortlayerAddrError   = VicPodCreatorError("PodCreator called with an invalid VIC portlayer addr")
-	PodCreatorNillPodSpecError     = VicPodCreatorError("CreatePod called with nil pod")
+	PodCreatorInvalidPodSpecError  = VicPodCreatorError("CreatePod called with nil pod")
 	PodCreatorInvalidArgsError     = VicPodCreatorError("Invalid arguments")
 )
 
-func NewPodCreator(client *client.PortLayer, imageStore proxy.ImageStore, isolationProxy proxy.IsolationProxy, podCache cache.PodCache, personaAddr string, portlayerAddr string) (*VicPodCreator, error) {
+func NewPodCreator(client *client.PortLayer, imageStore proxy.ImageStore, isolationProxy proxy.IsolationProxy, podCache cache.PodCache, personaAddr string, portlayerAddr string) (PodCreator, error) {
 	if client == nil {
 		return nil, PodCreatorPortlayerClientError
 	} else if imageStore == nil {
@@ -92,10 +92,6 @@ func NewPodCreator(client *client.PortLayer, imageStore proxy.ImageStore, isolat
 		return nil, PodCreatorIsolationProxyError
 	} else if podCache == nil {
 		return nil, PodCreatorPodCacheError
-	} else if personaAddr == "" {
-		return nil, PodCreatorPersonaAddrError
-	} else if portlayerAddr == "" {
-		return nil, PodCreatorPortlayerAddrError
 	}
 
 	return &VicPodCreator{
@@ -120,8 +116,8 @@ func (v *VicPodCreator) CreatePod(op trace.Operation, pod *v1.Pod, start bool) e
 	defer trace.End(trace.Begin("", op))
 
 	if pod == nil {
-		op.Errorf(PodCreatorNillPodSpecError.Error())
-		return PodCreatorNillPodSpecError
+		op.Errorf(PodCreatorInvalidPodSpecError.Error())
+		return PodCreatorInvalidPodSpecError
 	}
 
 	defer trace.End(trace.Begin(pod.Name, op))
@@ -177,7 +173,7 @@ func (v *VicPodCreator) pullPodContainers(op trace.Operation, pod *v1.Pod) error
 	defer trace.End(trace.Begin("", op))
 
 	if pod == nil || pod.Spec.Containers == nil {
-		return PodCreatorNillPodSpecError
+		return PodCreatorInvalidPodSpecError
 	}
 
 	var pullGroup sync.WaitGroup
@@ -231,8 +227,8 @@ func (v *VicPodCreator) createPod(op trace.Operation, pod *v1.Pod, start bool) (
 	defer trace.End(trace.Begin("", op))
 
 	if pod == nil || pod.Spec.Containers == nil {
-		op.Errorf(PodCreatorNillPodSpecError.Error())
-		return "", PodCreatorNillPodSpecError
+		op.Errorf(PodCreatorInvalidPodSpecError.Error())
+		return "", PodCreatorInvalidPodSpecError
 	}
 
 	id, h, err := v.isolationProxy.CreateHandle(op)

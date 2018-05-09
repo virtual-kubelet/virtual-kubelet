@@ -15,15 +15,12 @@
 package operations
 
 import (
-	"context"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/vmware/vic/lib/apiservers/portlayer/client"
-	"github.com/vmware/vic/pkg/trace"
-
 	"github.com/virtual-kubelet/virtual-kubelet/providers/vic/proxy/mocks"
+	"github.com/vmware/vic/lib/apiservers/portlayer/client"
 )
 
 func TestNewPodStarter(t *testing.T) {
@@ -47,21 +44,4 @@ func TestNewPodStarter(t *testing.T) {
 	assert.Equal(t, err, PodStarterIsolationProxyError)
 }
 
-func TestStartPod_BadArgs(t *testing.T) {
-	client := client.Default
-	ip := &mocks.IsolationProxy{}
-	op := trace.NewOperation(context.Background(), "")
-
-	// Start with arguments
-	s, err := NewPodStarter(client, ip)
-	assert.NotNil(t, s, "Expected non-nil creating a pod starter but received nil")
-
-	// Negative Cases
-	err = s.Start(op, "", podName)
-	assert.Equal(t, err, PodStarterInvalidPodIDError)
-
-	err = s.Start(op, podID, "")
-	assert.Equal(t, err, PodStarterInvalidPodNameError)
-}
-
-//NOTE: The rest of PodStarter tests were handled in PocCreator's tests so there's no need for further tests.
+//NOTE: The rest of PodStarter tests were handled in PodCreator's tests so there's no need for further tests.

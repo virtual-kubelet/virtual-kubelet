@@ -45,7 +45,7 @@ const (
 	PodStarterInvalidPodNameError  = VicPodStarterError("PodStarter called with invalid Pod name")
 )
 
-func NewPodStarter(client *client.PortLayer, isolationProxy proxy.IsolationProxy) (*VicPodStarter, error) {
+func NewPodStarter(client *client.PortLayer, isolationProxy proxy.IsolationProxy) (PodStarter, error) {
 	defer trace.End(trace.Begin("", context.Background()))
 
 	if client == nil {
@@ -71,15 +71,6 @@ func NewPodStarter(client *client.PortLayer, isolationProxy proxy.IsolationProxy
 //		error
 func (v *VicPodStarter) Start(op trace.Operation, id, name string) error {
 	defer trace.End(trace.Begin(fmt.Sprintf("id(%s), name(%s)", id, name), op))
-
-	if id == "" {
-		op.Errorf(PodStarterInvalidPodIDError.Error())
-		return PodStarterInvalidPodIDError
-	}
-	if name == "" {
-		op.Errorf(PodStarterInvalidPodNameError.Error())
-		return PodStarterInvalidPodNameError
-	}
 
 	h, err := v.isolationProxy.Handle(op, id, name)
 	if err != nil {

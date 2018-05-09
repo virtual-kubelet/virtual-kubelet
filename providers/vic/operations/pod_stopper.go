@@ -27,7 +27,7 @@ import (
 )
 
 type PodStopper interface {
-	Start(op trace.Operation, id, name string) error
+	Stop(op trace.Operation, id, name string) error
 }
 
 type VicPodStopper struct {
@@ -42,11 +42,11 @@ func (e VicPodStopperError) Error() string { return string(e) }
 const (
 	PodStopperPortlayerClientError = VicPodStopperError("PodStopper called with an invalid portlayer client")
 	PodStopperIsolationProxyError  = VicPodStopperError("PodStopper called with an invalid isolation proxy")
-	PodStopperEmptyPodIDError   = VicPodStopperError("PodStopper called with empty username")
-	PodStopperEmptyPodNameError   = VicPodStopperError("PodStopper called with empty password")
+	PodStopperInvalidPodIDError    = VicPodStopperError("PodStopper called with invalid PodID")
+	PodStopperInvalidPodNameError  = VicPodStopperError("PodStopper called with invalid PodName")
 )
 
-func NewPodStopper(client *client.PortLayer, isolationProxy proxy.IsolationProxy) (*VicPodStopper, error) {
+func NewPodStopper(client *client.PortLayer, isolationProxy proxy.IsolationProxy) (PodStopper, error) {
 	if client == nil {
 		return nil, PodStopperPortlayerClientError
 	} else if isolationProxy == nil {
@@ -69,12 +69,6 @@ func NewPodStopper(client *client.PortLayer, isolationProxy proxy.IsolationProxy
 // 		error
 func (v *VicPodStopper) Stop(op trace.Operation, id, name string) error {
 	defer trace.End(trace.Begin(fmt.Sprintf("id(%s), name(%s)", id, name), op))
-
-	if id == "" {
-		return PodStopperEmptyPodIDError
-	} else if name == "" {
-		return PodStopperEmptyPodNameError
-	}
 
 	operation := func() error {
 		return v.stop(op, id, name)
