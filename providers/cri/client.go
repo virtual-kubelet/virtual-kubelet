@@ -34,7 +34,7 @@ func stopPodSandbox(client criapi.RuntimeServiceClient, id string) error {
 		return err
 	}
 
-	fmt.Printf("Stopped sandbox %s\n", id)
+	log.Printf("Stopped sandbox %s\n", id)
 	return nil
 }
 
@@ -50,7 +50,7 @@ func removePodSandbox(client criapi.RuntimeServiceClient, id string) error {
 	if err != nil {
 		return err
 	}
-	fmt.Printf("Removed sandbox %s\n", id)
+	log.Printf("Removed sandbox %s\n", id)
 	return nil
 }
 
@@ -105,7 +105,7 @@ func createContainer(client criapi.RuntimeServiceClient, config *criapi.Containe
 	if err != nil {
 		return "", err
 	}
-	fmt.Printf("Container created: %s\n", r.ContainerId)
+	log.Printf("Container created: %s\n", r.ContainerId)
 	return r.ContainerId, nil
 }
 
@@ -123,7 +123,7 @@ func startContainer(client criapi.RuntimeServiceClient, cId string) error {
 	if err != nil {
 		return err
 	}
-	fmt.Printf("Container started: %s\n", cId)
+	log.Printf("Container started: %s\n", cId)
 	return nil
 }
 
