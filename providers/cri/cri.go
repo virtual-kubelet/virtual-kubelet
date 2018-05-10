@@ -2,15 +2,15 @@ package cri
 
 import (
 	"bufio"
+	"fmt"
 	"io/ioutil"
+	"net"
 	"os"
 	"path/filepath"
 	"runtime"
 	"strings"
 	"syscall"
 	"time"
-
-	"fmt"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/virtual-kubelet/virtual-kubelet/manager"
@@ -22,11 +22,10 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
 	criapi "k8s.io/kubernetes/pkg/kubelet/apis/cri/runtime/v1alpha2"
-	"k8s.io/kubernetes/pkg/kubelet/util"
 )
 
 // TODO: Make these configurable
-const CriSocket = "unix:///run/containerd/containerd.sock"
+const CriSocketPath = "/run/containerd/containerd.sock"
 const PodLogRoot = "/var/log/vk-cri/"
 const PodVolRoot = "/run/vk-cri/volumes/"
 const PodLogRootPerms = 0755
@@ -46,7 +45,6 @@ type CRIProvider struct {
 	resourceManager    *manager.ResourceManager
 	podLogRoot         string
 	podVolRoot         string
-	criSocket          string
 	nodeName           string
 	operatingSystem    string
 	internalIP         string
@@ -70,6 +68,7 @@ func (p *CRIProvider) refreshNodeState() error {
 		return err
 	}
 
+	newStatus := make(map[types.UID]CRIPod)
 	for _, pod := range allPods {
 		psId := pod.Id
 
@@ -92,19 +91,20 @@ func (p *CRIProvider) refreshNodeState() error {
 			css[cstatus.Metadata.Name] = cstatus
 		}
 
-		p.podStatus[types.UID(pss.Metadata.Uid)] = CRIPod{
+		newStatus[types.UID(pss.Metadata.Uid)] = CRIPod{
 			id:         pod.Id,
 			status:     pss,
 			containers: css,
 		}
 	}
+	p.podStatus = newStatus
 	return nil
 }
 
 // Initialize the CRI APIs required
-func getClientAPIs(criSocket string) (criapi.RuntimeServiceClient, criapi.ImageServiceClient, error) {
+func getClientAPIs(criSocketPath string) (criapi.RuntimeServiceClient, criapi.ImageServiceClient, error) {
 	// Set up a connection to the server.
-	conn, err := getClientConnection(criSocket)
+	conn, err := getClientConnection(criSocketPath)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to connect: %v", err)
 	}
@@ -119,14 +119,13 @@ func getClientAPIs(criSocket string) (criapi.RuntimeServiceClient, criapi.ImageS
 	return rc, ic, err
 }
 
-// Initialize CRI client connection
-func getClientConnection(criSocket string) (*grpc.ClientConn, error) {
-	addr, dialer, err := util.GetAddressAndDialer(criSocket)
-	if err != nil {
-		return nil, err
-	}
+func unixDialer(addr string, timeout time.Duration) (net.Conn, error) {
+	return net.DialTimeout("unix", addr, timeout)
+}
 
-	conn, err := grpc.Dial(addr, grpc.WithInsecure(), grpc.WithTimeout(10*time.Second), grpc.WithDialer(dialer))
+// Initialize CRI client connection
+func getClientConnection(criSocketPath string) (*grpc.ClientConn, error) {
+	conn, err := grpc.Dial(criSocketPath, grpc.WithInsecure(), grpc.WithTimeout(10*time.Second), grpc.WithDialer(unixDialer))
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect: %v", err)
 	}
@@ -135,7 +134,7 @@ func getClientConnection(criSocket string) (*grpc.ClientConn, error) {
 
 // Create a new CRIProvider
 func NewCRIProvider(nodeName, operatingSystem string, internalIP string, resourceManager *manager.ResourceManager, daemonEndpointPort int32) (*CRIProvider, error) {
-	runtimeClient, imageClient, err := getClientAPIs(CriSocket)
+	runtimeClient, imageClient, err := getClientAPIs(CriSocketPath)
 	if err != nil {
 		return nil, err
 	}
@@ -143,7 +142,6 @@ func NewCRIProvider(nodeName, operatingSystem string, internalIP string, resourc
 		resourceManager:    resourceManager,
 		podLogRoot:         PodLogRoot,
 		podVolRoot:         PodVolRoot,
-		criSocket:          CriSocket,
 		nodeName:           nodeName,
 		operatingSystem:    operatingSystem,
 		internalIP:         internalIP,
@@ -332,7 +330,7 @@ func createCtrMounts(container *v1.Container, pod *v1.Pod, podVolRoot string, rm
 	for _, mountSpec := range container.VolumeMounts {
 		podVolSpec := findPodVolumeSpec(pod, mountSpec.Name)
 		if podVolSpec == nil {
-			fmt.Printf("Container volume mount %s not found in Pod spec", mountSpec.Name)
+			log.Printf("Container volume mount %s not found in Pod spec", mountSpec.Name)
 			continue
 		}
 		// Common fields to all mount types
@@ -487,7 +485,7 @@ func generateContainerConfig(container *v1.Container, pod *v1.Pod, imageRef, pod
 
 // Provider function to create a Pod
 func (p *CRIProvider) CreatePod(pod *v1.Pod) error {
-	log.Printf("receive CreatePod %q\n", pod.Name)
+	log.Printf("receive CreatePod %q", pod.Name)
 
 	var attempt uint32 // TODO: Track attempts. Currently always 0
 	logPath := filepath.Join(p.podLogRoot, string(pod.UID))
@@ -500,7 +498,7 @@ func (p *CRIProvider) CreatePod(pod *v1.Pod) error {
 	if err != nil {
 		return err
 	}
-	fmt.Printf("%v\n", pConfig)
+	log.Debugf("%v", pConfig)
 	existing := p.findPodByName(pod.Namespace, pod.Name)
 
 	// TODO: Is re-using an existing sandbox with the UID the correct behavior?
@@ -525,14 +523,14 @@ func (p *CRIProvider) CreatePod(pod *v1.Pod) error {
 	}
 
 	for _, c := range pod.Spec.Containers {
-		fmt.Printf("Pulling image %s\n", c.Image)
+		log.Printf("Pulling image %s", c.Image)
 		imageRef, err := pullImage(p.imageClient, c.Image)
 		if err != nil {
 			return err
 		}
-		fmt.Printf("Creating container %s\n", c.Name)
+		log.Printf("Creating container %s", c.Name)
 		cConfig, err := generateContainerConfig(&c, pod, imageRef, volPath, p.resourceManager, attempt)
-		fmt.Printf("%v\n", cConfig)
+		log.Debugf("%v", cConfig)
 		if err != nil {
 			return err
 		}
@@ -540,7 +538,7 @@ func (p *CRIProvider) CreatePod(pod *v1.Pod) error {
 		if err != nil {
 			return err
 		}
-		fmt.Printf("Starting container %s\n", c.Name)
+		log.Printf("Starting container %s", c.Name)
 		err = startContainer(p.runtimeClient, cId)
 	}
 
@@ -549,14 +547,14 @@ func (p *CRIProvider) CreatePod(pod *v1.Pod) error {
 
 // Update is currently not required or even called by VK, so not implemented
 func (p *CRIProvider) UpdatePod(pod *v1.Pod) error {
-	log.Printf("receive UpdatePod %q\n", pod.Name)
+	log.Printf("receive UpdatePod %q", pod.Name)
 
 	return nil
 }
 
 // Provider function to delete a pod and its containers
 func (p *CRIProvider) DeletePod(pod *v1.Pod) error {
-	log.Printf("receive DeletePod %q\n", pod.Name)
+	log.Printf("receive DeletePod %q", pod.Name)
 
 	err := p.refreshNodeState()
 	if err != nil {
@@ -588,7 +586,7 @@ func (p *CRIProvider) DeletePod(pod *v1.Pod) error {
 
 // Provider function to return a Pod spec - mostly used for its status
 func (p *CRIProvider) GetPod(namespace, name string) (*v1.Pod, error) {
-	log.Printf("receive GetPod %q\n", name)
+	log.Printf("receive GetPod %q", name)
 
 	err := p.refreshNodeState()
 	if err != nil {
@@ -620,12 +618,12 @@ func readLogFile(filename string, tail int) (string, error) {
 	if tail > 0 && tail < len(lines) {
 		lines = lines[len(lines)-tail : len(lines)]
 	}
-	return strings.Join(lines, "\n"), nil
+	return strings.Join(lines, ""), nil
 }
 
 // Provider function to read the logs of a container
 func (p *CRIProvider) GetContainerLogs(namespace, podName, containerName string, tail int) (string, error) {
-	log.Printf("receive GetContainerLogs %q\n", containerName)
+	log.Printf("receive GetContainerLogs %q", containerName)
 
 	err := p.refreshNodeState()
 	if err != nil {
@@ -659,7 +657,7 @@ func (p *CRIProvider) findPodByName(namespace, name string) *CRIPod {
 
 // Provider function to return the status of a Pod
 func (p *CRIProvider) GetPodStatus(namespace, name string) (*v1.PodStatus, error) {
-	log.Printf("receive GetPodStatus %q\n", name)
+	log.Printf("receive GetPodStatus %q", name)
 
 	err := p.refreshNodeState()
 	if err != nil {
@@ -783,14 +781,14 @@ func createPodSpecFromCRI(p *CRIPod, nodeName string) *v1.Pod {
 		Status: *createPodStatusFromCRI(p),
 	}
 
-	//	fmt.Printf("Created Pod Spec %v\n", podSpec)
+	//	log.Printf("Created Pod Spec %v", podSpec)
 	return &podSpec
 }
 
 // Provider function to return all known pods
 // TODO: Should this be all pods or just running pods?
 func (p *CRIProvider) GetPods() ([]*v1.Pod, error) {
-	log.Printf("receive GetPods\n")
+	log.Printf("receive GetPods")
 
 	var pods []*v1.Pod
 
@@ -818,11 +816,11 @@ func getSystemTotalMemory() uint64 {
 
 // Provider function to return the capacity of the node
 func (p *CRIProvider) Capacity() v1.ResourceList {
-	log.Printf("receive Capacity\n")
+	log.Printf("receive Capacity")
 
 	err := p.refreshNodeState()
 	if err != nil {
-		log.Printf("Error getting pod status: %v\n", err)
+		log.Printf("Error getting pod status: %v", err)
 	}
 
 	var cpuQ resource.Quantity
@@ -888,7 +886,7 @@ func (p *CRIProvider) NodeConditions() []v1.NodeCondition {
 
 // Provider function to return a list of node addresses
 func (p *CRIProvider) NodeAddresses() []v1.NodeAddress {
-	log.Printf("receive NodeAddresses - returning %s\n", p.internalIP)
+	log.Printf("receive NodeAddresses - returning %s", p.internalIP)
 
 	return []v1.NodeAddress{
 		{
@@ -900,7 +898,7 @@ func (p *CRIProvider) NodeAddresses() []v1.NodeAddress {
 
 // Provider function to return the daemon endpoint
 func (p *CRIProvider) NodeDaemonEndpoints() *v1.NodeDaemonEndpoints {
-	log.Printf("receive NodeDaemonEndpoints - returning %v\n", p.daemonEndpointPort)
+	log.Printf("receive NodeDaemonEndpoints - returning %v", p.daemonEndpointPort)
 
 	return &v1.NodeDaemonEndpoints{
 		KubeletEndpoint: v1.DaemonEndpoint{
@@ -911,7 +909,7 @@ func (p *CRIProvider) NodeDaemonEndpoints() *v1.NodeDaemonEndpoints {
 
 // Provider function to return the guest OS
 func (p *CRIProvider) OperatingSystem() string {
-	log.Printf("receive OperatingSystem - returning %s\n", providers.OperatingSystemLinux)
+	log.Printf("receive OperatingSystem - returning %s", providers.OperatingSystemLinux)
 
 	return providers.OperatingSystemLinux
 }
