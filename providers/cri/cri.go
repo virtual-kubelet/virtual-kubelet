@@ -406,7 +406,7 @@ func createCtrMounts(container *v1.Container, pod *v1.Pod, podVolRoot string, rm
 				fullPath := filepath.Join(podConfigMapDir, k)
 				err = ioutil.WriteFile(fullPath, []byte(v), PodConfigMapFilePerms)
 				if err != nil {
-					return nil, fmt.Errorf("Could not write configmap file %s")
+					return nil, fmt.Errorf("Could not write configmap file %s", fullPath)
 				}
 			}
 		} else {

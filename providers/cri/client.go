@@ -17,7 +17,7 @@ func runPodSandbox(client criapi.RuntimeServiceClient, config *criapi.PodSandbox
 	if err != nil {
 		return "", err
 	}
-	fmt.Println("New pod sandbox created: %v", r.PodSandboxId)
+	log.Printf("New pod sandbox created: %v", r.PodSandboxId)
 	return r.PodSandboxId, nil
 }
 
