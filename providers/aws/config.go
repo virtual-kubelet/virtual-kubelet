@@ -102,6 +102,9 @@ func (p *FargateProvider) loadConfig(r io.Reader) error {
 	if config.OperatingSystem != providers.OperatingSystemLinux {
 		return fmt.Errorf("Fargate does not support operating system %v", config.OperatingSystem)
 	}
+	if config.CloudWatchLogGroupName != "" && config.ExecutionRoleArn == "" {
+		return fmt.Errorf("Execution role required if CloudWatch log group is specified")
+	}
 
 	// Validate advertised capacity.
 	if q, err = resource.ParseQuantity(config.CPU); err != nil {
