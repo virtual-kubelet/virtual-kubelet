@@ -32,6 +32,7 @@ ExecutionRoleArn = ""
 
 # Amazon CloudWatch log group name used to store container logs. Optional.
 # If omitted, container logs will not be available.
+# If specified, an execution role with access to CloudWatch logs is required.
 CloudWatchLogGroupName = ""
 
 # AWS Fargate platform version. Optional. Defaults to "LATEST".
