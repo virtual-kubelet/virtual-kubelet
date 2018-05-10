@@ -3,16 +3,17 @@ package cri
 import (
 	"fmt"
 
-	"github.com/Sirupsen/logrus"
+	log "github.com/Sirupsen/logrus"
 	"golang.org/x/net/context"
-	pb "k8s.io/kubernetes/pkg/kubelet/apis/cri/runtime/v1alpha2"
+	criapi "k8s.io/kubernetes/pkg/kubelet/apis/cri/runtime/v1alpha2"
 )
 
-func runPodSandbox(client pb.RuntimeServiceClient, config *pb.PodSandboxConfig) (string, error) {
-	request := &pb.RunPodSandboxRequest{Config: config}
-	logrus.Debugf("RunPodSandboxRequest: %v", request)
+// Call RunPodSandbox on the CRI client
+func runPodSandbox(client criapi.RuntimeServiceClient, config *criapi.PodSandboxConfig) (string, error) {
+	request := &criapi.RunPodSandboxRequest{Config: config}
+	log.Debugf("RunPodSandboxRequest: %v", request)
 	r, err := client.RunPodSandbox(context.Background(), request)
-	logrus.Debugf("RunPodSandboxResponse: %v", r)
+	log.Debugf("RunPodSandboxResponse: %v", r)
 	if err != nil {
 		return "", err
 	}
@@ -20,14 +21,15 @@ func runPodSandbox(client pb.RuntimeServiceClient, config *pb.PodSandboxConfig) 
 	return r.PodSandboxId, nil
 }
 
-func stopPodSandbox(client pb.RuntimeServiceClient, id string) error {
+// Call StopPodSandbox on the CRI client
+func stopPodSandbox(client criapi.RuntimeServiceClient, id string) error {
 	if id == "" {
 		return fmt.Errorf("ID cannot be empty")
 	}
-	request := &pb.StopPodSandboxRequest{PodSandboxId: id}
-	logrus.Debugf("StopPodSandboxRequest: %v", request)
+	request := &criapi.StopPodSandboxRequest{PodSandboxId: id}
+	log.Debugf("StopPodSandboxRequest: %v", request)
 	r, err := client.StopPodSandbox(context.Background(), request)
-	logrus.Debugf("StopPodSandboxResponse: %v", r)
+	log.Debugf("StopPodSandboxResponse: %v", r)
 	if err != nil {
 		return err
 	}
@@ -36,14 +38,15 @@ func stopPodSandbox(client pb.RuntimeServiceClient, id string) error {
 	return nil
 }
 
-func removePodSandbox(client pb.RuntimeServiceClient, id string) error {
+// Call RemovePodSandbox on the CRI client
+func removePodSandbox(client criapi.RuntimeServiceClient, id string) error {
 	if id == "" {
 		return fmt.Errorf("ID cannot be empty")
 	}
-	request := &pb.RemovePodSandboxRequest{PodSandboxId: id}
-	logrus.Debugf("RemovePodSandboxRequest: %v", request)
+	request := &criapi.RemovePodSandboxRequest{PodSandboxId: id}
+	log.Debugf("RemovePodSandboxRequest: %v", request)
 	r, err := client.RemovePodSandbox(context.Background(), request)
-	logrus.Debugf("RemovePodSandboxResponse: %v", r)
+	log.Debugf("RemovePodSandboxResponse: %v", r)
 	if err != nil {
 		return err
 	}
@@ -51,35 +54,37 @@ func removePodSandbox(client pb.RuntimeServiceClient, id string) error {
 	return nil
 }
 
-func getPodSandboxes(client pb.RuntimeServiceClient) ([]*pb.PodSandbox, error) {
-	filter := &pb.PodSandboxFilter{}
-	request := &pb.ListPodSandboxRequest{
+// Call ListPodSandbox on the CRI client
+func getPodSandboxes(client criapi.RuntimeServiceClient) ([]*criapi.PodSandbox, error) {
+	filter := &criapi.PodSandboxFilter{}
+	request := &criapi.ListPodSandboxRequest{
 		Filter: filter,
 	}
 
-	logrus.Debugf("ListPodSandboxRequest: %v", request)
+	log.Debugf("ListPodSandboxRequest: %v", request)
 	r, err := client.ListPodSandbox(context.Background(), request)
 
-	logrus.Debugf("ListPodSandboxResponse: %v", r)
+	log.Debugf("ListPodSandboxResponse: %v", r)
 	if err != nil {
 		return nil, err
 	}
 	return r.GetItems(), err
 }
 
-func getPodSandboxStatus(client pb.RuntimeServiceClient, psId string) (*pb.PodSandboxStatus, error) {
+// Call PodSandboxStatus on the CRI client
+func getPodSandboxStatus(client criapi.RuntimeServiceClient, psId string) (*criapi.PodSandboxStatus, error) {
 	if psId == "" {
 		return nil, fmt.Errorf("Pod ID cannot be empty in GPSS")
 	}
 
-	request := &pb.PodSandboxStatusRequest{
+	request := &criapi.PodSandboxStatusRequest{
 		PodSandboxId: psId,
 		Verbose:      false,
 	}
 
-	logrus.Debugf("PodSandboxStatusRequest: %v", request)
+	log.Debugf("PodSandboxStatusRequest: %v", request)
 	r, err := client.PodSandboxStatus(context.Background(), request)
-	logrus.Debugf("PodSandboxStatusResponse: %v", r)
+	log.Debugf("PodSandboxStatusResponse: %v", r)
 	if err != nil {
 		return nil, err
 	}
@@ -87,17 +92,16 @@ func getPodSandboxStatus(client pb.RuntimeServiceClient, psId string) (*pb.PodSa
 	return r.Status, nil
 }
 
-// CreateContainer sends a CreateContainerRequest to the server, and parses
-// the returned CreateContainerResponse.
-func createContainer(client pb.RuntimeServiceClient, config *pb.ContainerConfig, podConfig *pb.PodSandboxConfig, pId string) (string, error) {
-	request := &pb.CreateContainerRequest{
+// Call CreateContainer on the CRI client
+func createContainer(client criapi.RuntimeServiceClient, config *criapi.ContainerConfig, podConfig *criapi.PodSandboxConfig, pId string) (string, error) {
+	request := &criapi.CreateContainerRequest{
 		PodSandboxId:  pId,
 		Config:        config,
 		SandboxConfig: podConfig,
 	}
-	logrus.Debugf("CreateContainerRequest: %v", request)
+	log.Debugf("CreateContainerRequest: %v", request)
 	r, err := client.CreateContainer(context.Background(), request)
-	logrus.Debugf("CreateContainerResponse: %v", r)
+	log.Debugf("CreateContainerResponse: %v", r)
 	if err != nil {
 		return "", err
 	}
@@ -105,18 +109,17 @@ func createContainer(client pb.RuntimeServiceClient, config *pb.ContainerConfig,
 	return r.ContainerId, nil
 }
 
-// StartContainer sends a StartContainerRequest to the server, and parses
-// the returned StartContainerResponse.
-func startContainer(client pb.RuntimeServiceClient, cId string) error {
+// Call StartContainer on the CRI client
+func startContainer(client criapi.RuntimeServiceClient, cId string) error {
 	if cId == "" {
 		return fmt.Errorf("ID cannot be empty")
 	}
-	request := &pb.StartContainerRequest{
+	request := &criapi.StartContainerRequest{
 		ContainerId: cId,
 	}
-	logrus.Debugf("StartContainerRequest: %v", request)
+	log.Debugf("StartContainerRequest: %v", request)
 	r, err := client.StartContainer(context.Background(), request)
-	logrus.Debugf("StartContainerResponse: %v", r)
+	log.Debugf("StartContainerResponse: %v", r)
 	if err != nil {
 		return err
 	}
@@ -124,18 +127,19 @@ func startContainer(client pb.RuntimeServiceClient, cId string) error {
 	return nil
 }
 
-func getContainerCRIStatus(client pb.RuntimeServiceClient, cId string) (*pb.ContainerStatus, error) {
+// Call ContainerStatus on the CRI client
+func getContainerCRIStatus(client criapi.RuntimeServiceClient, cId string) (*criapi.ContainerStatus, error) {
 	if cId == "" {
 		return nil, fmt.Errorf("Container ID cannot be empty in GCCS")
 	}
 
-	request := &pb.ContainerStatusRequest{
+	request := &criapi.ContainerStatusRequest{
 		ContainerId: cId,
 		Verbose:     false,
 	}
-	logrus.Debugf("ContainerStatusRequest: %v", request)
+	log.Debugf("ContainerStatusRequest: %v", request)
 	r, err := client.ContainerStatus(context.Background(), request)
-	logrus.Debugf("ContainerStatusResponse: %v", r)
+	log.Debugf("ContainerStatusResponse: %v", r)
 	if err != nil {
 		return nil, err
 	}
@@ -143,31 +147,32 @@ func getContainerCRIStatus(client pb.RuntimeServiceClient, cId string) (*pb.Cont
 	return r.Status, nil
 }
 
-func getContainersForSandbox(client pb.RuntimeServiceClient, psId string) ([]*pb.Container, error) {
-	filter := &pb.ContainerFilter{}
+// Call ListContainers on the CRI client
+func getContainersForSandbox(client criapi.RuntimeServiceClient, psId string) ([]*criapi.Container, error) {
+	filter := &criapi.ContainerFilter{}
 	filter.PodSandboxId = psId
-	request := &pb.ListContainersRequest{
+	request := &criapi.ListContainersRequest{
 		Filter: filter,
 	}
-	logrus.Debugf("ListContainerRequest: %v", request)
+	log.Debugf("ListContainerRequest: %v", request)
 	r, err := client.ListContainers(context.Background(), request)
-	logrus.Debugf("ListContainerResponse: %v", r)
+	log.Debugf("ListContainerResponse: %v", r)
 	if err != nil {
 		return nil, err
 	}
 	return r.Containers, nil
 }
 
-// returns the imageRef
-func pullImage(client pb.ImageServiceClient, image string) (string, error) {
-	request := &pb.PullImageRequest{
-		Image: &pb.ImageSpec{
+// Pull and image on the CRI client and return the image ref
+func pullImage(client criapi.ImageServiceClient, image string) (string, error) {
+	request := &criapi.PullImageRequest{
+		Image: &criapi.ImageSpec{
 			Image: image,
 		},
 	}
-	logrus.Debugf("PullImageRequest: %v", request)
+	log.Debugf("PullImageRequest: %v", request)
 	r, err := client.PullImage(context.Background(), request)
-	logrus.Debugf("PullImageResponse: %v", r)
+	log.Debugf("PullImageResponse: %v", r)
 	if err != nil {
 		return "", err
 	}
