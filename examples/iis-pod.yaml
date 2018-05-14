@@ -21,7 +21,7 @@ spec:
     - containerPort: 443
       name: https
   dnsPolicy: Default
-  nodeName: virtual-kubelet-myaciconnector-win
+  kubernetes.io/hostname: virtual-kubelet-myaciconnector-linux
   automountServiceAccountToken: false
   tolerations:
   - key: azure.com/aci
