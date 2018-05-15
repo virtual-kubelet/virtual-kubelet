@@ -14,8 +14,17 @@
 
 package main
 
-import "github.com/virtual-kubelet/virtual-kubelet/cmd"
+import (
+	"fmt"
+	"github.com/virtual-kubelet/virtual-kubelet/cmd"
+	"os"
+)
 
 func main() {
-	cmd.Execute()
+	command := cmd.NewVKubeletCommand()
+	cmd.AddVersionCommand(command)
+	if err := command.Execute(); err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
 }

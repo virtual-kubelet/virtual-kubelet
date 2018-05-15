@@ -10,13 +10,14 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/virtual-kubelet/virtual-kubelet/cmd/options"
 	"github.com/virtual-kubelet/virtual-kubelet/manager"
 	"github.com/virtual-kubelet/virtual-kubelet/providers/aws"
 	"github.com/virtual-kubelet/virtual-kubelet/providers/azure"
+	"github.com/virtual-kubelet/virtual-kubelet/providers/cri"
 	"github.com/virtual-kubelet/virtual-kubelet/providers/hypersh"
 	"github.com/virtual-kubelet/virtual-kubelet/providers/mock"
 	"github.com/virtual-kubelet/virtual-kubelet/providers/web"
-	"github.com/virtual-kubelet/virtual-kubelet/providers/cri"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -39,13 +40,13 @@ type Server struct {
 }
 
 // New creates a new virtual-kubelet server.
-func New(nodeName, operatingSystem, namespace, kubeConfig, taint, provider, providerConfig string) (*Server, error) {
+func New(v *options.VKubeletRunOptions) (*Server, error) {
 	var config *rest.Config
 
 	// Check if the kubeConfig file exists.
-	if _, err := os.Stat(kubeConfig); !os.IsNotExist(err) {
+	if _, err := os.Stat(v.KubeConfig); !os.IsNotExist(err) {
 		// Get the kubeconfig from the filepath.
-		config, err = clientcmd.BuildConfigFromFlags("", kubeConfig)
+		config, err = clientcmd.BuildConfigFromFlags("", v.KubeConfig)
 		if err != nil {
 			return nil, err
 		}
@@ -74,45 +75,45 @@ func New(nodeName, operatingSystem, namespace, kubeConfig, taint, provider, prov
 	internalIP := os.Getenv("VKUBELET_POD_IP")
 
 	var p Provider
-	switch provider {
+	switch v.Provider {
 	case "aws":
-		p, err = aws.NewFargateProvider(providerConfig, rm, nodeName, operatingSystem, internalIP, daemonEndpointPort)
+		p, err = aws.NewFargateProvider(v.ProviderConfig, rm, v.NodeName, v.OperatingSystem, internalIP, daemonEndpointPort)
 		if err != nil {
 			return nil, err
 		}
 	case "azure":
-		p, err = azure.NewACIProvider(providerConfig, rm, nodeName, operatingSystem, internalIP, daemonEndpointPort)
+		p, err = azure.NewACIProvider(v.ProviderConfig, rm, v.NodeName, v.OperatingSystem, internalIP, daemonEndpointPort)
 		if err != nil {
 			return nil, err
 		}
 	case "hyper":
-		p, err = hypersh.NewHyperProvider(providerConfig, rm, nodeName, operatingSystem)
+		p, err = hypersh.NewHyperProvider(v.ProviderConfig, rm, v.NodeName, v.OperatingSystem)
 		if err != nil {
 			return nil, err
 		}
 	case "web":
-		p, err = web.NewBrokerProvider(nodeName, operatingSystem, daemonEndpointPort)
+		p, err = web.NewBrokerProvider(v.NodeName, v.OperatingSystem, daemonEndpointPort)
 		if err != nil {
 			return nil, err
 		}
 	case "mock":
-		p, err = mock.NewMockProvider(nodeName, operatingSystem, internalIP, daemonEndpointPort)
+		p, err = mock.NewMockProvider(v.NodeName, v.OperatingSystem, internalIP, daemonEndpointPort)
 		if err != nil {
 			return nil, err
 		}
 	case "cri":
-		p, err = cri.NewCRIProvider(nodeName, operatingSystem, internalIP, rm, daemonEndpointPort)
+		p, err = cri.NewCRIProvider(v.NodeName, v.OperatingSystem, internalIP, rm, daemonEndpointPort)
 		if err != nil {
 			return nil, err
 		}
 	default:
-		fmt.Printf("Provider '%s' is not supported\n", provider)
+		fmt.Printf("Provider '%s' is not supported\n", v.Provider)
 	}
 
 	s := &Server{
-		namespace:       namespace,
-		nodeName:        nodeName,
-		taint:           taint,
+		namespace:       v.KubeNamespace,
+		nodeName:        v.NodeName,
+		taint:           v.Taint,
 		k8sClient:       clientset,
 		resourceManager: rm,
 		provider:        p,
@@ -150,10 +151,10 @@ func (s *Server) registerNode() error {
 		ObjectMeta: metav1.ObjectMeta{
 			Name: s.nodeName,
 			Labels: map[string]string{
-				"type":                  "virtual-kubelet",
-				"kubernetes.io/role":    "agent",
-				"beta.kubernetes.io/os": strings.ToLower(s.provider.OperatingSystem()),
-				"kubernetes.io/hostname": s.nodeName,
+				"type":                                                    "virtual-kubelet",
+				"kubernetes.io/role":                                      "agent",
+				"beta.kubernetes.io/os":                                   strings.ToLower(s.provider.OperatingSystem()),
+				"kubernetes.io/hostname":                                  s.nodeName,
 				"alpha.service-controller.kubernetes.io/exclude-balancer": "true",
 			},
 		},
