@@ -10,7 +10,8 @@ spec:
     name: nanoserver
   dnsPolicy: Default
   restartPolicy: OnFailure
-  nodeName: virtual-kubelet-myaciconnector-win
+  nodeSelector:
+    kubernetes.io/hostname: virtual-kubelet-myaciconnector-win
   automountServiceAccountToken: false
   tolerations:
   - key: azure.com/aci
