@@ -120,7 +120,7 @@ You can find detailed instructions on how to set it up and how to test it in the
 #### Configuration File
 
 The Azure connector can use a configuration file specified by the `--provider-config` flag.
-The config file is in TOML format, and an example  lives in `providers/azure/example.toml`.
+The config file is in TOML format, and an example lives in `providers/azure/example.toml`.
 
 #### More Details
 
