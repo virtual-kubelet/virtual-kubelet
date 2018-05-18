@@ -29,33 +29,33 @@ type Authentication struct {
 // credentials.
 func NewAuthentication(azureCloud, clientID, clientSecret, subscriptionID, tenantID string) *Authentication {
 	environment := PublicCloud
-		
+
 	switch azureCloud {
 	case PublicCloud.Name:
 		environment = PublicCloud
-		break;
+		break
 	case USGovernmentCloud.Name:
 		environment = USGovernmentCloud
-		break;
+		break
 	case ChinaCloud.Name:
 		environment = ChinaCloud
-		break;
+		break
 	case GermanCloud.Name:
 		environment = GermanCloud
-		break;
+		break
 	}
 
 	return &Authentication{
-		ClientID:      	            clientID,
-		ClientSecret:               clientSecret,
-		SubscriptionID:             subscriptionID,
-		TenantID:                   tenantID,
-		ActiveDirectoryEndpoint:    environment.ActiveDirectoryEndpoint,
-		ResourceManagerEndpoint:    environment.ResourceManagerEndpoint,
-		GraphResourceID:            environment.GraphEndpoint,
-		SQLManagementEndpoint:      environment.SQLDatabaseDNSSuffix,
-		GalleryEndpoint:            environment.GalleryEndpoint,
-		ManagementEndpoint:         environment.ServiceManagementEndpoint,
+		ClientID:                clientID,
+		ClientSecret:            clientSecret,
+		SubscriptionID:          subscriptionID,
+		TenantID:                tenantID,
+		ActiveDirectoryEndpoint: environment.ActiveDirectoryEndpoint,
+		ResourceManagerEndpoint: environment.ResourceManagerEndpoint,
+		GraphResourceID:         environment.GraphEndpoint,
+		SQLManagementEndpoint:   environment.SQLDatabaseDNSSuffix,
+		GalleryEndpoint:         environment.GalleryEndpoint,
+		ManagementEndpoint:      environment.ServiceManagementEndpoint,
 	}
 }
 
