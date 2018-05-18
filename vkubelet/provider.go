@@ -3,9 +3,9 @@ package vkubelet
 import (
 	"github.com/virtual-kubelet/virtual-kubelet/providers/aws"
 	"github.com/virtual-kubelet/virtual-kubelet/providers/azure"
+	"github.com/virtual-kubelet/virtual-kubelet/providers/cri"
 	"github.com/virtual-kubelet/virtual-kubelet/providers/hypersh"
 	"github.com/virtual-kubelet/virtual-kubelet/providers/web"
-	"github.com/virtual-kubelet/virtual-kubelet/providers/cri"
 	"k8s.io/api/core/v1"
 )
 

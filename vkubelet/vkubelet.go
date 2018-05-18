@@ -13,10 +13,10 @@ import (
 	"github.com/virtual-kubelet/virtual-kubelet/manager"
 	"github.com/virtual-kubelet/virtual-kubelet/providers/aws"
 	"github.com/virtual-kubelet/virtual-kubelet/providers/azure"
+	"github.com/virtual-kubelet/virtual-kubelet/providers/cri"
 	"github.com/virtual-kubelet/virtual-kubelet/providers/hypersh"
 	"github.com/virtual-kubelet/virtual-kubelet/providers/mock"
 	"github.com/virtual-kubelet/virtual-kubelet/providers/web"
-	"github.com/virtual-kubelet/virtual-kubelet/providers/cri"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -150,10 +150,10 @@ func (s *Server) registerNode() error {
 		ObjectMeta: metav1.ObjectMeta{
 			Name: s.nodeName,
 			Labels: map[string]string{
-				"type":                  "virtual-kubelet",
-				"kubernetes.io/role":    "agent",
-				"beta.kubernetes.io/os": strings.ToLower(s.provider.OperatingSystem()),
-				"kubernetes.io/hostname": s.nodeName,
+				"type":                                                    "virtual-kubelet",
+				"kubernetes.io/role":                                      "agent",
+				"beta.kubernetes.io/os":                                   strings.ToLower(s.provider.OperatingSystem()),
+				"kubernetes.io/hostname":                                  s.nodeName,
 				"alpha.service-controller.kubernetes.io/exclude-balancer": "true",
 			},
 		},
