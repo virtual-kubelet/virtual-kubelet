@@ -12,10 +12,10 @@ import (
 
 // ACIMock implements a Azure Container Instance mock server.
 type ACIMock struct {
-	server                  *httptest.Server
-	OnCreate                func(string, string, string, *aci.ContainerGroup) (int, interface{})
-	OnGetContainerGroups    func(string, string) (int, interface{})
-	OnGetContainerGroup     func(string, string, string) (int, interface{})
+	server               *httptest.Server
+	OnCreate             func(string, string, string, *aci.ContainerGroup) (int, interface{})
+	OnGetContainerGroups func(string, string) (int, interface{})
+	OnGetContainerGroup  func(string, string, string) (int, interface{})
 }
 
 const (
