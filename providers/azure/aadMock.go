@@ -13,8 +13,8 @@ import (
 
 // AADMock implements a AAD mock server .
 type AADMock struct {
-	server *httptest.Server
-	OnAcquireToken func(http.ResponseWriter,*http.Request)
+	server         *httptest.Server
+	OnAcquireToken func(http.ResponseWriter, *http.Request)
 }
 
 // NewAADMock creates a new AAD server mocker.
@@ -26,7 +26,7 @@ func NewAADMock() *AADMock {
 }
 
 // Start the AAD server mocker.
-func (mock *AADMock)start() {
+func (mock *AADMock) start() {
 	if mock.server != nil {
 		return
 	}
@@ -40,8 +40,8 @@ func (mock *AADMock)start() {
 		w.WriteHeader(http.StatusOK)
 		token := adal.Token{
 			AccessToken: "Test Token",
-			NotBefore: strconv.FormatInt(time.Now().UnixNano(), 10),
-			ExpiresIn: strconv.FormatInt(int64(time.Minute), 10),
+			NotBefore:   strconv.FormatInt(time.Now().UnixNano(), 10),
+			ExpiresIn:   strconv.FormatInt(int64(time.Minute), 10),
 		}
 
 		b := new(bytes.Buffer)
@@ -51,7 +51,7 @@ func (mock *AADMock)start() {
 }
 
 // GetServerURL returns the mock server URL.
-func (mock *AADMock)GetServerURL() string {
+func (mock *AADMock) GetServerURL() string {
 	if mock.server != nil {
 		return mock.server.URL
 	}
@@ -60,7 +60,7 @@ func (mock *AADMock)GetServerURL() string {
 }
 
 // Close terminates the AAD server mocker.
-func (mock *AADMock)Close() {
+func (mock *AADMock) Close() {
 	if mock.server != nil {
 		mock.server.Close()
 		mock.server = nil

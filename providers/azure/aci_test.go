@@ -18,8 +18,8 @@ import (
 	azure "github.com/virtual-kubelet/virtual-kubelet/providers/azure/client"
 	"github.com/virtual-kubelet/virtual-kubelet/providers/azure/client/aci"
 	"k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/fake"
 )
 
@@ -29,7 +29,7 @@ const (
 	fakeClientID      = "f14193ad-4c4c-4876-a18a-c0badb3bbd40"
 	fakeClientSecret  = "VGhpcyBpcyBhIHNlY3JldAo="
 	fakeTenantID      = "8cb81aca-83fe-4c6f-b667-4ec09c45a8bf"
-	fakeNodeName	  = "vk"
+	fakeNodeName      = "vk"
 )
 
 // Tests create pod without resource spec
@@ -47,7 +47,7 @@ func TestCreatePodWithoutResourceSpec(t *testing.T) {
 		assert.Equal(t, fakeSubscription, subscription, "Subscription doesn't match")
 		assert.Equal(t, fakeResourceGroup, resourceGroup, "Resource group doesn't match")
 		assert.NotNil(t, cg, "Container group is nil")
-		assert.Equal(t, podNamespace + "-" + podName, containerGroup, "Container group name is not expected")
+		assert.Equal(t, podNamespace+"-"+podName, containerGroup, "Container group name is not expected")
 		assert.NotNil(t, cg.ContainerGroupProperties, "Container group properties should not be nil")
 		assert.NotNil(t, cg.ContainerGroupProperties.Containers, "Containers should not be nil")
 		assert.Equal(t, 1, len(cg.ContainerGroupProperties.Containers), "1 Container is expected")
@@ -95,7 +95,7 @@ func TestCreatePodWithResourceRequestOnly(t *testing.T) {
 		assert.Equal(t, fakeSubscription, subscription, "Subscription doesn't match")
 		assert.Equal(t, fakeResourceGroup, resourceGroup, "Resource group doesn't match")
 		assert.NotNil(t, cg, "Container group is nil")
-		assert.Equal(t, podNamespace + "-" + podName, containerGroup, "Container group name is not expected")
+		assert.Equal(t, podNamespace+"-"+podName, containerGroup, "Container group name is not expected")
 		assert.NotNil(t, cg.ContainerGroupProperties, "Container group properties should not be nil")
 		assert.NotNil(t, cg.ContainerGroupProperties.Containers, "Containers should not be nil")
 		assert.Equal(t, 1, len(cg.ContainerGroupProperties.Containers), "1 Container is expected")
@@ -120,7 +120,7 @@ func TestCreatePodWithResourceRequestOnly(t *testing.T) {
 					Name: "nginx",
 					Resources: v1.ResourceRequirements{
 						Requests: v1.ResourceList{
-							"cpu": resource.MustParse("1.981"),
+							"cpu":    resource.MustParse("1.981"),
 							"memory": resource.MustParse("3.49G"),
 						},
 					},
@@ -149,7 +149,7 @@ func TestCreatePodWithResourceRequestAndLimit(t *testing.T) {
 		assert.Equal(t, fakeSubscription, subscription, "Subscription doesn't match")
 		assert.Equal(t, fakeResourceGroup, resourceGroup, "Resource group doesn't match")
 		assert.NotNil(t, cg, "Container group is nil")
-		assert.Equal(t, podNamespace + "-" + podName, containerGroup, "Container group name is not expected")
+		assert.Equal(t, podNamespace+"-"+podName, containerGroup, "Container group name is not expected")
 		assert.NotNil(t, cg.ContainerGroupProperties, "Container group properties should not be nil")
 		assert.NotNil(t, cg.ContainerGroupProperties.Containers, "Containers should not be nil")
 		assert.Equal(t, 1, len(cg.ContainerGroupProperties.Containers), "1 Container is expected")
@@ -175,11 +175,11 @@ func TestCreatePodWithResourceRequestAndLimit(t *testing.T) {
 					Name: "nginx",
 					Resources: v1.ResourceRequirements{
 						Requests: v1.ResourceList{
-							"cpu": resource.MustParse("1.981"),
+							"cpu":    resource.MustParse("1.981"),
 							"memory": resource.MustParse("3.49G"),
 						},
 						Limits: v1.ResourceList{
-							"cpu": resource.MustParse("3999m"),
+							"cpu":    resource.MustParse("3999m"),
 							"memory": resource.MustParse("8010M"),
 						},
 					},
@@ -252,8 +252,8 @@ func TestGetPodsWithoutResourceRequestsLimits(t *testing.T) {
 							},
 							Resources: aci.ResourceRequirements{
 								Requests: &aci.ResourceRequests{
-									CPU: 		0.99,
-									MemoryInGB:	1.5,
+									CPU:        0.99,
+									MemoryInGB: 1.5,
 								},
 							},
 						},
@@ -308,7 +308,7 @@ func TestGetPodWithoutResourceRequestsLimits(t *testing.T) {
 	aciServerMocker.OnGetContainerGroup = func(subscription, resourceGroup, containerGroup string) (int, interface{}) {
 		assert.Equal(t, fakeSubscription, subscription, "Subscription doesn't match")
 		assert.Equal(t, fakeResourceGroup, resourceGroup, "Resource group doesn't match")
-		assert.Equal(t, podNamespace + "-" + podName, containerGroup, "Container group name is not expected")
+		assert.Equal(t, podNamespace+"-"+podName, containerGroup, "Container group name is not expected")
 
 		return http.StatusOK, aci.ContainerGroup{
 			Tags: map[string]string{
@@ -330,8 +330,8 @@ func TestGetPodWithoutResourceRequestsLimits(t *testing.T) {
 							},
 							Resources: aci.ResourceRequirements{
 								Requests: &aci.ResourceRequests{
-									CPU: 		0.99,
-									MemoryInGB:	1.5,
+									CPU:        0.99,
+									MemoryInGB: 1.5,
 								},
 							},
 						},

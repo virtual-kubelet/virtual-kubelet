@@ -6,9 +6,9 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/google/uuid"
 	azure "github.com/virtual-kubelet/virtual-kubelet/providers/azure/client"
 	"github.com/virtual-kubelet/virtual-kubelet/providers/azure/client/resourcegroups"
-	"github.com/google/uuid"
 )
 
 var (
@@ -72,9 +72,9 @@ func TestMain(m *testing.M) {
 
 func TestNewClient(t *testing.T) {
 	auth, err := azure.NewAuthenticationFromFile("../../../../credentials.json")
-        if err != nil {
-                log.Fatalf("Failed to load Azure authentication file: %v", err)
-        }
+	if err != nil {
+		log.Fatalf("Failed to load Azure authentication file: %v", err)
+	}
 
 	c, err := NewClient(auth)
 	if err != nil {
