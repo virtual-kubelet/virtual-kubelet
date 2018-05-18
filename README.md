@@ -2,7 +2,8 @@
 
 Virtual Kubelet is an open source [Kubernetes kubelet](https://kubernetes.io/docs/reference/generated/kubelet/)
 implementation that masquerades as a kubelet for the purposes of connecting Kubernetes to other APIs.
-This allows the nodes to be backed by other services like ACI, AWS Fargate, Hyper.sh, etc.
+This allows the nodes to be backed by other services like ACI, AWS Fargate, Hyper.sh, [IoT Edge](https://github.com/Azure/iot-edge-virtual-kubelet-provider) etc. The primary scenario for VK is enabling the extension of the Kubernetes API into serverless container platforms like ACI, Fargate, and Hyper.sh, though we are open to others. However, it should be noted that VK is explicitly not intended to be an alternative to Kubernetes federation.
+ 
 Virtual Kubelet features a pluggable architecture and direct use of Kubernetes primitives, making it much easier to build on.
 
 We invite the Kubernetes ecosystem to join us in empowering developers to build
@@ -48,21 +49,13 @@ a `virtual-kubelet` node.
 
 ## Current Features
 
-* Multiple containers per pod
-* Windows/Linux containers
-* Restart policies
-* Volumes
-  * Empty dir
-  * Git hub repo
-  * Azure files
-* Config maps
-* Secrets
-* Pod status
-* Resource limits (Mem and Cores)
-* Environment variables
-* Public IPs
-* kubectl logs
-* DNS name labels
+- create, delete and update pods
+- container logs
+- get pod, pods and pod status
+- capacity 
+- node addresses, node capacity, node daemon endpoints
+- operating system
+
 
 ## Command-Line Usage
 
@@ -208,7 +201,7 @@ You can generate this file by following the instructions listed in the
 
 ### Missing Load Balancer IP addresses for services
 
-#### When Virtual Kubelet is installed on a cluster, I cannot create external-IPs for a Service
+#### When Virtual Kubelet is installed on a cluster, you cannot create external-IPs for a Service
 
 Kubernetes 1.9 introduces a new flag, `ServiceNodeExclusion`, for the control plane's Controller Manager. Enabling this flag in the Controller Manager's manifest allows Kubernetes to exclude Virtual Kubelet nodes from being added to Load Balancer pools, allowing you to create public facing services with external IPs without issue.
 
@@ -222,3 +215,8 @@ Enable the ServiceNodeExclusion flag, by modifying the Controller Manager manife
 
 Virtual Kubelet follows the [CNCF Code of Conduct](https://github.com/cncf/foundation/blob/master/code-of-conduct.md).
 Sign the [CNCF CLA](https://github.com/kubernetes/community/blob/master/CLA.md) to be able to make Pull Requests to this repo. 
+
+Weekly Virtual Kubelet Architecture meetings are held at 3pm PST [here](https://zoom.us/j/5337610301). Our google drive with design specifications and meeting notes are [here](https://drive.google.com/drive/folders/19Ndu11WBCCBDowo9CrrGUHoIfd2L8Ueg?usp=sharing).
+
+
+
