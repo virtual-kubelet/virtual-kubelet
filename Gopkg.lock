@@ -135,11 +135,6 @@
 
 [[projects]]
   name = "github.com/docker/docker"
-<<<<<<< 673f8bcb399b20d4ea3948f49f1180a39e7e2b2d
-  packages = ["api/types/strslice"]
-  revision = "092cba3727bb9b4a2f0e922cd6c0f93ea270e363"
-  version = "v1.13.1"
-=======
   packages = [
     "api/errors",
     "api/types",
@@ -192,7 +187,6 @@
   packages = ["types/strslice"]
   revision = "3d1601b9d2436a70b0dfc045a23f6503d19195df"
   version = "v0.4.0"
->>>>>>> Vendored packages for the VIC provider
 
 [[projects]]
   name = "github.com/docker/go-connections"
@@ -211,9 +205,15 @@
   version = "v0.3.3"
 
 [[projects]]
-<<<<<<< 673f8bcb399b20d4ea3948f49f1180a39e7e2b2d
   name = "github.com/docker/libcompose"
-=======
+  packages = [
+    "utils",
+    "yaml"
+  ]
+  revision = "7c59e343cd9d1f3f5577b5bfb71f6486beb4c006"
+  version = "v0.4.0"
+
+[[projects]]
   name = "github.com/docker/libnetwork"
   packages = [
     "iptables",
@@ -221,16 +221,6 @@
   ]
   revision = "1ee720e18fe98dceda6039bdd005ffbcb359d343"
   version = "v0.5.6"
-
-[[projects]]
-  name = "github.com/emicklei/go-restful"
->>>>>>> Vendored packages for the VIC provider
-  packages = [
-    "utils",
-    "yaml"
-  ]
-  revision = "7c59e343cd9d1f3f5577b5bfb71f6486beb4c006"
-  version = "v0.4.0"
 
 [[projects]]
   branch = "master"
@@ -257,8 +247,6 @@
   version = "v1.36.0"
 
 [[projects]]
-<<<<<<< 673f8bcb399b20d4ea3948f49f1180a39e7e2b2d
-=======
   name = "github.com/go-openapi/analysis"
   packages = ["."]
   revision = "d5a75b7d751ca3f11ad5d93cfe97405f2c3f6a47"
@@ -325,7 +313,6 @@
   version = "v4.1.0"
 
 [[projects]]
->>>>>>> Vendored packages for the VIC provider
   name = "github.com/gogo/protobuf"
   packages = [
     "gogoproto",
@@ -527,7 +514,6 @@
   revision = "00c29f56e2386353d58c599509e8dc3801b0d716"
 
 [[projects]]
-<<<<<<< 673f8bcb399b20d4ea3948f49f1180a39e7e2b2d
   name = "github.com/modern-go/concurrent"
   packages = ["."]
   revision = "bacd9c7ef1dd9b15be4a9909b8ac7a4e313eec94"
@@ -535,7 +521,11 @@
 
 [[projects]]
   name = "github.com/modern-go/reflect2"
-=======
+  packages = ["."]
+  revision = "1df9eeb2bb81f327b96228865c5687bc2194af3f"
+  version = "1.0.0"
+
+[[projects]]
   name = "github.com/opencontainers/runc"
   packages = [
     "libcontainer/configs",
@@ -550,19 +540,6 @@
   name = "github.com/opencontainers/runtime-spec"
   packages = ["specs-go"]
   revision = "1c7c27d043c2a5e513a44084d2b10d77d1402b8c"
-
-[[projects]]
-  name = "github.com/pelletier/go-toml"
->>>>>>> Vendored packages for the VIC provider
-  packages = ["."]
-  revision = "1df9eeb2bb81f327b96228865c5687bc2194af3f"
-  version = "1.0.0"
-
-[[projects]]
-  name = "github.com/opencontainers/runc"
-  packages = ["libcontainer/user"]
-  revision = "baf6536d6259209c3edfa2b22237af82942d3dfa"
-  version = "v0.1.1"
 
 [[projects]]
   name = "github.com/pelletier/go-toml"
@@ -775,10 +752,6 @@
 [[projects]]
   branch = "master"
   name = "golang.org/x/crypto"
-<<<<<<< 673f8bcb399b20d4ea3948f49f1180a39e7e2b2d
-  packages = ["ssh/terminal"]
-  revision = "2d027ae1dddd4694d54f7a8b6cbe78dca8720226"
-=======
   packages = [
     "nacl/secretbox",
     "poly1305",
@@ -786,18 +759,14 @@
     "ssh/terminal"
   ]
   revision = "94eea52f7b742c7cbe0b03b22f0c4c8631ece122"
->>>>>>> Vendored packages for the VIC provider
 
 [[projects]]
   branch = "master"
   name = "golang.org/x/net"
   packages = [
     "context",
-<<<<<<< 673f8bcb399b20d4ea3948f49f1180a39e7e2b2d
     "http/httpguts",
-=======
     "context/ctxhttp",
->>>>>>> Vendored packages for the VIC provider
     "http2",
     "http2/hpack",
     "idna",

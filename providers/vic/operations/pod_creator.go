@@ -1,17 +1,3 @@
-// Copyright 2018 VMware, Inc. All Rights Reserved.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//    http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-
 package operations
 
 import (
@@ -183,12 +169,12 @@ func (v *VicPodCreator) pullPodContainers(op trace.Operation, pod *v1.Pod) error
 	for _, c := range pod.Spec.Containers {
 		pullGroup.Add(1)
 
-		go func(img string) {
+		go func(img string, policy v1.PullPolicy) {
 			defer pullGroup.Done()
 
 			// Pull image config from VIC's image store if policy allows
 			var realize bool
-			if c.ImagePullPolicy == v1.PullIfNotPresent {
+			if policy == v1.PullIfNotPresent {
 				realize = true
 			} else {
 				realize = false
@@ -196,11 +182,11 @@ func (v *VicPodCreator) pullPodContainers(op trace.Operation, pod *v1.Pod) error
 
 			_, err := v.imageStore.Get(op, img, "", realize)
 			if err != nil {
-				err = fmt.Errorf("VicPodCreator failed to get image %s's config from the image store: %s", c.Image, err.Error())
+				err = fmt.Errorf("VicPodCreator failed to get image %s's config from the image store: %s", img, err.Error())
 				op.Error(err)
 				errChan <- err
 			}
-		}(c.Image)
+		}(c.Image, c.ImagePullPolicy)
 	}
 
 	pullGroup.Wait()
