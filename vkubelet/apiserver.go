@@ -27,7 +27,8 @@ func ApiserverStart(provider Provider) {
 	addr := fmt.Sprintf(":%s", port)
 
 	r := mux.NewRouter()
-	r.HandleFunc("/containerLogs/{namespace}/{pod}/{container}", ApiServerHandler).Methods("GET")
+	r.HandleFunc("/containerLogs/{namespace}/{pod}/{container}", ApiServerHandlerLogs).Methods("GET")
+	r.HandleFunc("/exec/{namespace}/{pod}/{container}", ApiServerHandlerExec).Methods("POST")
 	r.NotFoundHandler = http.HandlerFunc(NotFound)
 
 	if err := http.ListenAndServeTLS(addr, certFilePath, keyFilePath, r); err != nil {
@@ -35,7 +36,7 @@ func ApiserverStart(provider Provider) {
 	}
 }
 
-func ApiServerHandler(w http.ResponseWriter, req *http.Request) {
+func ApiServerHandlerLogs(w http.ResponseWriter, req *http.Request) {
 	vars := mux.Vars(req)
 	if len(vars) == 3 {
 		namespace := vars["namespace"]
@@ -63,4 +64,7 @@ func ApiServerHandler(w http.ResponseWriter, req *http.Request) {
 	} else {
 		NotFound(w, req)
 	}
+}
+
+func ApiServerHandlerExec(w http.ResponseWriter, req *http.Request) {
 }

@@ -1,12 +1,17 @@
 package vkubelet
 
 import (
+	"io"
+	"time"
+
 	"github.com/virtual-kubelet/virtual-kubelet/providers/aws"
 	"github.com/virtual-kubelet/virtual-kubelet/providers/azure"
 	"github.com/virtual-kubelet/virtual-kubelet/providers/cri"
 	"github.com/virtual-kubelet/virtual-kubelet/providers/hypersh"
 	"github.com/virtual-kubelet/virtual-kubelet/providers/web"
 	"k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/tools/remotecommand"
 )
 
 // Compile time proof that our implementations meet the Provider interface.
@@ -32,6 +37,10 @@ type Provider interface {
 
 	// GetContainerLogs retrieves the logs of a container by name from the provider.
 	GetContainerLogs(namespace, podName, containerName string, tail int) (string, error)
+
+	// ExecInContainer executes a command in a container in the pod, copying data
+	// between in/out/err and the container's stdin/stdout/stderr.
+	ExecInContainer(name string, uid types.UID, container string, cmd []string, in io.Reader, out, err io.WriteCloser, tty bool, resize <-chan remotecommand.TerminalSize, timeout time.Duration) error
 
 	// GetPodStatus retrieves the status of a pod by name from the provider.
 	GetPodStatus(namespace, name string) (*v1.PodStatus, error)
