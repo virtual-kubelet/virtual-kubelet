@@ -67,4 +67,18 @@ func ApiServerHandlerLogs(w http.ResponseWriter, req *http.Request) {
 }
 
 func ApiServerHandlerExec(w http.ResponseWriter, req *http.Request) {
+	vars := mux.Vars(req)
+
+	supportedStreamProtocols := req.Header.Get("X-Stream-Protocol-Version")
+	req.Header.Get("Upgrade") // TODO: Proper upgrade handling (currently assuming SPDY not WebSocket)
+
+	namespace := vars["namespace"]
+	pod := vars["pod"]
+	container := vars["container"]
+
+	q := req.URL.Query()
+	command := q.Get("command")
+
+	ctx, _ := createStreams(req, w, supportedStreamProtocols, 30, 30)
+	p.ExecInContainer(container, pod, container, command, ctx)
 }
