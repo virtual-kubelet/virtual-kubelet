@@ -7,8 +7,11 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"strings"
+	"time"
 
 	"github.com/gorilla/mux"
+	"k8s.io/kubernetes/pkg/kubelet/server/remotecommand"
 )
 
 var p Provider
@@ -69,16 +72,32 @@ func ApiServerHandlerLogs(w http.ResponseWriter, req *http.Request) {
 func ApiServerHandlerExec(w http.ResponseWriter, req *http.Request) {
 	vars := mux.Vars(req)
 
-	supportedStreamProtocols := req.Header.Get("X-Stream-Protocol-Version")
-	req.Header.Get("Upgrade") // TODO: Proper upgrade handling (currently assuming SPDY not WebSocket)
-
 	namespace := vars["namespace"]
 	pod := vars["pod"]
 	container := vars["container"]
 
+	supportedStreamProtocols := strings.Split(req.Header.Get("X-Stream-Protocol-Version"), ",")
+
 	q := req.URL.Query()
 	command := q.Get("command")
 
-	ctx, _ := createStreams(req, w, supportedStreamProtocols, 30, 30)
-	p.ExecInContainer(container, pod, container, command, ctx)
+	// streamOpts := &remotecommand.Options{
+	// 	Stdin:  (q.Get("input") == "1"),
+	// 	Stdout: (q.Get("output") == "1"),
+	// 	Stderr: (q.Get("error") == "1"),
+	// 	TTY:    (q.Get("tty") == "1"),
+	// }
+
+	// TODO: tty flag causes remotecommand.createStreams to wait for the wrong number of streams
+	streamOpts := &remotecommand.Options{
+		Stdin:  true,
+		Stdout: true,
+		Stderr: true,
+		TTY:    false,
+	}
+
+	idleTimeout := time.Second * 30
+	streamCreationTimeout := time.Second * 30
+
+	remotecommand.ServeExec(w, req, p, fmt.Sprintf("%s-%s", namespace, pod), "", container, []string{command}, streamOpts, idleTimeout, streamCreationTimeout, supportedStreamProtocols)
 }

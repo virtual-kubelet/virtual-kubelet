@@ -13,7 +13,6 @@ import (
 	"syscall"
 	"time"
 
-	"k8s.io/client-go/tools/remotecommand"
 	log "github.com/Sirupsen/logrus"
 	"github.com/virtual-kubelet/virtual-kubelet/manager"
 	"github.com/virtual-kubelet/virtual-kubelet/providers"
@@ -23,6 +22,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/tools/remotecommand"
 	criapi "k8s.io/kubernetes/pkg/kubelet/apis/cri/runtime/v1alpha2"
 )
 

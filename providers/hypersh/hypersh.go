@@ -16,14 +16,14 @@ import (
 	"github.com/docker/go-connections/sockets"
 	"github.com/docker/go-connections/tlsconfig"
 	hyper "github.com/hyperhq/hyper-api/client"
-	hypertypes "github.com/hyperhq/hyper-api/types"
+	"github.com/hyperhq/hyper-api/types"
 	"github.com/hyperhq/hyper-api/types/filters"
 	"github.com/hyperhq/hyper-api/types/network"
 	"github.com/hyperhq/hypercli/cliconfig"
 	"k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
+	apitypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/remotecommand"
 )
 
@@ -263,7 +263,7 @@ func (p *HyperProvider) DeletePod(pod *v1.Pod) (err error) {
 	log.Printf("receive DeletePod %q\n", pod.Name)
 	var (
 		containerName = fmt.Sprintf("pod-%s-%s", pod.Name, pod.Name)
-		container     hypertypes.ContainerJSON
+		container     types.ContainerJSON
 	)
 	// Inspect hyper container
 	container, err = p.hyperClient.ContainerInspect(context.Background(), containerName)
@@ -276,7 +276,7 @@ func (p *HyperProvider) DeletePod(pod *v1.Pod) (err error) {
 		if v != pod.Name {
 			return fmt.Errorf("the label %q of hyper container %q should be %q, but it's %q currently", containerLabel, container.Name, pod.Name, v)
 		}
-		rmOptions := hypertypes.ContainerRemoveOptions{
+		rmOptions := types.ContainerRemoveOptions{
 			RemoveVolumes: true,
 			Force:         true,
 		}
@@ -301,7 +301,7 @@ func (p *HyperProvider) DeletePod(pod *v1.Pod) (err error) {
 func (p *HyperProvider) GetPod(namespace, name string) (pod *v1.Pod, err error) {
 	var (
 		containerName = fmt.Sprintf("pod-%s-%s", name, name)
-		container     hypertypes.ContainerJSON
+		container     types.ContainerJSON
 	)
 	// Inspect hyper container
 	container, err = p.hyperClient.ContainerInspect(context.Background(), containerName)
@@ -325,7 +325,7 @@ func (p *HyperProvider) GetContainerLogs(namespace, podName, containerName strin
 // ExecInContainer executes a command in a container in the pod, copying data
 // between in/out/err and the container's stdin/stdout/stderr.
 // TODO: Implementation
-func (p *HyperProvider) ExecInContainer(name string, uid types.UID, container string, cmd []string, in io.Reader, out, err io.WriteCloser, tty bool, resize <-chan remotecommand.TerminalSize, timeout time.Duration) error {
+func (p *HyperProvider) ExecInContainer(name string, uid apitypes.UID, container string, cmd []string, in io.Reader, out, err io.WriteCloser, tty bool, resize <-chan remotecommand.TerminalSize, timeout time.Duration) error {
 	log.Printf("receive ExecInContainer %q\n", container)
 	return nil
 }
@@ -348,7 +348,7 @@ func (p *HyperProvider) GetPods() ([]*v1.Pod, error) {
 		return nil, err
 	}
 	// Filter by label.
-	containers, err := p.hyperClient.ContainerList(context.Background(), hypertypes.ContainerListOptions{
+	containers, err := p.hyperClient.ContainerList(context.Background(), types.ContainerListOptions{
 		Filter: filter,
 		All:    true,
 	})
