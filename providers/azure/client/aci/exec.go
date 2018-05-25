@@ -46,7 +46,7 @@ func (c *Client) LaunchExec(resourceGroup, containerGroupName, containerName, co
 
 	req, err := http.NewRequest("POST", uri, b)
 	if err != nil {
-		return xcrsp, fmt.Errorf("Creating get container logs uri request failed: %v", err)
+		return xcrsp, fmt.Errorf("Creating launch exec uri request failed: %v", err)
 	}
 
 	// Add the parameters to the url.
