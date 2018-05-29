@@ -12,11 +12,6 @@ if ! type 'docker' > /dev/null; then
   exit 1
 fi
 
-if ! type 'jq' > /dev/null; then
-  echo 'jq not installed... exiting'
-  exit 1
-fi
-
 {{/* Vars */}}
 {{$podName := .PodName}}
 {{$volumes := .Volumes}}
@@ -28,11 +23,25 @@ docker login -u {{.Username}} -p {{.Password}} {{.Server}}
 
 function cleanup(){
     {{/* Take a copy of the container log is removed when container is deleted */}}
-    echo 'Pod Exited: Copying logs'    
+    echo 'Pod Exited: Copying logs' 
+    {{range $index, $container := .InitContainers}}
+    if [[ -f ./initcontainer-{{$index}}.cid ]]; then
+        container_{{$index}}_ID=$(<./initcontainer-{{$index}}.cid)
+        container_{{$index}}_Log_Path=$(docker inspect --format='{{"{{.LogPath}}"}}' $container_{{$index}}_ID)
+        cp $container_{{$index}}_Log_Path ./{{$container.Name}}.log
+
+        docker rm -f $container_{{$index}}_ID
+        rm -f ./initcontainer-{{$index}}.cid
+    fi
+    {{end}}
+
     {{range $index, $container := .Containers}}
-    container_{{$index}}_ID=$(<./container-{{$index}}.cid)
-    container_{{$index}}_Log_Path=$(docker inspect --format='{{"{{.LogPath}}"}}' $container_{{$index}}_ID)
-    cp $container_{{$index}}_Log_Path ./{{$container.Name}}.log
+    if [[ -f ./{{$container.Name}}.log && -f ./container-{{$index}}.cid ]]; then
+        container_{{$index}}_ID=$(<./container-{{$index}}.cid)
+        container_{{$index}}_Log_Path=$(docker inspect --format='{{"{{.LogPath}}"}}' $container_{{$index}}_ID)
+        rm ./{{$container.Name}}.log {{/* Remove the existing symlink */}}
+        cp $container_{{$index}}_Log_Path ./{{$container.Name}}.log
+    fi
     {{end}}
 
     {{/* Remove the containers, network and volumes */}}
@@ -75,12 +84,35 @@ docker volume create {{$podName}}_{{.Name}}
 {{end}}
 {{end}}
 
+{{/* Run the init containers in the Pod. Attaching to shared namespace */}}
+{{range $index, $container := .InitContainers}} 
+echo 'Running init container {{$index}}..'
+    {{if isPullAlways .}}
+docker pull {{$container.Image}}
+    {{end}}
+docker run --network container:{{$podName}} --ipc container:{{$podName}} \
+    {{- if isNvidiaRuntime $container}}
+    --runtime nvidia \
+    {{- end}}
+    {{- range $index, $envs := $container.Env}}
+-e "{{$envs.Name}}:{{$envs.Value}}" \
+    {{- end}}
+    {{- range $index, $mount := getValidVolumeMounts $container $volumes}}
+-v {{$podName}}_{{$mount.Name}}:{{$mount.MountPath}} \
+    {{- end}}
+--cidfile=./initcontainer-{{$index}}.cid {{$container.Image}} {{getLaunchCommand $container}}
+{{end}}
+
+
 {{/* Run the containers in the Pod. Attaching to shared namespace */}}
 {{range $index, $container := .Containers}} 
     {{if isPullAlways .}}
 docker pull {{$container.Image}}
     {{end}}
 docker run -d --network container:{{$podName}} --ipc container:{{$podName}} \
+    {{- if isNvidiaRuntime $container}}
+    --runtime nvidia \
+    {{- end}}
     {{- range $index, $envs := $container.Env}}
 -e "{{$envs.Name}}:{{$envs.Value}}" \
     {{- end}}
@@ -119,11 +151,15 @@ overallExitCode=0
 for line in ` + "`ls container-*`" + `
 do    
     id=$(cat $line) 
-    exitCode=$(docker inspect $id | jq '.[].State.ExitCode')
+    echo 'Getting exitcode'
+    exitCode=$(docker inspect -f {{"{{.State.ExitCode}}"}} $id)
+    
     echo 'ID: ' $id ' ExitCode: ' $exitCode
-    if [ $exitCode -ne 0 ]
+    echo 'Checking exitcode'
+    if (($exitCode != 0))
     then
-        $overallExitCode=$exitCode
+        echo 'Assigning exitcode'
+        overallExitCode=$exitCode
     fi
 done
 

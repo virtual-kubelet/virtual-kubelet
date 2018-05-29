@@ -18,7 +18,7 @@ func getPodFromTask(task *batch.CloudTask) (pod *apiv1.Pod, err error) {
 	jsonData := ""
 	settings := *task.EnvironmentSettings
 	for _, s := range settings {
-		if *s.Name == podJSONKey {
+		if *s.Name == podJSONKey && s.Value != nil {
 			ok = true
 			jsonData = *s.Value
 		}
@@ -29,6 +29,9 @@ func getPodFromTask(task *batch.CloudTask) (pod *apiv1.Pod, err error) {
 
 	pod = &apiv1.Pod{}
 	err = json.Unmarshal([]byte(jsonData), pod)
+	if err != nil {
+		return nil, err
+	}
 	return
 }
 
@@ -75,10 +78,10 @@ func convertTaskStatusToPodPhase(t *batch.CloudTask) (podPhase apiv1.PodPhase) {
 	case batch.TaskStateRunning:
 		podPhase = apiv1.PodRunning
 	case batch.TaskStateCompleted:
-		podPhase = apiv1.PodSucceeded
+		podPhase = apiv1.PodFailed
 
-		if t.ExecutionInfo != nil && t.ExecutionInfo.ExitCode != nil && *t.ExecutionInfo.ExitCode != 0 {
-			podPhase = apiv1.PodFailed
+		if t.ExecutionInfo != nil && t.ExecutionInfo.ExitCode != nil && *t.ExecutionInfo.ExitCode == 0 {
+			podPhase = apiv1.PodSucceeded
 		}
 	}
 

@@ -24,11 +24,6 @@
 #   go-tests = true
 #   unused-packages = true
 
-
-[[constraint]]
-  branch = "master"
-  name = "k8s.io/api"
-
 [prune]
   go-tests = true
   unused-packages = true

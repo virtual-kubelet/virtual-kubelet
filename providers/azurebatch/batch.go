@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/Azure/go-autorest/autorest"
+
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -21,8 +23,6 @@ import (
 )
 
 const (
-	stdoutFile string = "stdout.txt"
-	stderrFile string = "stderr.txt"
 	podJSONKey string = "virtualkubelet_pod"
 )
 
@@ -31,14 +31,12 @@ type Provider struct {
 	batchConfig        *Config
 	ctx                context.Context
 	cancelCtx          context.CancelFunc
-	poolClient         *batch.PoolClient
-	jobClient          *batch.JobClient
-	taskClient         *batch.TaskClient
 	fileClient         *batch.FileClient
 	resourceManager    *manager.ResourceManager
 	listTasks          func() (*[]batch.CloudTask, error)
-	resourceGroup      string
-	region             string
+	addTask            func(batch.TaskAddParameter) (autorest.Response, error)
+	getTask            func(taskID string) (batch.CloudTask, error)
+	deleteTask         func(taskID string) (autorest.Response, error)
 	nodeName           string
 	operatingSystem    string
 	cpu                string
@@ -64,14 +62,17 @@ type Config struct {
 // NewBatchProvider Creates a batch provider
 func NewBatchProvider(config string, rm *manager.ResourceManager, nodeName, operatingSystem string, internalIP string, daemonEndpointPort int32) (*Provider, error) {
 	fmt.Println("Starting create provider")
-
 	batchConfig, err := getAzureConfigFromEnv()
 	if err != nil {
 		log.Println("Failed to get auth information")
 	}
+	return NewBatchProviderFromConfig(batchConfig, rm, nodeName, operatingSystem, internalIP, daemonEndpointPort)
+}
 
+// NewBatchProviderFromConfig Creates a batch provider
+func NewBatchProviderFromConfig(config Config, rm *manager.ResourceManager, nodeName, operatingSystem string, internalIP string, daemonEndpointPort int32) (*Provider, error) {
 	p := Provider{}
-	p.batchConfig = &batchConfig
+	p.batchConfig = &config
 	// Set sane defaults for Capacity in case config is not supplied
 	p.cpu = "20"
 	p.memory = "100Gi"
@@ -83,17 +84,21 @@ func NewBatchProvider(config string, rm *manager.ResourceManager, nodeName, oper
 	p.daemonEndpointPort = daemonEndpointPort
 	p.ctx, p.cancelCtx = context.WithCancel(context.Background())
 
-	auth := getAzureADAuthorizer(p.batchConfig, azure.PublicCloud.BatchManagementEndpoint)
+	auth := getAzureADAuthorizer(&config, azure.PublicCloud.BatchManagementEndpoint)
 
-	createOrGetPool(&p, auth)
-	createOrGetJob(&p, auth)
-
-	taskclient := batch.NewTaskClientWithBaseURI(getBatchBaseURL(p.batchConfig))
-	taskclient.Authorizer = auth
-	p.taskClient = &taskclient
-
+	batchBaseURL := getBatchBaseURL(config.AccountName, config.AccountLocation)
+	_, err := getPool(p.ctx, batchBaseURL, config.PoolID, auth)
+	if err != nil {
+		log.Panicf("Error retreiving Azure Batch pool: %v", err)
+	}
+	_, err = createOrGetJob(p.ctx, batchBaseURL, config.JobID, config.PoolID, auth)
+	if err != nil {
+		log.Panicf("Error retreiving/creating Azure Batch job: %v", err)
+	}
+	taskClient := batch.NewTaskClientWithBaseURI(batchBaseURL)
+	taskClient.Authorizer = auth
 	p.listTasks = func() (*[]batch.CloudTask, error) {
-		res, err := p.taskClient.List(p.ctx, p.batchConfig.JobID, "", "", "", nil, nil, nil, nil, nil)
+		res, err := taskClient.List(p.ctx, config.JobID, "", "", "", nil, nil, nil, nil, nil)
 		if err != nil {
 			return &[]batch.CloudTask{}, err
 		}
@@ -111,8 +116,17 @@ func NewBatchProvider(config string, rm *manager.ResourceManager, nodeName, oper
 
 		return &currentTasks, nil
 	}
+	p.addTask = func(task batch.TaskAddParameter) (autorest.Response, error) {
+		return taskClient.Add(p.ctx, config.JobID, task, nil, nil, nil, nil)
+	}
+	p.getTask = func(taskID string) (batch.CloudTask, error) {
+		return taskClient.Get(p.ctx, p.batchConfig.JobID, taskID, "", "", nil, nil, nil, nil, "", "", nil, nil)
+	}
+	p.deleteTask = func(taskID string) (autorest.Response, error) {
+		return taskClient.Delete(p.ctx, config.JobID, taskID, nil, nil, nil, nil, "", "", nil, nil)
+	}
 
-	fileClient := batch.NewFileClientWithBaseURI(getBatchBaseURL(p.batchConfig))
+	fileClient := batch.NewFileClientWithBaseURI(batchBaseURL)
 	fileClient.Authorizer = auth
 	p.fileClient = &fileClient
 
@@ -123,9 +137,10 @@ func NewBatchProvider(config string, rm *manager.ResourceManager, nodeName, oper
 func (p *Provider) CreatePod(pod *v1.Pod) error {
 	log.Println("Creating pod...")
 	podCommand, err := pod2docker.GetBashCommand(pod2docker.PodComponents{
-		Containers: pod.Spec.Containers,
-		PodName:    pod.Name,
-		Volumes:    pod.Spec.Volumes,
+		InitContainers: pod.Spec.InitContainers,
+		Containers:     pod.Spec.Containers,
+		PodName:        pod.Name,
+		Volumes:        pod.Spec.Volumes,
 	})
 	if err != nil {
 		return err
@@ -153,7 +168,10 @@ func (p *Provider) CreatePod(pod *v1.Pod) error {
 			},
 		},
 	}
-	p.taskClient.Add(p.ctx, p.batchConfig.JobID, task, nil, nil, nil, nil)
+	_, err = p.addTask(task)
+	if err != nil {
+		return err
+	}
 
 	return nil
 }
@@ -174,21 +192,14 @@ func (p *Provider) GetPodStatus(namespace, name string) (*v1.PodStatus, error) {
 
 // UpdatePod accepts a Pod definition
 func (p *Provider) UpdatePod(pod *v1.Pod) error {
-	err := p.DeletePod(pod)
-	if err != nil {
-		return err
-	}
-	err = p.CreatePod(pod)
-	if err != nil {
-		return err
-	}
+	log.Println("Pod Update called: No-op as not implemented")
 	return nil
 }
 
 // DeletePod accepts a Pod definition
 func (p *Provider) DeletePod(pod *v1.Pod) error {
 	taskID := getTaskIDForPod(pod.Namespace, pod.Name)
-	task, err := p.taskClient.Delete(p.ctx, p.batchConfig.JobID, taskID, nil, nil, nil, nil, "", "", nil, nil)
+	task, err := p.deleteTask(taskID)
 	if err != nil {
 		log.Println(task)
 		log.Println(err)
@@ -202,7 +213,7 @@ func (p *Provider) DeletePod(pod *v1.Pod) error {
 // GetPod returns a pod by name
 func (p *Provider) GetPod(namespace, name string) (*v1.Pod, error) {
 	log.Println("Getting Pod ...")
-	task, err := p.taskClient.Get(p.ctx, p.batchConfig.JobID, getTaskIDForPod(namespace, name), "", "", nil, nil, nil, nil, "", "", nil, nil)
+	task, err := p.getTask(getTaskIDForPod(namespace, name))
 	if err != nil {
 		if task.Response.StatusCode == http.StatusNotFound {
 			return nil, nil
