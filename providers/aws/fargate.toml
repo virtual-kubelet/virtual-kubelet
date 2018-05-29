@@ -1,0 +1,50 @@
+#
+# Example configuration file for AWS Fargate virtual-kubelet provider.
+#
+# Usage:
+# virtual-kubelet --provider aws --provider-config fargate.toml
+#
+
+# AWS region where Fargate resources are provisioned. Mandatory.
+Region = "us-east-1"
+
+# AWS Fargate cluster name. Optional. Defaults to "default".
+# If a cluster with this name does not exist in the region, virtual-kubelet will create it.
+# Creating a dedicated Fargate cluster for each virtual-kubelet is recommended.
+ClusterName = "default"
+
+# List of subnets that pod ENIs are connected to. Mandatory.
+Subnets = ["subnet-12345678"]
+
+# List of security groups associated with pod ENIs. Optional.
+# If omitted, pod ENIs inherit their VPC's default security group.
+SecurityGroups = ["sg-12345678"]
+
+# Whether pod ENIs are assigned a public IPv4 address. Optional. Defaults to false.
+# If your pod requires internet access (e.g. to download container images from ECR or Docker Hub),
+# this should be set to "true" for pods on public subnets with internet gateways,
+# and to "false" for pods on private subnets with NAT gateways.
+AssignPublicIPv4Address = false
+
+# Role assumed by AWS Fargate to execute your pod. Optional.
+# https://docs.aws.amazon.com/AmazonECS/latest/developerguide/task_execution_IAM_role.html
+ExecutionRoleArn = ""
+
+# Amazon CloudWatch log group name used to store container logs. Optional.
+# If omitted, container logs will not be available.
+# If specified, an execution role with access to CloudWatch logs is required.
+CloudWatchLogGroupName = ""
+
+# AWS Fargate platform version. Optional. Defaults to "LATEST".
+# https://docs.aws.amazon.com/AmazonECS/latest/developerguide/platform_versions.html
+PlatformVersion = "LATEST"
+
+# Operating system for pods. Optional. Defaults to "Linux".
+OperatingSystem = "Linux"
+
+# AWS Fargate capacity advertised by virtual-kubelet. Optional. Defaults to the values below.
+# Capacity is specified using Kubernetes resource format.
+# https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/
+CPU = "20"
+Memory = "40Gi"
+Pods = "20"

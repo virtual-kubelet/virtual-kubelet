@@ -1,6 +1,10 @@
 # Virtual Kubelet
 
-Virtual Kubelet is an open source [Kubernetes kubelet](https://kubernetes.io/docs/reference/generated/kubelet/) implementation that masquerades as a kubelet for the purposes of connecting Kubernetes to other APIs. This allows the nodes to be backed by other services like ACI, Hyper.sh, AWS, etc.  This connector features a pluggable architecture and direct use of Kubernetes primitives, making it much easier to build on.
+Virtual Kubelet is an open source [Kubernetes kubelet](https://kubernetes.io/docs/reference/generated/kubelet/)
+implementation that masquerades as a kubelet for the purposes of connecting Kubernetes to other APIs.
+This allows the nodes to be backed by other services like ACI, AWS Fargate, Hyper.sh, [IoT Edge](https://github.com/Azure/iot-edge-virtual-kubelet-provider) etc. The primary scenario for VK is enabling the extension of the Kubernetes API into serverless container platforms like ACI, Fargate, and Hyper.sh, though we are open to others. However, it should be noted that VK is explicitly not intended to be an alternative to Kubernetes federation.
+ 
+Virtual Kubelet features a pluggable architecture and direct use of Kubernetes primitives, making it much easier to build on.
 
 We invite the Kubernetes ecosystem to join us in empowering developers to build
 upon our base. Join our slack channel named, virtual-kubelet, within the [Kubernetes slack group](https://kubernetes.slack.com/).
@@ -16,6 +20,7 @@ The best description is "Kubernetes API on top, programmable back."
 * [Usage](#usage)
 * [Providers](#providers)
     + [Azure Container Instances Provider](#azure-container-instances-provider)
+    + [AWS Fargate Provider](#aws-fargate-provider)
     + [Hyper.sh Provider](#hypersh-provider)
     + [Adding a New Provider via the Provider Interface](#adding-a-new-provider-via-the-provider-interface)
 * [Testing](#testing)
@@ -44,26 +49,13 @@ a `virtual-kubelet` node.
 
 ## Current Features
 
-* Multiple containers per pod
-* Windows/Linux containers
-* Restart policies
-* Volumes
-  * Empty dir
-  * Git hub repo
-  * Azure files
-* Config maps
-* Secrets
-* Pod status
-* Resource limits (Mem and Cores)
-* Environment variables
-* Public IPs
-* kubectl logs
-* DNS name labels
+- create, delete and update pods
+- container logs
+- get pod, pods and pod status
+- capacity 
+- node addresses, node capacity, node daemon endpoints
+- operating system
 
-## Current Limitations
-
-* kubectl exec
-* Metrics
 
 ## Command-Line Usage
 
@@ -104,6 +96,12 @@ leveraging the portable Kubernetes API.
 
 Each provider may have its own configuration file, and required environmental variables.
 
+Providers must provide the following functionality to be considered a supported integration with Virtual Kubelet.
+1. Provides the back-end plumbing necessary to support the lifecycle management of pods, containers and supporting resources in the context of Kubernete.
+2. Conforms to the current API provided by Virtual Kubelet.
+3. Does not have access to the Kubernetes API Server and has a well-defined callback mechanism for getting data like secrets or configmaps.
+
+
 ### Azure Container Instances Provider
 
 The Azure Container Instances Provider allows you to utilize both
@@ -120,6 +118,19 @@ The config file is in TOML format, and an example lives in `providers/azure/exam
 #### More Details
 
 See the [ACI Readme](providers/azure/README.md)
+
+### AWS Fargate Provider
+
+[AWS Fargate](https://aws.amazon.com/fargate/) is a technology that allows you to run containers
+without having to manage servers or clusters.
+
+The AWS Fargate provider allows you to deploy pods to [AWS Fargate](https://aws.amazon.com/fargate/).
+Your pods on AWS Fargate have access to VPC networking with dedicated ENIs in your subnets, public
+IP addresses to connect to the internet, private IP addresses to connect to your Kubernetes cluster,
+security groups, IAM roles, CloudWatch Logs and many other AWS services. Pods on Fargate can
+co-exist with pods on regular worker nodes in the same Kubernetes cluster.
+
+Easy instructions and a sample configuration file is available in the [AWS Fargate provider documentation](providers/aws/README.md).
 
 ### Hyper.sh Provider
 
@@ -190,7 +201,7 @@ You can generate this file by following the instructions listed in the
 
 ### Missing Load Balancer IP addresses for services
 
-#### When Virtual Kubelet is installed on a cluster, I cannot create external-IPs for a Service
+#### When Virtual Kubelet is installed on a cluster, you cannot create external-IPs for a Service
 
 Kubernetes 1.9 introduces a new flag, `ServiceNodeExclusion`, for the control plane's Controller Manager. Enabling this flag in the Controller Manager's manifest allows Kubernetes to exclude Virtual Kubelet nodes from being added to Load Balancer pools, allowing you to create public facing services with external IPs without issue.
 
@@ -204,3 +215,8 @@ Enable the ServiceNodeExclusion flag, by modifying the Controller Manager manife
 
 Virtual Kubelet follows the [CNCF Code of Conduct](https://github.com/cncf/foundation/blob/master/code-of-conduct.md).
 Sign the [CNCF CLA](https://github.com/kubernetes/community/blob/master/CLA.md) to be able to make Pull Requests to this repo. 
+
+Weekly Virtual Kubelet Architecture meetings are held at 3pm PST [here](https://zoom.us/j/5337610301). Our google drive with design specifications and meeting notes are [here](https://drive.google.com/drive/folders/19Ndu11WBCCBDowo9CrrGUHoIfd2L8Ueg?usp=sharing).
+
+
+

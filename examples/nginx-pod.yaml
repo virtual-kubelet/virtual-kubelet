@@ -7,10 +7,6 @@ spec:
   - image: nginx
     imagePullPolicy: Always
     name: nginx
-    resources:
-      requests:
-        memory: 1G
-        cpu: 1
     ports:
     - containerPort: 80
       name: http
@@ -18,7 +14,8 @@ spec:
     - containerPort: 443
       name: https
   dnsPolicy: ClusterFirst
-  nodeName: virtual-kubelet
+  nodeSelector:
+    kubernetes.io/hostname: virtual-kubelet-myaciconnector-linux
   tolerations:
   - key: azure.com/aci
     effect: NoSchedule

@@ -54,12 +54,14 @@ type AuthConfig struct {
 	RegistryToken string `json:"registrytoken,omitempty"`
 }
 
-// See https://docs.microsoft.com/en-us/azure/container-instances/container-instances-quotas for valid regions.
+// See https://azure.microsoft.com/en-us/status/ for valid regions.
 var validAciRegions = []string{
 	"westeurope",
 	"westus",
 	"eastus",
 	"southeastasia",
+	"westus2",
+	"northeurope",
 }
 
 // isValidACIRegion checks to make sure we're using a valid ACI region
@@ -562,20 +564,46 @@ func (p *ACIProvider) getContainers(pod *v1.Pod) ([]aci.Container, error) {
 			})
 		}
 
-		cpuLimit := float64(container.Resources.Limits.Cpu().Value())
-		memoryLimit := float64(container.Resources.Limits.Memory().Value()) / 1000000000.00
-		cpuRequest := float64(container.Resources.Requests.Cpu().Value())
-		memoryRequest := float64(container.Resources.Requests.Memory().Value()) / 1000000000.00
+		// NOTE(robbiezhang): ACI CPU request must be times of 10m
+		cpuRequest := 1.00
+		if _, ok := container.Resources.Requests[v1.ResourceCPU]; ok {
+			cpuRequest = float64(container.Resources.Requests.Cpu().MilliValue()/10.00) / 100.00
+			if cpuRequest < 0.01 {
+				cpuRequest = 0.01
+			}
+		}
+
+		// NOTE(robbiezhang): ACI memory request must be times of 0.1 GB
+		memoryRequest := 1.50
+		if _, ok := container.Resources.Requests[v1.ResourceMemory]; ok {
+			memoryRequest = float64(container.Resources.Requests.Memory().Value()/100000000.00) / 10.00
+			if memoryRequest < 0.10 {
+				memoryRequest = 0.10
+			}
+		}
 
 		c.Resources = aci.ResourceRequirements{
-			Limits: aci.ResourceLimits{
-				CPU:        cpuLimit,
-				MemoryInGB: memoryLimit,
-			},
-			Requests: aci.ResourceRequests{
+			Requests: &aci.ResourceRequests{
 				CPU:        cpuRequest,
 				MemoryInGB: memoryRequest,
 			},
+		}
+
+		if container.Resources.Limits != nil {
+			cpuLimit := cpuRequest
+			if _, ok := container.Resources.Limits[v1.ResourceCPU]; ok {
+				cpuLimit = float64(container.Resources.Limits.Cpu().MilliValue()) / 1000.00
+			}
+
+			memoryLimit := memoryRequest
+			if _, ok := container.Resources.Limits[v1.ResourceMemory]; ok {
+				memoryLimit = float64(container.Resources.Limits.Memory().Value()) / 1000000000.00
+			}
+
+			c.Resources.Limits = &aci.ResourceLimits{
+				CPU:        cpuLimit,
+				MemoryInGB: memoryLimit,
+			}
 		}
 
 		containers = append(containers, c)
@@ -730,16 +758,20 @@ func containerGroupToPod(cg *aci.ContainerGroup) (*v1.Pod, error) {
 			Image:   c.Image,
 			Command: c.Command,
 			Resources: v1.ResourceRequirements{
-				Limits: v1.ResourceList{
-					v1.ResourceCPU:    resource.MustParse(fmt.Sprintf("%d", int64(c.Resources.Limits.CPU))),
-					v1.ResourceMemory: resource.MustParse(fmt.Sprintf("%gG", c.Resources.Limits.MemoryInGB)),
-				},
 				Requests: v1.ResourceList{
-					v1.ResourceCPU:    resource.MustParse(fmt.Sprintf("%d", int64(c.Resources.Requests.CPU))),
+					v1.ResourceCPU:    resource.MustParse(fmt.Sprintf("%g", c.Resources.Requests.CPU)),
 					v1.ResourceMemory: resource.MustParse(fmt.Sprintf("%gG", c.Resources.Requests.MemoryInGB)),
 				},
 			},
 		}
+
+		if c.Resources.Limits != nil {
+			container.Resources.Limits = v1.ResourceList{
+				v1.ResourceCPU:    resource.MustParse(fmt.Sprintf("%g", c.Resources.Limits.CPU)),
+				v1.ResourceMemory: resource.MustParse(fmt.Sprintf("%gG", c.Resources.Limits.MemoryInGB)),
+			}
+		}
+
 		containers = append(containers, container)
 		containerStatus := v1.ContainerStatus{
 			Name:                 c.Name,
@@ -778,11 +810,9 @@ func containerGroupToPod(cg *aci.ContainerGroup) (*v1.Pod, error) {
 			Volumes:    []v1.Volume{},
 			Containers: containers,
 		},
-		// TODO: Make this dynamic, likely can translate the provisioningState or instanceView.ContainerState into a Phase,
-		// and some of the Events into Conditions
 		Status: v1.PodStatus{
 			Phase:             aciStateToPodPhase(aciState),
-			Conditions:        []v1.PodCondition{},
+			Conditions:        aciStateToPodConditions(aciState, podCreationTimestamp),
 			Message:           "",
 			Reason:            "",
 			HostIP:            "",
@@ -816,6 +846,28 @@ func aciStateToPodPhase(state string) v1.PodPhase {
 	}
 
 	return v1.PodUnknown
+}
+
+func aciStateToPodConditions(state string, transitiontime metav1.Time) []v1.PodCondition {
+	switch state {
+	case "Running", "Succeeded":
+		return []v1.PodCondition{
+			v1.PodCondition{
+				Type:               v1.PodReady,
+				Status:             v1.ConditionTrue,
+				LastTransitionTime: transitiontime,
+			}, v1.PodCondition{
+				Type:               v1.PodInitialized,
+				Status:             v1.ConditionTrue,
+				LastTransitionTime: transitiontime,
+			}, v1.PodCondition{
+				Type:               v1.PodScheduled,
+				Status:             v1.ConditionTrue,
+				LastTransitionTime: transitiontime,
+			},
+		}
+	}
+	return []v1.PodCondition{}
 }
 
 func aciContainerStateToContainerState(cs aci.ContainerState) v1.ContainerState {

@@ -23,4 +23,4 @@ jobs:
           command: V=1 make build
       - run:
           name: Tests
-          command: V=1 CI=1 make test
+          command: V=1 CI=1 SKIP_AWS_E2E=1 make test

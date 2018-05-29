@@ -1,18 +1,22 @@
 package vkubelet
 
 import (
+	"github.com/virtual-kubelet/virtual-kubelet/providers/aws"
 	"github.com/virtual-kubelet/virtual-kubelet/providers/azure"
 	"github.com/virtual-kubelet/virtual-kubelet/providers/azurebatch"
+	"github.com/virtual-kubelet/virtual-kubelet/providers/cri"
 	"github.com/virtual-kubelet/virtual-kubelet/providers/hypersh"
 	"github.com/virtual-kubelet/virtual-kubelet/providers/web"
 	"k8s.io/api/core/v1"
 )
 
 // Compile time proof that our implementations meet the Provider interface.
+var _ Provider = (*aws.FargateProvider)(nil)
 var _ Provider = (*azure.ACIProvider)(nil)
 var _ Provider = (*hypersh.HyperProvider)(nil)
 var _ Provider = (*web.BrokerProvider)(nil)
 var _ Provider = (*azurebatch.Provider)(nil)
+var _ Provider = (*cri.CRIProvider)(nil)
 
 // Provider contains the methods required to implement a virtual-kubelet provider.
 type Provider interface {
@@ -40,8 +44,8 @@ type Provider interface {
 	// Capacity returns a resource list with the capacity constraints of the provider.
 	Capacity() v1.ResourceList
 
-	// NodeConditions returns a list of conditions (Ready, OutOfDisk, etc), which is polled periodically to update the node status
-	// within Kubernetes.
+	// NodeConditions returns a list of conditions (Ready, OutOfDisk, etc), which is
+	// polled periodically to update the node status within Kubernetes.
 	NodeConditions() []v1.NodeCondition
 
 	// NodeAddresses returns a list of addresses for the node status

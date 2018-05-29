@@ -5,8 +5,8 @@ import (
 	"io"
 	"strings"
 
-	"github.com/virtual-kubelet/virtual-kubelet/providers"
 	"github.com/BurntSushi/toml"
+	"github.com/virtual-kubelet/virtual-kubelet/providers"
 )
 
 type providerConfig struct {

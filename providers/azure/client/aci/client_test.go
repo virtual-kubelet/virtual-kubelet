@@ -6,9 +6,9 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/google/uuid"
 	azure "github.com/virtual-kubelet/virtual-kubelet/providers/azure/client"
 	"github.com/virtual-kubelet/virtual-kubelet/providers/azure/client/resourcegroups"
-	"github.com/google/uuid"
 )
 
 var (
@@ -72,9 +72,9 @@ func TestMain(m *testing.M) {
 
 func TestNewClient(t *testing.T) {
 	auth, err := azure.NewAuthenticationFromFile("../../../../credentials.json")
-        if err != nil {
-                log.Fatalf("Failed to load Azure authentication file: %v", err)
-        }
+	if err != nil {
+		log.Fatalf("Failed to load Azure authentication file: %v", err)
+	}
 
 	c, err := NewClient(auth)
 	if err != nil {
@@ -107,11 +107,51 @@ func TestCreateContainerGroupFails(t *testing.T) {
 		},
 	})
 	if err == nil {
-		t.Fatal("expected create container group to fail with ResourceSomeRequestsNotSpecified, but returned nil")
+		t.Fatal("expected create container group to fail with ResourceRequestsNotSpecified, but returned nil")
 	}
 
-	if !strings.Contains(err.Error(), "ResourceSomeRequestsNotSpecified") {
-		t.Fatalf("expected ResourceSomeRequestsNotSpecified to be in the error message but got: %v", err)
+	if !strings.Contains(err.Error(), "ResourceRequestsNotSpecified") {
+		t.Fatalf("expected ResourceRequestsNotSpecified to be in the error message but got: %v", err)
+	}
+}
+
+func TestCreateContainerGroupWithoutResourceLimit(t *testing.T) {
+	cg, err := client.CreateContainerGroup(resourceGroup, containerGroup, ContainerGroup{
+		Location: location,
+		ContainerGroupProperties: ContainerGroupProperties{
+			OsType: Linux,
+			Containers: []Container{
+				{
+					Name: "nginx",
+					ContainerProperties: ContainerProperties{
+						Image:   "nginx",
+						Command: []string{"nginx", "-g", "daemon off;"},
+						Ports: []ContainerPort{
+							{
+								Protocol: ContainerNetworkProtocolTCP,
+								Port:     80,
+							},
+						},
+						Resources: ResourceRequirements{
+							Requests: &ResourceRequests{
+								CPU:        1,
+								MemoryInGB: 1,
+							},
+						},
+					},
+				},
+			},
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cg.Name != containerGroup {
+		t.Fatalf("resource group name is %s, expected %s", cg.Name, containerGroup)
+	}
+
+	if err := client.DeleteContainerGroup(resourceGroup, containerGroup); err != nil {
+		t.Fatal(err)
 	}
 }
 
@@ -133,11 +173,11 @@ func TestCreateContainerGroup(t *testing.T) {
 							},
 						},
 						Resources: ResourceRequirements{
-							Requests: ResourceRequests{
+							Requests: &ResourceRequests{
 								CPU:        1,
 								MemoryInGB: 1,
 							},
-							Limits: ResourceLimits{
+							Limits: &ResourceLimits{
 								CPU:        1,
 								MemoryInGB: 1,
 							},

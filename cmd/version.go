@@ -17,15 +17,15 @@ package cmd
 import (
 	"fmt"
 
-	"github.com/virtual-kubelet/virtual-kubelet/version"
 	"github.com/spf13/cobra"
+	"github.com/virtual-kubelet/virtual-kubelet/version"
 )
 
 // versionCmd represents the version command
 var versionCmd = &cobra.Command{
 	Use:   "version",
 	Short: "Show the version of the program",
-	Long: `Show the version of the program`,
+	Long:  `Show the version of the program`,
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Printf("Version: %s, Built: %s", version.Version, version.BuildTime)
 	},

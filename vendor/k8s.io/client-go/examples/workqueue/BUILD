@@ -8,12 +8,13 @@ load(
 
 go_binary(
     name = "workqueue",
-    library = ":go_default_library",
+    embed = [":go_default_library"],
 )
 
 go_library(
     name = "go_default_library",
     srcs = ["main.go"],
+    importpath = "k8s.io/client-go/examples/workqueue",
     deps = [
         "//vendor/github.com/golang/glog:go_default_library",
         "//vendor/k8s.io/api/core/v1:go_default_library",

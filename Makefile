@@ -54,24 +54,24 @@ docker:
 	@echo "Docker Build..."
 	$Q docker build -t $(DOCKER_IMAGE) .
 
-clean: clean-build
+clean:
 	@echo "Clean..."
 	$Q rm -rf bin
 
 
 test:
 	@echo "Testing..."
-	$Q go test $(if $V,-v) -i -race $(allpackages) # install -race libs to speed up next run
+	$Q go test $(if $V,-v) -i $(allpackages) # install -race libs to speed up next run
 ifndef CI
 	@echo "Testing Outside CI..."
 	$Q go vet $(allpackages)
-	$Q GODEBUG=cgocheck=2 go test -race $(allpackages)
+	$Q GODEBUG=cgocheck=2 go test $(allpackages)
 else
 	@echo "Testing in CI..."
 	$Q mkdir -p test
 	$Q ( go vet $(allpackages); echo $$? ) | \
        tee test/vet.txt | sed '$$ d'; exit $$(tail -1 test/vet.txt)
-	$Q ( GODEBUG=cgocheck=2 go test -v -race $(allpackages); echo $$? ) | \
+	$Q ( GODEBUG=cgocheck=2 go test -v $(allpackages); echo $$? ) | \
        tee test/output.txt | sed '$$ d'; exit $$(tail -1 test/output.txt)
 endif
 
