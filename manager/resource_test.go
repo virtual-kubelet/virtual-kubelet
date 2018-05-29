@@ -21,14 +21,15 @@ func init() {
 func TestResourceManager(t *testing.T) {
 	pm := NewResourceManager(fakeClient)
 	pod1Name := "Pod1"
-	pod1 := makePod(pod1Name)
+	pod1Namespace := "Pod1Namespace"
+	pod1 := makePod(pod1Namespace, pod1Name)
 	pm.AddPod(pod1)
 
 	pods := pm.GetPods()
 	if len(pods) != 1 {
 		t.Errorf("Got %d, expected 1 pod", len(pods))
 	}
-	gotPod1 := pm.GetPod(pod1Name)
+	gotPod1 := pm.GetPod(pod1Namespace, pod1Name)
 	if gotPod1.Name != pod1.Name {
 		t.Errorf("Got %s, wanted %s", gotPod1.Name, pod1.Name)
 	}
@@ -37,7 +38,8 @@ func TestResourceManager(t *testing.T) {
 func TestResourceManagerDeletePod(t *testing.T) {
 	pm := NewResourceManager(fakeClient)
 	pod1Name := "Pod1"
-	pod1 := makePod(pod1Name)
+	pod1Namespace := "Pod1Namespace"
+	pod1 := makePod(pod1Namespace, pod1Name)
 	pm.AddPod(pod1)
 	pods := pm.GetPods()
 	if len(pods) != 1 {
@@ -50,9 +52,10 @@ func TestResourceManagerDeletePod(t *testing.T) {
 		t.Errorf("Got %d, expected 0 pods", len(pods))
 	}
 }
-func makePod(name string) *v1.Pod {
+func makePod(namespace, name string) *v1.Pod {
 	pod := &v1.Pod{}
 	pod.Name = name
+	pod.Namespace = namespace
 	pod.UID = types.UID(uuid.New().String())
 	return pod
 }
@@ -60,25 +63,26 @@ func makePod(name string) *v1.Pod {
 func TestResourceManagerUpdatePod(t *testing.T) {
 	pm := NewResourceManager(fakeClient)
 	pod1Name := "Pod1"
-	pod1 := makePod(pod1Name)
+	pod1Namespace := "Pod1Namespace"
+	pod1 := makePod(pod1Namespace, pod1Name)
 	pm.AddPod(pod1)
 
 	pods := pm.GetPods()
 	if len(pods) != 1 {
 		t.Errorf("Got %d, expected 1 pod", len(pods))
 	}
-	gotPod1 := pm.GetPod(pod1Name)
+	gotPod1 := pm.GetPod(pod1Namespace, pod1Name)
 	if gotPod1.Name != pod1.Name {
 		t.Errorf("Got %s, wanted %s", gotPod1.Name, pod1.Name)
 	}
 
-	if gotPod1.Namespace != "" {
-		t.Errorf("Got %s, wanted %s", gotPod1.Namespace, "<empty namespace>")
+	if gotPod1.Namespace != pod1.Namespace {
+		t.Errorf("Got %s, wanted %s", gotPod1.Namespace, pod1.Namespace)
 	}
-	pod1.Namespace = "POD1NAMESPACE"
+	pod1.Namespace = "POD2NAMESPACE"
 	pm.UpdatePod(pod1)
 
-	gotPod1 = pm.GetPod(pod1Name)
+	gotPod1 = pm.GetPod(pod1Namespace, pod1Name)
 	if gotPod1.Name != pod1.Name {
 		t.Errorf("Got %s, wanted %s", gotPod1.Name, pod1.Name)
 	}
