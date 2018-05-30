@@ -1,20 +1,41 @@
 # Kubernetes Virtual Kubelet with Azure Batch
 
-[Azure Batch](https://docs.microsoft.com/en-us/azure/batch/) provide an HPC Computing environment in Azure for distributed tasks. Azure handles scheduling decrete jobs and tasks accross pools of VM's. It is commonly used for batch processing tasks such as rendering.
+[Azure Batch](https://docs.microsoft.com/en-us/azure/batch/) provides a HPC Computing environment in Azure for distributed tasks. Azure Batch handles scheduling decrete jobs and tasks accross pools of VM's. It is commonly used for batch processing tasks such as rendering.
 
-The Virtual kubelet integration allows you to take advantage of this from within Kubernetes. The primary usecase for the provider is the simple executate of GPU based batch processes from normal Kubernetes clusters. For example, creating Kubernetes Jobs which train or execute ML models using Nvidia GPU's or using FFMPEG. As such there are some limitation to this provider. 
+The Virtual kubelet integration allows you to take advantage of this from within Kubernetes. The primary usecase for the provider is to make it easy to use GPU based workload from normal Kubernetes clusters. For example, creating Kubernetes Jobs which train or execute ML models using Nvidia GPU's or using FFMPEG.
 
 __The [ACI provider](../azure/README.MD) is the best option unless you're looking to utilise some specific features of Azure Batch__.
 
+## Status: Experimental
+
+This provider is currently in the exterimental stages. Contributions welcome!
+
 ## Quick Start
 
-The following Terraform template deploys an AKS cluster, Service Principal, Azure Batch Account and GPU enabled Azure Batch pool then runs a sample job which uses `nvidia-smi` to list out the driver details of the GPU.
+The following Terraform template deploys an AKS cluster with the Virtual Kubelet, Azure Batch Account and GPU enabled Azure Batch pool.
 
 1. Setup Terraform for Azure following [this guide here](https://docs.microsoft.com/en-us/azure/virtual-machines/linux/terraform-install-configure)
-2. From the commandline move to the deployment folder `cd ./providers/azurebatch/deployment`
-3. Use `terraform plan` and `terraform apply` to deploy the template
-4. Run `kubectl create -f examplegpujob.yaml`
-5. Run `pods=$(kubectl get pods --selector=job-name=examplegpujob --output=jsonpath={.items..metadata.name})` then `kubectl logs $pods` to view the logs
+2. From the commandline move to the deployment folder `cd ./providers/azurebatch/deployment` then edit `vars.example.tfvars` adding in your Service Principal details
+3. Download the latest version of the Community Kubernetes Provider for Terraform. Get the correct link [from here](https://github.com/sl1pm4t/terraform-provider-kubernetes/releases) and use it as follows: (Current official Terraform K8s provider doesn't support `Deployments`)
+
+```shell
+curl -L -o PUT_RELASE_BINARY_LINK_YOU_FOUND_HERE | gunzip > terraform-provider-kubernetes
+chmod +x ./terraform-provider-kubernetes
+```
+
+4. Use `terraform plan -var-file=./vars.example.tfvars` and `terraform apply -var-file=./vars.example.tfvars` to deploy the template
+5. Run `kubectl describe deployment/vkdeployment` to check the virtual kubelet is running correctly.
+6. Run `kubectl create -f examplegpujob.yaml`
+7. Run `pods=$(kubectl get pods --selector=app=examplegpupod --show-all --output=jsonpath={.items..metadata.name})` then `kubectl logs $pods` to view the logs. Should see:
+
+```text
+	[Vector addition of 50000 elements]
+	Copy input data from the host memory to the CUDA device
+	CUDA kernel launch with 196 blocks of 256 threads
+	Copy output data from the CUDA device to the host memory
+	Test PASSED
+	Done
+```
 
 ## Advanced Setup
 
@@ -38,7 +59,7 @@ The provider expects the following environment variables to be configured:
 	SubscriptionID:  AZURE_SUBSCRIPTION_ID
 	TenantID:        AZURE_TENANT_ID
 	PoolID:          AZURE_BATCH_POOLID
-	JobID:           AZURE_BATCH_JOBID
+	JobID (optional):AZURE_BATCH_JOBID
 	AccountLocation: AZURE_BATCH_ACCOUNT_LOCATION
 	AccountName:     AZURE_BATCH_ACCOUNT_NAME
 ```

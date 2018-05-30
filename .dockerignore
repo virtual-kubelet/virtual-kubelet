@@ -1,0 +1,3 @@
+.vscode
+private.env
+*.private.*

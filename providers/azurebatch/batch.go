@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/Azure/go-autorest/autorest"
+	"os"
 
 	"io/ioutil"
 	"log"
@@ -12,11 +13,11 @@ import (
 
 	"github.com/Azure/go-autorest/autorest/azure"
 
-	"github.com/Azure/go-autorest/autorest/to"
-
 	"github.com/Azure/azure-sdk-for-go/services/batch/2017-09-01.6.0/batch"
+	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/lawrencegripper/pod2docker"
 	"github.com/virtual-kubelet/virtual-kubelet/manager"
+	azureCreds "github.com/virtual-kubelet/virtual-kubelet/providers/azure"
 	"k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -60,19 +61,33 @@ type Config struct {
 }
 
 // NewBatchProvider Creates a batch provider
-func NewBatchProvider(config string, rm *manager.ResourceManager, nodeName, operatingSystem string, internalIP string, daemonEndpointPort int32) (*Provider, error) {
+func NewBatchProvider(configString string, rm *manager.ResourceManager, nodeName, operatingSystem string, internalIP string, daemonEndpointPort int32) (*Provider, error) {
 	fmt.Println("Starting create provider")
-	batchConfig, err := getAzureConfigFromEnv()
+
+	config := &Config{}
+	if azureCredsFilepath := os.Getenv("AZURE_CREDENTIALS_LOCATION"); azureCredsFilepath != "" {
+		creds, err := azureCreds.NewAcsCredential(azureCredsFilepath)
+		if err != nil {
+			return nil, err
+		}
+		config.ClientID = creds.ClientID
+		config.ClientSecret = creds.ClientSecret
+		config.SubscriptionID = creds.SubscriptionID
+		config.TenantID = creds.TenantID
+	}
+
+	err := getAzureConfigFromEnv(config)
 	if err != nil {
 		log.Println("Failed to get auth information")
 	}
-	return NewBatchProviderFromConfig(batchConfig, rm, nodeName, operatingSystem, internalIP, daemonEndpointPort)
+
+	return NewBatchProviderFromConfig(config, rm, nodeName, operatingSystem, internalIP, daemonEndpointPort)
 }
 
 // NewBatchProviderFromConfig Creates a batch provider
-func NewBatchProviderFromConfig(config Config, rm *manager.ResourceManager, nodeName, operatingSystem string, internalIP string, daemonEndpointPort int32) (*Provider, error) {
+func NewBatchProviderFromConfig(config *Config, rm *manager.ResourceManager, nodeName, operatingSystem string, internalIP string, daemonEndpointPort int32) (*Provider, error) {
 	p := Provider{}
-	p.batchConfig = &config
+	p.batchConfig = config
 	// Set sane defaults for Capacity in case config is not supplied
 	p.cpu = "20"
 	p.memory = "100Gi"
@@ -84,7 +99,7 @@ func NewBatchProviderFromConfig(config Config, rm *manager.ResourceManager, node
 	p.daemonEndpointPort = daemonEndpointPort
 	p.ctx, p.cancelCtx = context.WithCancel(context.Background())
 
-	auth := getAzureADAuthorizer(&config, azure.PublicCloud.BatchManagementEndpoint)
+	auth := getAzureADAuthorizer(config, azure.PublicCloud.BatchManagementEndpoint)
 
 	batchBaseURL := getBatchBaseURL(config.AccountName, config.AccountLocation)
 	_, err := getPool(p.ctx, batchBaseURL, config.PoolID, auth)
@@ -281,9 +296,10 @@ func (p *Provider) GetPods() ([]*v1.Pod, error) {
 // Capacity returns a resource list containing the capacity limits
 func (p *Provider) Capacity() v1.ResourceList {
 	return v1.ResourceList{
-		"cpu":    resource.MustParse(p.cpu),
-		"memory": resource.MustParse(p.memory),
-		"pods":   resource.MustParse(p.pods),
+		"cpu":            resource.MustParse(p.cpu),
+		"memory":         resource.MustParse(p.memory),
+		"pods":           resource.MustParse(p.pods),
+		"nvidia.com/gpu": resource.MustParse("1"),
 	}
 }
 

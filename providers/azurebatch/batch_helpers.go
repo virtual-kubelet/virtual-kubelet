@@ -101,18 +101,50 @@ func getBatchBaseURL(batchAccountName, batchAccountLocation string) string {
 	return fmt.Sprintf("https://%s.%s.batch.azure.com", batchAccountName, batchAccountLocation)
 }
 
+func envHasValue(env string) bool {
+	val := os.Getenv(env)
+	if val == "" {
+		return false
+	}
+	return true
+}
+
 // GetConfigFromEnv - Retreives the azure configuration from environment variables.
-func getAzureConfigFromEnv() (Config, error) {
-	config := Config{
-		ClientID:        os.Getenv("AZURE_CLIENT_ID"),
-		ClientSecret:    os.Getenv("AZURE_CLIENT_SECRET"),
-		ResourceGroup:   os.Getenv("AZURE_RESOURCE_GROUP"),
-		SubscriptionID:  os.Getenv("AZURE_SUBSCRIPTION_ID"),
-		TenantID:        os.Getenv("AZURE_TENANT_ID"),
-		PoolID:          os.Getenv("AZURE_BATCH_POOLID"),
-		JobID:           os.Getenv("AZURE_BATCH_JOBID"),
-		AccountLocation: os.Getenv("AZURE_BATCH_ACCOUNT_LOCATION"),
-		AccountName:     os.Getenv("AZURE_BATCH_ACCOUNT_NAME"),
+func getAzureConfigFromEnv(config *Config) error {
+	if envHasValue("AZURE_CLIENT_ID") {
+		config.ClientID = os.Getenv("AZURE_CLIENT_ID")
+	}
+	if envHasValue("AZURE_CLIENT_SECRET") {
+		config.ClientSecret = os.Getenv("AZURE_CLIENT_SECRET")
+	}
+	if envHasValue("AZURE_RESOURCE_GROUP") {
+		config.ResourceGroup = os.Getenv("AZURE_RESOURCE_GROUP")
+	}
+	if envHasValue("AZURE_SUBSCRIPTION_ID") {
+		config.SubscriptionID = os.Getenv("AZURE_SUBSCRIPTION_ID")
+	}
+	if envHasValue("AZURE_TENANT_ID") {
+		config.TenantID = os.Getenv("AZURE_TENANT_ID")
+	}
+	if envHasValue("AZURE_BATCH_POOLID") {
+		config.PoolID = os.Getenv("AZURE_BATCH_POOLID")
+	}
+	if envHasValue("AZURE_BATCH_JOBID") {
+		config.JobID = os.Getenv("AZURE_BATCH_JOBID")
+	}
+	if envHasValue("AZURE_BATCH_ACCOUNT_LOCATION") {
+		config.AccountLocation = os.Getenv("AZURE_BATCH_ACCOUNT_LOCATION")
+	}
+	if envHasValue("AZURE_BATCH_ACCOUNT_NAME") {
+		config.AccountName = os.Getenv("AZURE_BATCH_ACCOUNT_NAME")
+	}
+
+	if config.JobID == "" {
+		hostname, err := os.Hostname()
+		if err != nil {
+			log.Panic(err)
+		}
+		config.JobID = hostname
 	}
 
 	if config.ClientID == "" ||
@@ -120,12 +152,11 @@ func getAzureConfigFromEnv() (Config, error) {
 		config.ResourceGroup == "" ||
 		config.SubscriptionID == "" ||
 		config.PoolID == "" ||
-		config.JobID == "" ||
 		config.TenantID == "" {
-		return config, &ConfigError{CurrentConfig: config, ErrorDetails: "Missing configuration"}
+		return &ConfigError{CurrentConfig: config, ErrorDetails: "Missing configuration"}
 	}
 
-	return config, nil
+	return nil
 }
 
 func getTaskIDForPod(namespace, name string) string {
@@ -135,7 +166,7 @@ func getTaskIDForPod(namespace, name string) string {
 
 // ConfigError - Error when reading configuration values.
 type ConfigError struct {
-	CurrentConfig Config
+	CurrentConfig *Config
 	ErrorDetails  string
 }
 
