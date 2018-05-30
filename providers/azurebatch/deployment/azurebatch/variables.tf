@@ -31,3 +31,13 @@ variable "resource_group_location" {
   description = "Location of the azure resource group."
   default     = "eastus"
 }
+
+variable "low_priority_node_count" {
+  type        = "string"
+  description = "The number of low priority nodes to allocate to the pool"
+}
+
+variable "dedicated_node_count" {
+  type        = "string"
+  description = "The number dedicated nodes to allocate to the pool"
+}

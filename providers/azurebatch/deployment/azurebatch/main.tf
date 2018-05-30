@@ -22,6 +22,8 @@ resource "azurerm_template_deployment" "test" {
     "location"              = "${var.resource_group_location}"
     "poolID"                = "${var.pool_id}"
     "vmSku"                 = "${var.vm_sku}"
+    "lowPriorityNodeCount"  = "${var.low_priority_node_count}"
+    "dedicatedNodeCount"    = "${var.dedicated_node_count}"
   }
 
   deployment_mode = "Incremental"
@@ -42,6 +44,12 @@ resource "azurerm_template_deployment" "test" {
             "metadata": {
                 "description": "GPU Pool ID"
             }
+        },
+        "dedicatedNodeCount": {
+            "type": "string"
+        },
+        "lowPriorityNodeCount": {
+            "type": "string"
         },
         "vmSku": {
             "type": "string"
@@ -118,8 +126,8 @@ resource "azurerm_template_deployment" "test" {
                 },
                 "scaleSettings": {
                     "fixedScale": {
-                        "targetDedicatedNodes": 1,
-                        "targetLowPriorityNodes": 0,
+                        "targetDedicatedNodes": "[parameters('dedicatedNodeCount')]",
+                        "targetLowPriorityNodes": "[parameters('lowPriorityNodeCount')]",
                         "resizeTimeout": "PT15M"
                     }
                 }

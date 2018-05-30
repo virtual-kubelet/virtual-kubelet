@@ -33,6 +33,9 @@ module "azurebatch" {
 
   resource_group_name     = "${azurerm_resource_group.batchrg.name}"
   resource_group_location = "${azurerm_resource_group.batchrg.location}"
+
+  dedicated_node_count    = 1
+  low_priority_node_count = 2
 }
 
 module "virtualkubelet" {

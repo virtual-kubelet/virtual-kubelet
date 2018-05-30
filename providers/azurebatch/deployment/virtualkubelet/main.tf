@@ -74,7 +74,7 @@ resource "kubernetes_deployment" "vkdeployment" {
               value = "${var.azure_batch_account_name}"
             },
             {
-              name  = "AZURE_BATCH_POOL_ID"
+              name  = "AZURE_BATCH_POOLID"
               value = "${var.azure_batch_pool_id}"
             },
             {

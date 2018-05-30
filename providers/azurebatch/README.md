@@ -4,6 +4,8 @@
 
 The Virtual kubelet integration allows you to take advantage of this from within Kubernetes. The primary usecase for the provider is to make it easy to use GPU based workload from normal Kubernetes clusters. For example, creating Kubernetes Jobs which train or execute ML models using Nvidia GPU's or using FFMPEG.
 
+Azure Batch allows for [low priority nodes](https://docs.microsoft.com/en-us/azure/batch/batch-low-pri-vms) which can also help to reduce cost for non-time sensitive workloads.
+
 __The [ACI provider](../azure/README.MD) is the best option unless you're looking to utilise some specific features of Azure Batch__.
 
 ## Status: Experimental
@@ -12,7 +14,7 @@ This provider is currently in the exterimental stages. Contributions welcome!
 
 ## Quick Start
 
-The following Terraform template deploys an AKS cluster with the Virtual Kubelet, Azure Batch Account and GPU enabled Azure Batch pool.
+The following Terraform template deploys an AKS cluster with the Virtual Kubelet, Azure Batch Account and GPU enabled Azure Batch pool. The Batch pool contains 1 Dedicated NC6 Node and 2 Low Priority NC6 Nodes.
 
 1. Setup Terraform for Azure following [this guide here](https://docs.microsoft.com/en-us/azure/virtual-machines/linux/terraform-install-configure)
 2. From the commandline move to the deployment folder `cd ./providers/azurebatch/deployment` then edit `vars.example.tfvars` adding in your Service Principal details
@@ -36,6 +38,10 @@ chmod +x ./terraform-provider-kubernetes
 	Test PASSED
 	Done
 ```
+
+### Tweaking the Quickstart
+
+You can update [main.tf](./main.tf) to increase the number of nodes allocated to the Azure Batch pool or update [./aks/main.tf](./aks/main.tf) to increase the number of agent nodes allocated to your AKS cluster.
 
 ## Advanced Setup
 
