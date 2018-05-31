@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/Azure/go-autorest/autorest"
 	"os"
+	"strings"
 
 	"io/ioutil"
 	"log"
@@ -38,6 +39,7 @@ type Provider struct {
 	addTask            func(batch.TaskAddParameter) (autorest.Response, error)
 	getTask            func(taskID string) (batch.CloudTask, error)
 	deleteTask         func(taskID string) (autorest.Response, error)
+	getFileFromTask    func(taskID, path string) (result batch.ReadCloser, err error)
 	nodeName           string
 	operatingSystem    string
 	cpu                string
@@ -135,10 +137,13 @@ func NewBatchProviderFromConfig(config *Config, rm *manager.ResourceManager, nod
 		return taskClient.Add(p.ctx, config.JobID, task, nil, nil, nil, nil)
 	}
 	p.getTask = func(taskID string) (batch.CloudTask, error) {
-		return taskClient.Get(p.ctx, p.batchConfig.JobID, taskID, "", "", nil, nil, nil, nil, "", "", nil, nil)
+		return taskClient.Get(p.ctx, config.JobID, taskID, "", "", nil, nil, nil, nil, "", "", nil, nil)
 	}
 	p.deleteTask = func(taskID string) (autorest.Response, error) {
 		return taskClient.Delete(p.ctx, config.JobID, taskID, nil, nil, nil, nil, "", "", nil, nil)
+	}
+	p.getFileFromTask = func(taskID, path string) (batch.ReadCloser, error) {
+		return p.fileClient.GetFromTask(p.ctx, config.JobID, taskID, path, nil, nil, nil, nil, "", nil, nil)
 	}
 
 	fileClient := batch.NewFileClientWithBaseURI(batchBaseURL)
@@ -252,21 +257,47 @@ func (p *Provider) GetPod(namespace, name string) (*v1.Pod, error) {
 func (p *Provider) GetContainerLogs(namespace, podName, containerName string, tail int) (string, error) {
 	log.Println("Getting pod logs ....")
 
+	taskID := getTaskIDForPod(namespace, podName)
 	logFileLocation := fmt.Sprintf("wd/%s.log", containerName)
-	// todo: Log file is the json log from docker - deserialise and form at it before returning it.
-	reader, err := p.fileClient.GetFromTask(p.ctx, p.batchConfig.JobID, getTaskIDForPod(namespace, podName), logFileLocation, nil, nil, nil, nil, "", nil, nil)
+	containerLogReader, err := p.getFileFromTask(taskID, logFileLocation)
+
+	if containerLogReader.Response.Response != nil && containerLogReader.StatusCode == http.StatusNotFound {
+		stdoutReader, err := p.getFileFromTask(taskID, "stdout.txt")
+		if err != nil {
+			return "", err
+		}
+		stderrReader, err := p.getFileFromTask(taskID, "stderr.txt")
+		if err != nil {
+			return "", err
+		}
+
+		var builder strings.Builder
+		builderPtr := &builder
+		mustWriteString(builderPtr, "Container still starting....\n")
+		mustWriteString(builderPtr, "Showing startup logs from Azure Batch node instead:\n")
+		mustWriteString(builderPtr, "----- STDOUT -----\n")
+		stdoutBytes, _ := ioutil.ReadAll(*stdoutReader.Value)
+		mustWrite(builderPtr, stdoutBytes)
+		mustWriteString(builderPtr, "\n")
+
+		mustWriteString(builderPtr, "----- STDERR -----\n")
+		stderrBytes, _ := ioutil.ReadAll(*stderrReader.Value)
+		mustWrite(builderPtr, stderrBytes)
+		mustWriteString(builderPtr, "\n")
+
+		return builder.String(), nil
+	}
 
 	if err != nil {
 		return "", err
 	}
 
-	bytes, err := ioutil.ReadAll(*reader.Value)
-
+	result, err := formatLogJSON(containerLogReader)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("Container log formating failed err: %v", err)
 	}
 
-	return string(bytes), nil
+	return result, nil
 }
 
 // GetPods retrieves a list of all pods scheduled to run.

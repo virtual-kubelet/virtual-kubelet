@@ -1,12 +1,14 @@
 package azurebatch
 
 import (
+	"bufio"
 	"context"
 	"crypto/md5"
 	"encoding/json"
 	"fmt"
 	"log"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/Azure/azure-sdk-for-go/services/batch/2017-09-01.6.0/batch"
@@ -14,6 +16,20 @@ import (
 	"github.com/Azure/go-autorest/autorest/adal"
 	"github.com/Azure/go-autorest/autorest/azure"
 )
+
+func mustWriteString(builder *strings.Builder, s string) {
+	_, err := builder.WriteString(s)
+	if err != nil {
+		panic(err)
+	}
+}
+
+func mustWrite(builder *strings.Builder, b []byte) {
+	_, err := builder.Write(b)
+	if err != nil {
+		panic(err)
+	}
+}
 
 // NewServicePrincipalTokenFromCredentials creates a new ServicePrincipalToken using values of the
 // passed credentials map.
@@ -162,6 +178,26 @@ func getAzureConfigFromEnv(config *Config) error {
 func getTaskIDForPod(namespace, name string) string {
 	ID := []byte(fmt.Sprintf("%s-%s", namespace, name))
 	return string(fmt.Sprintf("%x", md5.Sum(ID)))
+}
+
+type jsonLog struct {
+	Log string `json:"log"`
+}
+
+func formatLogJSON(readCloser batch.ReadCloser) (string, error) {
+	//Read line by line as file isn't valid json. Each line is a single valid json object.
+	scanner := bufio.NewScanner(*readCloser.Value)
+	var b strings.Builder
+	for scanner.Scan() {
+		result := jsonLog{}
+		err := json.Unmarshal(scanner.Bytes(), &result)
+		if err != nil {
+			return "", err
+		}
+		mustWriteString(&b, result.Log)
+	}
+
+	return b.String(), nil
 }
 
 // ConfigError - Error when reading configuration values.

@@ -5,6 +5,10 @@ import (
 	"fmt"
 	"github.com/Azure/azure-sdk-for-go/services/batch/2017-09-01.6.0/batch"
 	"github.com/Azure/go-autorest/autorest"
+	"io/ioutil"
+	"net/http"
+	"os"
+	"strings"
 	"testing"
 
 	apiv1 "k8s.io/api/core/v1"
@@ -88,4 +92,74 @@ func Test_createPod_errorResponse(t *testing.T) {
 	if err == nil {
 		t.Error("Expected error but none seen")
 	}
+}
+
+func Test_readLogs_404Response_expectReturnStartupLogs(t *testing.T) {
+	pod := &apiv1.Pod{}
+	pod.Namespace = "bob"
+	pod.Name = "marley"
+	containerName := "sam"
+
+	provider := Provider{}
+	provider.getFileFromTask = func(taskID, path string) (batch.ReadCloser, error) {
+		if path == "wd/sam.log" {
+			// Autorest - Seriously? Can't find a better way to make a 404 :(
+			return batch.ReadCloser{Response: autorest.Response{Response: &http.Response{StatusCode: 404}}}, nil
+		} else if path == "stderr.txt" {
+			response := ioutil.NopCloser(strings.NewReader("stderrResponse"))
+			return batch.ReadCloser{Value: &response}, nil
+		} else if path == "stdout.txt" {
+			response := ioutil.NopCloser(strings.NewReader("stdoutResponse"))
+			return batch.ReadCloser{Value: &response}, nil
+		} else {
+			t.Errorf("Unexpected Filepath: %v", path)
+		}
+
+		return batch.ReadCloser{}, fmt.Errorf("Failed in test mock of getFileFromTask")
+	}
+
+	result, err := provider.GetContainerLogs(pod.Namespace, pod.Name, containerName, 0)
+	if err != nil {
+		t.Errorf("GetContainerLogs return error: %v", err)
+	}
+
+	fmt.Print(result)
+
+	if !strings.Contains(result, "stderrResponse") || !strings.Contains(result, "stdoutResponse") {
+		t.Errorf("Result didn't contain expected content have: %v", result)
+	}
+
+}
+
+func Test_readLogs_JsonResponse_expectFormattedLogs(t *testing.T) {
+	pod := &apiv1.Pod{}
+	pod.Namespace = "bob"
+	pod.Name = "marley"
+	containerName := "sam"
+
+	provider := Provider{}
+	provider.getFileFromTask = func(taskID, path string) (batch.ReadCloser, error) {
+		if path == "wd/sam.log" {
+			fileReader, err := os.Open("./testdata/logresponse.json")
+			if err != nil {
+				t.Error(err)
+			}
+			readCloser := ioutil.NopCloser(fileReader)
+			return batch.ReadCloser{Value: &readCloser, Response: autorest.Response{Response: &http.Response{StatusCode: 200}}}, nil
+		}
+
+		t.Errorf("Unexpected Filepath: %v", path)
+		return batch.ReadCloser{}, fmt.Errorf("Failed in test mock of getFileFromTask")
+	}
+
+	result, err := provider.GetContainerLogs(pod.Namespace, pod.Name, containerName, 0)
+	if err != nil {
+		t.Errorf("GetContainerLogs return error: %v", err)
+	}
+
+	fmt.Print(result)
+	if !strings.Contains(result, "Copy output data from the CUDA device to the host memory") || strings.Contains(result, "{") {
+		t.Errorf("Result didn't contain expected content have or had json: %v", result)
+	}
+
 }
