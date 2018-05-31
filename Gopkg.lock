@@ -128,10 +128,10 @@
   version = "v2.6.2"
 
 [[projects]]
-  name = "github.com/docker/docker"
-  packages = ["api/types/strslice"]
-  revision = "092cba3727bb9b4a2f0e922cd6c0f93ea270e363"
-  version = "v1.13.1"
+  name = "github.com/docker/engine-api"
+  packages = ["types/strslice"]
+  revision = "3d1601b9d2436a70b0dfc045a23f6503d19195df"
+  version = "v0.4.0"
 
 [[projects]]
   name = "github.com/docker/go-connections"
@@ -148,15 +148,6 @@
   packages = ["."]
   revision = "47565b4f722fb6ceae66b95f853feed578a4a51c"
   version = "v0.3.3"
-
-[[projects]]
-  name = "github.com/docker/libcompose"
-  packages = [
-    "utils",
-    "yaml"
-  ]
-  revision = "7c59e343cd9d1f3f5577b5bfb71f6486beb4c006"
-  version = "v0.4.0"
 
 [[projects]]
   branch = "master"
@@ -318,6 +309,7 @@
     "pkg/tarsum",
     "pkg/term",
     "pkg/term/windows",
+    "pkg/urlutil",
     "pkg/version",
     "reference",
     "registry"
@@ -326,9 +318,12 @@
 
 [[projects]]
   name = "github.com/hyperhq/libcompose"
-  packages = ["config"]
-  revision = "47186a61e8fafdbe1cd3955cc041f8eec97e4b6f"
-  version = "v0.2.0"
+  packages = [
+    "config",
+    "utils",
+    "yaml"
+  ]
+  revision = "15d3a105140f968f5d4f62d2f44afd22a24a98fb"
 
 [[projects]]
   name = "github.com/imdario/mergo"
@@ -478,10 +473,9 @@
   revision = "bd5ef7bd5415a7ac448318e64f11a24cd21e594b"
 
 [[projects]]
-  branch = "master"
   name = "github.com/xeipuuv/gojsonschema"
   packages = ["."]
-  revision = "2c8e4be869c17540b336bab0ea18b8d73e6a28b7"
+  revision = "0c8571ac0ce161a5feb57375a9cdf148c98c0f70"
 
 [[projects]]
   branch = "master"
@@ -537,6 +531,12 @@
 
 [[projects]]
   branch = "master"
+  name = "golang.org/x/time"
+  packages = ["rate"]
+  revision = "fbb02b2291d28baffd63558aa44b4b56f178d650"
+
+[[projects]]
+  branch = "master"
   name = "google.golang.org/genproto"
   packages = ["googleapis/rpc/status"]
   revision = "86e600f69ee4704c6efbf6a2a40a5c10700e76c2"
@@ -571,12 +571,6 @@
   ]
   revision = "41344da2231b913fa3d983840a57a6b1b7b631a1"
   version = "v1.12.0"
-
-[[projects]]
-  branch = "master"
-  name = "golang.org/x/time"
-  packages = ["rate"]
-  revision = "fbb02b2291d28baffd63558aa44b4b56f178d650"
 
 [[projects]]
   name = "gopkg.in/inf.v0"
@@ -626,13 +620,13 @@
   revision = "53d615ae3f440f957cb9989d989d597f047262d9"
 
 [[projects]]
-  branch = "master"
   name = "k8s.io/apimachinery"
   packages = [
     "pkg/api/errors",
     "pkg/api/meta",
     "pkg/api/resource",
     "pkg/apis/meta/v1",
+    "pkg/apis/meta/v1/unstructured",
     "pkg/apis/meta/v1beta1",
     "pkg/conversion",
     "pkg/conversion/queryparams",
@@ -664,7 +658,8 @@
     "pkg/watch",
     "third_party/forked/golang/reflect"
   ]
-  revision = "13b73596e4b63e03203e86f6d9c7bcc1b937c62f"
+  revision = "302974c03f7e50f16561ba237db776ab93594ef6"
+  version = "kubernetes-1.10.0"
 
 [[projects]]
   name = "k8s.io/client-go"
@@ -762,6 +757,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "574b1551c18b46c07b8d4a67c305c335c6001f6e9a07b41b15067a0f2aa9352e"
+  inputs-digest = "47c5a9eccbfc0b86065a00ea46cdee219c065b6f4852a5f7bea34df45a82f68a"
   solver-name = "gps-cdcl"
   solver-version = 1

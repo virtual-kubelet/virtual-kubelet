@@ -57,6 +57,7 @@ docker:
 clean:
 	@echo "Clean..."
 	$Q rm -rf bin
+	$Q rm -rf vendor/
 
 
 test:

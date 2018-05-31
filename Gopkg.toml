@@ -21,9 +21,9 @@
 #  version = "2.4.0"
 
 [prune]
-  [[prune.project]]
-    unused-packages = true
-    name = "k8s.io/kubernetes"
+  unused-packages = true
+  non-go = true
+  go-tests = true
 
 [[constraint]]
   branch = "master"
@@ -45,21 +45,11 @@
   name = "github.com/hyperhq/hyper-api"
   revision = "18c77d3f9fe0abebb41b45c12f383ecac46f4ff1"
 
-[[constraint]]
-  name = "github.com/hyperhq/libcompose"
-  revision = "15d3a105140f968f5d4f62d2f44afd22a24a98fb"
 
-[[constraint]]
-  name = "github.com/xeipuuv/gojsonschema"
-  revision = "0c8571ac0ce161a5feb57375a9cdf148c98c0f70"
 
 [[constraint]]
   name = "github.com/gorilla/mux"
   version = "1.6.0"
-
-[[constraint]]
-  name = "k8s.io/client-go"
-  version = "7.0.0"
 
 [[constraint]]
   name = "github.com/hyperhq/hypercli"
@@ -70,10 +60,27 @@
   version = "1.13.38"
 
 [[constraint]]
-  name = "github.com/golang/protobuf"
-  version = "1.1.0"
-
-[[constraint]]
   name = "k8s.io/kubernetes"
   version = "1.10.0"
 
+[[constraint]]
+  name = "k8s.io/apimachinery"
+  version = "kubernetes-1.10.0"
+
+[[constraint]]
+  name = "k8s.io/client-go"
+  version = "7.0.0"
+
+
+# These are required for HyperHQ
+[[override]]
+  name = "github.com/xeipuuv/gojsonschema"
+  revision = "0c8571ac0ce161a5feb57375a9cdf148c98c0f70"
+
+[[override]]
+  name = "github.com/docker/libcompose"
+  version = "0.2.0"
+
+[[override]]
+  name = "github.com/hyperhq/libcompose"
+  revision = "15d3a105140f968f5d4f62d2f44afd22a24a98fb"
