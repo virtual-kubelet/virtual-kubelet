@@ -273,7 +273,7 @@ func (s *Server) reconcile() {
 
 	for _, pod := range providerPods {
 		// Delete pods that don't exist in Kubernetes
-		if p := s.resourceManager.GetPod(pod.Name); p == nil {
+		if p := s.resourceManager.GetPod(pod.Namespace, pod.Name); p == nil {
 			if err := s.deletePod(pod); err != nil {
 				log.Printf("Error deleting pod '%s': %s\n", pod.Name, err)
 				continue
