@@ -217,3 +217,4 @@ Virtual Kubelet follows the [CNCF Code of Conduct](https://github.com/cncf/found
 Sign the [CNCF CLA](https://github.com/kubernetes/community/blob/master/CLA.md) to be able to make Pull Requests to this repo. 
 
 Weekly Virtual Kubelet Architecture meetings are held at 3pm PST [here](https://zoom.us/j/5337610301). Our google drive with design specifications and meeting notes are [here](https://drive.google.com/drive/folders/19Ndu11WBCCBDowo9CrrGUHoIfd2L8Ueg?usp=sharing).
+
