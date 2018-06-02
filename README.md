@@ -218,5 +218,3 @@ Sign the [CNCF CLA](https://github.com/kubernetes/community/blob/master/CLA.md) 
 
 Weekly Virtual Kubelet Architecture meetings are held at 3pm PST [here](https://zoom.us/j/5337610301). Our google drive with design specifications and meeting notes are [here](https://drive.google.com/drive/folders/19Ndu11WBCCBDowo9CrrGUHoIfd2L8Ueg?usp=sharing).
 
-
-
