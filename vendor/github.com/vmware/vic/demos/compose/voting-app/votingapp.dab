@@ -1,0 +1,69 @@
+{
+  "Services": {
+    "db": {
+      "Env": [
+        "PGDATA=/var/lib/postgresql/data/data"
+      ], 
+      "Image": "postgres@sha256:9db811348585075eddb7b6938fa65c0236fe8e4f7feaf3c2890a3c4b7f4c9bfc", 
+      "Networks": [
+        "default"
+      ]
+    }, 
+    "redis": {
+      "Image": "redis@sha256:f1ed3708f538b537eb9c2a7dd50dc90a706f7debd7e1196c9264edeea521a86d", 
+      "Networks": [
+        "default"
+      ], 
+      "Ports": [
+        {
+          "Port": 6379, 
+          "Protocol": "tcp"
+        }
+      ]
+    }, 
+    "result": {
+      "Args": [
+        "nodemon", 
+        "--debug", 
+        "server.js"
+      ], 
+      "Image": "victest/vote-result@sha256:413fcc5d11e4426d9e5ec512056aeeb7fa83acc61eec2ed6346e8d30d56b7ae7", 
+      "Networks": [
+        "default"
+      ], 
+      "Ports": [
+        {
+          "Port": 80, 
+          "Protocol": "tcp"
+        }, 
+        {
+          "Port": 5858, 
+          "Protocol": "tcp"
+        }
+      ]
+    }, 
+    "vote": {
+      "Args": [
+        "python", 
+        "app.py"
+      ], 
+      "Image": "victest/vote@sha256:13037f3373a3b10dfeac4f323b38a215d9665d88d72b1bb5fe7baef83c3b34ad", 
+      "Networks": [
+        "default"
+      ], 
+      "Ports": [
+        {
+          "Port": 80, 
+          "Protocol": "tcp"
+        }
+      ]
+    }, 
+    "worker": {
+      "Image": "victest/vote-worker@sha256:70cc69d1e91b8c23bbfd7515572c804c8b954c227da0e55e1131c367929f79dd", 
+      "Networks": [
+        "default"
+      ]
+    }
+  }, 
+  "Version": "0.1"
+}

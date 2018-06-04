@@ -1,0 +1,50 @@
+.vagrant/
+.vscode/
+.cover/
+bin/
+binary/
+vic_binaries*.tar.gz
+secrets.yml
+test_secrets.yml
+nightly_ui_tests_secrets.yml
+secrets-e2e.yml
+vic-ci-logs.key
+install-*.tar.gz
+*.log
+log.html
+report.html
+*.xml
+*.gas
+*.pyc
+package.list
+*container-logs.zip
+*certs.zip
+integration_logs*
+vmware-ovftool
+
+# generally a bad idea to check certificates into repos - whitelist if needed
+**/*.pem
+
+lib/apiservers/portlayer/cmd
+lib/apiservers/portlayer/restapi/*.go
+lib/apiservers/portlayer/restapi/operations
+!lib/apiservers/portlayer/restapi/configure_port_layer.go
+lib/config/dynamic/admiral/client
+lib/config/dynamic/admiral/models
+lib/config/dynamic/admiral/operations
+
+lib/apiservers/service/models
+lib/apiservers/service/restapi/*.go
+lib/apiservers/service/restapi/operations
+!lib/apiservers/service/restapi/configure_vic_machine.go
+
+tests/.project
+# go test binaries
+*.test
+
+# Intellij files
+*.iml
+
+# Eclipse files
+.project
+

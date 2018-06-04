@@ -1,0 +1,3998 @@
+{
+	"swagger": "2.0",
+	"basePath": "/",
+	"info": {
+		"description": "Port Layer API",
+		"title": "Port Layer API",
+		"version": "v0.0.1"
+	},
+	"produces": [
+		"application/json"
+	],
+	"consumes": [
+		"application/json"
+	],
+	"schemes": [
+		"http"
+	],
+	"paths": {
+		"/_ping": {
+			"get": {
+				"description": "Pings the server to see if it's running",
+				"summary": "ping the portlayer server",
+				"tags": [
+					"misc"
+				],
+				"operationId": "Ping",
+				"produces": [
+					"text/plain"
+				],
+				"responses": {
+					"200": {
+						"description": "OK",
+						"schema": {
+							"type": "string"
+						}
+					}
+				}
+			}
+		},
+		"/vch/info": {
+			"get": {
+				"description": "Gets vital information about the vch",
+				"tags": [
+					"misc"
+				],
+				"operationId": "GetVCHInfo",
+				"consumes": [
+					"application/json"
+				],
+				"produces": [
+					"application/json"
+				],
+				"responses": {
+					"200": {
+						"description": "retrieval success",
+						"schema": {
+							"$ref": "#/definitions/VCHInfo"
+						}
+					}
+				}
+			}
+		},
+		"/kv/{key}": {
+			"get": {
+				"description": "Gets value from k/v store",
+				"tags": [
+					"kv"
+				],
+				"operationId": "GetValue",
+				"consumes": [
+					"application/json"
+				],
+				"produces": [
+					"application/json"
+				],
+				"parameters": [
+					{
+						"name": "key",
+						"type": "string",
+						"in": "path",
+						"required": true
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "OK",
+						"schema": {
+							"$ref": "#/definitions/KeyValue"
+						}
+					},
+					"404": {
+						"description": "Not found"
+					},
+					"500": {
+						"description": "error",
+						"schema": {
+							"$ref": "#/definitions/Error"
+						}
+					}
+				}
+			},
+			"delete": {
+				"description": "deletes entry in k/v store",
+				"tags": [
+					"kv"
+				],
+				"operationId": "DeleteValue",
+				"consumes": [
+					"application/json"
+				],
+				"produces": [
+					"application/json"
+				],
+				"parameters": [
+					{
+						"name": "key",
+						"type": "string",
+						"in": "path",
+						"required": true
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "OK"
+					},
+					"404": {
+						"description": "Not found"
+					},
+					"500": {
+						"description": "error",
+						"schema": {
+							"$ref": "#/definitions/Error"
+						}
+					}
+				}
+			},
+			"put": {
+				"description": "Adds / updates value in k/v store",
+				"tags": [
+					"kv"
+				],
+				"operationId": "PutValue",
+				"consumes": [
+					"application/json"
+				],
+				"produces": [
+					"application/json"
+				],
+				"parameters": [
+					{
+						"name": "key",
+						"type": "string",
+						"in": "path",
+						"required": true
+					},
+					{
+						"name": "key_value",
+						"required": true,
+						"in": "body",
+						"schema": {
+							"$ref": "#/definitions/KeyValue"
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "OK"
+					},
+					"500": {
+						"description": "error",
+						"schema": {
+							"$ref": "#/definitions/Error"
+						}
+					}
+				}
+			}
+		},
+		"/archive": {
+			"get": {
+				"description": "Exports a tar archive from the target device.",
+				"summary": "Export tar archive from supplied target",
+				"tags": [
+					"storage"
+				],
+				"produces": [
+					"application/x-tar"
+				],
+				"operationId": "ExportArchive",
+				"parameters": [
+					{
+						"name": "store",
+						"in": "query",
+						"required": true,
+						"type": "string",
+						"x-nullable": false
+					},
+					{
+						"name": "ancestorStore",
+						"in": "query",
+						"required": false,
+						"type": "string",
+						"x-nullable": false
+					},
+					{
+						"name": "deviceID",
+						"in": "query",
+						"required": true,
+						"type": "string",
+						"x-nullable": false
+					},
+					{
+						"name": "ancestor",
+						"in": "query",
+						"required": false,
+						"type": "string",
+						"x-nullable": false
+					},
+					{
+						"name": "data",
+						"in": "query",
+						"required": true,
+						"type": "boolean",
+						"x-nullable": false
+					},
+					{
+						"name": "filterSpec",
+						"in": "query",
+						"required": false,
+						"type": "string",
+						"x-nullable": true
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "OK",
+						"schema": {
+							"format": "binary"
+						}
+					},
+					"404": {
+						"description": "Supplied target not found"
+					},
+					"422": {
+						"description": "Format error in supplied filter or archive"
+					},
+					"423": {
+						"description": "Device or resource is locked"
+					},
+					"500": {
+						"description": "failed to export tar archive from target"
+					},
+					"default": {
+						"description": "error"
+					}
+				}
+			},
+			"post": {
+				"description": "Imports a tar stream to a device at the target path",
+				"summary": "Import tar stream to supplied target",
+				"tags": [
+					"storage"
+				],
+				"consumes": [
+					"application/x-tar"
+				],
+				"operationId": "ImportArchive",
+				"parameters": [
+					{
+						"name": "store",
+						"in": "query",
+						"required": true,
+						"type": "string",
+						"x-nullable": false
+					},
+					{
+						"name": "deviceID",
+						"in": "query",
+						"required": true,
+						"type": "string",
+						"x-nullable": false
+					},
+					{
+						"name": "filterSpec",
+						"in": "query",
+						"required": false,
+						"type": "string",
+						"x-nullable": true
+					},
+					{
+						"name": "Archive",
+						"required": true,
+						"in": "body",
+						"schema": {
+							"type": "string",
+							"format": "binary"
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "OK"
+					},
+					"422": {
+						"description": "Format error in supplied filter or archive"
+					},
+					"404": {
+						"description": "Supplied target not found"
+					},
+					"409": {
+						"description": "Unexpected resource conflict"
+					},
+					"423": {
+						"description": "Device or resource is locked"
+					},
+					"500": {
+						"description": "failed to export tar archive from target"
+					},
+					"default": {
+						"description": "error"
+					}
+				}
+			},
+			"head": {
+				"description": "Fetches filesystem stats on the device id at the specified path",
+				"operationId": "StatPath",
+				"tags": [
+					"storage"
+				],
+				"parameters": [
+					{
+						"name": "store",
+						"in": "query",
+						"required": true,
+						"type": "string",
+						"x-nullable": false
+					},
+					{
+						"name": "deviceID",
+						"in": "query",
+						"required": true,
+						"type": "string",
+						"x-nullable": false
+					},
+					{
+						"name": "filterSpec",
+						"in": "query",
+						"required": false,
+						"type": "string",
+						"x-nullable": true
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "OK",
+						"headers": {
+							"name": {
+								"type": "string",
+								"x-nullable": false
+							},
+							"mode": {
+								"type": "integer",
+								"format": "uint32"
+							},
+							"size": {
+								"type": "integer",
+								"format": "int64"
+							},
+							"linkTarget": {
+								"type": "string",
+								"x-nullable": false
+							},
+							"modTime": {
+								"type": "string",
+								"x-nullable": false
+							}
+						}
+					},
+					"422": {
+						"description": "Format error in supplied filter or archive"
+					},
+					"404": {
+						"description": "Supplied target not found"
+					},
+					"500": {
+						"description": "failed to export tar archive from target"
+					},
+					"default": {
+						"description": "error"
+					}
+				}
+			}
+		},
+		"/storage": {
+			"post": {
+				"description": "Creates a location to store images",
+				"summary": "creates an image store",
+				"tags": [
+					"storage"
+				],
+				"operationId": "CreateImageStore",
+				"parameters": [
+					{
+						"name": "body",
+						"in": "body",
+						"schema": {
+							"$ref": "#/definitions/ImageStore"
+						}
+					}
+				],
+				"responses": {
+					"201": {
+						"description": "Created",
+						"schema": {
+							"$ref": "#/definitions/StoreUrl"
+						}
+					},
+					"409": {
+						"description": "An image store with that name already exists.",
+						"schema": {
+							"$ref": "#/definitions/Error"
+						}
+					},
+					"default": {
+						"description": "error",
+						"schema": {
+							"$ref": "#/definitions/Error"
+						}
+					}
+				}
+			}
+		},
+		"/storage/{store_name}": {
+			"get": {
+				"description": "Retrieves a list of images given a list of image IDs, or all images in the image store if no param is passed.",
+				"summary": "Retrieve a list of images in an image store",
+				"tags": [
+					"storage"
+				],
+				"operationId": "ListImages",
+				"parameters": [
+					{
+						"name": "store_name",
+						"type": "string",
+						"in": "path",
+						"required": true
+					},
+					{
+						"name": "ids",
+						"type": "array",
+						"in": "query",
+						"items": {
+							"type": "string",
+							"collectionFormat": "csv"
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "OK",
+						"schema": {
+							"type": "array",
+							"items": {
+								"$ref": "#/definitions/Image"
+							}
+						}
+					},
+					"404": {
+						"description": "Not found",
+						"schema": {
+							"$ref": "#/definitions/Error"
+						}
+					},
+					"default": {
+						"description": "error",
+						"schema": {
+							"$ref": "#/definitions/Error"
+						}
+					}
+				}
+			},
+			"post": {
+				"description": "Creates a new image layer in an image store",
+				"summary": "Creates a new image layer",
+				"tags": [
+					"storage"
+				],
+				"operationId": "WriteImage",
+				"consumes": [
+					"application/octet-stream"
+				],
+				"parameters": [
+					{
+						"name": "image_file",
+						"in": "body",
+						"schema": {
+							"type": "string",
+							"format": "binary"
+						}
+					},
+					{
+						"name": "store_name",
+						"type": "string",
+						"in": "path",
+						"required": true
+					},
+					{
+						"name": "image_id",
+						"type": "string",
+						"in": "query",
+						"required": true
+					},
+					{
+						"name": "parent_id",
+						"type": "string",
+						"in": "query",
+						"required": true
+					},
+					{
+						"name": "sum",
+						"type": "string",
+						"in": "query",
+						"required": true
+					},
+					{
+						"name": "metadatakey",
+						"type": "string",
+						"x-nullable": false,
+						"in": "query"
+					},
+					{
+						"name": "metadataval",
+						"type": "string",
+						"x-nullable": false,
+						"in": "query"
+					}
+				],
+				"responses": {
+					"201": {
+						"description": "Created",
+						"schema": {
+							"$ref": "#/definitions/Image"
+						}
+					},
+					"default": {
+						"description": "error",
+						"schema": {
+							"$ref": "#/definitions/Error"
+						}
+					}
+				}
+			}
+		},
+		"/storage/{store_name}/info/{id}": {
+			"get": {
+				"description": "Inspect an image by id in an image store",
+				"summary": "Inspect an image",
+				"tags": [
+					"storage"
+				],
+				"operationId": "GetImage",
+				"parameters": [
+					{
+						"name": "store_name",
+						"type": "string",
+						"in": "path",
+						"required": true
+					},
+					{
+						"name": "id",
+						"type": "string",
+						"in": "path",
+						"required": true
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "OK",
+						"schema": {
+							"$ref": "#/definitions/Image"
+						}
+					},
+					"404": {
+						"description": "Not found",
+						"schema": {
+							"$ref": "#/definitions/Error"
+						}
+					},
+					"default": {
+						"description": "error",
+						"schema": {
+							"$ref": "#/definitions/Error"
+						}
+					}
+				}
+			},
+			"post": {
+				"description": "Join an image to a container",
+				"operationId": "ImageJoin",
+				"tags": [
+					"storage"
+				],
+				"consumes": [
+					"application/json",
+					"application/octet-stream"
+				],
+				"produces": [
+					"application/json"
+				],
+				"parameters": [
+					{
+						"name": "store_name",
+						"type": "string",
+						"in": "path",
+						"required": true
+					},
+					{
+						"name": "id",
+						"required": true,
+						"type": "string",
+						"in": "path"
+					},
+					{
+						"name": "config",
+						"in": "body",
+						"required": true,
+						"schema": {
+							"$ref": "#/definitions/ImageJoinConfig"
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "OK",
+						"schema": {
+							"$ref": "#/definitions/ImageJoinResponse"
+						}
+					},
+					"404": {
+						"description": "Not found",
+						"schema": {
+							"$ref": "#/definitions/Error"
+						}
+					},
+					"500": {
+						"description": "ServerError",
+						"schema": {
+							"$ref": "#/definitions/Error"
+						}
+					},
+					"default": {
+						"description": "error",
+						"schema": {
+							"$ref": "#/definitions/Error"
+						}
+					}
+				}
+			},			
+			"delete": {
+				"description": "Delete an image by id in an image store",
+				"summary": "Delete an image",
+				"tags": [
+					"storage"
+				],
+				"operationId": "DeleteImage",
+				"parameters": [
+					{
+						"name": "store_name",
+						"type": "string",
+						"in": "path",
+						"required": true
+					},
+					{
+						"name": "id",
+						"type": "string",
+						"in": "path",
+						"required": true
+					},
+					{
+						"name": "keepNodes",
+						"type": "array",
+						"required": true,
+						"in": "query",
+						"items": {
+							"type": "string",
+							"collectionFormat": "csv"
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "OK",
+						"schema": {
+							"type": "array",
+							"items": {
+								"$ref": "#/definitions/Image"
+							}
+						}
+					},
+					"404": {
+						"description": "Not found",
+						"schema": {
+							"$ref": "#/definitions/Error"
+						}
+					},
+					"423": {
+						"description": "In use",
+						"schema": {
+							"$ref": "#/definitions/Error"
+						}
+					},
+					"default": {
+						"description": "error",
+						"schema": {
+							"$ref": "#/definitions/Error"
+						}
+					}
+				}
+			}
+		},
+		"/storage/{store_name}/tar/{id}": {
+			"get": {
+				"description": "Get an image by id in an image store as a tar file",
+				"summary": "Get an image as a tar file",
+				"tags": [
+					"storage"
+				],
+				"operationId": "GetImageTar",
+				"parameters": [
+					{
+						"name": "store_name",
+						"type": "string",
+						"in": "path",
+						"required": true
+					},
+					{
+						"name": "id",
+						"type": "string",
+						"in": "path",
+						"required": true
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "OK",
+						"schema": {
+							"type": "string",
+							"format": "binary"
+						}
+					},
+					"404": {
+						"description": "Not found"
+					},
+					"default": {
+						"description": "error",
+						"schema": {
+							"$ref": "#/definitions/Error"
+						}
+					}
+				}
+			}
+		},
+		"/storage/volumestores": {
+			"get": {
+				"description": "Get a list of available volume store locations",
+				"operationId": "VolumeStoresList",
+				"tags": [
+					"storage"
+				],
+				"consumes": [
+					"application/json",
+					"application/octet-stream"
+				],
+				"produces": [
+					"application/json"
+				],
+				"responses": {
+					"200": {
+						"description": "OK",
+						"schema": {
+							"$ref": "#/definitions/VolumeStoresListResponse"
+						}
+					},
+					"404": {
+						"description": "Not found",
+						"schema": {
+							"$ref": "#/definitions/Error"
+						}
+					},
+					"500": {
+						"description": "error",
+						"schema": {
+							"$ref": "#/definitions/Error"
+						}
+					}
+				}
+			}
+		},
+		"/storage/volumes": {
+			"get": {
+				"description": "Get a list of available volumes",
+				"operationId": "ListVolumes",
+				"tags": [
+					"storage"
+				],
+				"consumes": [
+					"application/json",
+					"application/octet-stream"
+				],
+				"produces": [
+					"application/json"
+				],
+				"parameters": [
+					{
+						"name": "filterString",
+						"type": "string",
+						"in": "query",
+						"required": false
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "OK",
+						"schema": {
+							"type": "array",
+							"items": {
+								"$ref": "#/definitions/VolumeResponse"
+							}
+						}
+					},
+					"500": {
+						"description": "Not found",
+						"schema": {
+							"$ref": "#/definitions/Error"
+						}
+					},
+					"default": {
+						"description": "error",
+						"schema": {
+							"$ref": "#/definitions/Error"
+						}
+					}
+				}
+			},
+			"post": {
+				"description": "Create a volume",
+				"operationId": "CreateVolume",
+				"summary": "Creates a Volume with metadata that is provided from the personality",
+				"tags": [
+					"storage"
+				],
+				"consumes": [
+					"application/json",
+					"application/octet-stream"
+				],
+				"produces": [
+					"application/json"
+				],
+				"parameters": [
+					{
+						"name": "VolumeRequest",
+						"required": true,
+						"in": "body",
+						"schema": {
+							"$ref": "#/definitions/VolumeRequest"
+						}
+					}
+				],
+				"responses": {
+					"201": {
+						"description": "Created",
+						"schema": {
+							"$ref": "#/definitions/VolumeResponse"
+						}
+					},
+					"409": {
+						"description": "Volume already exists by that ID",
+						"schema": {
+							"$ref": "#/definitions/Error"
+						}
+					},
+					"404": {
+						"description": "VolumeStore Does not Exist",
+						"schema": {
+							"$ref": "#/definitions/Error"
+						}
+					},
+					"500": {
+						"description": "Error",
+						"schema": {
+							"$ref": "#/definitions/Error"
+						}
+					},
+					"default": {
+						"description": "error",
+						"schema": {
+							"$ref": "#/definitions/Error"
+						}
+					}
+				}
+			}
+		},
+		"/storage/volumes/{name}": {
+			"get": {
+				"description": "Get info about a volume",
+				"operationId": "GetVolume",
+				"tags": [
+					"storage"
+				],
+				"consumes": [
+					"application/json",
+					"application/octet-stream"
+				],
+				"produces": [
+					"application/json"
+				],
+				"parameters": [
+					{
+						"name": "name",
+						"required": true,
+						"in": "path",
+						"type": "string"
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "OK",
+						"schema": {
+							"$ref": "#/definitions/VolumeResponse"
+						}
+					},
+					"404": {
+						"description": "Volume not found",
+						"schema": {
+							"$ref": "#/definitions/Error"
+						}
+					}
+				}
+			},
+			"delete": {
+				"summary": "Remove a volume",
+				"tags": [
+					"storage"
+				],
+				"operationId": "RemoveVolume",
+				"parameters": [
+					{
+						"name": "name",
+						"type": "string",
+						"in": "path",
+						"required": true
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "Volume successfully removed",
+						"schema": {
+							"$ref": "#/definitions/Error"
+						}
+					},
+					"404": {
+						"description": "Volume not found",
+						"schema": {
+							"$ref": "#/definitions/Error"
+						}
+					},
+					"409": {
+						"description": "Volume in use",
+						"schema": {
+							"$ref": "#/definitions/Error"
+						}
+					},
+					"500": {
+						"description": "Server Error",
+						"schema": {
+							"$ref": "#/definitions/Error"
+						}
+					}
+				}
+			},
+			"post": {
+				"description": "Attach a volume to a container",
+				"operationId": "VolumeJoin",
+				"tags": [
+					"storage"
+				],
+				"consumes": [
+					"application/json",
+					"application/octet-stream"
+				],
+				"produces": [
+					"application/json"
+				],
+				"parameters": [
+					{
+						"name": "name",
+						"required": true,
+						"type": "string",
+						"in": "path"
+					},
+					{
+						"name": "JoinArgs",
+						"in": "body",
+						"required": true,
+						"schema": {
+							"$ref": "#/definitions/VolumeJoinConfig"
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "OK",
+						"schema": {
+							"type": "string"
+						}
+					},
+					"404": {
+						"description": "Volume not found",
+						"schema": {
+							"$ref": "#/definitions/Error"
+						}
+					},
+					"500": {
+						"description": "ServerError",
+						"schema": {
+							"$ref": "#/definitions/Error"
+						}
+					},
+					"default": {
+						"description": "error",
+						"schema": {
+							"$ref": "#/definitions/Error"
+						}
+					}
+				}
+			}
+		},
+		"/scopes": {
+			"post": {
+				"summary": "Create a new scope",
+				"tags": [
+					"scopes"
+				],
+				"operationId": "CreateScope",
+				"parameters": [
+					{
+						"name": "config",
+						"in": "body",
+						"schema": {
+							"$ref": "#/definitions/ScopeConfig"
+						}
+					}
+				],
+				"responses": {
+					"201": {
+						"description": "Created",
+						"schema": {
+							"$ref": "#/definitions/ScopeConfig"
+						}
+					},
+					"409": {
+						"description": "A scope with that name exists.",
+						"schema": {
+							"$ref": "#/definitions/Error"
+						}
+					},
+					"default": {
+						"description": "error",
+						"schema": {
+							"$ref": "#/definitions/Error"
+						}
+					}
+				}
+			},
+			"get": {
+				"tags": [
+					"scopes"
+				],
+				"operationId": "ListAll",
+				"responses": {
+					"200": {
+						"description": "OK",
+						"schema": {
+							"type": "array",
+							"items": {
+								"$ref": "#/definitions/ScopeConfig"
+							}
+						}
+					},
+					"default": {
+						"description": "error",
+						"schema": {
+							"$ref": "#/definitions/Error"
+						}
+					}
+				}
+			}
+		},
+		"/scopes/{idName}": {
+			"get": {
+				"tags": [
+					"scopes"
+				],
+				"operationId": "List",
+				"parameters": [
+					{
+						"name": "idName",
+						"type": "string",
+						"in": "path",
+						"required": true
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "OK",
+						"schema": {
+							"type": "array",
+							"items": {
+								"$ref": "#/definitions/ScopeConfig"
+							}
+						}
+					},
+					"404": {
+						"description": "Not found",
+						"schema": {
+							"$ref": "#/definitions/Error"
+						}
+					},
+					"default": {
+						"description": "error",
+						"schema": {
+							"$ref": "#/definitions/Error"
+						}
+					}
+				}
+			},
+			"delete": {
+				"tags": [
+					"scopes"
+				],
+				"operationId": "DeleteScope",
+				"parameters": [
+					{
+						"name": "idName",
+						"type": "string",
+						"in": "path",
+						"required": true
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "OK"
+					},
+					"404": {
+						"description": "Not found",
+						"schema": {
+							"$ref": "#/definitions/Error"
+						}
+					},
+					"500": {
+						"description": "Internal server error",
+						"schema": {
+							"$ref": "#/definitions/Error"
+						}
+					}
+				}
+			}
+		},
+		"/scopes/{scope}/containers": {
+			"post": {
+				"description": "Add a container to scopes modifying the container VM's config as necessary",
+				"tags": [
+					"scopes"
+				],
+				"operationId": "AddContainer",
+				"parameters": [
+					{
+						"name": "scope",
+						"required": true,
+						"in": "path",
+						"type": "string"
+					},
+					{
+						"name": "config",
+						"in": "body",
+						"schema": {
+							"$ref": "#/definitions/ScopesAddContainerConfig"
+						},
+						"required": true
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "OK",
+						"schema": {
+							"type": "string"
+						}
+					},
+					"404": {
+						"description": "Not found",
+						"schema": {
+							"$ref": "#/definitions/Error"
+						}
+					},
+					"500": {
+						"description": "error",
+						"schema": {
+							"$ref": "#/definitions/Error"
+						}
+					}
+				}
+			}
+		},
+		"/scopes/{scope}/containers/{handle}": {
+			"delete": {
+				"description": "Remove a container from a scope",
+				"tags": [
+					"scopes"
+				],
+				"operationId": "RemoveContainer",
+				"parameters": [
+					{
+						"name": "handle",
+						"required": true,
+						"in": "path",
+						"type": "string"
+					},
+					{
+						"name": "scope",
+						"in": "path",
+						"required": true,
+						"type": "string"
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "OK",
+						"schema": {
+							"type": "string"
+						}
+					},
+					"404": {
+						"description": "Not found",
+						"schema": {
+							"$ref": "#/definitions/Error"
+						}
+					},
+					"500": {
+						"description": "error",
+						"schema": {
+							"$ref": "#/definitions/Error"
+						}
+					}
+				}
+			}
+		},
+		"/scopes/containers/{handleOrId}": {
+			"get": {
+				"tags": [
+					"scopes"
+				],
+				"description": "Get a list of the endpoints for a container",
+				"operationId": "GetContainerEndpoints",
+				"consumes": [
+					"application/octet-stream",
+					"application/json"
+				],
+				"produces": [
+					"application/json"
+				],
+				"parameters": [
+					{
+						"name": "handleOrId",
+						"required": true,
+						"in": "path",
+						"type": "string"
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "OK",
+						"schema": {
+							"type": "array",
+							"items": {
+								"$ref": "#/definitions/EndpointConfig"
+							}
+						}
+					},
+					"404": {
+						"description": "Not found",
+						"schema": {
+							"$ref": "#/definitions/Error"
+						}
+					},
+					"500": {
+						"description": "error",
+						"schema": {
+							"$ref": "#/definitions/Error"
+						}
+					}
+				}
+			}
+		},
+		"/scopes/containers/{handle}/binding": {
+			"post": {
+				"tags": [
+					"scopes"
+				],
+				"description": "Perform scope initialization for each of the scopes the container belongs to. Network initialization may include, for example, assigning addresses on a scope.",
+				"operationId": "BindContainer",
+				"consumes": [
+					"application/octet-stream",
+					"application/json"
+				],
+				"produces": [
+					"application/json"
+				],
+				"parameters": [
+					{
+						"name": "handle",
+						"required": true,
+						"in": "path",
+						"type": "string"
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "OK",
+						"schema": {
+							"$ref": "#/definitions/BindContainerResponse"
+						}
+					},
+					"404": {
+						"description": "Not found",
+						"schema": {
+							"$ref": "#/definitions/Error"
+						}
+					},
+					"500": {
+						"description": "error",
+						"schema": {
+							"$ref": "#/definitions/Error"
+						}
+					}
+				}
+			},
+			"delete": {
+				"tags": [
+					"scopes"
+				],
+				"operationId": "UnbindContainer",
+				"consumes": [
+					"application/octet-stream",
+					"application/json"
+				],
+				"produces": [
+					"application/json"
+				],
+				"parameters": [
+					{
+						"name": "handle",
+						"required": true,
+						"in": "path",
+						"type": "string"
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "OK",
+						"schema": {
+							"$ref": "#/definitions/UnbindContainerResponse"
+						}
+					},
+					"404": {
+						"description": "Not found",
+						"schema": {
+							"$ref": "#/definitions/Error"
+						}
+					},
+					"500": {
+						"description": "error",
+						"schema": {
+							"$ref": "#/definitions/Error"
+						}
+					}
+				}
+			}
+		},
+		"/events": {
+			"get": {
+				"description": "Gets portlayer events",
+				"summary": "Gets portlayer events",
+				"operationId": "GetEvents",
+				"tags": [
+					"events"
+				],
+				"consumes": [
+					"application/octet-stream"
+				],
+				"produces": [
+					"application/octet-stream"
+				],
+				"parameters": [],
+				"responses": {
+					"200": {
+						"description": "OK",
+						"schema": {
+							"format": "binary"
+						}
+					},
+					"500": {
+						"description": "Failed to get events"
+					}
+				}
+			}
+		},
+		"/containers": {
+			"post": {
+				"description": "Initiates a container create operation",
+				"summary": "Initiates a container create operation",
+				"operationId": "Create",
+				"tags": [
+					"containers"
+				],
+				"consumes": [
+					"application/json",
+					"application/octet-stream"
+				],
+				"produces": [
+					"application/json"
+				],
+				"parameters": [
+					{
+						"name": "name",
+						"in": "query",
+						"type": "string",
+						"pattern": "/?[a-zA-Z0-9_-]+"
+					},
+					{
+						"name": "createConfig",
+						"in": "body",
+						"required": true,
+						"schema": {
+							"$ref": "#/definitions/ContainerCreateConfig"
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "OK",
+						"schema": {
+							"$ref": "#/definitions/ContainerCreatedInfo"
+						}
+					},
+					"404": {
+						"description": "Create failed",
+						"schema": {
+							"$ref": "#/definitions/Error"
+						}
+					}
+				}
+			}
+		},
+		"/containers/info/{id}": {
+			"get": {
+				"description": "Gets information about a container by id",
+				"operationId": "GetContainerInfo",
+				"tags": [
+					"containers"
+				],
+				"consumes": [
+					"application/octet-stream"
+				],
+				"produces": [
+					"application/json"
+				],
+				"parameters": [
+					{
+						"name": "id",
+						"required": true,
+						"in": "path",
+						"type": "string"
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "OK",
+						"schema": {
+							"$ref": "#/definitions/ContainerInfo"
+						}
+					},
+					"404": {
+						"description": "not found",
+						"schema": {
+							"$ref": "#/definitions/Error"
+						}
+					},
+					"500": {
+						"description": "server error",
+						"schema": {
+							"$ref": "#/definitions/Error"
+						}
+					}
+				}
+			}
+		},
+		"/containers/list": {
+			"get": {
+				"description": "Gets a list of all containers",
+				"operationId": "GetContainerList",
+				"tags": [
+					"containers"
+				],
+				"consumes": [
+					"application/octet-stream"
+				],
+				"produces": [
+					"application/json"
+				],
+				"parameters": [
+					{
+						"name": "all",
+						"required": false,
+						"in": "query",
+						"type": "boolean"
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "OK",
+						"schema": {
+							"type": "array",
+							"items": {
+								"$ref": "#/definitions/ContainerInfo"
+							}
+						}
+					},
+					"500": {
+						"description": "server error",
+						"schema": {
+							"$ref": "#/definitions/Error"
+						}
+					}
+				}
+			}
+		},
+		"/containers/{id}": {
+			"get": {
+				"description": "Get a container handle",
+				"operationId": "Get",
+				"tags": [
+					"containers"
+				],
+				"consumes": [
+					"application/json",
+					"application/octet-stream"
+				],
+				"produces": [
+					"application/json"
+				],
+				"parameters": [
+					{
+						"name": "id",
+						"required": true,
+						"in": "path",
+						"type": "string"
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "OK",
+						"schema": {
+							"type": "string"
+						}
+					},
+					"404": {
+						"description": "not found",
+						"schema": {
+							"$ref": "#/definitions/Error"
+						}
+					},
+					"default": {
+						"description": "Error",
+						"schema": {
+							"$ref": "#/definitions/Error"
+						}
+					}
+				}
+			},
+			"delete": {
+				"description": "Remove a container from existence",
+				"operationId": "ContainerRemove",
+				"tags": [
+					"containers"
+				],
+				"consumes": [
+					"application/octet-stream"
+				],
+				"parameters": [
+					{
+						"name": "id",
+						"required": true,
+						"in": "path",
+						"type": "string"
+					},
+					{
+						"name": "force",
+						"in": "query",
+						"type": "boolean",
+						"default": false
+					},
+					{
+						"name": "v",
+						"in": "query",
+						"type": "boolean",
+						"default": false
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "OK"
+					},
+					"400": {
+						"description": "bad parameter"
+					},
+					"404": {
+						"description": "no such container"
+					},
+					"409": {
+						"description": "conflict",
+						"schema": {
+							"$ref": "#/definitions/Error"
+						}
+					},
+					"500": {
+						"description": "server error",
+						"schema": {
+							"$ref": "#/definitions/Error"
+						}
+					},
+					"default": {
+						"description": "Error",
+						"schema": {
+							"$ref": "#/definitions/Error"
+						}
+					}
+				}
+			}
+		},
+		"/containers/{handle}": {
+			"put": {
+				"description": "Commit and close a container handle",
+				"operationId": "Commit",
+				"tags": [
+					"containers"
+				],
+				"consumes": [
+					"application/json",
+					"application/octet-stream"
+				],
+				"produces": [
+					"application/json"
+				],
+				"parameters": [
+					{
+						"name": "handle",
+						"in": "path",
+						"required": true,
+						"type": "string"
+					},
+					{
+						"name": "wait_time",
+						"in": "query",
+						"type": "integer",
+						"format": "int32"
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "OK"
+					},
+					"404": {
+						"description": "not found",
+						"schema": {
+							"$ref": "#/definitions/Error"
+						}
+					},
+					"409": {
+						"description": "conflict",
+						"schema": {
+							"$ref": "#/definitions/Error"
+						}
+					},
+					"default": {
+						"description": "Error",
+						"schema": {
+							"$ref": "#/definitions/Error"
+						}
+					}
+				}
+			}
+		},
+		"/containers/{handle}/state": {
+			"put": {
+				"description": "Changes the state of a container",
+				"operationId": "StateChange",
+				"tags": [
+					"containers"
+				],
+				"consumes": [
+					"application/octet-stream",
+					"application/json"
+				],
+				"produces": [
+					"application/json"
+				],
+				"parameters": [
+					{
+						"name": "handle",
+						"required": true,
+						"x-nullable": false,
+						"in": "path",
+						"type": "string"
+					},
+					{
+						"name": "state",
+						"required": true,
+						"in": "body",
+						"schema": {
+							"x-nullable": false,
+							"type": "string",
+							"enum": [
+								"RUNNING",
+								"STOPPED"
+							]
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "OK",
+						"schema": {
+							"type": "string"
+						}
+					},
+					"404": {
+						"description": "not found",
+						"schema": {
+							"$ref": "#/definitions/Error"
+						}
+					},
+					"default": {
+						"description": "Error",
+						"schema": {
+							"$ref": "#/definitions/Error"
+						}
+					}
+				}
+			},
+			"get": {
+				"description": "Get the current state of the a container",
+				"operationId": "GetState",
+				"tags": [
+					"containers"
+				],
+				"consumes": [
+					"application/octet-stream",
+					"application/json"
+				],
+				"produces": [
+					"application/json"
+				],
+				"parameters": [
+					{
+						"name": "handle",
+						"required": true,
+						"in": "path",
+						"type": "string"
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "OK",
+						"schema": {
+							"$ref": "#/definitions/ContainerGetStateResponse"
+						}
+					},
+					"404": {
+						"description": "not found",
+						"schema": {
+							"$ref": "#/definitions/Error"
+						}
+					},
+					"default": {
+						"description": "Error",
+						"schema": {
+							"$ref": "#/definitions/Error"
+						}
+					}
+				}
+			}
+		},
+		"/tasks": {
+			"put": {
+				"description": "Initiates an task wait operation",
+				"summary": "Initiates an task wait operation",
+				"operationId": "Wait",
+				"tags": [
+					"tasks"
+				],
+				"consumes": [
+					"application/json",
+					"application/octet-stream"
+				],
+				"produces": [
+					"application/json"
+				],
+				"parameters": [
+					{
+						"name": "config",
+						"in": "body",
+						"required": true,
+						"schema": {
+							"$ref": "#/definitions/TaskWaitConfig"
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "OK"
+					},
+					"404": {
+						"description": "not found",
+						"schema": {
+							"$ref": "#/definitions/Error"
+						}
+					},
+					"500": {
+						"description": "Wait of task failed",
+						"schema": {
+							"$ref": "#/definitions/Error"
+						}
+					}
+				}
+			},
+			"get": {
+				"description": "Initiates an task inspect operation",
+				"summary": "Initiates an task inspect operation",
+				"operationId": "Inspect",
+				"tags": [
+					"tasks"
+				],
+				"consumes": [
+					"application/json",
+					"application/octet-stream"
+				],
+				"produces": [
+					"application/json"
+				],
+				"parameters": [
+					{
+						"name": "config",
+						"in": "body",
+						"required": true,
+						"schema": {
+							"$ref": "#/definitions/TaskInspectConfig"
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "OK",
+						"schema": {
+							"$ref": "#/definitions/TaskInspectResponse"
+						}
+					},
+					"404": {
+						"description": "not found",
+						"schema": {
+							"$ref": "#/definitions/Error"
+						}
+					},
+            "409": {
+              "description": "Task failed due to power state change",
+              "schema": {
+                  "$ref": "#/definitions/Error"
+              }
+            },
+					"500": {
+						"description": "Inspect of task failed",
+						"schema": {
+							"$ref": "#/definitions/Error"
+						}
+					}
+				}
+			},
+			"post": {
+				"description": "Initiates an task join operation",
+				"summary": "Initiates an task join operation",
+				"operationId": "Join",
+				"tags": [
+					"tasks"
+				],
+				"consumes": [
+					"application/json",
+					"application/octet-stream"
+				],
+				"produces": [
+					"application/json"
+				],
+				"parameters": [
+					{
+						"name": "config",
+						"in": "body",
+						"required": true,
+						"schema": {
+							"$ref": "#/definitions/TaskJoinConfig"
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "OK",
+						"schema": {
+							"$ref": "#/definitions/TaskJoinResponse"
+						}
+					},
+					"404": {
+						"description": "not found",
+						"schema": {
+							"$ref": "#/definitions/Error"
+						}
+					},
+					"500": {
+						"description": "Join of task failed",
+						"schema": {
+							"$ref": "#/definitions/Error"
+						}
+					}
+				}
+			},
+			"delete": {
+				"description": "Initiates an task remove operation",
+				"summary": "Initiates an task remove operation",
+				"operationId": "Remove",
+				"tags": [
+					"tasks"
+				],
+				"consumes": [
+					"application/json",
+					"application/octet-stream"
+				],
+				"produces": [
+					"application/json"
+				],
+				"parameters": [
+					{
+						"name": "config",
+						"in": "body",
+						"schema": {
+							"$ref": "#/definitions/TaskRemoveConfig"
+						},
+						"required": true
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "OK",
+						"schema": {
+							"$ref": "#/definitions/TaskRemoveResponse"
+						}
+					},
+					"404": {
+						"description": "not found",
+						"schema": {
+							"$ref": "#/definitions/Error"
+						}
+					},
+					"500": {
+						"description": "Removal of task failed",
+						"schema": {
+							"$ref": "#/definitions/Error"
+						}
+					}
+				}
+			}
+		},
+		"/tasks/binding": {
+			"post": {
+				"description": "Activate a task that exists within the context of the provided handle",
+				"summary": "Activate an existing task",
+				"operationId": "Bind",
+				"tags": [
+					"tasks"
+				],
+				"consumes": [
+					"application/octet-stream",
+					"application/json"
+				],
+				"produces": [
+					"application/json"
+				],
+				"parameters": [
+					{
+						"name": "config",
+						"in": "body",
+						"schema": {
+							"$ref": "#/definitions/TaskBindConfig"
+						},
+						"required": true
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "OK",
+						"schema": {
+							"$ref": "#/definitions/TaskBindResponse"
+						}
+					},
+					"404": {
+						"description": "No such task",
+						"schema": {
+							"$ref": "#/definitions/Error"
+						}
+					},
+					"500": {
+						"description": "Activating task failed",
+						"schema": {
+							"$ref": "#/definitions/Error"
+						}
+					}
+				}
+			},
+			"delete": {
+				"description": "Deactivate a task that exists within the context of the provided handle",
+				"summary": "Deactivate an existing task",
+				"operationId": "Unbind",
+				"tags": [
+					"tasks"
+				],
+				"consumes": [
+					"application/octet-stream",
+					"application/json"
+				],
+				"produces": [
+					"application/json"
+				],
+				"parameters": [
+					{
+						"name": "config",
+						"in": "body",
+						"schema": {
+							"$ref": "#/definitions/TaskUnbindConfig"
+						},
+						"required": true
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "OK",
+						"schema": {
+							"$ref": "#/definitions/TaskUnbindResponse"
+						}
+					},
+					"404": {
+						"description": "No such task",
+						"schema": {
+							"$ref": "#/definitions/Error"
+						}
+					},
+					"500": {
+						"description": "Deactivating task failed",
+						"schema": {
+							"$ref": "#/definitions/Error"
+						}
+					}
+				}
+			}
+		},
+		"/containers/{handle}/name": {
+			"patch": {
+				"description": "Rename a container to the new name",
+				"operationId": "ContainerRename",
+				"tags": [
+					"containers"
+				],
+				"consumes": [
+					"application/json",
+					"application/octet-stream"
+				],
+				"produces": [
+					"application/json"
+				],
+				"parameters": [
+					{
+						"name": "handle",
+						"required": true,
+						"in": "path",
+						"type": "string"
+					},
+					{
+						"name": "name",
+						"in": "query",
+						"type": "string",
+						"description": "New name for the container",
+						"required": true
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "OK",
+						"schema": {
+							"type": "string"
+						}
+					},
+					"404": {
+						"description": "no such container",
+						"schema": {
+							"$ref": "#/definitions/Error"
+						}
+					},
+					"409": {
+						"description": "conflict, name already assigned",
+						"schema": {
+							"$ref": "#/definitions/Error"
+						}
+					},
+					"500": {
+						"description": "server error",
+						"schema": {
+							"$ref": "#/definitions/Error"
+						}
+					}
+				}
+			}
+		},
+		"/containers/{id}/signal": {
+			"post": {
+				"description": "Sends a signal to a container by id",
+				"summary": "Signal a running container",
+				"operationId": "ContainerSignal",
+				"tags": [
+					"containers"
+				],
+				"consumes": [
+					"application/octet-stream"
+				],
+				"parameters": [
+					{
+						"name": "id",
+						"in": "path",
+						"type": "string",
+						"required": true
+					},
+					{
+						"name": "signal",
+						"in": "query",
+						"type": "integer",
+						"format": "int64",
+						"required": true
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "OK"
+					},
+					"404": {
+						"description": "Container not found",
+						"schema": {
+							"$ref": "#/definitions/Error"
+						}
+					},
+					"500": {
+						"description": "Failed to signal container",
+						"schema": {
+							"$ref": "#/definitions/Error"
+						}
+					}
+				}
+			}
+		},
+		"/containers/{id}/stats": {
+			"get": {
+				"description": "Gets the container stats by id",
+				"summary": "Gets the container stats",
+				"operationId": "GetContainerStats",
+				"tags": [
+					"containers"
+				],
+				"consumes": [
+					"application/octet-stream"
+				],
+				"produces": [
+					"application/octet-stream"
+				],
+				"parameters": [
+					{
+						"name": "id",
+						"in": "path",
+						"type": "string",
+						"required": true
+					},
+					{
+						"name": "stream",
+						"in": "query",
+						"type": "boolean",
+						"required": true
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "OK",
+						"schema": {
+							"format": "binary"
+						}
+					},
+					"404": {
+						"description": "Stats not found"
+					},
+					"500": {
+						"description": "Failed to get stats"
+					}
+				}
+			}
+		},
+		"/containers/{id}/logs": {
+			"get": {
+				"description": "Gets the container logs by id",
+				"summary": "Gets the container logs",
+				"operationId": "GetContainerLogs",
+				"tags": [
+					"containers"
+				],
+				"consumes": [
+					"application/octet-stream"
+				],
+				"produces": [
+					"application/octet-stream"
+				],
+				"parameters": [
+					{
+						"name": "id",
+						"in": "path",
+						"type": "string",
+						"required": true
+					},
+					{
+						"name": "follow",
+						"in": "query",
+						"type": "boolean",
+						"default": false,
+						"required": false
+					},
+					{
+						"name": "since",
+						"in": "query",
+						"type": "integer",
+						"format": "int64",
+						"required": false
+					},
+					{
+						"name": "timestamp",
+						"in": "query",
+						"type": "boolean",
+						"default": false,
+						"required": false
+					},
+					{
+						"name": "taillines",
+						"in": "query",
+						"type": "integer",
+						"format": "int64",
+						"required": false
+					},
+					{
+						"name": "deadline",
+						"in": "query",
+						"type": "integer",
+						"format": "int64",
+						"required": false
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "OK",
+						"schema": {
+							"format": "binary"
+						}
+					},
+					"404": {
+						"description": "Logs not found"
+					},
+					"500": {
+						"description": "Failed to get logs"
+					}
+				}
+			}
+		},
+		"/logging": {
+			"post": {
+				"description": "Adds logging capabilities to given handle",
+				"summary": "Add logging capability",
+				"operationId": "LoggingJoin",
+				"tags": [
+					"logging"
+				],
+				"consumes": [
+					"application/octet-stream",
+					"application/json"
+				],
+				"produces": [
+					"application/json"
+				],
+				"parameters": [
+					{
+						"name": "config",
+						"in": "body",
+						"schema": {
+							"$ref": "#/definitions/LoggingJoinConfig"
+						},
+						"required": true
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "OK",
+						"schema": {
+							"$ref": "#/definitions/LoggingJoinResponse"
+						}
+					},
+					"404": {
+						"description": "VirtualDevice not found",
+						"schema": {
+							"$ref": "#/definitions/Error"
+						}
+					},
+					"500": {
+						"description": "Adding a VirtualDevice failed",
+						"schema": {
+							"$ref": "#/definitions/Error"
+						}
+					}
+				}
+			}
+		},
+		"/logging/binding": {
+			"post": {
+				"description": "Enable/bind/activate the VirtualDevice",
+				"summary": "Enable/bind/activate the VirtualDevice",
+				"operationId": "LoggingBind",
+				"tags": [
+					"logging"
+				],
+				"consumes": [
+					"application/octet-stream",
+					"application/json"
+				],
+				"produces": [
+					"application/json"
+				],
+				"parameters": [
+					{
+						"name": "config",
+						"in": "body",
+						"schema": {
+							"$ref": "#/definitions/LoggingBindConfig"
+						},
+						"required": true
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "OK",
+						"schema": {
+							"$ref": "#/definitions/LoggingBindResponse"
+						}
+					},
+					"404": {
+						"description": "VirtualDevice not found",
+						"schema": {
+							"$ref": "#/definitions/Error"
+						}
+					},
+					"500": {
+						"description": "Connecting VirtualDevice failed",
+						"schema": {
+							"$ref": "#/definitions/Error"
+						}
+					}
+				}
+			},
+			"delete": {
+				"description": "Disable/unbind/deactivate the VirtualDevice",
+				"summary": "Disable/unbind/deactivate the VirtualDevice",
+				"operationId": "LoggingUnbind",
+				"tags": [
+					"logging"
+				],
+				"consumes": [
+					"application/octet-stream",
+					"application/json"
+				],
+				"produces": [
+					"application/json"
+				],
+				"parameters": [
+					{
+						"name": "config",
+						"in": "body",
+						"schema": {
+							"$ref": "#/definitions/LoggingUnbindConfig"
+						},
+						"required": true
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "OK",
+						"schema": {
+							"$ref": "#/definitions/LoggingUnbindResponse"
+						}
+					},
+					"404": {
+						"description": "VirtualDevice not found",
+						"schema": {
+							"$ref": "#/definitions/Error"
+						}
+					},
+					"500": {
+						"description": "Disconnecting VirtualDevice failed",
+						"schema": {
+							"$ref": "#/definitions/Error"
+						}
+					}
+				}
+			}
+		},
+		"/interaction": {
+			"post": {
+				"description": "Adds interaction capabilities to given handle",
+				"summary": "Add interaction capability",
+				"operationId": "InteractionJoin",
+				"tags": [
+					"interaction"
+				],
+				"consumes": [
+					"application/octet-stream",
+					"application/json"
+				],
+				"produces": [
+					"application/json"
+				],
+				"parameters": [
+					{
+						"name": "config",
+						"in": "body",
+						"schema": {
+							"$ref": "#/definitions/InteractionJoinConfig"
+						},
+						"required": true
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "OK",
+						"schema": {
+							"$ref": "#/definitions/InteractionJoinResponse"
+						}
+					},
+					"404": {
+						"description": "VirtualDevice not found",
+						"schema": {
+							"$ref": "#/definitions/Error"
+						}
+					},
+					"500": {
+						"description": "Adding a VirtualDevice failed",
+						"schema": {
+							"$ref": "#/definitions/Error"
+						}
+					}
+				}
+			}
+		},
+		"/interaction/binding": {
+			"post": {
+				"description": "Enable/bind/activate the VirtualDevice",
+				"summary": "Enable/bind/activate the VirtualDevice",
+				"operationId": "InteractionBind",
+				"tags": [
+					"interaction"
+				],
+				"consumes": [
+					"application/octet-stream",
+					"application/json"
+				],
+				"produces": [
+					"application/json"
+				],
+				"parameters": [
+					{
+						"name": "config",
+						"in": "body",
+						"schema": {
+							"$ref": "#/definitions/InteractionBindConfig"
+						},
+						"required": true
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "OK",
+						"schema": {
+							"$ref": "#/definitions/InteractionBindResponse"
+						}
+					},
+					"404": {
+						"description": "VirtualDevice not found",
+						"schema": {
+							"$ref": "#/definitions/Error"
+						}
+					},
+					"500": {
+						"description": "Connecting VirtualDevice failed",
+						"schema": {
+							"$ref": "#/definitions/Error"
+						}
+					}
+				}
+			},
+			"delete": {
+				"description": "Disable/unbind/deactivate the VirtualDevice",
+				"summary": "Disable/unbind/deactivate the VirtualDevice",
+				"operationId": "InteractionUnbind",
+				"tags": [
+					"interaction"
+				],
+				"consumes": [
+					"application/octet-stream",
+					"application/json"
+				],
+				"produces": [
+					"application/json"
+				],
+				"parameters": [
+					{
+						"name": "config",
+						"in": "body",
+						"schema": {
+							"$ref": "#/definitions/InteractionUnbindConfig"
+						},
+						"required": true
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "OK",
+						"schema": {
+							"$ref": "#/definitions/InteractionUnbindResponse"
+						}
+					},
+					"404": {
+						"description": "VirtualDevice not found",
+						"schema": {
+							"$ref": "#/definitions/Error"
+						}
+					},
+					"500": {
+						"description": "Disconnecting VirtualDevice failed",
+						"schema": {
+							"$ref": "#/definitions/Error"
+						}
+					}
+				}
+			}
+		},
+		"/containers/{id}/wait": {
+			"get": {
+				"description": "Wait for the container to stop",
+				"operationId": "ContainerWait",
+				"tags": [
+					"containers"
+				],
+				"consumes": [
+					"application/octet-stream",
+					"application/json"
+				],
+				"produces": [
+					"application/json"
+				],
+				"parameters": [
+					{
+						"name": "id",
+						"in": "path",
+						"type": "string",
+						"required": true
+					},
+					{
+						"name": "timeout",
+						"in": "query",
+						"type": "integer",
+						"format": "int64",
+						"required": true
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "OK",
+						"schema": {
+							"$ref": "#/definitions/ContainerInfo"
+						}
+					},
+					"404": {
+						"description": "Container not found",
+						"schema": {
+							"$ref": "#/definitions/Error"
+						}
+					},
+					"500": {
+						"description": "Failed to wait on Container",
+						"schema": {
+							"$ref": "#/definitions/Error"
+						}
+					}
+				}
+			}
+		},
+		"/interaction/{id}/resize": {
+			"post": {
+				"description": "Resize the container's tty session",
+				"summary": "Resize tty session",
+				"operationId": "ContainerResize",
+				"tags": [
+					"interaction"
+				],
+				"consumes": [
+					"application/octet-stream",
+					"application/json"
+				],
+				"produces": [
+					"application/json"
+				],
+				"parameters": [
+					{
+						"name": "id",
+						"in": "path",
+						"type": "string",
+						"required": true
+					},
+					{
+						"name": "height",
+						"in": "query",
+						"type": "integer",
+						"format": "int32",
+						"required": true
+					},
+					{
+						"name": "width",
+						"in": "query",
+						"type": "integer",
+						"format": "int32",
+						"required": true
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "OK"
+					},
+					"404": {
+						"description": "Container not found",
+						"schema": {
+							"$ref": "#/definitions/Error"
+						}
+					},
+					"500": {
+						"description": "Container resize failed",
+						"schema": {
+							"$ref": "#/definitions/Error"
+						}
+					}
+				}
+			}
+		},
+		"/interaction/{id}/stdin": {
+			"post": {
+				"description": "Set a stdin for the container",
+				"summary": "Set stdin",
+				"operationId": "ContainerSetStdin",
+				"tags": [
+					"interaction"
+				],
+				"consumes": [
+					"application/raw-stream"
+				],
+				"parameters": [
+					{
+						"name": "id",
+						"in": "path",
+						"type": "string",
+						"required": true
+					},
+					{
+						"name": "deadline",
+						"in": "query",
+						"type": "string",
+						"format": "datetime"
+					},
+					{
+						"name": "raw_stream",
+						"in": "body",
+						"schema": {
+							"type": "string",
+							"format": "binary"
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "OK"
+					},
+					"404": {
+						"description": "Container not found",
+						"schema": {
+							"$ref": "#/definitions/Error"
+						}
+					},
+					"500": {
+						"description": "Failed to Set stdin",
+						"schema": {
+							"$ref": "#/definitions/Error"
+						}
+					}
+				}
+			},
+			"delete": {
+				"description": "Close a stdin for the container",
+				"summary": "Close stdin",
+				"operationId": "ContainerCloseStdin",
+				"tags": [
+					"interaction"
+				],
+				"consumes": [
+					"application/json"
+				],
+				"parameters": [
+					{
+						"name": "id",
+						"in": "path",
+						"type": "string",
+						"required": true
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "OK"
+					},
+					"404": {
+						"description": "Container not found",
+						"schema": {
+							"$ref": "#/definitions/Error"
+						}
+					},
+					"500": {
+						"description": "Failed to Close stdin",
+						"schema": {
+							"$ref": "#/definitions/Error"
+						}
+					}
+				}
+			}
+		},
+		"/interaction/{id}/stdout": {
+			"get": {
+				"description": "Get a stdout for the container",
+				"summary": "Get stdout",
+				"operationId": "ContainerGetStdout",
+				"tags": [
+					"interaction"
+				],
+				"consumes": [
+					"application/octet-stream"
+				],
+				"produces": [
+					"application/octet-stream"
+				],
+				"parameters": [
+					{
+						"name": "id",
+						"in": "path",
+						"type": "string",
+						"required": true
+					},
+					{
+						"name": "deadline",
+						"in": "query",
+						"type": "string",
+						"format": "datetime"
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "OK",
+						"schema": {
+							"format": "binary"
+						}
+					},
+					"404": {
+						"description": "Container not found"
+					},
+					"500": {
+						"description": "Failed to get stdout"
+					}
+				}
+			}
+		},
+		"/interaction/{id}/stderr": {
+			"get": {
+				"description": "Get a stderr for the container",
+				"summary": "Get stderr",
+				"operationId": "ContainerGetStderr",
+				"tags": [
+					"interaction"
+				],
+				"consumes": [
+					"application/octet-stream"
+				],
+				"produces": [
+					"application/octet-stream"
+				],
+				"parameters": [
+					{
+						"name": "id",
+						"in": "path",
+						"type": "string",
+						"required": true
+					},
+					{
+						"name": "deadline",
+						"in": "query",
+						"type": "string",
+						"format": "datetime"
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "OK",
+						"schema": {
+							"format": "binary"
+						}
+					},
+					"404": {
+						"description": "Container not found"
+					},
+					"500": {
+						"description": "Failed to get stderr"
+					}
+				}
+			}
+		}
+	},
+	"definitions": {
+		"Error": {
+			"type": "object",
+			"required": [
+				"message"
+			],
+			"properties": {
+				"code": {
+					"type": "integer",
+					"format": "int64"
+				},
+				"message": {
+					"type": "string",
+					"x-nullable": false
+				}
+			}
+		},
+		"VCHInfo": {
+			"type": "object",
+			"properties": {
+				"cpuMhz": {
+					"type": "integer",
+					"format": "int64"
+				},
+				"memory": {
+					"type": "integer",
+					"format": "int64"
+				},
+				"cpuUsage": {
+					"type": "integer",
+					"format": "int64"
+				},
+				"memUsage": {
+					"type": "integer",
+					"format": "int64"
+				},
+				"hostProductName": {
+					"type": "string"
+				},
+				"hostOS": {
+					"type": "string"
+				},
+				"hostOSVersion": {
+					"type": "string"
+				}
+			}
+		},
+		"KeyValue": {
+			"type": "object",
+			"properties": {
+				"Key": {
+					"x-nullable": false,
+					"type": "string"
+				},
+				"Value": {
+					"x-nullable": false,
+					"type": "string"
+				}
+			}
+		},
+		"StoreUrl": {
+			"type": "object",
+			"required": [
+				"url"
+			],
+			"properties": {
+				"code": {
+					"type": "integer",
+					"format": "int64"
+				},
+				"url": {
+					"x-nullable": false,
+					"type": "string"
+				}
+			}
+		},
+		"ImageStore": {
+			"type": "object",
+			"required": [
+				"name"
+			],
+			"properties": {
+				"name": {
+					"type": "string",
+					"x-nullable": false
+				}
+			}
+		},
+		"Image": {
+			"type": "object",
+			"required": [
+				"ID",
+				"Store"
+			],
+			"properties": {
+				"ID": {
+					"x-nullable": false,
+					"type": "string"
+				},
+				"Store": {
+					"x-nullable": false,
+					"type": "string"
+				},
+				"SelfLink": {
+					"type": "string"
+				},
+				"Parent": {
+					"type": "string"
+				},
+				"Metadata": {
+					"type": "object",
+					"additionalProperties": {
+						"type": "string"
+					}
+				}
+			}
+		},
+		"ImageJoinConfig": {
+			"type": "object",
+			"required": [
+				"handle",
+				"deltaID"
+			],
+			"properties": {
+				"handle": {
+					"type": "object"
+				},
+				"deltaID": {
+					"x-nullable": false,
+					"type": "string"
+				},
+				"imageID": {
+					"x-nullable": false,
+					"type": "string"
+				},
+				"repoName": {
+					"x-nullable": false,
+					"type": "string"
+				}
+			}
+		},
+		"ImageJoinResponse": {
+			"type": "object",
+			"required": [
+				"handle"
+			],
+			"properties": {
+				"handle": {
+					"type": "object"
+				}
+			}
+		},		
+		"ScopeConfig": {
+			"type": "object",
+			"required": [
+				"name",
+				"scopeType"
+			],
+			"properties": {
+				"id": {
+					"type": "string"
+				},
+				"name": {
+					"x-nullable": false,
+					"type": "string"
+				},
+				"scopeType": {
+					"x-nullable": false,
+					"type": "string"
+				},
+				"subnet": {
+					"type": "string"
+				},
+				"gateway": {
+					"type": "string"
+				},
+				"dns": {
+					"type": "array",
+					"items": {
+						"type": "string"
+					}
+				},
+				"ipam": {
+					"type": "array",
+					"items": {
+						"type": "string"
+					}
+				},
+				"endpoints": {
+					"type": "array",
+					"items": {
+						"$ref": "#/definitions/EndpointConfig"
+					}
+				},
+				"annotations": {
+					"type": "object",
+					"additionalProperties": {
+						"type": "string"
+					}
+				},
+				"internal": {
+					"type": "boolean"
+				}
+			}
+		},
+		"EndpointConfig": {
+			"type": "object",
+			"required": [
+				"id",
+				"name",
+				"scope",
+				"address",
+				"gateway",
+				"container",
+				"ports",
+				"aliases",
+				"nameservers"
+			],
+			"properties": {
+				"id": {
+					"x-nullable": false,
+					"type": "string"
+				},
+				"name": {
+					"x-nullable": false,
+					"type": "string"
+				},
+				"scope": {
+					"x-nullable": false,
+					"type": "string"
+				},
+				"address": {
+					"x-nullable": false,
+					"type": "string"
+				},
+				"gateway": {
+					"x-nullable": false,
+					"type": "string"
+				},
+				"container": {
+					"x-nullable": false,
+					"type": "string"
+				},
+				"ports": {
+					"type": "array",
+					"items": {
+						"type": "string"
+					}
+				},
+				"aliases": {
+					"type": "array",
+					"items": {
+						"type": "string"
+					}
+				},
+				"nameservers": {
+					"type": "array",
+					"items": {
+						"type": "string"
+					}
+				},
+				"trust": {
+					"x-nullable": false,
+					"type": "string"
+				},
+				"direct": {
+					"x-nullable": false,
+					"type": "boolean"
+				}
+			}
+		},
+		"ContainerCreateConfig": {
+			"type": "object",
+			"properties": {
+				"name": {
+					"type": "string"
+				},
+				"imageStore": {
+					"$ref": "#/definitions/ImageStore"
+				},
+				"image": {
+					"type": "string"
+				},
+				"layer": {
+					"type": "string"
+				},
+				"repoName": {
+					"type": "string"
+				},
+				"numCPUs": {
+					"type": "integer",
+					"format": "int64"
+				},
+				"memoryMB": {
+					"type": "integer",
+					"format": "int64"
+				},
+				"networkDisabled": {
+					"type": "boolean"
+				},
+				"annotations": {
+					"type": "object",
+					"additionalProperties": {
+						"type": "string"
+					}
+				},
+				"hostname": {
+					"type": "string",
+					"x-nullable": false
+				},
+				"domainname": {
+					"type": "string",
+					"x-nullable": false
+				}
+			}
+		},
+		"ContainerCreatedInfo": {
+			"type": "object",
+			"required": [
+				"handle",
+				"id"
+			],
+			"properties": {
+				"handle": {
+					"type": "string",
+					"x-nullable": false
+				},
+				"id": {
+					"type": "string",
+					"x-nullable": false
+				}
+			}
+		},
+		"ScopesAddContainerConfig": {
+			"type": "object",
+			"required": [
+				"networkConfig",
+				"handle"
+			],
+			"properties": {
+				"networkConfig": {
+					"$ref": "#/definitions/NetworkConfig"
+				},
+				"handle": {
+					"x-nullable": false,
+					"type": "string"
+				}
+			}
+		},
+		"NetworkConfig": {
+			"type": "object",
+			"required": [
+				"networkName"
+			],
+			"properties": {
+				"networkName": {
+					"x-nullable": false,
+					"type": "string"
+				},
+				"address": {
+					"type": "string"
+				},
+				"aliases": {
+					"type": "array",
+					"items": {
+						"type": "string"
+					}
+				},
+				"ports": {
+					"type": "array",
+					"items": {
+						"type": "string"
+					}
+				}
+			}
+		},
+		"ContainerGetStateResponse": {
+			"type": "object",
+			"required": [
+				"handle",
+				"state"
+			],
+			"properties": {
+				"handle": {
+					"type": "string",
+					"x-nullable": false
+				},
+				"state": {
+					"type": "string",
+					"x-nullable": false,
+					"enum": [
+						"RUNNING",
+						"STOPPED"
+					]
+				}
+			}
+		},
+		"VolumeRequest": {
+			"type": "object",
+			"required": [
+				"Name",
+				"Store",
+				"Capacity",
+				"Driver"
+			],
+			"properties": {
+				"Name": {
+					"x-nullable": false,
+					"type": "string"
+				},
+				"Driver": {
+					"x-nullable": false,
+					"type": "string"
+				},
+				"DriverArgs": {
+					"type": "object",
+					"additionalProperties": {
+						"type": "string"
+					}
+				},
+				"Store": {
+					"x-nullable": false,
+					"type": "string"
+				},
+				"Capacity": {
+					"x-nullable": false,
+					"type": "integer"
+				},
+				"Metadata": {
+					"type": "object",
+					"additionalProperties": {
+						"type": "string"
+					}
+				}
+			}
+		},
+		"VolumeResponse": {
+			"type": "object",
+			"required": [
+				"Name",
+				"Label",
+				"Store",
+				"Driver"
+			],
+			"properties": {
+				"Name": {
+					"x-nullable": false,
+					"type": "string"
+				},
+				"Label": {
+					"description": "this is the label used to mount the block device",
+					"x-nullable": false,
+					"type": "string"
+				},
+				"Driver": {
+					"x-nullable": false,
+					"type": "string"
+				},
+				"Store": {
+					"x-nullable": false,
+					"type": "string"
+				},
+				"Metadata": {
+					"type": "object",
+					"additionalProperties": {
+						"type": "string"
+					}
+				}
+			}
+		},
+		"VolumeJoinConfig": {
+			"type": "object",
+			"required": [
+				"Handle",
+				"MountPath",
+				"Flags"
+			],
+			"properties": {
+				"Handle": {
+					"x-nullable": false,
+					"type": "string"
+				},
+				"MountPath": {
+					"x-nullable": false,
+					"type": "string"
+				},
+				"Flags": {
+					"type": "object",
+					"additionalProperties": {
+						"type": "string"
+					}
+				}
+			}
+		},
+		"VolumeStoresListResponse": {
+			"type": "object",
+			"required": [
+				"Stores"
+			],
+			"properties": {
+				"Stores": {
+					"type": "array",
+					"items": {
+						"type": "string"
+					}
+				}
+			}
+		},
+		"ContainerInfo": {
+			"type": "object",
+			"properties": {
+				"containerConfig": {
+					"$ref": "#/definitions/ContainerConfig"
+				},
+				"HostConfig": {
+					"$ref": "#/definitions/HostConfig"
+				},
+				"processConfig": {
+					"$ref": "#/definitions/ProcessConfig"
+				},
+				"volumeConfig": {
+					"type": "array",
+					"items": {
+						"$ref": "#/definitions/VolumeConfig"
+					}
+				},
+				"endpoints": {
+					"type": "array",
+					"items": {
+						"$ref": "#/definitions/EndpointConfig"
+					}
+				},
+				"dataVersion": {
+					"type": "integer",
+					"format": "int64"
+				}
+			}
+		},
+		"ContainerConfig": {
+			"type": "object",
+			"properties": {
+				"containerId": {
+					"type": "string"
+				},
+				"layerId": {
+					"type": "string"
+				},
+				"imageId": {
+					"type": "string"
+				},
+				"repoName": {
+					"x-nullable": true,
+					"type": "string"
+				},
+				"createTime": {
+					"type": "integer",
+					"format": "int64"
+				},
+				"names": {
+					"type": "array",
+					"items": {
+						"type": "string"
+					}
+				},
+				"annotations": {
+					"type": "object",
+					"additionalProperties": {
+						"type": "string"
+					}
+				},
+				"state": {
+					"type": "string"
+				},
+				"restartCount": {
+					"type": "integer"
+				},
+				"hostName": {
+					"x-nullable": true,
+					"type": "string"
+				},
+				"attachStdin": {
+					"x-nullable": true,
+					"type": "boolean"
+				},
+				"attachStdout": {
+					"x-nullable": true,
+					"type": "boolean"
+				},
+				"attachStderr": {
+					"x-nullable": true,
+					"type": "boolean"
+				},
+				"tty": {
+					"x-nullable": true,
+					"type": "boolean"
+				},
+				"consoleSize": {
+					"type": "object",
+					"properties": {
+						"width": {
+							"type": "integer"
+						},
+						"height": {
+							"type": "integer"
+						}
+					}
+				},
+				"openStdin": {
+					"x-nullable": true,
+					"type": "boolean"
+				},
+				"logPath": {
+					"type": "string"
+				},
+				"reservation": {
+					"$ref": "#/definitions/ReservationConfig"
+				},
+				"storageSize": {
+					"type": "integer"
+				}
+			}
+		},
+		"ReservationConfig": {
+			"type": "object",
+			"properties": {
+				"cpuCount": {
+					"type": "integer"
+				},
+				"memoryLimit": {
+					"type": "integer"
+				}
+			}
+		},
+		"HostConfig": {
+			"description": "Information about the virtual container host (VCH)",
+			"type": "object",
+			"properties": {
+				"architecture": {
+					"type": "string"
+				},
+				"ostype": {
+					"type": "string"
+				},
+				"kernelVersion": {
+					"type": "string"
+				},
+				"reservation": {
+					"$ref": "#/definitions/ReservationConfig"
+				}
+			}
+		},
+		"ProcessConfig": {
+			"type": "object",
+			"properties": {
+				"pid": {
+					"type": "integer"
+				},
+				"execPath": {
+					"type": "string"
+				},
+				"execArgs": {
+					"type": "array",
+					"items": {
+						"type": "string"
+					}
+				},
+				"workingDir": {
+					"x-nullable": true,
+					"type": "string"
+				},
+				"user": {
+					"type": "string"
+				},
+				"env": {
+					"type": "array",
+					"items": {
+						"type": "string"
+					}
+				},
+				"status": {
+					"type": "string"
+				},
+				"startTime": {
+					"type": "integer",
+					"format": "int64"
+				},
+				"stopTime": {
+					"type": "integer",
+					"format": "int64"
+				},
+				"exitCode": {
+					"type": "integer",
+					"format": "int32"
+				},
+				"errorMsg": {
+					"type": "string"
+				}
+			}
+		},
+		"VolumeConfig": {
+			"type": "object",
+			"properties": {
+				"name": {
+					"type": "string"
+				},
+				"mountPoint": {
+					"type": "string"
+				},
+				"flags": {
+					"type": "object",
+					"additionalProperties": {
+						"type": "string"
+					}
+				},
+				"readWrite": {
+					"type": "boolean"
+				}
+			}
+		},
+		"BindContainerResponse": {
+			"type": "object",
+			"required": [
+				"handle",
+				"endpoints"
+			],
+			"properties": {
+				"handle": {
+					"x-nullable": false,
+					"type": "string"
+				},
+				"endpoints": {
+					"type": "array",
+					"items": {
+						"$ref": "#/definitions/EndpointConfig"
+					}
+				}
+			}
+		},
+		"UnbindContainerResponse": {
+			"type": "object",
+			"required": [
+				"handle",
+				"endpoints"
+			],
+			"properties": {
+				"handle": {
+					"x-nullable": false,
+					"type": "string"
+				},
+				"endpoints": {
+					"type": "array",
+					"items": {
+						"$ref": "#/definitions/EndpointConfig"
+					}
+				}
+			}
+		},
+		"LoggingJoinConfig": {
+			"type": "object",
+			"required": [
+				"handle"
+			],
+			"properties": {
+				"handle": {
+					"type": "object"
+				}
+			}
+		},
+		"LoggingBindConfig": {
+			"type": "object",
+			"required": [
+				"handle"
+			],
+			"properties": {
+				"handle": {
+					"type": "object"
+				}
+			}
+		},
+		"LoggingUnbindConfig": {
+			"type": "object",
+			"required": [
+				"handle"
+			],
+			"properties": {
+				"handle": {
+					"type": "object"
+				}
+			}
+		},
+		"LoggingJoinResponse": {
+			"type": "object",
+			"required": [
+				"handle"
+			],
+			"properties": {
+				"handle": {
+					"type": "object"
+				}
+			}
+		},
+		"LoggingBindResponse": {
+			"type": "object",
+			"required": [
+				"handle"
+			],
+			"properties": {
+				"handle": {
+					"type": "object"
+				}
+			}
+		},
+		"LoggingUnbindResponse": {
+			"type": "object",
+			"required": [
+				"handle"
+			],
+			"properties": {
+				"handle": {
+					"type": "object"
+				}
+			}
+		},
+		"InteractionJoinConfig": {
+			"type": "object",
+			"required": [
+				"handle"
+			],
+			"properties": {
+				"handle": {
+					"type": "object"
+				}
+			}
+		},
+		"InteractionBindConfig": {
+			"type": "object",
+			"required": [
+				"handle",
+				"id"
+			],
+			"properties": {
+				"id": {
+					"type": "string",
+					"x-nullable": false
+				},
+				"handle": {
+					"type": "object"
+				}
+			}
+		},
+		"InteractionUnbindConfig": {
+			"type": "object",
+			"required": [
+				"handle",
+				"id"
+			],
+			"properties": {
+				"id": {
+					"type": "string",
+					"x-nullable": false
+				},
+				"handle": {
+					"type": "object"
+				}
+			}
+		},
+		"InteractionJoinResponse": {
+			"type": "object",
+			"required": [
+				"handle"
+			],
+			"properties": {
+				"handle": {
+					"type": "object"
+				}
+			}
+		},
+		"InteractionBindResponse": {
+			"type": "object",
+			"required": [
+				"handle"
+			],
+			"properties": {
+				"handle": {
+					"type": "object"
+				}
+			}
+		},
+		"InteractionUnbindResponse": {
+			"type": "object",
+			"required": [
+				"handle"
+			],
+			"properties": {
+				"handle": {
+					"type": "object"
+				}
+			}
+		},
+		"TaskJoinConfig": {
+			"type": "object",
+			"required": [
+				"handle",
+				"path"
+			],
+			"properties": {
+				"handle": {
+					"type": "object"
+				},
+				"namespace": {
+					"type": "string"
+				},
+				"id": {
+					"type": "string",
+					"x-nullable": false
+				},
+				"path": {
+					"type": "string",
+					"x-nullable": false
+				},
+				"args": {
+					"type": "array",
+					"items": {
+						"type": "string"
+					}
+				},
+				"workingDir": {
+					"type": "string"
+				},
+				"env": {
+					"type": "array",
+					"items": {
+						"type": "string"
+					}
+				},
+				"user": {
+					"type": "string"
+				},
+				"attach": {
+					"type": "boolean",
+					"default": true,
+					"x-nullable": false
+				},
+				"openStdin": {
+					"type": "boolean",
+					"default": false,
+					"x-nullable": false
+				},
+				"tty": {
+					"type": "boolean",
+					"default": false,
+					"x-nullable": false
+				},
+				"stopSignal": {
+					"type": "string"
+				}
+			}
+		},
+		"TaskBindConfig": {
+			"type": "object",
+			"required": [
+				"handle",
+				"id"
+			],
+			"properties": {
+				"id": {
+					"type": "string",
+					"x-nullable": false
+				},
+				"handle": {
+					"type": "object"
+				}
+			}
+		},
+		"TaskUnbindConfig": {
+			"type": "object",
+			"required": [
+				"handle",
+				"id"
+			],
+			"properties": {
+				"id": {
+					"type": "string",
+					"x-nullable": false
+				},
+				"handle": {
+					"type": "object"
+				}
+			}
+		},
+		"TaskRemoveConfig": {
+			"type": "object",
+			"required": [
+				"handle",
+				"id"
+			],
+			"properties": {
+				"id": {
+					"type": "string",
+					"x-nullable": false
+				},
+				"handle": {
+					"type": "object"
+				}
+			}
+		},
+		"TaskInspectConfig": {
+			"type": "object",
+			"required": [
+				"handle",
+				"id"
+			],
+			"properties": {
+				"id": {
+					"type": "string",
+					"x-nullable": false
+				},
+				"handle": {
+					"type": "object"
+				}
+			}
+		},
+		"TaskWaitConfig": {
+			"type": "object",
+			"required": [
+				"handle",
+				"id"
+			],
+			"properties": {
+				"id": {
+					"type": "string",
+					"x-nullable": false
+				},
+				"handle": {
+					"type": "object"
+				}
+			}
+		},
+		"TaskJoinResponse": {
+			"type": "object",
+			"required": [
+				"handle",
+				"id"
+			],
+			"properties": {
+				"handle": {
+					"type": "object"
+				},
+				"id": {
+					"type": "string",
+					"x-nullable": false
+				}
+			}
+		},
+		"TaskBindResponse": {
+			"type": "object",
+			"required": [
+				"handle"
+			],
+			"properties": {
+				"handle": {
+					"type": "object"
+				}
+			}
+		},
+		"TaskUnbindResponse": {
+			"type": "object",
+			"required": [
+				"handle"
+			],
+			"properties": {
+				"handle": {
+					"type": "object"
+				}
+			}
+		},
+		"TaskRemoveResponse": {
+			"type": "object",
+			"required": [
+				"handle"
+			],
+			"properties": {
+				"handle": {
+					"type": "object"
+				}
+			}
+		},
+		"TaskInspectResponse": {
+			"type": "object",
+			"required": [
+				"id"
+			],
+			"properties": {
+				"id": {
+					"type": "string",
+					"x-nullable": false
+				},
+				"running": {
+					"type": "boolean",
+					"x-nullable": false
+				},
+				"exitCode": {
+					"type": "integer",
+					"x-nullable": false
+				},
+				"processConfig": {
+					"$ref": "#/definitions/ProcessConfig"
+				},
+				"openStdin": {
+					"type": "boolean",
+					"default": false,
+					"x-nullable": false
+				},
+				"openStderr": {
+					"type": "boolean",
+					"default": false,
+					"x-nullable": false
+				},
+				"openStdout": {
+					"type": "boolean",
+					"default": false,
+					"x-nullable": false
+				},
+				"tty": {
+					"type": "boolean",
+					"default": false,
+					"x-nullable": false
+				},
+				"user": {
+					"type": "string"
+				},
+				"pid": {
+					"type": "integer",
+					"x-nullable": false
+				}
+			}
+		}
+	}
+}

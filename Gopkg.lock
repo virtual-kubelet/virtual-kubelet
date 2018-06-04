@@ -38,6 +38,12 @@
   version = "v1.0.5"
 
 [[projects]]
+  name = "github.com/asaskevich/govalidator"
+  packages = ["."]
+  revision = "ccb8e960c48f04d6935e72476ae4a51028f9e22f"
+  version = "v9"
+
+[[projects]]
   name = "github.com/aws/aws-sdk-go"
   packages = [
     "aws",
@@ -129,9 +135,58 @@
 
 [[projects]]
   name = "github.com/docker/docker"
-  packages = ["api/types/strslice"]
-  revision = "092cba3727bb9b4a2f0e922cd6c0f93ea270e363"
-  version = "v1.13.1"
+  packages = [
+    "api/errors",
+    "api/types",
+    "api/types/backend",
+    "api/types/blkiodev",
+    "api/types/container",
+    "api/types/filters",
+    "api/types/mount",
+    "api/types/network",
+    "api/types/registry",
+    "api/types/strslice",
+    "api/types/swarm",
+    "api/types/versions",
+    "daemon/graphdriver",
+    "image",
+    "image/v1",
+    "layer",
+    "oci",
+    "pkg/archive",
+    "pkg/chrootarchive",
+    "pkg/fileutils",
+    "pkg/idtools",
+    "pkg/ioutils",
+    "pkg/jsonlog",
+    "pkg/jsonmessage",
+    "pkg/longpath",
+    "pkg/mount",
+    "pkg/plugingetter",
+    "pkg/plugins",
+    "pkg/plugins/transport",
+    "pkg/pools",
+    "pkg/progress",
+    "pkg/promise",
+    "pkg/pubsub",
+    "pkg/random",
+    "pkg/reexec",
+    "pkg/streamformatter",
+    "pkg/stringid",
+    "pkg/system",
+    "pkg/term",
+    "pkg/term/windows",
+    "pkg/truncindex",
+    "plugin/v2",
+    "reference"
+  ]
+  revision = "49bf474f9ed7ce7143a59d1964ff7b7fd9b52178"
+
+[[projects]]
+  name = "github.com/docker/engine-api"
+  packages = ["types/strslice"]
+  revision = "3d1601b9d2436a70b0dfc045a23f6503d19195df"
+  version = "v0.4.0"
 
 [[projects]]
   name = "github.com/docker/go-connections"
@@ -159,6 +214,15 @@
   version = "v0.4.0"
 
 [[projects]]
+  name = "github.com/docker/libnetwork"
+  packages = [
+    "iptables",
+    "portallocator"
+  ]
+  revision = "1ee720e18fe98dceda6039bdd005ffbcb359d343"
+  version = "v0.5.6"
+
+[[projects]]
   branch = "master"
   name = "github.com/flynn/go-shlex"
   packages = ["."]
@@ -181,6 +245,72 @@
   packages = ["."]
   revision = "6529cf7c58879c08d927016dde4477f18a0634cb"
   version = "v1.36.0"
+
+[[projects]]
+  name = "github.com/go-openapi/analysis"
+  packages = ["."]
+  revision = "d5a75b7d751ca3f11ad5d93cfe97405f2c3f6a47"
+
+[[projects]]
+  name = "github.com/go-openapi/errors"
+  packages = ["."]
+  revision = "fc3f73a224499b047eda7191e5d22e1e9631e86f"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/go-openapi/jsonpointer"
+  packages = ["."]
+  revision = "779f45308c19820f1a69e9a4cd965f496e0da10f"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/go-openapi/jsonreference"
+  packages = ["."]
+  revision = "36d33bfe519efae5632669801b180bf1a245da3b"
+
+[[projects]]
+  name = "github.com/go-openapi/loads"
+  packages = [
+    ".",
+    "fmts"
+  ]
+  revision = "6bb6486231e079ea125c0f39994ed3d0c53399ed"
+
+[[projects]]
+  name = "github.com/go-openapi/runtime"
+  packages = [
+    ".",
+    "client"
+  ]
+  revision = "3b13ebb46790d871d74a6c2450fa4b1280f90854"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/go-openapi/spec"
+  packages = ["."]
+  revision = "bfb48d37839bcacb52be3f539ffac5abcda7e195"
+
+[[projects]]
+  name = "github.com/go-openapi/strfmt"
+  packages = ["."]
+  revision = "0cb3db44c13bad3b3f567b762a66751972a310cc"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/go-openapi/swag"
+  packages = ["."]
+  revision = "cf0bdb963811675a4d7e74901cefc7411a1df939"
+
+[[projects]]
+  name = "github.com/go-openapi/validate"
+  packages = ["."]
+  revision = "035dcd74f1f61e83debe1c22950dc53556e7e4b2"
+
+[[projects]]
+  name = "github.com/godbus/dbus"
+  packages = ["."]
+  revision = "a389bdde4dd695d414e47b755e95e72b7826432c"
+  version = "v4.1.0"
 
 [[projects]]
   name = "github.com/gogo/protobuf"
@@ -354,6 +484,18 @@
   version = "1.1.3"
 
 [[projects]]
+  branch = "master"
+  name = "github.com/kr/pretty"
+  packages = ["."]
+  revision = "cfb55aafdaf3ec08f0db22699ab822c50091b1c4"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/kr/text"
+  packages = ["."]
+  revision = "7cafcd837844e784b526369c9bce262804aebc60"
+
+[[projects]]
   name = "github.com/magiconair/properties"
   packages = ["."]
   revision = "c3beff4c2358b44d0493c7dda585e7db7ff28ae6"
@@ -385,9 +527,19 @@
 
 [[projects]]
   name = "github.com/opencontainers/runc"
-  packages = ["libcontainer/user"]
+  packages = [
+    "libcontainer/configs",
+    "libcontainer/devices",
+    "libcontainer/system",
+    "libcontainer/user"
+  ]
   revision = "baf6536d6259209c3edfa2b22237af82942d3dfa"
   version = "v0.1.1"
+
+[[projects]]
+  name = "github.com/opencontainers/runtime-spec"
+  packages = ["specs-go"]
+  revision = "1c7c27d043c2a5e513a44084d2b10d77d1402b8c"
 
 [[projects]]
   name = "github.com/pelletier/go-toml"
@@ -447,13 +599,26 @@
   version = "v1.0.2"
 
 [[projects]]
+  name = "github.com/stretchr/objx"
+  packages = ["."]
+  revision = "facf9a85c22f48d2f52f2380e4efce1768749a89"
+  version = "v0.1"
+
+[[projects]]
   name = "github.com/stretchr/testify"
   packages = [
     "assert",
+    "mock",
     "require"
   ]
   revision = "12b6f73e6084dad08a7c6e575284b177ecafbc71"
   version = "v1.2.1"
+
+[[projects]]
+  name = "github.com/tchap/go-patricia"
+  packages = ["patricia"]
+  revision = "666120de432aea38ab06bd5c818f04f4129882c9"
+  version = "v2.2.6"
 
 [[projects]]
   name = "github.com/vbatts/tar-split"
@@ -464,6 +629,107 @@
   ]
   revision = "38ec4ddb06dedbea0a895c4848b248eb38af221b"
   version = "v0.10.2"
+
+[[projects]]
+  name = "github.com/vishvananda/netlink"
+  packages = [
+    ".",
+    "nl"
+  ]
+  revision = "482f7a52b758233521878cb6c5904b6bd63f3457"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/vishvananda/netns"
+  packages = ["."]
+  revision = "be1fbeda19366dea804f00efff2dd73a1642fdcc"
+
+[[projects]]
+  name = "github.com/vmware/govmomi"
+  packages = [
+    ".",
+    "find",
+    "list",
+    "nfc",
+    "object",
+    "performance",
+    "property",
+    "session",
+    "task",
+    "vim25",
+    "vim25/debug",
+    "vim25/methods",
+    "vim25/mo",
+    "vim25/progress",
+    "vim25/soap",
+    "vim25/types",
+    "vim25/xml"
+  ]
+  revision = "123ed177021588bac57b5c87c1a84270ddf2eca8"
+  version = "v0.17.1"
+
+[[projects]]
+  branch = "feature/wolfpack"
+  name = "github.com/vmware/vic"
+  packages = [
+    "lib/apiservers/engine/backends/cache",
+    "lib/apiservers/engine/backends/container",
+    "lib/apiservers/engine/backends/convert",
+    "lib/apiservers/engine/backends/endpoint",
+    "lib/apiservers/engine/backends/filter",
+    "lib/apiservers/engine/backends/kv",
+    "lib/apiservers/engine/backends/portmap",
+    "lib/apiservers/engine/constants",
+    "lib/apiservers/engine/errors",
+    "lib/apiservers/engine/network",
+    "lib/apiservers/engine/proxy",
+    "lib/apiservers/portlayer/client",
+    "lib/apiservers/portlayer/client/containers",
+    "lib/apiservers/portlayer/client/events",
+    "lib/apiservers/portlayer/client/interaction",
+    "lib/apiservers/portlayer/client/kv",
+    "lib/apiservers/portlayer/client/logging",
+    "lib/apiservers/portlayer/client/misc",
+    "lib/apiservers/portlayer/client/scopes",
+    "lib/apiservers/portlayer/client/storage",
+    "lib/apiservers/portlayer/client/tasks",
+    "lib/apiservers/portlayer/models",
+    "lib/archive",
+    "lib/config",
+    "lib/config/executor",
+    "lib/constants",
+    "lib/metadata",
+    "lib/migration/feature",
+    "pkg/certificate",
+    "pkg/dio",
+    "pkg/errors",
+    "pkg/ip",
+    "pkg/log",
+    "pkg/log/syslog",
+    "pkg/retry",
+    "pkg/trace",
+    "pkg/version",
+    "pkg/vsphere/extraconfig",
+    "pkg/vsphere/extraconfig/vmomi",
+    "pkg/vsphere/performance",
+    "pkg/vsphere/session",
+    "pkg/vsphere/sys",
+    "pkg/vsphere/tasks",
+    "pkg/vsphere/vm"
+  ]
+  revision = "aaff393e268f9ba7a70f55455174e671ce27f3ef"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/vmware/vmw-guestinfo"
+  packages = [
+    "bdoor",
+    "message",
+    "rpcout",
+    "rpcvmx",
+    "vmcheck"
+  ]
+  revision = "25eff159a728be87e103a0b8045e08273f4dbec4"
 
 [[projects]]
   branch = "master"
@@ -486,8 +752,13 @@
 [[projects]]
   branch = "master"
   name = "golang.org/x/crypto"
-  packages = ["ssh/terminal"]
-  revision = "2d027ae1dddd4694d54f7a8b6cbe78dca8720226"
+  packages = [
+    "nacl/secretbox",
+    "poly1305",
+    "salsa20/salsa",
+    "ssh/terminal"
+  ]
+  revision = "94eea52f7b742c7cbe0b03b22f0c4c8631ece122"
 
 [[projects]]
   branch = "master"
@@ -495,6 +766,7 @@
   packages = [
     "context",
     "http/httpguts",
+    "context/ctxhttp",
     "http2",
     "http2/hpack",
     "idna",
@@ -571,6 +843,12 @@
   ]
   revision = "41344da2231b913fa3d983840a57a6b1b7b631a1"
   version = "v1.12.0"
+
+[[projects]]
+  branch = "master"
+  name = "golang.org/x/time"
+  packages = ["rate"]
+  revision = "fbb02b2291d28baffd63558aa44b4b56f178d650"
 
 [[projects]]
   branch = "master"
@@ -762,6 +1040,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "574b1551c18b46c07b8d4a67c305c335c6001f6e9a07b41b15067a0f2aa9352e"
+  inputs-digest = "78bbfe28d4d9a3dc7f506a80b31c877133e9db027e30e1b006e0d6f6aaf5c73e"
   solver-name = "gps-cdcl"
   solver-version = 1
