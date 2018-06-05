@@ -150,7 +150,7 @@ func (t *attachServerSSH) Enabled() bool {
 	return atomic.LoadInt32(&t.enabled) == 1
 }
 
-func (t *attachServerSSH) Start() error {
+func (t *attachServerSSH) Start(system tether.System) error {
 	defer trace.End(trace.Begin(""))
 
 	return nil
@@ -618,9 +618,6 @@ func (t *attachServerSSH) channelMux(in <-chan *ssh.Request, session *tether.Ses
 	// cleanup function passed by the caller
 	defer cleanup()
 
-	// to make sure we close the channel once
-	var once sync.Once
-
 	// for the actions after we process the request
 	var pendingFn func()
 	for req := range in {
@@ -654,17 +651,7 @@ func (t *attachServerSSH) channelMux(in <-chan *ssh.Request, session *tether.Ses
 				abort = true
 			} else {
 				// unblock ^ (above)
-				pendingFn = func() {
-					once.Do(func() {
-						launchChan := session.ClearToLaunch
-						if session.RunBlock && launchChan != nil && session.Started == "" {
-							log.Infof("Unblocking the launch of %s", session.Common.ID)
-							// make sure that portlayer received the container id back
-							launchChan <- struct{}{}
-							log.Infof("Unblocked the launch of %s", session.Common.ID)
-						}
-					})
-				}
+				pendingFn = session.Unblock()
 			}
 
 		case msgs.WindowChangeReq:

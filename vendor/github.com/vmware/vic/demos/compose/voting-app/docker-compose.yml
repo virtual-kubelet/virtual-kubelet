@@ -16,6 +16,9 @@ services:
   worker:
     container_name: worker
     image: victest/vote-worker
+    depends_on:
+      - redis
+      - db
 
 # Postgres container will create an anonymous volume.  VIC will use a
 # vmdk for the volume.  Since it is a new volume, it will have a lost+found

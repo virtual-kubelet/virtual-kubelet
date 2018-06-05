@@ -17,6 +17,7 @@ package vicadmin
 import (
 	"context"
 	"fmt"
+	"html"
 	"html/template"
 	"io/ioutil"
 	"net"
@@ -249,7 +250,7 @@ func NewValidator(ctx context.Context, vch *config.VirtualContainerHostConfigSpe
 	if err != nil {
 		log.Errorf("Had a problem querying the datastores: %s", err.Error())
 	}
-	v.QueryVCHStatus(vch, sess)
+	v.QueryVCHStatus(ctx, vch, sess)
 	return v
 }
 
@@ -277,7 +278,7 @@ func (v *Validator) GetVCHName(ctx context.Context, sess *session.Session) error
 	}
 
 	newVM := vm.NewVirtualMachineFromVM(ctx, sess, self)
-	vchName, err := newVM.Name(ctx)
+	vchName, err := newVM.ObjectName(ctx)
 	if err != nil {
 		v.Hostname = DefaultVCHName
 		return err
@@ -351,7 +352,7 @@ func (v *Validator) QueryDatastore(ctx context.Context, vch *config.VirtualConta
 	return nil
 }
 
-func (v *Validator) QueryVCHStatus(vch *config.VirtualContainerHostConfigSpec, sess *session.Session) {
+func (v *Validator) QueryVCHStatus(ctx context.Context, vch *config.VirtualContainerHostConfigSpec, sess *session.Session) {
 	defer trace.End(trace.Begin(""))
 
 	if sess == nil {
@@ -409,7 +410,31 @@ func (v *Validator) QueryVCHStatus(vch *config.VirtualContainerHostConfigSpec, s
 				v.VCHIssues, strings.Title(service)))
 		}
 	}
+
+	v.QueryVMGroupStatus(ctx, vch, sess)
+
 	if v.VCHIssues != template.HTML("") {
 		v.VCHStatus = BadStatus
 	}
+}
+
+func (v *Validator) QueryVMGroupStatus(ctx context.Context, vch *config.VirtualContainerHostConfigSpec, sess *session.Session) {
+	if !vch.UseVMGroup {
+		return
+	}
+
+	exists, err := validate.VMGroupExists(trace.FromContext(ctx, ""), sess.Cluster, vch.VMGroupName)
+
+	if err != nil {
+		// #nosec: this method will not auto-escape HTML. Verify data is well formed.
+		v.VCHIssues = template.HTML(fmt.Sprintf("%s<span class=\"error-message\">%s</span>\n", v.VCHIssues, html.EscapeString(err.Error())))
+		return
+	}
+
+	if !exists {
+		// #nosec: this method will not auto-escape HTML. Verify data is well formed.
+		v.VCHIssues = template.HTML(fmt.Sprintf("%s<span class=\"error-message\">VCH is configured to use DRS VM Group %q, which cannot be found</span>\n", v.VCHIssues, html.EscapeString(vch.VMGroupName)))
+	}
+
+	return
 }

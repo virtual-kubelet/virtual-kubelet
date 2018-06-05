@@ -2,28 +2,23 @@ package docker
 
 import (
 	"fmt"
-	"strconv"
-
-	"golang.org/x/net/context"
+	"io"
+	"time"
 
 	"github.com/docker/engine-api/client"
-	"github.com/docker/engine-api/types"
-	"github.com/docker/engine-api/types/filters"
-	"github.com/hyperhq/libcompose/labels"
 )
 
-const format = "%s-%s-%d"
+const format = "%s_%s_%d"
 
 // Namer defines method to provide container name.
 type Namer interface {
-	Next() (string, int)
+	io.Closer
+	Next() string
 }
 
-type defaultNamer struct {
-	project       string
-	service       string
-	oneOff        bool
-	currentNumber int
+type inOrderNamer struct {
+	names chan string
+	done  chan bool
 }
 
 type singleNamer struct {
@@ -37,56 +32,50 @@ func NewSingleNamer(name string) Namer {
 
 // NewNamer returns a namer that returns names based on the specified project and
 // service name and an inner counter, e.g. project_service_1, project_service_2…
-func NewNamer(client client.APIClient, project, service string, oneOff bool) (Namer, error) {
-	namer := &defaultNamer{
-		project: project,
-		service: service,
-		oneOff:  oneOff,
+func NewNamer(client client.APIClient, project, service string) Namer {
+	namer := &inOrderNamer{
+		names: make(chan string),
+		done:  make(chan bool),
 	}
 
-	filter := filters.NewArgs()
-	filter.Add("label", fmt.Sprintf("%s=%s", labels.PROJECT.Str(), project))
-	filter.Add("label", fmt.Sprintf("%s=%s", labels.SERVICE.Str(), service))
-	if oneOff {
-		filter.Add("label", fmt.Sprintf("%s=%s", labels.ONEOFF.Str(), "True"))
-	} else {
-		filter.Add("label", fmt.Sprintf("%s=%s", labels.ONEOFF.Str(), "False"))
-	}
+	go func() {
+		for i := 1; true; i++ {
+			name := fmt.Sprintf(format, project, service, i)
+			c, err := GetContainerByName(client, name)
+			if err != nil {
+				// Sleep here to avoid crazy tight loop when things go south
+				time.Sleep(time.Second * 1)
+				continue
+			}
+			if c != nil {
+				continue
+			}
 
-	containers, err := client.ContainerList(context.Background(), types.ContainerListOptions{
-		All:    true,
-		Filter: filter,
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	maxNumber := 0
-	for _, container := range containers {
-		number, err := strconv.Atoi(container.Labels[labels.NUMBER.Str()])
-		if err != nil {
-			return nil, err
+			select {
+			case namer.names <- name:
+			case <-namer.done:
+				close(namer.names)
+				return
+			}
 		}
-		if number > maxNumber {
-			maxNumber = number
-		}
-	}
-	namer.currentNumber = maxNumber + 1
+	}()
 
-	return namer, nil
+	return namer
 }
 
-func (i *defaultNamer) Next() (string, int) {
-	service := i.service
-	if i.oneOff {
-		service = i.service + "-run"
-	}
-	name := fmt.Sprintf(format, i.project, service, i.currentNumber)
-	number := i.currentNumber
-	i.currentNumber = i.currentNumber + 1
-	return name, number
+func (i *inOrderNamer) Next() string {
+	return <-i.names
 }
 
-func (s *singleNamer) Next() (string, int) {
-	return s.name, 1
+func (i *inOrderNamer) Close() error {
+	close(i.done)
+	return nil
+}
+
+func (s *singleNamer) Next() string {
+	return s.name
+}
+
+func (s *singleNamer) Close() error {
+	return nil
 }

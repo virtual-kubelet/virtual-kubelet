@@ -72,23 +72,50 @@ COMMIT
 -A INPUT -i lo -j ACCEPT
 -A INPUT -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
 -A INPUT -m conntrack --ctstate INVALID -j DROP
+
+# allow SSH incoming
 -A INPUT -p tcp -m tcp --dport 22 -j ACCEPT
+
+# allow pinging of the endpointVM for liveliness checks
 -A INPUT -p icmp -m icmp --icmp-type 8 -j ACCEPT
+
+# DHCP traffic
 -A INPUT -p udp -m udp --dport 68 -j ACCEPT
+
+# DOCKER API - no TLS
 -A INPUT -p tcp -m tcp --dport 2375 -j ACCEPT
+# DOCKER API - TLS
 -A INPUT -p tcp -m tcp --dport 2376 -j ACCEPT
+
+# vSPC incoming connections - ideally would be -i management but you cannot use
+# aliases in iptables and there's no assurance of a separate interface
 -A INPUT -p tcp -m tcp --dport 2377 -j ACCEPT
+
+# vicadmin
 -A INPUT -p tcp -m tcp --dport 2378 -j ACCEPT
+
+# portlayer port when debug set to expose portlayer API directly
 -A INPUT -p tcp -m tcp --dport 2380 -j ACCEPT
 
+# ports 6060-6063 are for per component pprof servers when debug setting allows external access
+# vic-init
+-A INPUT -p tcp -m tcp --dport 6060 -j ACCEPT
+# vicadmin
+-A INPUT -p tcp -m tcp --dport 6061 -j ACCEPT
+# docker personality
 -A INPUT -p tcp -m tcp --dport 6062 -j ACCEPT
+# port layer
 -A INPUT -p tcp -m tcp --dport 6063 -j ACCEPT
 
+# open DNS ports so containerVMs can do name resolution
 -A INPUT -i bridge -p udp -m udp --dport 53 -j ACCEPT
 -A INPUT -i bridge -p tcp -m tcp --dport 53 -j ACCEPT
+
 -A INPUT -p udp -j REJECT --reject-with icmp-port-unreachable
 -A INPUT -p tcp -j REJECT --reject-with tcp-reset
 -A INPUT -j REJECT --reject-with icmp-proto-unreachable
+
+# forward container traffic to the bridge network
 -A FORWARD -o bridge -j VIC
 -A FORWARD -o bridge -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
 
@@ -96,3 +123,7 @@ COMMIT
 -A VIC -i bridge -o bridge -j REJECT --reject-with icmp-port-unreachable
 COMMIT
 RULES
+
+# TODO: adjust this rule configuration for TLS and debug configuration
+# 2375 should not be open by default with TLS configs
+# 6061-6063 should not be open without debug>=2

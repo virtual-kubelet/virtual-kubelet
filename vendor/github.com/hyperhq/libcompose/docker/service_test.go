@@ -1,6 +1,11 @@
 package docker
 
-/*
+import (
+	"github.com/docker/libcompose/config"
+	"github.com/stretchr/testify/assert"
+	"testing"
+)
+
 func TestSpecifiesHostPort(t *testing.T) {
 	servicesWithHostPort := []Service{
 		{serviceConfig: &config.ServiceConfig{Ports: []string{"8000:8000"}}},
@@ -20,4 +25,3 @@ func TestSpecifiesHostPort(t *testing.T) {
 		assert.False(t, service.specificiesHostPort())
 	}
 }
-*/

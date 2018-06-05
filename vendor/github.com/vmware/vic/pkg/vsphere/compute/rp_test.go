@@ -20,6 +20,7 @@ import (
 	"testing"
 
 	"github.com/vmware/govmomi/simulator"
+	"github.com/vmware/vic/pkg/trace"
 	"github.com/vmware/vic/pkg/vsphere/session"
 	"github.com/vmware/vic/pkg/vsphere/test"
 )
@@ -61,13 +62,11 @@ func TestRp(t *testing.T) {
 
 func testGetChildrenVMs(ctx context.Context, sess *session.Session, t *testing.T) {
 	rp := NewResourcePool(ctx, sess, sess.Pool.Reference())
-	vms, err := rp.GetChildrenVMs(ctx, sess)
+	op := trace.NewOperation(ctx, "children")
+	vms, err := rp.GetChildrenVMs(op)
 	if err != nil {
 		t.Errorf("Failed to get children vm of resource pool %s, %s", rp.Name(), err)
 	}
-	//	if vms == nil || len(vms) == 0 {
-	//		t.Error("Didn't get children VM")
-	//	}
 	for _, vm := range vms {
 		t.Logf("vm: %s", vm)
 	}
@@ -75,7 +74,7 @@ func testGetChildrenVMs(ctx context.Context, sess *session.Session, t *testing.T
 
 func testGetChildVM(ctx context.Context, sess *session.Session, t *testing.T) {
 	rp := NewResourcePool(ctx, sess, sess.Pool.Reference())
-	vm, err := rp.GetChildVM(ctx, sess, "random")
+	vm, err := rp.GetChildVM(ctx, "random")
 	if err == nil && vm != nil {
 		t.Logf("vm: %s", vm.Reference())
 		t.Errorf("Should not find VM random")

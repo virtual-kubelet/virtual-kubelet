@@ -30,6 +30,7 @@ import (
 	"github.com/vmware/vic/lib/install/data"
 	"github.com/vmware/vic/lib/install/management"
 	"github.com/vmware/vic/lib/install/validate"
+	"github.com/vmware/vic/pkg/ip"
 	"github.com/vmware/vic/pkg/trace"
 	"github.com/vmware/vic/pkg/version"
 	"github.com/vmware/vic/pkg/vsphere/vm"
@@ -167,7 +168,7 @@ func upgradeStatusMessage(op trace.Operation, vch *vm.VirtualMachine, installerV
 }
 
 func getVCHConfig(op trace.Operation, d *data.Data, validator *validate.Validator) (*config.VirtualContainerHostConfigSpec, error) {
-	executor := management.NewDispatcher(validator.Context, validator.Session, nil, false)
+	executor := management.NewDispatcher(validator.Context, validator.Session, management.NoAction, false)
 	vch, err := executor.NewVCHFromID(d.ID)
 	if err != nil {
 		return nil, util.NewError(http.StatusNotFound, fmt.Sprintf("Unable to find VCH %s: %s", d.ID, err))
@@ -186,18 +187,34 @@ func getVCHConfig(op trace.Operation, d *data.Data, validator *validate.Validato
 	return vchConfig, nil
 }
 
-func getAddresses(vchConfig *config.VirtualContainerHostConfigSpec) (dockerHost, adminPortal string) {
-	if client := vchConfig.ExecutorConfig.Networks["client"]; client != nil {
-		if publicIP := client.Assigned.IP; publicIP != nil {
-			var dockerPort = opts.DefaultTLSHTTPPort
-			if vchConfig.HostCertificate.IsNil() {
-				dockerPort = opts.DefaultHTTPPort
-			}
+func getAddresses(executor *management.Dispatcher, vchConfig *config.VirtualContainerHostConfigSpec) (string, string, error) {
+	clientNet := vchConfig.ExecutorConfig.Networks["client"]
+	if clientNet != nil {
+		clientIP := clientNet.Assigned.IP
 
-			dockerHost = fmt.Sprintf("%s:%d", publicIP, dockerPort)
-			adminPortal = fmt.Sprintf("https://%s:%d", publicIP, constants.VchAdminPortalPort)
+		if ip.IsUnspecifiedIP(clientIP) {
+			return "", "", fmt.Errorf("No client IP address assigned")
 		}
+
+		hostIP := clientIP.String()
+		// try looking up preferred name irrespective of CAs, if available
+		// once we found a preferred address, we use that instead of the assigned client IP address
+		if cert, err := vchConfig.HostCertificate.X509Certificate(); err == nil {
+			hostIP = executor.GetTLSFriendlyHostIP(clientIP, cert, vchConfig.CertificateAuthorities)
+		}
+
+		var dockerPort int
+		if !vchConfig.HostCertificate.IsNil() {
+			dockerPort = opts.DefaultTLSHTTPPort
+		} else {
+			dockerPort = opts.DefaultHTTPPort
+		}
+
+		dockerHost := fmt.Sprintf("%s:%d", hostIP, dockerPort)
+		adminPortal := fmt.Sprintf("https://%s:%d", hostIP, constants.VchAdminPortalPort)
+
+		return dockerHost, adminPortal, nil
 	}
 
-	return
+	return "", "", fmt.Errorf("No client IP address assigned")
 }

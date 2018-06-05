@@ -1,4 +1,4 @@
-# Copyright 2016-2017 VMware, Inc. All Rights Reserved.
+# Copyright 2016-2018 VMware, Inc. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -15,7 +15,7 @@
 *** Settings ***
 Documentation  Test 12-01 - Delete
 Resource  ../../resources/Util.robot
-Suite Setup  Install VIC 0.6.0 to Test Server
+Suite Setup  Install VIC 1.1.1 to Test Server
 Test Teardown  Run Keyword If Test Failed  Clean up VIC Appliance And Local Binary
 
 *** Keywords ***
@@ -23,7 +23,7 @@ Clean up VIC Appliance And Local Binary
     Cleanup VIC Appliance On Test Server
     Run  rm -rf vic.tar.gz vic
 
-Install VIC 0.6.0 to Test Server
+Install VIC 1.1.1 to Test Server
     Log To Console  \nDownloading VIC 1.1.1 from gcp...
     ${rc}  ${output}=  Run And Return Rc And Output  wget https://storage.googleapis.com/vic-engine-releases/vic_1.1.1.tar.gz -O vic.tar.gz
     ${rc}  ${output}=  Run And Return Rc And Output  tar zxvf vic.tar.gz
@@ -65,7 +65,5 @@ Delete VCH with new vic-machine
 
     # Check resource pool is removed
     ${ret}=  Run  govc pool.info -json=true host/*/Resources/%{VCH-NAME}
-	Should Contain  ${ret}  {"ResourcePools":null}
+    Should Contain  ${ret}  {"ResourcePools":null}
     Run  rm -rf vic.tar.gz vic
-
-    Run Keyword And Ignore Error  Cleanup VCH Bridge Network  %{VCH-NAME}

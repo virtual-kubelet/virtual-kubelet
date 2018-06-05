@@ -47,13 +47,30 @@ type Operations interface {
 	SessionLog(session *SessionConfig) (dio.DynamicMultiWriter, dio.DynamicMultiWriter, error)
 	// Returns a function to invoke after the session state has been persisted
 	HandleSessionExit(config *ExecutorConfig, session *SessionConfig) func()
-	ProcessEnv(env []string) []string
+	ProcessEnv(session *SessionConfig) []string
 	// LaunchUtility starts a process and provides a way to block on completion and retrieve
 	// it's exit code. This is needed to co-exist with a childreaper.
 	LaunchUtility(UtilityFn) (<-chan int, error)
 	// HandleUtilityExit will process the utility exit. If the pid cannot be matched to a launched
 	// utility process then this returns false and does nothing.
 	HandleUtilityExit(pid, exitCode int) bool
+}
+
+// System is a very preliminary interface that provides extensions with a means by which to
+// perform system style operations.
+// This should be designed with intent to provide sufficient abstraction that vic-init, tether
+// can be run by vcsim. Odds are that a significant portion of the methods on this interface
+// will be defined in vcsim and this interface will simply embed the vcsim interface.
+// There may well be overlap with shared.Sys that needs to be resolved
+//
+// For now its sole purpose is to allow extensions access to the specific portions of
+// BaseOperations that they actively use.
+type System interface {
+	// LaunchUtility starts a process and provides a way to block on completion and retrieve
+	// it's exit code. This is needed to co-exist with a childreaper.
+	LaunchUtility(UtilityFn) (<-chan int, error)
+
+	MountLabel(ctx context.Context, label, target string) error
 }
 
 // Tether presents the consumption interface for code needing to run a tether
@@ -67,7 +84,7 @@ type Tether interface {
 // Extension is a very simple extension interface for supporting code that need to be
 // notified when the configuration is reloaded.
 type Extension interface {
-	Start() error
+	Start(System) error
 	Reload(config *ExecutorConfig) error
 	Stop() error
 }

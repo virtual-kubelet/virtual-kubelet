@@ -15,6 +15,7 @@
 package management
 
 import (
+	"crypto/x509"
 	"fmt"
 	"io/ioutil"
 	"net"
@@ -82,22 +83,9 @@ func (d *Dispatcher) InspectVCH(vch *vm.VirtualMachine, conf *config.VirtualCont
 
 	// try looking up preferred name, irrespective of CAs
 	if cert, err := conf.HostCertificate.X509Certificate(); err == nil {
-		// #nosec: Errors unhandled.
-		name, _ := viableHostAddress(d.op, []net.IP{clientIP}, cert, conf.CertificateAuthorities)
-		if name != "" {
-			d.op.Debugf("Retrieved proposed name from host certificate: %q", name)
-			d.op.Debugf("Assigning first name from set: %s", name)
-
-			if name != d.HostIP {
-				d.op.Infof("Using address from host certificate over allocated IP: %s", d.HostIP)
-				// reassign
-				d.HostIP = name
-			}
-		} else {
-			d.op.Warn("Unable to identify address acceptable to host certificate")
-		}
+		d.HostIP = d.GetTLSFriendlyHostIP(clientIP, cert, conf.CertificateAuthorities)
 	} else {
-		d.op.Debug("No host certificates provided")
+		d.op.Debug("No host certificates provided, using assigned client IP as host address.")
 	}
 
 	// Check for valid client cert for a tls-verify configuration
@@ -129,6 +117,26 @@ func (d *Dispatcher) InspectVCH(vch *vm.VirtualMachine, conf *config.VirtualCont
 	return nil
 }
 
+func (d *Dispatcher) GetTLSFriendlyHostIP(clientIP net.IP, cert *x509.Certificate, CertificateAuthorities []byte) string {
+	hostIP := clientIP.String()
+	name, _ := viableHostAddress(d.op, []net.IP{clientIP}, cert, CertificateAuthorities)
+
+	if name != "" {
+		d.op.Debugf("Retrieved proposed name from host certificate: %q", name)
+		d.op.Debugf("Using the first proposed name returned from the set of all preferred name from host certificate: %s", name)
+
+		if name != hostIP {
+			d.op.Infof("Using address %s from host certificate for host address over assigned client IP %s", name, d.HostIP)
+			// found a preferred name by CA, return the preferred hostIP
+			return name
+		}
+	}
+
+	d.op.Warn("Unable to identify address acceptable to host certificate, using assigned client IP as host address.")
+
+	return hostIP
+}
+
 // findCertPaths returns candidate paths for client certs depending on whether
 // a certPath was specified in the CLI.
 func findCertPaths(op trace.Operation, vchName, certPath string) []string {
@@ -156,6 +164,12 @@ func findCertPaths(op trace.Operation, vchName, certPath string) []string {
 }
 
 func (d *Dispatcher) ShowVCH(conf *config.VirtualContainerHostConfigSpec, key string, cert string, cacert string, envfile string, certpath string) {
+	moref := new(types.ManagedObjectReference)
+	if ok := moref.FromString(conf.ID); ok {
+		d.op.Info("")
+		d.op.Infof("VCH ID: %s", moref.Value)
+	}
+
 	if d.sshEnabled {
 		d.op.Info("")
 		d.op.Info("SSH to appliance:")
@@ -170,6 +184,13 @@ func (d *Dispatcher) ShowVCH(conf *config.VirtualContainerHostConfigSpec, key st
 	publicIP := conf.ExecutorConfig.Networks["public"].Assigned.IP
 	d.op.Info("Published ports can be reached at:")
 	d.op.Infof("%s", publicIP.String())
+
+	if management := conf.ExecutorConfig.Networks["management"]; management != nil {
+		d.op.Info("")
+		managementIP := management.Assigned.IP
+		d.op.Info("Management traffic will use:")
+		d.op.Infof("%s", managementIP.String())
+	}
 
 	cmd, env := d.GetDockerAPICommand(conf, key, cert, cacert, certpath)
 

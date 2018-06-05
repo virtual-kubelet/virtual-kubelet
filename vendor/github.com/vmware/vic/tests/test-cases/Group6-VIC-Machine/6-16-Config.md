@@ -19,33 +19,32 @@ This test requires that a vSphere server is running and available
 6. Check the debug state of the VCH
 7. Check the debug state of the existing containerVM
 8. Create a new container and check the debug state of it
-9. Configure the debug state of the VCH again and check whether there is only a single snapshot left
-10. check whether the output of vic-machine inspect contains the desired debug state
-11. Configure the VCH by adding a container network
-12. Run docker network ls
-13. Run vic-machine inspect config
-14. Run a container with the new container network
-15. Configure the VCH by adding a new container network without specifying the previous network
-16. Configure the VCH by adding a new container network while specifying the previous network
-17. Run docker network ls
-18. Run vic-machine inspect config
-19. Run a container with the new container network
-20. Configure the VCH by attempting to change an existing container network
-21. Configure VCH http proxy
-22. Verify http proxy is set correctly through govc
-23. Configure the VCH's operations user credentials
-24. Run vic-machine inspect config
-26. Reset VCH http proxy using VCH ID
-26. Verify http proxy is reset correctly through govc
-27. Run vic-machine inspect config
-28. Configure VCH dns server to 10.118.81.1 and 10.118.81.2
-29. Run vic-machine inspect config
-30. Reset VCH dns server to default
-31. Run vic-machine inspect config
-32. Configure VCH resources
-33. Verify VCH configuration through vic-machine inspect
-34. Configure VCH resources with too small values
-35. Verify VCH configuration is rollback to old value
+9. check whether the output of vic-machine inspect contains the desired debug state
+10. Configure the VCH by adding a container network
+11. Run docker network ls
+12. Run vic-machine inspect config
+13. Run a container with the new container network
+14. Configure the VCH by adding a new container network without specifying the previous network
+15. Configure the VCH by adding a new container network while specifying the previous network
+16. Run docker network ls
+17. Run vic-machine inspect config
+18. Run a container with the new container network
+19. Configure the VCH by attempting to change an existing container network
+20. Configure VCH http proxy
+21. Verify http proxy is set correctly through govc
+22. Configure the VCH's operations user credentials
+23. Run vic-machine inspect config
+24. Reset VCH http proxy using VCH ID
+25. Verify http proxy is reset correctly through govc
+26. Run vic-machine inspect config
+27. Configure VCH dns server to 10.118.81.1 and 10.118.81.2
+28. Run vic-machine inspect config
+29. Reset VCH dns server to default
+30. Run vic-machine inspect config
+31. Configure VCH resources
+32. Verify VCH configuration through vic-machine inspect
+33. Configure VCH resources with too small values
+34. Verify VCH configuration is rollback to old value
 35. Configure the VCH by adding a new volume store
 36. Run vic-machine inspect config
 37. Run docker info

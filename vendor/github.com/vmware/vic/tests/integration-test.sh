@@ -32,23 +32,35 @@ else
     export FAST_FAILURE=0
 fi
 
+if (echo $prBody | grep -q "\[shared datastore="); then
+    command=$(echo $prBody | grep "\[shared datastore=")
+    datastore=$(echo $command | awk -F"\[shared datastore=" '{sub(/\].*/,"",$2);print $2}')
+    export TEST_DATASTORE=$datastore
+fi
+
+jobs="1"
+if (echo $prBody | grep -q "\[parallel jobs="); then
+    parallel=$(echo $prBody | grep "\[parallel jobs=")
+    jobs=$(echo $parallel | awk -F"\[parallel jobs=" '{sub(/\].*/,"",$2);print $2}')
+fi
+
 if [[ $DRONE_BRANCH == "master" || $DRONE_BRANCH == "releases/"* ]] && [[ $DRONE_REPO == "vmware/vic" ]] && [[ $DRONE_BUILD_EVENT == "push" ]]; then
     echo "Running full CI for $DRONE_BUILD_EVENT on $DRONE_BRANCH"
-    pybot --removekeywords TAG:secret --exclude skip tests/test-cases
-elif [[ $DRONE_BRANCH == *"refs/tags"* ]] && [[ $DRONE_REPO == "vmware/vic" ]] && [[ $DRONE_BUILD_EVENT == "tag" ]]; then
+    pabot --verbose --processes $jobs --removekeywords TAG:secret --exclude skip tests/test-cases
+elif [[ $DRONE_REPO == "vmware/vic" ]] && [[ $DRONE_BUILD_EVENT == "tag" ]]; then
     echo "Running only Group11-Upgrade and 7-01-Regression for $DRONE_BUILD_EVENT on $DRONE_BRANCH"
-    pybot --removekeywords TAG:secret --suite Group11-Upgrade --suite 7-01-Regression tests/test-cases
+    pabot --verbose --processes $jobs --removekeywords TAG:secret --suite Group11-Upgrade --suite 7-01-Regression tests/test-cases
 elif (echo $prBody | grep -q "\[full ci\]"); then
     echo "Running full CI as per commit message"
-    pybot --removekeywords TAG:secret --exclude skip tests/test-cases
+    pabot --verbose --processes $jobs --removekeywords TAG:secret --exclude skip tests/test-cases
 elif (echo $prBody | grep -q "\[specific ci="); then
     echo "Running specific CI as per commit message"
     buildtype=$(echo $prBody | grep "\[specific ci=")
     testsuite=$(echo $buildtype | awk -F"\[specific ci=" '{sub(/\].*/,"",$2);print $2}')
-    pybot --removekeywords TAG:secret --suite $testsuite --suite 7-01-Regression tests/test-cases
+    pabot --verbose --processes $jobs --removekeywords TAG:secret --suite $testsuite --suite 7-01-Regression tests/test-cases
 else
     echo "Running regressions"
-    pybot --removekeywords TAG:secret --exclude skip --include regression tests/test-cases
+    pabot --verbose --processes $jobs --removekeywords TAG:secret --exclude skip --include regression tests/test-cases
 fi
 
 rc="$?"
@@ -72,7 +84,14 @@ echo "default_project_id = $GS_PROJECT_ID" >> $botofile
 
 
 if [ -f "$outfile" ]; then
-  gsutil cp $outfile gs://vic-ci-logs
+  echo `ls -al $outfile`
+  n=0
+  until [ $n -ge 5 ]
+  do
+    gsutil cp $outfile gs://vic-ci-logs && break
+    n=$[$n+1]
+    sleep 15
+  done
   source "$(dirname "${BASH_SOURCE[0]}")/save-test-results.sh"
 
   echo "----------------------------------------------"

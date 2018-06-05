@@ -1,4 +1,4 @@
-// Copyright 2016-2017 VMware, Inc. All Rights Reserved.
+// Copyright 2016-2018 VMware, Inc. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -24,17 +24,18 @@ import (
 	"github.com/vmware/govmomi/simulator"
 	"github.com/vmware/govmomi/vim25/types"
 	"github.com/vmware/vic/pkg/vsphere/session"
+	"github.com/vmware/vic/pkg/vsphere/test"
 	"github.com/vmware/vic/pkg/vsphere/test/env"
 )
 
-var Role1 = types.AuthorizationRole{
+var role1 = types.AuthorizationRole{
 	Name: "vcenter",
 	Privilege: []string{
 		"Datastore.Config",
 	},
 }
 
-var Role2 = types.AuthorizationRole{
+var role2 = types.AuthorizationRole{
 	Name: "datacenter",
 	Privilege: []string{
 		"Datastore.Config",
@@ -47,7 +48,7 @@ var Role2 = types.AuthorizationRole{
 	},
 }
 
-var Role3 = types.AuthorizationRole{
+var role3 = types.AuthorizationRole{
 	Name: "cluster",
 	Privilege: []string{
 		"Datastore.AllocateSpace",
@@ -59,29 +60,138 @@ var Role3 = types.AuthorizationRole{
 	},
 }
 
+var readOnlyRole = types.AuthorizationRole{
+	Name: "readonly",
+	Privilege: []string{
+		sysAnonPriv,
+		sysReadPriv,
+		sysViewPriv,
+	},
+}
+
+var dcReadOnlyConfig = Config{
+	Resources: []Resource{
+		{
+			Type:      Datacenter,
+			Propagate: true,
+			Role:      readOnlyRole,
+		},
+	},
+}
+
 // Configuration for the ops-user
 var testRBACConfig = Config{
 	Resources: []Resource{
 		{
 			Type:      VCenter,
 			Propagate: false,
-			Role:      Role1,
+			Role:      role1,
 		},
 		{
 			Type:      Datacenter,
 			Propagate: true,
-			Role:      Role2,
+			Role:      role2,
 		},
 		{
 			Type:      Cluster,
 			Propagate: true,
-			Role:      Role3,
+			Role:      role3,
 		},
 	},
 }
 
-var testRolePrefix = "test-role-prefix"
-var testUser = "test-user"
+var (
+	testRolePrefix = "test-role-prefix"
+	testUser       = "test-user"
+)
+
+func TestReadPermsOnDC(t *testing.T) {
+	ctx := context.Background()
+
+	// Create the VPX model and server.
+	m := simulator.VPX()
+	defer m.Remove()
+	err := m.Create()
+	require.NoError(t, err, "Cannot create VPX simulator")
+
+	server := m.Service.NewServer()
+	defer server.Close()
+
+	s, err := test.SessionWithVPX(ctx, server.URL.String())
+	require.NoError(t, err, "Cannot initialize the VPX session")
+
+	// Initialize the AuthzManager.
+	am := NewAuthzManager(ctx, s.Vim25())
+	am.InitConfig(testUser, testRolePrefix, &dcReadOnlyConfig)
+
+	_, err = am.createOrRepairRoles(ctx)
+	require.NoError(t, err, "Cannot create the read-only role")
+
+	// Test that ReadPermsOnDC returns an error when a non-existent entity ref is supplied.
+	// TODO(anchal): govmomi simulator's RetrieveEntityPermissions func assumes a validated
+	// moref. This test case requires an update to govmomi.
+	// fakeRef := types.ManagedObjectReference{
+	// 	Type:  "VirtualMachine",
+	// 	Value: "foo",
+	// }
+	// hasPrivs, err := am.ReadPermsOnDC(ctx, fakeRef)
+	// require.Error(t, err, "Received no error from ReadPermsOnDC")
+
+	// Test that ReadPermsOnDC returns false when no permissions have been set on an object.
+	dcRef := s.Datacenter.Reference()
+	hasPrivs, err := am.ReadPermsOnDC(ctx, dcRef)
+	require.NoError(t, err, "Received unexpected error from ReadPermsOnDC")
+	require.False(t, hasPrivs, "Expected ReadPermsOnDC to return false")
+
+	// Test that ReadPermsOnDC returns false when a subset of read-only privileges is
+	// assigned to an entity.
+	clusterRef := s.Cluster.Reference()
+	clusterPerms := []types.Permission{
+		{
+			Principal: am.Principal,
+			// RoleId -3 is for the View role, which has only System.Anonymous
+			// and System.View privileges.
+			RoleId: int32(-3),
+		},
+	}
+	err = am.authzManager.SetEntityPermissions(ctx, clusterRef, clusterPerms)
+	require.NoError(t, err, "Cannot set permissions on cluster ref")
+
+	hasPrivs, err = am.ReadPermsOnDC(ctx, clusterRef)
+	require.NoError(t, err, "Received unexpected error from ReadPermsOnDC")
+	require.False(t, hasPrivs, "Expected ReadPermsOnDC to return false")
+
+	// Test that ReadPermsOnDC returns false when the permissions are assigned to a
+	// user who does not match the ops-user (am.Principal).
+	fakePrincipal := "foo@vsphere.local"
+	dcPerms := []types.Permission{
+		{
+			Principal: fakePrincipal,
+			RoleId:    readOnlyRole.RoleId,
+		},
+	}
+	err = am.authzManager.SetEntityPermissions(ctx, dcRef, dcPerms)
+	require.NoError(t, err, "Cannot set permissions on dc ref")
+
+	hasPrivs, err = am.ReadPermsOnDC(ctx, dcRef)
+	require.NoError(t, err, "Received unexpected error from ReadPermsOnDC")
+	require.False(t, hasPrivs, "Expected ReadPermsOnDC to return false")
+
+	// Test that ReadPermsOnDC returns true when read-only permissions are assigned to
+	// the ops-user.
+	dcPerms = []types.Permission{
+		{
+			Principal: am.Principal,
+			RoleId:    readOnlyRole.RoleId,
+		},
+	}
+	err = am.authzManager.SetEntityPermissions(ctx, dcRef, dcPerms)
+	require.NoError(t, err, "Cannot set permissions on dc ref")
+
+	hasPrivs, err = am.ReadPermsOnDC(ctx, dcRef)
+	require.NoError(t, err, "Received unexpected error from ReadPermsOnDC")
+	require.True(t, hasPrivs, "Expected ReadPermsOnDC to return true")
+}
 
 func TestRolesSimulatorVPX(t *testing.T) {
 	ctx := context.Background()

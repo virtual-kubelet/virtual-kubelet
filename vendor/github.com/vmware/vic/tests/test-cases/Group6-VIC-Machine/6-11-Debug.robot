@@ -48,7 +48,7 @@ Check Password Change When Expired
     ${rc}=  Run And Return Rc  bin/vic-machine-linux debug --target %{TEST_URL} --thumbprint=%{TEST_THUMBPRINT} --user %{TEST_USERNAME} --password=%{TEST_PASSWORD} --compute-resource=%{TEST_RESOURCE} --name %{VCH-NAME} --enable-ssh --authorized-key=%{VCH-NAME}.key.pub
     Should Be Equal As Integers  ${rc}  0
 
-    # push the date forward, past the suport duration
+    # push the date forward, past the support duration
     ${rc}  ${output}=  Run And Return Rc And Output  ssh -o StrictHostKeyChecking=no -i %{VCH-NAME}.key root@%{VCH-IP} 'date -s " +6 year"'
     Should Be Equal As Integers  ${rc}  0
 
@@ -70,6 +70,6 @@ Check Password Change When Expired
 Check Error From Incorrect ID
     ${rc}  ${output}=  Run And Return Rc And Output  bin/vic-machine-linux debug --target %{TEST_URL} --thumbprint=%{TEST_THUMBPRINT} --user %{TEST_USERNAME} --password=%{TEST_PASSWORD} --id=wrong
     Should Be Equal As Integers  ${rc}  1
-    Should Contain  ${output}  Failed to get Virtual Container Host 
+    Should Contain  ${output}  Failed to get Virtual Container Host
     Should Contain  ${output}  id \\"wrong\\" could not be found
-    
+

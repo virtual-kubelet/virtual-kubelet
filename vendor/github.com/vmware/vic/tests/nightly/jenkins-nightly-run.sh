@@ -16,8 +16,11 @@
 ESX_60_VERSION="ob-5251623"
 VC_60_VERSION="ob-5112509"
 
-if [[ $1 != "6.0" && $1 != "6.5" ]]; then
-    echo "Please specify a target cluster. One of: 6.0, 6.5"
+ESX_67_VERSION="ob-8126342"
+VC_67_VERSION="ob-8130682"
+
+if [[ $1 != "6.0" && $1 != "6.5" && $1 != "6.7" ]]; then
+    echo "Please specify a target cluster. One of: 6.0, 6.5, 6.7"
     exit 1
 fi
 target="$1"
@@ -78,6 +81,10 @@ elif [[ $target == "6.5" ]]; then
     echo "Executing nightly tests on vSphere 6.5"
     pabot --processes 4 --removekeywords TAG:secret -d 65/$i tests/manual-test-cases/Group5-Functional-Tests tests/manual-test-cases/Group13-vMotion tests/manual-test-cases/Group21-Registries tests/manual-test-cases/Group23-Future-Tests
     cat 65/pabot_results/*/stdout.txt | grep '::' | grep -E 'PASS|FAIL' > console.log
+elif [[ $target == "6.7" ]]; then
+    echo "Executing nightly tests on vSphere 6.7"
+    pabot --processes 4 --removekeywords TAG:secret --exclude nsx --exclude hetero --exclude vsan-complex --variable ESX_VERSION:$ESX_67_VERSION --variable VC_VERSION:$VC_67_VERSION -d 67/$i tests/manual-test-cases/Group5-Functional-Tests tests/manual-test-cases/Group13-vMotion tests/manual-test-cases/Group21-Registries tests/manual-test-cases/Group23-Future-Tests
+    cat 67/pabot_results/*/stdout.txt | grep '::' | grep -E 'PASS|FAIL' > console.log
 fi
 # Pretty up the email results
 sed -i -e 's/^/<br>/g' console.log

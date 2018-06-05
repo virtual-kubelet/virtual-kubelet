@@ -6,11 +6,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/hyperhq/libcompose/config"
-	"github.com/hyperhq/libcompose/project/options"
-	"github.com/hyperhq/libcompose/yaml"
+	"github.com/docker/libcompose/config"
+	"github.com/docker/libcompose/yaml"
 	"github.com/stretchr/testify/assert"
-	"golang.org/x/net/context"
 )
 
 type TestServiceFactory struct {
@@ -33,11 +31,11 @@ func (t *TestService) Name() string {
 	return t.name
 }
 
-func (t *TestService) Run(ctx context.Context, commandParts []string) (int, error) {
+func (t *TestService) Run(commandParts []string) (int, error) {
 	return 0, nil
 }
 
-func (t *TestService) Create(options options.Create) error {
+func (t *TestService) Create() error {
 	key := t.name + ".create"
 	t.factory.Counts[key] = t.factory.Counts[key] + 1
 	return nil
@@ -60,17 +58,17 @@ func TestTwoCall(t *testing.T) {
 		Counts: map[string]int{},
 	}
 
-	p := NewProject(nil, &Context{
+	p := NewProject(&Context{
 		ServiceFactory: factory,
 	})
-	p.ServiceConfigs = config.NewServiceConfigs()
-	p.ServiceConfigs.Add("foo", &config.ServiceConfig{})
+	p.Configs = config.NewConfigs()
+	p.Configs.Add("foo", &config.ServiceConfig{})
 
-	if err := p.Create(options.Create{}, "foo"); err != nil {
+	if err := p.Create("foo"); err != nil {
 		t.Fatal(err)
 	}
 
-	if err := p.Create(options.Create{}, "foo"); err != nil {
+	if err := p.Create("foo"); err != nil {
 		t.Fatal(err)
 	}
 
@@ -79,8 +77,23 @@ func TestTwoCall(t *testing.T) {
 	}
 }
 
+func TestEventEquality(t *testing.T) {
+	if fmt.Sprintf("%s", EventServiceStart) != "Started" ||
+		fmt.Sprintf("%v", EventServiceStart) != "Started" {
+		t.Fatalf("EventServiceStart String() doesn't work: %s %v", EventServiceStart, EventServiceStart)
+	}
+
+	if fmt.Sprintf("%s", EventServiceStart) != fmt.Sprintf("%s", EventServiceUp) {
+		t.Fatal("Event messages do not match")
+	}
+
+	if EventServiceStart == EventServiceUp {
+		t.Fatal("Events match")
+	}
+}
+
 func TestParseWithBadContent(t *testing.T) {
-	p := NewProject(nil, &Context{
+	p := NewProject(&Context{
 		ComposeBytes: [][]byte{
 			[]byte("garbage"),
 		},
@@ -91,13 +104,13 @@ func TestParseWithBadContent(t *testing.T) {
 		t.Fatal("Should have failed parse")
 	}
 
-	if !strings.HasPrefix(err.Error(), "Invalid timestamp: 'garbage'") {
+	if !strings.HasPrefix(err.Error(), "Unknown resolution for 'garbage'") {
 		t.Fatalf("Should have failed parse: %#v", err)
 	}
 }
 
 func TestParseWithGoodContent(t *testing.T) {
-	p := NewProject(nil, &Context{
+	p := NewProject(&Context{
 		ComposeBytes: [][]byte{
 			[]byte("not-garbage:\n  image: foo"),
 		},
@@ -121,13 +134,13 @@ func TestEnvironmentResolve(t *testing.T) {
 		Counts: map[string]int{},
 	}
 
-	p := NewProject(nil, &Context{
+	p := NewProject(&Context{
 		ServiceFactory:    factory,
 		EnvironmentLookup: &TestEnvironmentLookup{},
 	})
-	p.ServiceConfigs = config.NewServiceConfigs()
-	p.ServiceConfigs.Add("foo", &config.ServiceConfig{
-		Environment: yaml.MaporEqualSlice([]string{
+	p.Configs = config.NewConfigs()
+	p.Configs.Add("foo", &config.ServiceConfig{
+		Environment: yaml.NewMaporEqualSlice([]string{
 			"A",
 			"A=",
 			"A=B",
@@ -139,48 +152,33 @@ func TestEnvironmentResolve(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if !reflect.DeepEqual(service.Config().Environment, yaml.MaporEqualSlice{"A=X", "A=X", "A=B"}) {
-		t.Fatal("Invalid environment", service.Config().Environment)
+	if !reflect.DeepEqual(service.Config().Environment.Slice(), []string{"A=X", "A=X", "A=B"}) {
+		t.Fatal("Invalid environment", service.Config().Environment.Slice())
 	}
 }
 
 func TestParseWithMultipleComposeFiles(t *testing.T) {
-	/*
-			configOne := []byte(`
-		  multiple:
-		    image: tianon/true
-		    ports:
-		      - 8000`)
-
-			configTwo := []byte(`
-		  multiple:
-		    image: busybox
-		    container_name: multi
-		    ports:
-		      - 9000`)
-
-			configThree := []byte(`
-		  multiple:
-		    image: busybox
-		    mem_limit: 40000000
-		    ports:
-		      - 10000`)
-	*/
 	configOne := []byte(`
   multiple:
-    image: tianon/true`)
+    image: tianon/true
+    ports:
+      - 8000`)
 
 	configTwo := []byte(`
   multiple:
     image: busybox
-    container_name: multi`)
+    container_name: multi
+    ports:
+      - 9000`)
 
 	configThree := []byte(`
   multiple:
     image: busybox
-    size: xxs`)
+    mem_limit: 40000000
+    ports:
+      - 10000`)
 
-	p := NewProject(nil, &Context{
+	p := NewProject(&Context{
 		ComposeBytes: [][]byte{configOne, configTwo},
 	})
 
@@ -188,12 +186,12 @@ func TestParseWithMultipleComposeFiles(t *testing.T) {
 
 	assert.Nil(t, err)
 
-	multipleConfig, _ := p.ServiceConfigs.Get("multiple")
+	multipleConfig, _ := p.Configs.Get("multiple")
 	assert.Equal(t, "busybox", multipleConfig.Image)
 	assert.Equal(t, "multi", multipleConfig.ContainerName)
-	//assert.Equal(t, []string{"8000", "9000"}, multipleConfig.Ports)
+	assert.Equal(t, []string{"8000", "9000"}, multipleConfig.Ports)
 
-	p = NewProject(nil, &Context{
+	p = NewProject(&Context{
 		ComposeBytes: [][]byte{configTwo, configOne},
 	})
 
@@ -201,12 +199,12 @@ func TestParseWithMultipleComposeFiles(t *testing.T) {
 
 	assert.Nil(t, err)
 
-	multipleConfig, _ = p.ServiceConfigs.Get("multiple")
+	multipleConfig, _ = p.Configs.Get("multiple")
 	assert.Equal(t, "tianon/true", multipleConfig.Image)
 	assert.Equal(t, "multi", multipleConfig.ContainerName)
-	//assert.Equal(t, []string{"9000", "8000"}, multipleConfig.Ports)
+	assert.Equal(t, []string{"9000", "8000"}, multipleConfig.Ports)
 
-	p = NewProject(nil, &Context{
+	p = NewProject(&Context{
 		ComposeBytes: [][]byte{configOne, configTwo, configThree},
 	})
 
@@ -214,9 +212,9 @@ func TestParseWithMultipleComposeFiles(t *testing.T) {
 
 	assert.Nil(t, err)
 
-	multipleConfig, _ = p.ServiceConfigs.Get("multiple")
+	multipleConfig, _ = p.Configs.Get("multiple")
 	assert.Equal(t, "busybox", multipleConfig.Image)
 	assert.Equal(t, "multi", multipleConfig.ContainerName)
-	//assert.Equal(t, []string{"8000", "9000", "10000"}, multipleConfig.Ports)
-	//assert.Equal(t, int64(40000000), multipleConfig.MemLimit)
+	assert.Equal(t, []string{"8000", "9000", "10000"}, multipleConfig.Ports)
+	assert.Equal(t, int64(40000000), multipleConfig.MemLimit)
 }

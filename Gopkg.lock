@@ -32,6 +32,18 @@
   version = "v0.4.7"
 
 [[projects]]
+  name = "github.com/PuerkitoBio/purell"
+  packages = ["."]
+  revision = "0bcb03f4b4d0a9428594752bd2a3b9aa0a9d4bd4"
+  version = "v1.1.0"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/PuerkitoBio/urlesc"
+  packages = ["."]
+  revision = "de5bf2ad457846296e2031421a34e2568e304e35"
+
+[[projects]]
   name = "github.com/Sirupsen/logrus"
   packages = ["."]
   revision = "c155da19408a8799da419ed3eeb0cb5db0ad5dbc"
@@ -183,12 +195,6 @@
   revision = "49bf474f9ed7ce7143a59d1964ff7b7fd9b52178"
 
 [[projects]]
-  name = "github.com/docker/engine-api"
-  packages = ["types/strslice"]
-  revision = "3d1601b9d2436a70b0dfc045a23f6503d19195df"
-  version = "v0.4.0"
-
-[[projects]]
   name = "github.com/docker/go-connections"
   packages = [
     "nat",
@@ -221,6 +227,15 @@
   ]
   revision = "1ee720e18fe98dceda6039bdd005ffbcb359d343"
   version = "v0.5.6"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/docker/spdystream"
+  packages = [
+    ".",
+    "spdy"
+  ]
+  revision = "bc6354cbbc295e925e4c611ffe90c1f287ee54db"
 
 [[projects]]
   branch = "master"
@@ -376,6 +391,12 @@
   version = "v1.6.1"
 
 [[projects]]
+  name = "github.com/gorilla/websocket"
+  packages = ["."]
+  revision = "ea4d1f681babbce9545c9c5f3d5194a789c89f5b"
+  version = "v1.2.0"
+
+[[projects]]
   branch = "master"
   name = "github.com/hashicorp/hcl"
   packages = [
@@ -500,6 +521,16 @@
   packages = ["."]
   revision = "c3beff4c2358b44d0493c7dda585e7db7ff28ae6"
   version = "v1.7.6"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/mailru/easyjson"
+  packages = [
+    "buffer",
+    "jlexer",
+    "jwriter"
+  ]
+  revision = "9825584555aa620c53c265d4a09ace0df1346fd9"
 
 [[projects]]
   branch = "master"
@@ -710,14 +741,11 @@
     "pkg/trace",
     "pkg/version",
     "pkg/vsphere/extraconfig",
-    "pkg/vsphere/extraconfig/vmomi",
     "pkg/vsphere/performance",
     "pkg/vsphere/session",
-    "pkg/vsphere/sys",
-    "pkg/vsphere/tasks",
-    "pkg/vsphere/vm"
+    "pkg/vsphere/sys"
   ]
-  revision = "aaff393e268f9ba7a70f55455174e671ce27f3ef"
+  revision = "24e7742b481d328dc0d5b68c992750b7aef4550d"
 
 [[projects]]
   branch = "master"
@@ -765,15 +793,16 @@
   name = "golang.org/x/net"
   packages = [
     "context",
-    "http/httpguts",
     "context/ctxhttp",
+    "http/httpguts",
     "http2",
     "http2/hpack",
     "idna",
     "internal/socks",
     "internal/timeseries",
     "proxy",
-    "trace"
+    "trace",
+    "websocket"
   ]
   revision = "f73e4c9ed3b7ebdd5f699a16a880c2b1994e50dd"
 
@@ -802,10 +831,17 @@
     "unicode/bidi",
     "unicode/cldr",
     "unicode/norm",
-    "unicode/rangetable"
+    "unicode/rangetable",
+    "width"
   ]
   revision = "f21a4dfb5e38f5895301dc265a8def02365cc3d0"
   version = "v0.3.0"
+
+[[projects]]
+  branch = "master"
+  name = "golang.org/x/time"
+  packages = ["rate"]
+  revision = "fbb02b2291d28baffd63558aa44b4b56f178d650"
 
 [[projects]]
   branch = "master"
@@ -843,18 +879,6 @@
   ]
   revision = "41344da2231b913fa3d983840a57a6b1b7b631a1"
   version = "v1.12.0"
-
-[[projects]]
-  branch = "master"
-  name = "golang.org/x/time"
-  packages = ["rate"]
-  revision = "fbb02b2291d28baffd63558aa44b4b56f178d650"
-
-[[projects]]
-  branch = "master"
-  name = "golang.org/x/time"
-  packages = ["rate"]
-  revision = "fbb02b2291d28baffd63558aa44b4b56f178d650"
 
 [[projects]]
   name = "gopkg.in/inf.v0"
@@ -910,6 +934,7 @@
     "pkg/api/errors",
     "pkg/api/meta",
     "pkg/api/resource",
+    "pkg/apis/meta/internalversion",
     "pkg/apis/meta/v1",
     "pkg/apis/meta/v1beta1",
     "pkg/conversion",
@@ -929,9 +954,12 @@
     "pkg/util/clock",
     "pkg/util/errors",
     "pkg/util/framer",
+    "pkg/util/httpstream",
+    "pkg/util/httpstream/spdy",
     "pkg/util/intstr",
     "pkg/util/json",
     "pkg/util/net",
+    "pkg/util/remotecommand",
     "pkg/util/runtime",
     "pkg/util/sets",
     "pkg/util/validation",
@@ -940,9 +968,19 @@
     "pkg/util/yaml",
     "pkg/version",
     "pkg/watch",
+    "third_party/forked/golang/netutil",
     "third_party/forked/golang/reflect"
   ]
   revision = "13b73596e4b63e03203e86f6d9c7bcc1b937c62f"
+
+[[projects]]
+  branch = "master"
+  name = "k8s.io/apiserver"
+  packages = [
+    "pkg/server/httplog",
+    "pkg/util/wsstream"
+  ]
+  revision = "6afdf50cddfeb57957e59e1c3f47d0a1bde247f5"
 
 [[projects]]
   name = "k8s.io/client-go"
@@ -1022,8 +1060,11 @@
     "tools/clientcmd/api/v1",
     "tools/metrics",
     "tools/reference",
+    "tools/remotecommand",
     "transport",
+    "transport/spdy",
     "util/cert",
+    "util/exec",
     "util/flowcontrol",
     "util/homedir",
     "util/integer"
@@ -1033,13 +1074,23 @@
 
 [[projects]]
   name = "k8s.io/kubernetes"
-  packages = ["pkg/kubelet/apis/cri/runtime/v1alpha2"]
+  packages = [
+    "pkg/apis/core",
+    "pkg/kubelet/apis/cri/runtime/v1alpha2",
+    "pkg/kubelet/server/remotecommand"
+  ]
   revision = "81753b10df112992bf51bbc2c2f85208aad78335"
   version = "v1.10.2"
+
+[[projects]]
+  branch = "master"
+  name = "k8s.io/utils"
+  packages = ["exec"]
+  revision = "258e2a2fa64568210fbd6267cf1d8fd87c3cb86e"
 
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "78bbfe28d4d9a3dc7f506a80b31c877133e9db027e30e1b006e0d6f6aaf5c73e"
+  inputs-digest = "89c03b3402c45d80ca12f794859aab1a727c681beb98f0d9e264b43526e037eb"
   solver-name = "gps-cdcl"
   solver-version = 1

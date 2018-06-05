@@ -90,7 +90,8 @@ Get VM IP
 
 Get VM Host Name
     [Arguments]  ${vm}
-    ${out}=  Run  govc vm.info ${vm}
+    ${rc}  ${out}=  Run And Return Rc And Output  govc vm.info ${vm}
+    Should Be Equal As Integers  ${rc}  0
     ${out}=  Split To Lines  ${out}
     ${host}=  Fetch From Right  @{out}[-1]  ${SPACE}
     [Return]  ${host}
@@ -190,9 +191,10 @@ Check Delete Success
     Log  ${out}
     Should Not Contain  ${out}  ${name}
 
-Gather Logs From ESX Server
-    Environment Variable Should Be Set  TEST_URL
+Gather vSphere Logs
+    Log To Console  Collecting vSphere logs...
     ${out}=  Run  govc logs.download
+    Log To Console  vSphere logs collected
 
 Change Log Level On Server
     [Arguments]  ${level}
@@ -276,3 +278,37 @@ Get Hostd Memory Consumption
     Log to console  ${out}
     Close Connection
     [Return]  ${out}
+
+# This function will use %{VCH-NAME} and the provided vm name to confirm that the supplied vm will exist at `vm/%{VCH-NAME}/vm-name`
+Check VM Folder Path
+    [Arguments]  ${vm-name}
+    ${vm-path}=  Run  govc find / -type m | grep ${vm-name}
+    # If it is esxi - we should find the vm in the vmfolder
+    Run Keyword If  '%{HOST_TYPE}' == 'ESXi'  Should Contain  ${vm-path}  vm/${vm-name}
+    # If it is VC - we should find the vm in a folder named after the VCH.
+    Run Keyword If  '%{HOST_TYPE}' == 'VC'  Should Contain  ${vm-path}  vm/%{VCH-NAME}/${vm-name}
+
+Check VM Folder Path Doesn't Exist
+    [Arguments]  ${vm-name}
+    ${vm-path}=  Run  govc find / -type m | grep ${vm-name}
+    # If it is esxi - we should find the vm in the vmfolder
+    Run Keyword If  '%{HOST_TYPE}' == 'ESXi'  Should Not Contain  ${vm-path}  vm/${vm-name}
+    # If it is VC - we should find the vm in a folder named after the VCH.
+    Run Keyword If  '%{HOST_TYPE}' == 'VC'  Should Not Contain  ${vm-path}  vm/%{VCH-NAME}/${vm-name}
+
+Get Public Network VLAN ID
+    ${noQuotes}=  Strip String  %{PUBLIC_NETWORK}  characters='"
+    ${vlan}=  Run Keyword If  '%{HOST_TYPE}' == 'ESXi'  Run  govc host.portgroup.info --json | jq -r '.Portgroup[].Spec | select(.Name == "${noQuotes}") | .VlanId'
+    Return From Keyword If  '%{HOST_TYPE}' == 'ESXi'  ${vlan}
+
+    ${dvs}=  Run Keyword If  '%{HOST_TYPE}' == 'VC'  Run  govc find -type DistributedVirtualSwitch | head -n1
+    ${vlan}=  Run Keyword If  '%{HOST_TYPE}' == 'VC'  Run  govc dvs.portgroup.info -json -pg='${noQuotes}' ${dvs} | jq -r '.Port[0].Config.Setting.Vlan.VlanId'
+    Return From Keyword If  '%{HOST_TYPE}' == 'VC'  ${vlan}
+
+Query Cluster DRS Setting
+    [Arguments]  ${cluster}
+
+    ${rc}  ${output}=  Run And Return Rc And Output  govc object.collect -json ${cluster} configurationEx | jq '.[].Val.DrsConfig.Enabled'
+    Should Be Equal As Integers  ${rc}  0
+
+    [Return]  ${output}

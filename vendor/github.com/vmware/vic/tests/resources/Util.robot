@@ -32,5 +32,6 @@ Resource  Admiral-Util.robot
 Resource  OVA-Util.robot
 Resource  Cert-Util.robot
 Resource  Slack-Util.robot
+Resource  nimbus-testbeds/ELM-DRS-Disabled.robot
 
 Variables  dynamic-vars.py

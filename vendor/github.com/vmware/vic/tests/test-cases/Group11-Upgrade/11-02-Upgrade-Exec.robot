@@ -15,7 +15,7 @@
 *** Settings ***
 Documentation  Test 11-02 - Upgrade Exec
 Resource  ../../resources/Util.robot
-Suite Setup  Install VIC with version to Test Server  8351
+Suite Setup  Install VIC with version to Test Server  0.9.0
 Suite Teardown  Clean up VIC Appliance And Local Binary
 Default Tags
 

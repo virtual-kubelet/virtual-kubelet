@@ -3,7 +3,6 @@ package gojsonschema
 import (
 	"net"
 	"net/url"
-	"reflect"
 	"regexp"
 	"strings"
 	"time"
@@ -12,7 +11,7 @@ import (
 type (
 	// FormatChecker is the interface all formatters added to FormatCheckerChain must implement
 	FormatChecker interface {
-		IsFormat(input string) bool
+		IsFormat(input interface{}) bool
 	}
 
 	// FormatCheckerChain holds the formatters
@@ -125,32 +124,50 @@ func (c *FormatCheckerChain) IsFormat(name string, input interface{}) bool {
 		return false
 	}
 
-	if !isKind(input, reflect.String) {
+	return f.IsFormat(input)
+}
+
+func (f EmailFormatChecker) IsFormat(input interface{}) bool {
+
+	asString, ok := input.(string)
+	if ok == false {
 		return false
 	}
 
-	inputString := input.(string)
-
-	return f.IsFormat(inputString)
-}
-
-func (f EmailFormatChecker) IsFormat(input string) bool {
-	return rxEmail.MatchString(input)
+	return rxEmail.MatchString(asString)
 }
 
 // Credit: https://github.com/asaskevich/govalidator
-func (f IPV4FormatChecker) IsFormat(input string) bool {
-	ip := net.ParseIP(input)
-	return ip != nil && strings.Contains(input, ".")
+func (f IPV4FormatChecker) IsFormat(input interface{}) bool {
+
+	asString, ok := input.(string)
+	if ok == false {
+		return false
+	}
+
+	ip := net.ParseIP(asString)
+	return ip != nil && strings.Contains(asString, ".")
 }
 
 // Credit: https://github.com/asaskevich/govalidator
-func (f IPV6FormatChecker) IsFormat(input string) bool {
-	ip := net.ParseIP(input)
-	return ip != nil && strings.Contains(input, ":")
+func (f IPV6FormatChecker) IsFormat(input interface{}) bool {
+
+	asString, ok := input.(string)
+	if ok == false {
+		return false
+	}
+
+	ip := net.ParseIP(asString)
+	return ip != nil && strings.Contains(asString, ":")
 }
 
-func (f DateTimeFormatChecker) IsFormat(input string) bool {
+func (f DateTimeFormatChecker) IsFormat(input interface{}) bool {
+
+	asString, ok := input.(string)
+	if ok == false {
+		return false
+	}
+
 	formats := []string{
 		"15:04:05",
 		"15:04:05Z07:00",
@@ -160,7 +177,7 @@ func (f DateTimeFormatChecker) IsFormat(input string) bool {
 	}
 
 	for _, format := range formats {
-		if _, err := time.Parse(format, input); err == nil {
+		if _, err := time.Parse(format, asString); err == nil {
 			return true
 		}
 	}
@@ -168,8 +185,14 @@ func (f DateTimeFormatChecker) IsFormat(input string) bool {
 	return false
 }
 
-func (f URIFormatChecker) IsFormat(input string) bool {
-	u, err := url.Parse(input)
+func (f URIFormatChecker) IsFormat(input interface{}) bool {
+
+	asString, ok := input.(string)
+	if ok == false {
+		return false
+	}
+
+	u, err := url.Parse(asString)
 	if err != nil || u.Scheme == "" {
 		return false
 	}
@@ -177,25 +200,49 @@ func (f URIFormatChecker) IsFormat(input string) bool {
 	return true
 }
 
-func (f URIReferenceFormatChecker) IsFormat(input string) bool {
-	_, err := url.Parse(input)
+func (f URIReferenceFormatChecker) IsFormat(input interface{}) bool {
+
+	asString, ok := input.(string)
+	if ok == false {
+		return false
+	}
+
+	_, err := url.Parse(asString)
 	return err == nil
 }
 
-func (f HostnameFormatChecker) IsFormat(input string) bool {
-	return rxHostname.MatchString(input) && len(input) < 256
+func (f HostnameFormatChecker) IsFormat(input interface{}) bool {
+
+	asString, ok := input.(string)
+	if ok == false {
+		return false
+	}
+
+	return rxHostname.MatchString(asString) && len(asString) < 256
 }
 
-func (f UUIDFormatChecker) IsFormat(input string) bool {
-	return rxUUID.MatchString(input)
+func (f UUIDFormatChecker) IsFormat(input interface{}) bool {
+
+	asString, ok := input.(string)
+	if ok == false {
+		return false
+	}
+
+	return rxUUID.MatchString(asString)
 }
 
 // IsFormat implements FormatChecker interface.
-func (f RegexFormatChecker) IsFormat(input string) bool {
-	if input == "" {
+func (f RegexFormatChecker) IsFormat(input interface{}) bool {
+
+	asString, ok := input.(string)
+	if ok == false {
+		return false
+	}
+
+	if asString == "" {
 		return true
 	}
-	_, err := regexp.Compile(input)
+	_, err := regexp.Compile(asString)
 	if err != nil {
 		return false
 	}

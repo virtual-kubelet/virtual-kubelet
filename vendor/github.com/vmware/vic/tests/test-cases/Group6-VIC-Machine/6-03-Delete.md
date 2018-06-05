@@ -63,7 +63,7 @@ This test requires that a vSphere server is running and available
 
 
 ## Delete VCH moved to root RP and original RP deleted
-1. Create VCH though vic-machine create
+1. Create VCH through vic-machine create
 2. Create VM in the root RP
 3. Move VCH to root RP
 4. Delete the VCH created RP
@@ -73,3 +73,23 @@ This test requires that a vSphere server is running and available
 
 ### Expected Outcome:
 1. All steps should succeed
+
+
+## Delete VCH with non-cVM in VCH folder
+
+### Summary:
+This verifies that when there is a non-containerVM inside the VCH folder, vic-machine delete cleans up the VCH and containerVMs
+but leaves the non-containerVM and its parent folder (VCH folder) intact.
+
+### Test Steps:
+1. Create VCH through vic-machine create
+2. Create a busybox container
+3. Create a dummy VM inside the VCH's folder
+4. Delete the VCH with vic-machine delete --force
+5. Use govc to look for the VCH folder
+6. Use govc to verify that the container has been deleted
+7. Use govc to look for the non-containerVM
+8. Use govc to cleanup the non-containerVM, the VCH folder and the resource pool
+
+### Expected Outcome:
+* All steps should succeed

@@ -16,13 +16,14 @@
 unit_test_array=($TEST_URL_ARRAY)
 numServers=${#unit_test_array[@]}
 DRONE_BUILD_NUMBER=${DRONE_BUILD_NUMBER:=0}
-prevBuildStatus=`drone build info --format='{{.Status}}' vmware/vic $(( $DRONE_BUILD_NUMBER-$numServers ))`
+prevBuildNumber=$(( $DRONE_BUILD_NUMBER-$numServers ))
+prevBuildStatus=`drone build info --format='{{.Status}}' vmware/vic $prevBuildNumber`
 echo prevBuildStatus $prevBuildStatus
 
 while [[ $prevBuildStatus == *"running"* ]]; do
-    echo "Waiting 5 minutes for previous build to complete";
+    echo "Waiting 5 minutes for build $prevBuildNumber to complete";
     sleep 300;
-    prevBuildStatus=`drone build info --format='{{.Status}}' vmware/vic $(( $DRONE_BUILD_NUMBER-$numServers ))`
+    prevBuildStatus=`drone build info --format='{{.Status}}' vmware/vic $prevBuildNumber`
 	echo prevBuildStatus $prevBuildStatus
 done
 set +x;

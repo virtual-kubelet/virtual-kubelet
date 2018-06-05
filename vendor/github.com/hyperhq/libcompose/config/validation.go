@@ -5,7 +5,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/Sirupsen/logrus"
 	"github.com/xeipuuv/gojsonschema"
 )
 
@@ -121,23 +120,19 @@ func convertKeysToStrings(item interface{}) interface{} {
 }
 
 var dockerConfigHints = map[string]string{
-	/*
-		"cpu_share":  "cpu_shares",
-		"add_host":   "extra_hosts",
-		"hosts":      "extra_hosts",
-		"extra_host": "extra_hosts",
-		"device":     "devices",
-	*/
-	"link": "links",
-	/*
-		"memory_swap": "memswap_limit",
-		"port":        "ports",
-		"privilege":   "privileged",
-		"priviliged":  "privileged",
-		"privilige":   "privileged",
-	*/
-	"volume":  "volumes",
-	"workdir": "working_dir",
+	"cpu_share":   "cpu_shares",
+	"add_host":    "extra_hosts",
+	"hosts":       "extra_hosts",
+	"extra_host":  "extra_hosts",
+	"device":      "devices",
+	"link":        "links",
+	"memory_swap": "memswap_limit",
+	"port":        "ports",
+	"privilege":   "privileged",
+	"priviliged":  "privileged",
+	"privilige":   "privileged",
+	"volume":      "volumes",
+	"workdir":     "working_dir",
 }
 
 func unsupportedConfigMessage(key string, nextErr gojsonschema.ResultError) string {
@@ -193,8 +188,8 @@ func invalidTypeMessage(service, key string, err gojsonschema.ResultError) strin
 	return fmt.Sprintf("Service '%s' configuration key '%s' contains an invalid type, it should be %s.", service, key, validTypesMsg)
 }
 
-func validate(serviceMap RawServiceMap, version string) error {
-	if err := setupSchemaLoaders(version); err != nil {
+func validate(serviceMap RawServiceMap) error {
+	if err := setupSchemaLoaders(); err != nil {
 		return err
 	}
 
@@ -229,7 +224,6 @@ func validate(serviceMap RawServiceMap, version string) error {
 				default:
 					validationErrors = append(validationErrors, err.Description())
 				}
-
 			} else {
 				skipRootAdditionalPropertyError = true
 
@@ -238,7 +232,6 @@ func validate(serviceMap RawServiceMap, version string) error {
 
 				switch err.Type() {
 				case "additional_property_not_allowed":
-					logrus.Infof("%s %s", serviceName, key)
 					validationErrors = append(validationErrors, unsupportedConfigMessage(key, result.Errors()[i+1]))
 				case "number_one_of":
 					validationErrors = append(validationErrors, fmt.Sprintf("Service '%s' configuration key '%s' %s", serviceName, key, oneOfMessage(serviceMap, schema, err, result.Errors()[i+1])))
@@ -261,16 +254,14 @@ func validate(serviceMap RawServiceMap, version string) error {
 			}
 		}
 
-		if len(validationErrors) > 0 {
-			return fmt.Errorf(strings.Join(validationErrors, "\n"))
-		}
+		return fmt.Errorf(strings.Join(validationErrors, "\n"))
 	}
 
 	return nil
 }
 
 func validateServiceConstraints(service RawService, serviceName string) error {
-	if err := setupSchemaLoaders("v1"); err != nil {
+	if err := setupSchemaLoaders(); err != nil {
 		return err
 	}
 

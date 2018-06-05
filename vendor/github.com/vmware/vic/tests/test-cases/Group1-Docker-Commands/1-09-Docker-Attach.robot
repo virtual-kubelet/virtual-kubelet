@@ -32,7 +32,6 @@ Basic attach
     Run  echo q > /tmp/fifo
     ${ret}=  Wait For Process  custom
     Should Be Equal As Integers  ${ret.rc}  0
-    Should Be Empty  ${ret.stdout}
     Should Be Empty  ${ret.stderr}
 
 Attach to stopped container

@@ -25,11 +25,10 @@ import (
 	"strings"
 	"syscall"
 
-	docker "github.com/docker/docker/pkg/archive"
-
 	"github.com/vmware/govmomi/object"
 	"github.com/vmware/govmomi/vim25/mo"
 	"github.com/vmware/govmomi/vim25/types"
+	"github.com/vmware/vic/lib/archive"
 	"github.com/vmware/vic/lib/constants"
 	"github.com/vmware/vic/lib/portlayer/exec"
 	"github.com/vmware/vic/lib/portlayer/storage"
@@ -403,7 +402,7 @@ func (v *ImageStore) writeImage(op trace.Operation, storeName, parentID, ID stri
 
 	// Untar the archive
 	var n int64
-	if n, err = docker.ApplyLayer(dir, t); err != nil {
+	if n, err = archive.DockerUnpack(op, dir, t); err != nil {
 		return nil, err
 	}
 

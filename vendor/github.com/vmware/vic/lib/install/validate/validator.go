@@ -70,8 +70,7 @@ type Validator struct {
 	isVC   bool
 	issues []error
 
-	DisableDRSCheck bool
-	allowEmptyDC    bool
+	allowEmptyDC bool
 }
 
 func CreateFromVCHConfig(ctx context.Context, vch *config.VirtualContainerHostConfigSpec, sess *session.Session) (*Validator, error) {
@@ -133,6 +132,9 @@ func NewValidator(ctx context.Context, input *data.Data) (*Validator, error) {
 		Insecure:   input.Force,
 	}
 
+	// if a compute resource path was specified, set it
+	v.ClusterPath = input.ComputeResourcePath
+
 	// if a datacenter was specified, set it
 	v.DatacenterPath = tURL.Path
 	if v.DatacenterPath != "" {
@@ -142,6 +144,7 @@ func NewValidator(ctx context.Context, input *data.Data) (*Validator, error) {
 		tURL.Path = ""
 	}
 
+	sessionconfig.ClusterPath = input.ComputeResourcePath
 	sessionconfig.Service = tURL.String()
 
 	sessionconfig.CloneTicket = input.CloneTicket
@@ -307,7 +310,6 @@ func (v *Validator) Validate(ctx context.Context, input *data.Data) (*config.Vir
 	}
 
 	v.basics(op, input, conf)
-
 	v.target(op, input, conf)
 	v.credentials(op, input, conf)
 	v.compute(op, input, conf)
@@ -326,7 +328,8 @@ func (v *Validator) Validate(ctx context.Context, input *data.Data) (*config.Vir
 	v.CheckFirewall(op, conf)
 	v.CheckPersistNetworkBacking(op, false)
 	v.CheckLicense(op)
-	v.CheckDrs(op)
+	v.CheckDRS(op, input)
+	v.checkVMGroup(op, input, conf) // Depends on a side-effect of the CheckDRS method.
 
 	v.certificate(op, input, conf)
 	v.certificateAuthorities(op, input, conf)
@@ -830,7 +833,7 @@ func (v *Validator) checkDatastoresAreWriteable(op trace.Operation, conf *config
 	if len(clusterHosts) == 1 && v.Session.IsVC() && !justOneHost {
 		// if we have a cluster with >1 host to begin with, on VC, and only one host can talk to all the datastores, warn
 		// on ESX and clusters with only one host to begin with, this warning would be redundant/irrelevant
-		op.Warn("Only one host can access all of the image/container/volume datastores. This may be a point of contention/performance degradation and HA/DRS may not work as intended.")
+		op.Warn("Only one host can access all of the image/volume datastores. This may be a point of contention/performance degradation and HA/DRS may not work as intended.")
 	}
 }
 
@@ -943,11 +946,10 @@ func (v *Validator) syslog(op trace.Operation, conf *config.VirtualContainerHost
 func (v *Validator) kubelet(op trace.Operation, conf *config.VirtualContainerHostConfigSpec, input *data.Data) {
 	defer trace.End(trace.Begin("", op))
 
-	if input.Kubelet.ServerAddress == nil || input.Kubelet.ConfigFile == nil {
+	if input.Kubelet.ConfigFile == nil {
 		return
 	}
 
-	conf.KubernetesServerAddress = *input.Kubelet.ServerAddress
 	conf.KubeletConfigFile = *input.Kubelet.ConfigFile
 
 	err := kubelet.ReadKubeletConfigFile(op, conf)

@@ -14,7 +14,7 @@
 
 *** Settings ***
 Documentation  Test 11-04 - Upgrade-UpdateInProgress
-Suite Setup  Install VIC with version to Test Server  7315
+Suite Setup  Install VIC with version to Test Server  1.2.1
 Suite Teardown  Clean up VIC Appliance And Local Binary
 Resource  ../../resources/Util.robot
 

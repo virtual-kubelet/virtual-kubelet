@@ -22,10 +22,9 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/vmware/vic/lib/config"
-
 	"github.com/vmware/govmomi/find"
 	"github.com/vmware/govmomi/simulator"
+	"github.com/vmware/vic/lib/config"
 	"github.com/vmware/vic/pkg/vsphere/rbac"
 	"github.com/vmware/vic/pkg/vsphere/session"
 	"github.com/vmware/vic/pkg/vsphere/test/env"
@@ -55,7 +54,7 @@ func TestOpsUserRolesSimulatorVPX(t *testing.T) {
 	require.NoError(t, err, "Cannot connect to VPX Simulator")
 
 	am := rbac.NewAuthzManager(ctx, sess.Vim25())
-	am.InitConfig(opsuser, rolePrefix, &OpsuserRBACConf)
+	am.InitConfig(opsuser, rolePrefix, &DRSConf)
 
 	var testRoleNames = []string{
 		"datastore",
@@ -85,7 +84,7 @@ func TestOpsUserRolesVCenter(t *testing.T) {
 	}
 
 	am := rbac.NewAuthzManager(ctx, sess.Vim25())
-	am.InitConfig(opsuser, rolePrefix, &OpsuserRBACConf)
+	am.InitConfig(opsuser, rolePrefix, &DRSConf)
 
 	var testRoleNames = []string{
 		"datastore",
@@ -129,7 +128,8 @@ func TestOpsUserPermsSimulatorVPX(t *testing.T) {
 		},
 	}
 
-	mgr := NewRBACManager(ctx, sess.Vim25(), nil, &OpsuserRBACConf, configSpec)
+	mgr, err := NewRBACManager(ctx, sess, &DRSConf, configSpec)
+	require.NoError(t, err)
 	am := mgr.AuthzManager
 
 	var roleCount = len(am.TargetRoles)

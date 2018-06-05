@@ -55,7 +55,6 @@ import (
 	"github.com/vmware/vic/lib/apiservers/engine/proxy"
 	"github.com/vmware/vic/lib/apiservers/portlayer/client/containers"
 	"github.com/vmware/vic/lib/apiservers/portlayer/client/scopes"
-	"github.com/vmware/vic/lib/apiservers/portlayer/client/tasks"
 	"github.com/vmware/vic/lib/apiservers/portlayer/models"
 	"github.com/vmware/vic/lib/archive"
 	"github.com/vmware/vic/lib/constants"
@@ -112,6 +111,15 @@ const (
 	maxElapsedTime = 2 * time.Minute
 )
 
+// These are the constants used for the portlayer exec states checks returned when obtaining the state of a container handle
+const (
+	RunningState   = "Running"
+	CreatedState   = "Created"
+	SuspendedState = "Suspended"
+	StartingState  = "Starting"
+	StoppedState   = "Stopped"
+)
+
 var (
 	defaultScope struct {
 		sync.Mutex
@@ -162,60 +170,18 @@ const (
 	defaultEnvPath = "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 )
 
-// docker's container.execBackend
-
-func (c *ContainerBackend) TaskInspect(cid, cname, eid string) (*models.TaskInspectResponse, error) {
-	// obtain a portlayer client
-	client := PortLayerClient()
-
-	handle, err := c.containerProxy.Handle(ctx, cid, cname)
+func (c *ContainerBackend) Handle(id, name string) (string, error) {
+	handle, err := c.containerProxy.Handle(context.Background(), id, name)
 	if err != nil {
-		return nil, err
-	}
-
-	// inspect the Task to obtain ProcessConfig
-	config := &models.TaskInspectConfig{
-		Handle: handle,
-		ID:     eid,
-	}
-
-	params := tasks.NewInspectParamsWithContext(ctx).WithConfig(config)
-	resp, err := client.Tasks.Inspect(params)
-	if err != nil {
-		return nil, err
-	}
-	return resp.Payload, nil
-
-}
-
-func (c *ContainerBackend) TaskWaitToStart(cid, cname, eid string) error {
-	// obtain a portlayer client
-	client := PortLayerClient()
-
-	handle, err := c.containerProxy.Handle(ctx, cid, cname)
-	if err != nil {
-		return err
-	}
-
-	// wait the Task to start
-	config := &models.TaskWaitConfig{
-		Handle: handle,
-		ID:     eid,
-	}
-
-	params := tasks.NewWaitParamsWithContext(ctx).WithConfig(config)
-	_, err = client.Tasks.Wait(params)
-	if err != nil {
-		switch err := err.(type) {
-		case *tasks.WaitInternalServerError:
-			return engerr.InternalServerError(err.Payload.Message)
-		default:
-			return engerr.InternalServerError(err.Error())
+		if engerr.IsNotFoundError(err) {
+			cache.ContainerCache().DeleteContainer(id)
 		}
+		return "", err
 	}
-
-	return nil
+	return handle, nil
 }
+
+// docker's container.execBackend
 
 // ContainerExecCreate sets up an exec in a running container.
 func (c *ContainerBackend) ContainerExecCreate(name string, config *types.ExecConfig) (string, error) {
@@ -229,56 +195,73 @@ func (c *ContainerBackend) ContainerExecCreate(name string, config *types.ExecCo
 	}
 	id := vc.ContainerID
 
-	// Is it running?
-	state, err := c.containerProxy.State(op, vc)
-	if err != nil {
-		return "", engerr.InternalServerError(err.Error())
-	}
-
-	if state.Restarting {
-		return "", engerr.ConflictError(fmt.Sprintf("Container %s is restarting, wait until the container is running", id))
-	}
-	if !state.Running {
-		return "", engerr.ConflictError(fmt.Sprintf("Container %s is not running", id))
-	}
-
-	op.Debugf("State checks succeeded for exec operation on cotnainer(%s)", id)
-	handle, err := c.containerProxy.Handle(op, id, name)
-	if err != nil {
-		op.Error(err)
-		return "", engerr.InternalServerError(err.Error())
-	}
-
 	// set up the environment
 	config.Env = setEnvFromImageConfig(config.Tty, config.Env, vc.Config.Env)
 
-	handleprime, eid, err := c.containerProxy.CreateExecTask(ctx, handle, config)
-	if err != nil {
-		op.Errorf("Failed to create exec task for container(%s) due to error(%s)", id, err)
-		return "", engerr.InternalServerError(err.Error())
+	var eid string
+	operation := func() error {
+
+		handle, err := c.Handle(id, name)
+		if err != nil {
+			op.Error(err)
+			return engerr.InternalServerError(err.Error())
+		}
+
+		// Is it running?
+		handle, state, err := c.containerProxy.GetStateFromHandle(op, handle)
+		if err != nil {
+			return engerr.InternalServerError(err.Error())
+		}
+
+		switch state {
+		case StoppedState, CreatedState, SuspendedState:
+			return engerr.InternalServerError(fmt.Sprintf("Container (%s) is not running", name))
+		case StartingState:
+			// This is a transient state, returning conflict error to trigger a retry in the operation.
+			return engerr.ConflictError(fmt.Sprintf("container (%s) is still starting", id))
+		case RunningState:
+			// NO-OP - this is the state that allows an exec to occur.
+		default:
+			return engerr.InternalServerError(fmt.Sprintf("Container (%s) is in an unknown state: %s", id, state))
+		}
+
+		handle, eid, err = c.containerProxy.CreateExecTask(op, handle, config)
+		if err != nil {
+			op.Errorf("Failed to create exec task for container(%s) due to error(%s)", id, err)
+			return engerr.InternalServerError(err.Error())
+		}
+
+		err = c.containerProxy.CommitContainerHandle(op, handle, id, 0)
+		if err != nil {
+			op.Errorf("Failed to commit exec handle for container(%s) due to error(%s)", id, err)
+			return err
+		}
+
+		return nil
 	}
 
-	err = c.containerProxy.CommitContainerHandle(ctx, handleprime, id, 0)
-	if err != nil {
-		op.Errorf("Failed to commit exec handle for container(%s) due to error(%s)", id, err)
+	// configure custom exec back off configure
+	backoffConf := retry.NewBackoffConfig()
+	backoffConf.MaxInterval = 2 * time.Second
+	backoffConf.InitialInterval = 500 * time.Millisecond
+
+	if err := retry.DoWithConfig(operation, engerr.IsConflictError, backoffConf); err != nil {
+		op.Errorf("Failed to start Exec task for container(%s) due to error (%s)", id, err)
 		return "", err
 	}
 
 	// associate newly created exec task with container
 	cache.ContainerCache().AddExecToContainer(vc, eid)
 
-	ec, err := c.TaskInspect(id, name, eid)
+	handle, err := c.Handle(id, name)
 	if err != nil {
-		switch err := err.(type) {
-		case *tasks.InspectInternalServerError:
-			op.Debugf("received an internal server error during task inspect: %s", err.Payload.Message)
-			return "", engerr.InternalServerError(err.Payload.Message)
-		case *tasks.InspectConflict:
-			op.Debugf("received a conflict error during task inspect: %s", err.Payload.Message)
-			return "", engerr.ConflictError(fmt.Sprintf("Cannot complete the operation, container %s has been powered off during execution", id))
-		default:
-			return "", engerr.InternalServerError(err.Error())
-		}
+		op.Error(err)
+		return "", engerr.InternalServerError(err.Error())
+	}
+
+	ec, err := c.containerProxy.InspectTask(op, handle, eid, id)
+	if err != nil {
+		return "", err
 	}
 
 	// exec_create event
@@ -298,23 +281,20 @@ func (c *ContainerBackend) ContainerExecInspect(eid string) (*backend.ExecInspec
 	// Look up the container name in the metadata cache to get long ID
 	vc := cache.ContainerCache().GetContainerFromExec(eid)
 	if vc == nil {
-		return nil, engerr.NotFoundError(eid)
+		return nil, engerr.TaskInspectNotFoundError(eid)
 	}
 	id := vc.ContainerID
 	name := vc.Name
 
-	ec, err := c.TaskInspect(id, name, eid)
+	handle, err := c.Handle(id, name)
 	if err != nil {
-		switch err := err.(type) {
-		case *tasks.InspectInternalServerError:
-			op.Debugf("received an internal server error during task inspect: %s", err.Payload.Message)
-			return nil, engerr.InternalServerError(err.Payload.Message)
-		case *tasks.InspectConflict:
-			op.Debugf("received a conflict error during task inspect: %s", err.Payload.Message)
-			return nil, engerr.ConflictError(fmt.Sprintf("Cannot complete the operation, container %s has been powered off during execution", id))
-		default:
-			return nil, engerr.InternalServerError(err.Error())
-		}
+		op.Error(err)
+		return nil, engerr.InternalServerError(err.Error())
+	}
+
+	ec, err := c.containerProxy.InspectTask(op, handle, eid, id)
+	if err != nil {
+		return nil, err
 	}
 
 	exit := int(ec.ExitCode)
@@ -368,56 +348,36 @@ func (c *ContainerBackend) ContainerExecResize(eid string, height, width int) er
 // ContainerExecStart starts a previously set up exec instance. The
 // std streams are set up.
 func (c *ContainerBackend) ContainerExecStart(ctx context.Context, eid string, stdin io.ReadCloser, stdout io.Writer, stderr io.Writer) error {
-	op := trace.NewOperation(ctx, "")
-	defer trace.End(trace.Begin(fmt.Sprintf("opID=(%s) eid=(%s)", op, eid)))
+	op := trace.FromContext(ctx, "exec start")
+	defer trace.End(trace.Begin("", op))
 
 	// Look up the container name in the metadata cache to get long ID
 	vc := cache.ContainerCache().GetContainerFromExec(eid)
 	if vc == nil {
-		return engerr.NotFoundError(eid)
+		return engerr.InternalServerError(fmt.Sprintf("No container was found with exec id: %s", eid))
 	}
 	id := vc.ContainerID
 	name := vc.Name
 
-	// grab the task details
-	ec, err := c.TaskInspect(id, name, eid)
-	if err != nil {
-		switch err := err.(type) {
-		case *tasks.InspectInternalServerError:
-			op.Debugf("received an internal server error during task inspect: %s", err.Payload.Message)
-			return engerr.InternalServerError(err.Payload.Message)
-		case *tasks.InspectConflict:
-			op.Debugf("received a conflict error during task inspect: %s", err.Payload.Message)
-			return engerr.ConflictError(fmt.Sprintf("Cannot complete the operation, container %s has been powered off during execution", id))
-		default:
-			return engerr.InternalServerError(err.Error())
-		}
-	}
-
-	handle, err := c.containerProxy.Handle(ctx, id, name)
-	if err != nil {
-		op.Errorf("Failed to obtain handle during exec start for container(%s) due to error: %s", id, err)
-		return engerr.InternalServerError(err.Error())
-	}
-
-	bindconfig := &models.TaskBindConfig{
-		Handle: handle,
-		ID:     eid,
-	}
-
-	// obtain a portlayer client
-	client := PortLayerClient()
-
-	// call Bind with bindparams
-	bindparams := tasks.NewBindParamsWithContext(ctx).WithConfig(bindconfig)
-	resp, err := client.Tasks.Bind(bindparams)
-	if err != nil {
-		op.Errorf("Failed to bind parameters during exec start for container(%s) due to error: %s", id, err)
-		return engerr.InternalServerError(err.Error())
-	}
-	handle = resp.Payload.Handle.(string)
+	op.Debugf("exec start of %s in container %d", eid, id)
 
 	operation := func() error {
+		handle, err := c.Handle(id, name)
+		if err != nil {
+			op.Errorf("Failed to obtain handle during exec start for container(%s) due to error: %s", id, err)
+			return engerr.InternalServerError(err.Error())
+		}
+
+		ec, err := c.containerProxy.InspectTask(op, handle, eid, id)
+		if err != nil {
+			return err
+		}
+
+		handle, err = c.containerProxy.BindTask(op, handle, eid)
+		if err != nil {
+			return err
+		}
+
 		// exec doesn't have separate attach path so we will decide whether we need interaction/runblocking or not
 		attach := ec.OpenStdin || ec.OpenStdout || ec.OpenStderr
 		if attach {
@@ -434,14 +394,16 @@ func (c *ContainerBackend) ContainerExecStart(ctx context.Context, eid string, s
 		}
 
 		// we need to be able to cancel it
-		ctx, cancel := context.WithCancel(ctx)
+		taskCtx, cancel := trace.WithCancel(&op, "exec task wait on %s", eid)
 		defer cancel()
 
 		// we do not return an error here if this fails. TODO: Investigate what exactly happens on error here...
+		// FIXME: This being in a retry could lead to multiple writes to stdout(?)
 		go func() {
 			defer trace.End(trace.Begin(eid))
+
 			// wait property collector
-			if err := c.TaskWaitToStart(id, name, eid); err != nil {
+			if err := c.containerProxy.WaitTask(taskCtx, id, name, eid); err != nil {
 				op.Errorf("Task wait returned %s, canceling the context", err)
 
 				// we can't return a proper error as we close the streams as soon as AttachStreams returns so we mimic Docker and write to stdout directly
@@ -464,6 +426,7 @@ func (c *ContainerBackend) ContainerExecStart(ctx context.Context, eid string, s
 			op.Debugf("Detached mode. Returning early.")
 			return nil
 		}
+
 		EventService().Log(containerAttachEvent, eventtypes.ContainerEventType, actor)
 		ca := &backend.ContainerAttachConfig{
 			UseStdin:  ec.OpenStdin,
@@ -503,7 +466,13 @@ func (c *ContainerBackend) ContainerExecStart(ctx context.Context, eid string, s
 		}
 		return nil
 	}
-	if err := retry.Do(operation, engerr.IsConflictError); err != nil {
+
+	// configure custom exec back off configure
+	backoffConf := retry.NewBackoffConfig()
+	backoffConf.MaxInterval = 2 * time.Second
+	backoffConf.InitialInterval = 500 * time.Millisecond
+
+	if err := retry.DoWithConfig(operation, engerr.IsConflictError, backoffConf); err != nil {
 		op.Errorf("Failed to start Exec task for container(%s) due to error (%s)", id, err)
 		return err
 	}
@@ -1438,9 +1407,13 @@ payloadLoop:
 				ips = []string{""}
 			}
 			c := cache.ContainerCache().GetContainer(t.ContainerConfig.ContainerID)
-			pi := network.PortForwardingInformation(c, ips)
-			if pi != nil {
-				ports = append(ports, pi...)
+			if c != nil {
+				pi := network.PortForwardingInformation(c, ips)
+				if pi != nil {
+					ports = append(ports, pi...)
+				}
+			} else {
+				log.Warningf("Container is not found in cache: %s", t.ContainerConfig.ContainerID)
 			}
 		}
 

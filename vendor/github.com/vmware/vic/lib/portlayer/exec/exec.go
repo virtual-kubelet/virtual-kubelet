@@ -1,4 +1,4 @@
-// Copyright 2016-2017 VMware, Inc. All Rights Reserved.
+// Copyright 2016-2018 VMware, Inc. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -25,11 +25,13 @@ import (
 
 	"github.com/vmware/govmomi/find"
 	"github.com/vmware/govmomi/object"
+	"github.com/vmware/govmomi/vim25/types"
 
 	"github.com/vmware/vic/lib/portlayer/event"
 	"github.com/vmware/vic/lib/portlayer/event/collector/vsphere"
 	"github.com/vmware/vic/lib/portlayer/event/events"
 	"github.com/vmware/vic/pkg/trace"
+	"github.com/vmware/vic/pkg/vsphere/compute"
 	"github.com/vmware/vic/pkg/vsphere/extraconfig"
 	"github.com/vmware/vic/pkg/vsphere/session"
 )
@@ -41,7 +43,15 @@ var (
 	}
 )
 
-func Init(ctx context.Context, sess *session.Session, source extraconfig.DataSource, _ extraconfig.DataSink) error {
+// batchingLimit: the maximum number of requests of adding cVM to VMGroup that can be processed concurrently
+const batchingLimit = 100
+
+// Init is the main initializaton function for the exec component.
+// sess - active session object used for vmomi access
+// source - source from which to deserialize component configuration
+// sink - unused at this time but provided for symmetry with source
+// self - a reference to the VM in which this logic is running
+func Init(ctx context.Context, sess *session.Session, source extraconfig.DataSource, _ extraconfig.DataSink, self types.ManagedObjectReference) error {
 	log.Info("Beginning initialization of portlayer exec component")
 	initializer.once.Do(func() {
 		var err error
@@ -76,11 +86,26 @@ func Init(ctx context.Context, sess *session.Session, source extraconfig.DataSou
 			Config.ResourcePool = o.ResourcePool
 		case *object.ResourcePool:
 			Config.ResourcePool = o
+			rp := compute.NewResourcePool(ctx, sess, cr)
+			Config.Cluster, err = rp.GetCluster(ctx)
+			if err != nil {
+				err = fmt.Errorf("could not get cluster from resource pool: %s", err)
+				log.Error(err)
+				return
+			}
 		default:
 			err = fmt.Errorf("could not get resource pool or virtual app from reference %q: object type is wrong", cr.String())
 			log.Error(err)
 			return
 		}
+
+		// TODO: see if we can find a different way of supplying this element. While in product it's a legitimate assumption
+		// for this code to run in a VM that's locatable in the infrastructure it may make testing more awkward.
+		// Alternatively, if committing to only testing via vcsim then we need a vcsim mechanism for "guest.GetSelf" so that
+		// we can pretend that the code runs in a VM in the simulated infra.
+		//
+		// stash this aside for future use in vm group manipulation
+		Config.SelfReference = self
 
 		// we want to monitor the cluster, so create a vSphere Event Collector
 		// The cluster managed object will either be a proper vSphere Cluster or
@@ -128,6 +153,26 @@ func Init(ctx context.Context, sess *session.Session, source extraconfig.DataSou
 		if err = Containers.sync(ctx, sess); err != nil {
 			log.Errorf("Error encountered during container cache sync during init process: %s", err)
 			return
+		}
+
+		if Config.UseVMGroup {
+			vmGroupChan := make(chan chan error, batchingLimit)
+			Config.addToVMGroup = func(op trace.Operation) error {
+				errChan := make(chan error)
+				vmGroupChan <- errChan
+				select {
+				case <-op.Done(): // context cancelled, quit
+					return nil
+				case err := <-errChan:
+					return err
+				}
+			}
+			// fire background listener to add container VM to group
+			go batchBlockOnFunc(ctx, vmGroupChan, reconfigureVMGroup)
+		} else {
+			Config.addToVMGroup = func(op trace.Operation) error {
+				return nil
+			}
 		}
 	})
 

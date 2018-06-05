@@ -15,6 +15,7 @@
 package test
 
 import (
+	"context"
 	"fmt"
 	"math/rand"
 	"strings"
@@ -22,11 +23,14 @@ import (
 	"time"
 
 	"github.com/vmware/govmomi/object"
+	"github.com/vmware/govmomi/simulator"
+	"github.com/vmware/govmomi/vim25/types"
 	"github.com/vmware/vic/lib/spec"
+	"github.com/vmware/vic/pkg/trace"
+	"github.com/vmware/vic/pkg/vsphere/extraconfig"
 	"github.com/vmware/vic/pkg/vsphere/session"
+	"github.com/vmware/vic/pkg/vsphere/tasks"
 	"github.com/vmware/vic/pkg/vsphere/test/env"
-
-	"context"
 )
 
 // Session returns a session.Session struct
@@ -122,4 +126,54 @@ func PickRandomHost(ctx context.Context, session *session.Session, t *testing.T)
 		t.SkipNow()
 	}
 	return hosts[rand.Intn(len(hosts))]
+}
+
+// VpxModelSetup creates a VPX model, starts its server and populates the session. The caller must
+// clean up the model and the server once it is done using them.
+func VpxModelSetup(ctx context.Context, t *testing.T) (*simulator.Model, *simulator.Server, *session.Session) {
+	model := simulator.VPX()
+	if err := model.Create(); err != nil {
+		t.Fatal(err)
+	}
+
+	server := model.Service.NewServer()
+	sess, err := SessionWithVPX(ctx, server.URL.String())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	return model, server, sess
+}
+
+// CreateVM provides a moref to a created VM
+func CreateVM(op trace.Operation, sess *session.Session, name string) (types.ManagedObjectReference, error) {
+	vmx := fmt.Sprintf("%s/%s.vmx", name, name)
+	ds := sess.Datastore
+	secretKey, err := extraconfig.NewSecretKey()
+	if err != nil {
+		return types.ManagedObjectReference{}, err
+	}
+
+	spec := types.VirtualMachineConfigSpec{
+		Name:    name,
+		GuestId: string(types.VirtualMachineGuestOsIdentifierOtherGuest),
+		Files: &types.VirtualMachineFileInfo{
+			VmPathName: fmt.Sprintf("[%s] %s", ds.Name(), vmx),
+		},
+		ExtraConfig: []types.BaseOptionValue{
+			&types.OptionValue{
+				Key:   extraconfig.GuestInfoSecretKey,
+				Value: secretKey.String(),
+			},
+		},
+	}
+
+	res, err := tasks.WaitForResult(op, func(op context.Context) (tasks.Task, error) {
+		return sess.VMFolder.CreateVM(op, spec, sess.Pool, nil)
+	})
+	if err != nil {
+		return types.ManagedObjectReference{}, err
+	}
+
+	return res.Result.(types.ManagedObjectReference), nil
 }

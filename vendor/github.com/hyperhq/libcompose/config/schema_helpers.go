@@ -31,17 +31,13 @@ func (checker portsFormatChecker) IsFormat(input string) bool {
 	return err == nil
 }
 
-func setupSchemaLoaders(version string) error {
+func setupSchemaLoaders() error {
 	if schema != nil {
 		return nil
 	}
 
 	var schemaRaw interface{}
-	var schemaStr string = schemaV1
-	if version == "v2" {
-		schemaStr = schemaV2
-	}
-	err := json.Unmarshal([]byte(schemaStr), &schemaRaw)
+	err := json.Unmarshal([]byte(schemaString), &schemaRaw)
 	if err != nil {
 		return err
 	}
@@ -49,8 +45,8 @@ func setupSchemaLoaders(version string) error {
 	schema = schemaRaw.(map[string]interface{})
 
 	gojsonschema.FormatCheckers.Add("environment", environmentFormatChecker{})
-	//gojsonschema.FormatCheckers.Add("ports", portsFormatChecker{})
-	//gojsonschema.FormatCheckers.Add("expose", portsFormatChecker{})
+	gojsonschema.FormatCheckers.Add("ports", portsFormatChecker{})
+	gojsonschema.FormatCheckers.Add("expose", portsFormatChecker{})
 	schemaLoader = gojsonschema.NewGoLoader(schemaRaw)
 
 	definitions := schema["definitions"].(map[string]interface{})

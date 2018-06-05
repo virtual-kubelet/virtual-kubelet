@@ -1,4 +1,4 @@
-// Copyright 2016-2017 VMware, Inc. All Rights Reserved.
+// Copyright 2016-2018 VMware, Inc. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -24,15 +24,20 @@ import (
 	"strconv"
 	"strings"
 	"sync/atomic"
+	"time"
 
 	"github.com/vmware/govmomi/object"
 	"github.com/vmware/govmomi/property"
 	"github.com/vmware/govmomi/vim25/methods"
 	"github.com/vmware/govmomi/vim25/mo"
+	"github.com/vmware/govmomi/vim25/soap"
 	"github.com/vmware/govmomi/vim25/types"
 
+	"github.com/vmware/vic/pkg/retry"
 	"github.com/vmware/vic/pkg/trace"
+	"github.com/vmware/vic/pkg/vsphere/compute/placement"
 	"github.com/vmware/vic/pkg/vsphere/extraconfig/vmomi"
+	"github.com/vmware/vic/pkg/vsphere/performance"
 	"github.com/vmware/vic/pkg/vsphere/session"
 	"github.com/vmware/vic/pkg/vsphere/tasks"
 )
@@ -64,9 +69,33 @@ type VirtualMachine struct {
 	fixing int32
 }
 
+// Attributes will retrieve the properties for the provided references.  A variadic arg of attribs
+// is provided to allow overriding the default properties retrieved
+func Attributes(ctx context.Context, session *session.Session, refs []types.ManagedObjectReference, attribs ...string) ([]mo.VirtualMachine, error) {
+	defer trace.End(trace.Begin(fmt.Sprintf("populating %d refs", len(refs))))
+	var vms []mo.VirtualMachine
+	// default attributes to retrieve
+	props := []string{"config", "runtime.powerState", "summary"}
+	// if attributes provided then use those instead of default
+	if len(attribs) > 0 {
+		props = attribs
+	}
+	// retrieve the properties via the session property collector
+	err := session.Retrieve(ctx, refs, props, &vms)
+	return vms, err
+}
+
 // NewVirtualMachine returns a NewVirtualMachine object
 func NewVirtualMachine(ctx context.Context, session *session.Session, moref types.ManagedObjectReference) *VirtualMachine {
-	return NewVirtualMachineFromVM(ctx, session, object.NewVirtualMachine(session.Vim25(), moref))
+	vm := NewVirtualMachineFromVM(ctx, session, object.NewVirtualMachine(session.Vim25(), moref))
+	// best effort to get the correct path
+	if session.Finder != nil {
+		e, _ := session.Finder.Element(ctx, moref)
+		if e != nil {
+			vm.VirtualMachine.InventoryPath = e.Path
+		}
+	}
+	return vm
 }
 
 // NewVirtualMachineFromVM returns a NewVirtualMachine object
@@ -107,10 +136,10 @@ func (vm *VirtualMachine) VMPathNameAsURL(ctx context.Context) (url.URL, error) 
 	return val, nil
 }
 
-// FolderName returns the name of the namespace(vsan) or directory(vmfs) that holds the VM
+// DatastoreFolderName returns the name of the namespace(vsan) or directory(vmfs) that holds the VM
 // this equates to the normal directory that contains the vmx file, stripped of any parent path
-func (vm *VirtualMachine) FolderName(ctx context.Context) (string, error) {
-	op := trace.FromContext(ctx, "FolderName")
+func (vm *VirtualMachine) DatastoreFolderName(ctx context.Context) (string, error) {
+	op := trace.FromContext(ctx, "DatastoreFolderName")
 
 	u, err := vm.VMPathNameAsURL(op)
 	if err != nil {
@@ -118,6 +147,42 @@ func (vm *VirtualMachine) FolderName(ctx context.Context) (string, error) {
 	}
 
 	return path.Base(u.Path), nil
+}
+
+// Folder returns a reference to the parent folder that owns the vm
+func (vm *VirtualMachine) Folder(op trace.Operation) (*object.Folder, error) {
+	name, err := vm.ObjectName(op)
+	if err != nil {
+		op.Errorf("Unable to get VM Name to acquire folder: %s", err)
+		return nil, err
+	}
+	// find the VM by name - this is to ensure we have a
+	// consistent inventory path
+	v, err := vm.Session.Finder.VirtualMachine(op, name)
+	if err != nil {
+		op.Errorf("Unable to find VM(name: %s) to acquire folder: %s", name, err)
+		return nil, err
+	}
+	inv := path.Dir(v.InventoryPath)
+	// Parent to determine if VM or vApp
+	p, err := vm.Parent(op)
+	if err != nil {
+		op.Errorf("Unable to get VM Parent to acquire folder: %s", err)
+		return nil, err
+	}
+	// if vApp then move up a slot in the inventory path
+	if p.Type == "VirtualApp" {
+		inv = path.Dir(inv)
+	}
+	// find the vm folder
+	folderRef, err := vm.Session.Finder.Folder(op, inv)
+	if err != nil {
+		e := fmt.Errorf("Error finding folder: %s", err)
+		op.Errorf(e.Error())
+		return nil, e
+	}
+
+	return folderRef, nil
 }
 
 func (vm *VirtualMachine) getNetworkName(op trace.Operation, nic types.BaseVirtualEthernetCard) (string, error) {
@@ -238,20 +303,6 @@ func (vm *VirtualMachine) WaitForKeyInExtraConfig(ctx context.Context, key strin
 	return detail, nil
 }
 
-func (vm *VirtualMachine) Name(ctx context.Context) (string, error) {
-	op := trace.FromContext(ctx, "Name")
-
-	var err error
-	var mvm mo.VirtualMachine
-
-	if err = vm.Properties(op, vm.Reference(), []string{"summary.config"}, &mvm); err != nil {
-		op.Errorf("Unable to get vm summary.config property: %s", err)
-		return "", err
-	}
-
-	return mvm.Summary.Config.Name, nil
-}
-
 func (vm *VirtualMachine) UUID(ctx context.Context) (string, error) {
 	op := trace.FromContext(ctx, "UUID")
 
@@ -267,21 +318,69 @@ func (vm *VirtualMachine) UUID(ctx context.Context) (string, error) {
 }
 
 // DeleteExceptDisks destroys the VM after detaching all virtual disks
-func (vm *VirtualMachine) DeleteExceptDisks(ctx context.Context) (*object.Task, error) {
+func (vm *VirtualMachine) DeleteExceptDisks(ctx context.Context) (*types.TaskInfo, error) {
+
 	op := trace.FromContext(ctx, "DeleteExceptDisks")
+	vmName, err := vm.ObjectName(op)
+	if err != nil {
+		vmName = vm.String()
+		op.Debugf("Failed to get VM name, using moref %q instead due to: %s", vmName, err)
+	}
 
-	devices, err := vm.Device(op)
+	firstTime := true
+	err = retry.Do(func() error {
+		op.Debugf("Getting list of the devices for VM %q", vmName)
+		devices, err := vm.Device(op)
+		if err != nil {
+			return err
+		}
+
+		disks := devices.SelectByType(&types.VirtualDisk{})
+		if len(disks) > 0 {
+			op.Debugf("Removing disks from VM %q", vmName)
+			firstTime = false
+			return vm.RemoveDevice(op, true, disks...)
+		}
+
+		if firstTime {
+			op.Debugf("Disk list is empty for VM %q", vmName)
+		} else {
+			op.Debugf("All VM %q disks were removed at first call, but the result yielded an error that caused a retry", "%q")
+		}
+
+		return nil
+
+	}, func(err error) bool {
+		return tasks.IsRetryError(op, err)
+	})
+
 	if err != nil {
 		return nil, err
 	}
 
-	disks := devices.SelectByType(&types.VirtualDisk{})
-	err = vm.RemoveDevice(op, true, disks...)
+	op.Debugf("Destroying VM %q", vmName)
+	info, err := vm.WaitForResult(op, func(ctx context.Context) (tasks.Task, error) {
+		return vm.Destroy(ctx)
+	})
+
+	if err == nil || !tasks.IsMethodDisabledError(err) {
+		return info, err
+	}
+
+	// If destroy method is disabled on this VM, re-enable it and retry
+	op.Debugf("Destroy is disabled. Enabling destroy for VM %q", vmName)
+	err = retry.Do(func() error {
+		return vm.EnableDestroy(op)
+	}, tasks.IsConcurrentAccessError)
+
 	if err != nil {
 		return nil, err
 	}
 
-	return vm.Destroy(op)
+	op.Debugf("Retrying destroy of VM %q again", vmName)
+	return vm.WaitForResult(op, func(ctx context.Context) (tasks.Task, error) {
+		return vm.Destroy(ctx)
+	})
 }
 
 func (vm *VirtualMachine) VMPathName(ctx context.Context) (string, error) {
@@ -446,7 +545,7 @@ func (vm *VirtualMachine) fixVM(op trace.Operation) error {
 		return err
 	}
 
-	task, err := vm.registerVM(op, mvm.Summary.Config.VmPathName, name, mvm.ParentVApp, mvm.ResourcePool, mvm.Summary.Runtime.Host, vm.Session.VMFolder)
+	task, err := vm.registerVM(op, mvm.Summary.Config.VmPathName, name, mvm.ParentVApp, mvm.ResourcePool, mvm.Summary.Runtime.Host, vm.Session.VCHFolder)
 	if err != nil {
 		op.Errorf("Unable to register VM %q back: %s", name, err)
 		return err
@@ -490,6 +589,24 @@ func (vm *VirtualMachine) IsInvalidState(ctx context.Context) bool {
 	}
 	if o.Summary.Runtime.ConnectionState == types.VirtualMachineConnectionStateInvalid {
 		return true
+	}
+	return false
+}
+
+// IsInvalidPowerStateError is an error certifier function for errors coming back from vsphere. It checks for an InvalidPowerStateFault
+func (vm *VirtualMachine) IsInvalidPowerStateError(err error) bool {
+	if soap.IsVimFault(err) {
+		_, ok1 := soap.ToVimFault(err).(*types.InvalidPowerState)
+		_, ok2 := soap.ToVimFault(err).(*types.InvalidPowerStateFault)
+		return ok1 || ok2
+	}
+
+	if soap.IsSoapFault(err) {
+		_, ok1 := soap.ToSoapFault(err).VimFault().(types.InvalidPowerState)
+		_, ok2 := soap.ToSoapFault(err).VimFault().(types.InvalidPowerStateFault)
+		// sometimes we get the correct fault but wrong type
+		return ok1 || ok2 || soap.ToSoapFault(err).String == "vim.fault.InvalidPowerState" ||
+			soap.ToSoapFault(err).String == "vim.fault.InvalidPowerState"
 	}
 	return false
 }
@@ -616,13 +733,15 @@ func (vm *VirtualMachine) SetVCHUpdateStatus(ctx context.Context, status bool) e
 	return err
 }
 
-// DisableDestroy attempts to disable the VirtualMachine.Destroy_Task method.
-// When the method is disabled, the VC UI will disable/grey out the VM "delete" action.
-// Requires the "Global.Disable" VC privilege.
-// The VirtualMachine.Destroy_Task method can still be invoked via the API.
-func (vm *VirtualMachine) DisableDestroy(ctx context.Context) {
+// DisableDestroy attempts to disable the VirtualMachine.Destroy_Task method on the VM
+// After destroy is disabled for the VM, any session other than the session that disables the destroy can't evoke the method
+// The "VM delete" option will be grayed out on VC UI
+// Requires the "Global.Disable" VC privilege
+func (vm *VirtualMachine) DisableDestroy(ctx context.Context) error {
+	// For nonVC, OOB deletion won't disrupt disk images (ESX doesn't delete parent disks)
+	// See https://github.com/vmware/vic/issues/2928
 	if !vm.IsVC() {
-		return
+		return nil
 	}
 
 	op := trace.FromContext(ctx, "DisableDestroy")
@@ -641,14 +760,18 @@ func (vm *VirtualMachine) DisableDestroy(ctx context.Context) {
 	err := m.DisableMethods(op, obj, method, "VIC")
 	if err != nil {
 		op.Warnf("Failed to disable method %s for %s: %s", method[0].Method, obj[0], err)
+		return err
 	}
+
+	return nil
 }
 
-// EnableDestroy attempts to enable the VirtualMachine.Destroy_Task method
-// so that the VC UI can enable the VM "delete" action.
-func (vm *VirtualMachine) EnableDestroy(ctx context.Context) {
+// EnableDestroy attempts to enable the VirtualMachine.Destroy_Task method for all sessions
+func (vm *VirtualMachine) EnableDestroy(ctx context.Context) error {
+	// For nonVC, OOB deletion won't disrupt disk images (ESX doesn't delete parent disks)
+	// See https://github.com/vmware/vic/issues/2928
 	if !vm.IsVC() {
-		return
+		return nil
 	}
 
 	op := trace.FromContext(ctx, "EnableDestroy")
@@ -660,21 +783,178 @@ func (vm *VirtualMachine) EnableDestroy(ctx context.Context) {
 	err := m.EnableMethods(op, obj, []string{DestroyTask}, "VIC")
 	if err != nil {
 		op.Warnf("Failed to enable Destroy_Task for %s: %s", obj[0], err)
+		return err
 	}
+
+	return nil
 }
 
-// RemoveSnapshot removes a snapshot by reference
-func (vm *VirtualMachine) RemoveSnapshotByRef(ctx context.Context, snapshot *types.ManagedObjectReference, removeChildren bool, consolidate *bool) (*object.Task, error) {
+// RemoveSnapshot removes the provided snapshot
+func (vm *VirtualMachine) RemoveSnapshot(op trace.Operation, snapshot *types.ManagedObjectReference, removeChildren bool, consolidate *bool) (*object.Task, error) {
 	req := types.RemoveSnapshot_Task{
 		This:           snapshot.Reference(),
 		RemoveChildren: removeChildren,
 		Consolidate:    consolidate,
 	}
 
-	res, err := methods.RemoveSnapshot_Task(ctx, vm.Vim25(), &req)
+	res, err := methods.RemoveSnapshot_Task(op, vm.Vim25(), &req)
 	if err != nil {
 		return nil, err
 	}
 
 	return object.NewTask(vm.Vim25(), res.Returnval), nil
+}
+
+// PowerOn powers on a VM. If the environment is VC without DRS enabled, it will attempt to relocate  the VM
+// to the most suitable host in the cluster. If relocation or subsequent power-on fail, it will attempt the next
+// best host, and repeat this process until a successful power-on is achieved or there are no more hosts to try.
+func (vm *VirtualMachine) PowerOn(op trace.Operation) error {
+	// if we aren't in VC, we don't need to recommend or use DRS-aware power-on
+	if !vm.IsVC() {
+		_, err := vm.WaitForResult(op, func(op context.Context) (tasks.Task, error) {
+			return vm.VirtualMachine.PowerOn(op)
+		})
+		return err
+	}
+
+	h, err := vm.Cluster.Hosts(op)
+	if err != nil {
+		return err
+	}
+
+	// we only recommend if the VM is in a cluster with more than one host
+	cls := vm.InCluster(op) && len(h) > 1
+	op.Debugf("%s resides in a multi-host cluster: %t", vm.Reference().String(), cls)
+
+	// or if DRS is disabled
+	drs := vm.Session.DRSEnabled != nil && *vm.Session.DRSEnabled
+	op.Debugf("DRS enabled: %t", drs)
+
+	if !cls || drs {
+		// if we aren't in a multi-host cluster or if we are and DRS is enabled,
+		// there is no reason to recommend a host, so bail early and power-on.
+		return vm.powerOnDRS(op)
+	}
+
+	// otherwise place the VM before powering it on
+	hmp := performance.NewHostMetricsProvider(vm.Session.Vim25())
+	rhp, err := placement.NewRankedHostPolicy(op, vm.Cluster, hmp)
+	if err != nil {
+		return err
+	}
+
+	// first we check if the host on which the VM was created is adequate for power-on
+	if rhp.CheckHost(op, vm.VirtualMachine) {
+		// if so, just power-on, don't bother recommending a better host
+		return vm.powerOnDRS(op)
+	}
+
+	op.Debugf("Host is not adequate for power-on, getting placement recommendation")
+
+	var hosts, subset []*object.HostSystem
+
+	f := func() error {
+		hosts, err = rhp.RecommendHost(op, subset)
+		if err != nil {
+			return fmt.Errorf("error recommending host: %s", err.Error())
+		}
+		return nil
+	}
+
+	conf := retry.NewBackoffConfig()
+	conf.MaxInterval = 1 * time.Second
+	conf.MaxElapsedTime = 20 * time.Second
+
+	err = retry.DoWithConfig(f, retry.OnError, conf)
+	if err != nil {
+		return err
+	}
+
+	for len(hosts) > 0 {
+		op.Debugf("hosts: %s", hosts)
+		op.Infof("Placement recommended %s", hosts[0].Reference().String())
+
+		var err error
+		if err = vm.relocate(op, hosts[0]); err != nil {
+			op.Warnf("VM relocation failed: %s", err.Error())
+		} else if err = vm.powerOnDRS(op); err != nil {
+			op.Warnf("VM power-on failed: %s", err.Error())
+		} else {
+			return nil
+		}
+
+		// if relocation or powerOn fails, something has changed and we need a new recommendation
+		subset = hosts[1:]
+
+		if err = retry.DoWithConfig(f, retry.OnError, conf); err != nil {
+			return err
+		}
+
+	}
+	op.Warnf("vm placement failed: no available hosts. Attempting power-on.")
+	return vm.powerOnDRS(op)
+}
+
+func (vm *VirtualMachine) powerOnDRS(op trace.Operation) error {
+	option := &types.OptionValue{
+		Key:   string(types.ClusterPowerOnVmOptionOverrideAutomationLevel),
+		Value: string(types.DrsBehaviorFullyAutomated),
+	}
+
+	t, err := vm.WaitForResult(op, func(op context.Context) (tasks.Task, error) {
+		return vm.Datacenter.PowerOnVM(op, []types.ManagedObjectReference{vm.Reference()}, option)
+	})
+	if err != nil {
+		return err
+	}
+
+	switch r := t.Result.(type) {
+	case types.ClusterPowerOnVmResult:
+		attempts := len(r.Attempted)
+		if attempts != 1 {
+			return fmt.Errorf("Attempted to power on the wrong number of VMs. Expected 1, attempted %d", attempts)
+		}
+		info := r.Attempted[0]
+		task := object.NewTask(vm.Session.Vim25(), *info.Task)
+		_, err := task.WaitForResult(op, nil)
+		return err
+	default:
+		return fmt.Errorf("Unexpected return type when attempting to power on VM: %T", r)
+	}
+}
+
+func (vm *VirtualMachine) relocate(op trace.Operation, host *object.HostSystem) error {
+	h, err := vm.HostSystem(op)
+	if err != nil {
+		return err
+	}
+	src := h.Reference()
+	dst := host.Reference()
+
+	// NOP if dest host and src host are the same
+	if src.String() == dst.String() {
+		op.Debugf("Skipping relocate - source and destination hosts are the same")
+		return nil
+	}
+
+	op.Debugf("Attempting to relocate %s from host %s to host %s", vm.Reference().String(), src.String(), dst.String())
+
+	spec := types.VirtualMachineRelocateSpec{Host: &dst}
+	_, err = vm.WaitForResult(op, func(op context.Context) (tasks.Task, error) {
+		return vm.Relocate(op, spec, types.VirtualMachineMovePriorityDefaultPriority)
+	})
+	if err != nil {
+		return err
+	}
+
+	op.Infof("VM %s successfully relocated", vm.Reference().String())
+
+	return nil
+}
+
+// InCluster returns true if the VM belongs to a cluster
+func (vm *VirtualMachine) InCluster(op trace.Operation) bool {
+	cls := vm.Cluster.Reference().Type == "ClusterComputeResource"
+	op.Debugf("vm compute resource: %s", vm.Cluster.Name())
+	return cls
 }

@@ -139,6 +139,10 @@ type InstallerData struct {
 
 	HTTPSProxy *url.URL
 	HTTPProxy  *url.URL
+
+	// Used only for configure, so that the current state can be validated relative to the requested changes
+	CreateVMGroup bool
+	DeleteVMGroup bool
 }
 
 func NewData() *Data {

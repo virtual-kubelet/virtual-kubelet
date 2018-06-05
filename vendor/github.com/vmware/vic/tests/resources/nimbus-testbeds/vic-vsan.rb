@@ -32,7 +32,7 @@ $testbed = Proc.new do |type, esxStyle, vcStyle, dbType, location|
     numEsx = 4
     numCPUs = 2
     vmsPerHost = 0
-    addHosts = 'vsan-simple-vcqafvt'   
+    addHosts = 'vsan-simple-vcqafvt'
   end
   testbed = {
     'name' => nameParts.join('-'),
@@ -141,7 +141,7 @@ $testbed = Proc.new do |type, esxStyle, vcStyle, dbType, location|
     testbed['vc']['dbHost'] = 'vc-mssql'
   end
 
-  testbed = VcQaTestbedCommon.addSharedDisks testbed, [10, 2, 10, 2], sharedStorageStyle   # 2 x 10gb shared vmfs, 2 x 2gb free luns as defined by 'freeSharedLuns', DON'T CHANGE THE ORDERING UNLESS YOU KNOW WHAT YOU'RE DOING!
+  testbed = VcQaTestbedCommon.addSharedDisks testbed, [20, 10, 20, 10], sharedStorageStyle   # 2 x 20gb shared vmfs, 2 x 10gb free luns as defined by 'freeSharedLuns', DON'T CHANGE THE ORDERING UNLESS YOU KNOW WHAT YOU'RE DOING!
 
   testbed
 end

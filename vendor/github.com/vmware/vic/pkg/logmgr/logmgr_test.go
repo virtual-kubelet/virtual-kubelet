@@ -90,7 +90,7 @@ func TestStartAndStop(t *testing.T) {
 	m.AddLogRotate("/var/log/test1.log", Daily, 20000, 2, false)
 
 	go func() {
-		assert.Nil(t, m.Start())
+		assert.Nil(t, m.Start(nil))
 		time.Sleep(time.Millisecond * 100)
 		assert.Nil(t, m.Stop())
 	}()

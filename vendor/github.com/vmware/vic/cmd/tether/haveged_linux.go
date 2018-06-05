@@ -49,7 +49,7 @@ func NewHaveged() *Haveged {
 }
 
 // Start implementation of the tether.Extension interface
-func (h *Haveged) Start() error {
+func (h *Haveged) Start(system tether.System) error {
 	log.Infof("Starting haveged")
 
 	var err error

@@ -8,7 +8,7 @@ import (
 	"reflect"
 	"sort"
 
-	"github.com/hyperhq/libcompose/yaml"
+	"github.com/docker/libcompose/yaml"
 )
 
 // GetServiceHash computes and returns a hash that will identify a service.
@@ -49,34 +49,47 @@ func GetServiceHash(name string, config *ServiceConfig) string {
 		switch s := serviceValue.(type) {
 		case yaml.SliceorMap:
 			sliceKeys := []string{}
-			for lkey := range s {
+			for lkey := range s.MapParts() {
 				sliceKeys = append(sliceKeys, lkey)
 			}
 			sort.Strings(sliceKeys)
 
 			for _, sliceKey := range sliceKeys {
-				io.WriteString(hash, fmt.Sprintf("%s=%v, ", sliceKey, s[sliceKey]))
+				io.WriteString(hash, fmt.Sprintf("%s=%v, ", sliceKey, s.MapParts()[sliceKey]))
 			}
 		case yaml.MaporEqualSlice:
-			for _, sliceKey := range s {
+			sliceKeys := s.Slice()
+			// do not sort keys as the order matters
+
+			for _, sliceKey := range sliceKeys {
 				io.WriteString(hash, fmt.Sprintf("%s, ", sliceKey))
 			}
 		case yaml.MaporColonSlice:
-			for _, sliceKey := range s {
+			sliceKeys := s.Slice()
+			// do not sort keys as the order matters
+
+			for _, sliceKey := range sliceKeys {
 				io.WriteString(hash, fmt.Sprintf("%s, ", sliceKey))
 			}
 		case yaml.MaporSpaceSlice:
-			for _, sliceKey := range s {
+			sliceKeys := s.Slice()
+			// do not sort keys as the order matters
+
+			for _, sliceKey := range sliceKeys {
 				io.WriteString(hash, fmt.Sprintf("%s, ", sliceKey))
 			}
 		case yaml.Command:
-			for _, sliceKey := range s {
+			sliceKeys := s.Slice()
+			// do not sort keys as the order matters
+
+			for _, sliceKey := range sliceKeys {
 				io.WriteString(hash, fmt.Sprintf("%s, ", sliceKey))
 			}
 		case yaml.Stringorslice:
-			sort.Strings(s)
+			sliceKeys := s.Slice()
+			sort.Strings(sliceKeys)
 
-			for _, sliceKey := range s {
+			for _, sliceKey := range sliceKeys {
 				io.WriteString(hash, fmt.Sprintf("%s, ", sliceKey))
 			}
 		case []string:

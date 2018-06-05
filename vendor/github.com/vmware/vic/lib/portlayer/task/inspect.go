@@ -17,13 +17,12 @@ package task
 import (
 	"fmt"
 
-	"github.com/vmware/govmomi/vim25/types"
 	"github.com/vmware/vic/lib/config/executor"
 	"github.com/vmware/vic/lib/portlayer/exec"
 	"github.com/vmware/vic/pkg/trace"
 )
 
-// Inspect the task configuration from the containerVM config
+// Inspect the given task id and returns it's config
 func Inspect(op *trace.Operation, h interface{}, id string) (*executor.SessionConfig, error) {
 	defer trace.End(trace.Begin(id))
 
@@ -35,42 +34,29 @@ func Inspect(op *trace.Operation, h interface{}, id string) (*executor.SessionCo
 	stasks := handle.ExecConfig.Sessions
 	etasks := handle.ExecConfig.Execs
 
-	_, okS := stasks[id]
-	_, okE := etasks[id]
-
 	op.Debugf("target task ID: %s", id)
 	op.Debugf("session tasks during inspect: %s", stasks)
 	op.Debugf("exec tasks during inspect: %s", etasks)
 
-	if !okS && !okE {
-		if handle.Runtime.PowerState == types.VirtualMachinePowerStatePoweredOff {
-			powerStateError := TaskPowerStateError{
-				msg: fmt.Sprintf("the operation cannot be completed, container(%s) has been shut down during the operations execution.", handle.ExecConfig.ID),
-			}
-			return nil, powerStateError
-		}
-
-		return nil, fmt.Errorf("unknown task ID: %s", id)
+	if _, ok := stasks[id]; ok {
+		return stasks[id], nil
 	}
 
-	tasks := stasks
-	if handle.Runtime != nil && handle.Runtime.PowerState != types.VirtualMachinePowerStatePoweredOff {
-		op.Debugf("Task configuration applies to ephemeral set")
-		tasks = etasks
+	if _, ok := etasks[id]; ok {
+		return etasks[id], nil
 	}
 
-	if _, ok := tasks[id]; !ok {
-		return nil, fmt.Errorf("Cannot find task %s", id)
+	err := TaskNotFoundError{
+		msg: fmt.Sprintf("Cannot find task %s", id),
 	}
-
-	return tasks[id], nil
+	return nil, err
 }
 
 // Special Error types for a task inspect
-type TaskPowerStateError struct {
+type TaskNotFoundError struct {
 	msg string
 }
 
-func (e TaskPowerStateError) Error() string {
+func (e TaskNotFoundError) Error() string {
 	return e.msg
 }

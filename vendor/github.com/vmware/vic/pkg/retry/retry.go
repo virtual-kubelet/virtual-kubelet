@@ -57,15 +57,8 @@ func NewBackoffConfig() *BackoffConfig {
 // Do retries the given function until defaultMaxInterval time passes, while sleeping some time between unsuccessful attempts
 // if retryOnError returns true, continue retry, otherwise, return error
 func Do(operation func() error, retryOnError func(err error) bool) error {
-	bConf := &BackoffConfig{
-		InitialInterval:     defaultInitialInterval,
-		RandomizationFactor: defaultRandomizationFactor,
-		Multiplier:          defaultMultiplier,
-		MaxInterval:         defaultMaxInterval,
-		MaxElapsedTime:      defaultMaxElapsedTime,
-	}
-
-	return DoWithConfig(operation, retryOnError, bConf)
+	conf := NewBackoffConfig()
+	return DoWithConfig(operation, retryOnError, conf)
 }
 
 // DoWithConfig will attempt an operation while retrying using an exponential back off based on the config supplied by the caller. The retry decider is the supplied function retryOnError

@@ -101,6 +101,13 @@ make cleandeps
 
 After that next "make" run will regenerate dependencies from scratch.
 
+## Updating the appliance with newly built binaries
+After building any of the binaries for the appliance VM (vicadmin, vic-init, port-layer-server, or the docker personality), run `make push` to replace the binaries on your VCH with the newly built ones.
+
+`make push` will prompt you for information that it needs, or you can set your `GOVC` environment variables, as well as `VIC_NAME` (name of your VCH) and `VIC_KEY` with a path to your SSH key in order to run `make push` noninteractively.
+
+Replace individual components with one of: `make push-portlayer`, `make push-vicadmin`, `make push-docker`, or `make push-vic-init`.
+
 
 ## Managing vendor/ directory
 

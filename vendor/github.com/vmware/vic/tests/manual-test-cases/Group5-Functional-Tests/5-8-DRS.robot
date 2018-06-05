@@ -79,14 +79,13 @@ DRS Setup
 *** Test Cases ***
 Test
     Log To Console  \nStarting test...
-    ${status}  ${message}=  Run Keyword And Ignore Error  Install VIC Appliance To Test Server  certs=${false}  vol=default
-    Should Contain  ${message}  DRS must be enabled to use VIC
-    Should Be Equal As Strings  ${status}  FAIL
+    Install VIC Appliance To Test Server  certs=${false}  vol=default
+    Run Regression Tests
+    Cleanup VIC Appliance On Test Server
 
     Log To Console  Enable DRS on the cluster
     ${out}=  Run  govc cluster.change -drs-enabled /ha-datacenter/host/cls
     Should Be Empty  ${out}
 
     Install VIC Appliance To Test Server  certs=${false}  vol=default
-
     Run Regression Tests

@@ -54,7 +54,7 @@ Clean up test files and VIC appliance to test server
     Cleanup VIC Appliance On Test Server
 
 *** Test Cases ***
-Copy a directory from online container to host, dst path doesn't exist
+Copy a directory from online container to host, destination path doesn't exist
     ${rc}  ${output}=  Run And Return Rc And Output  docker %{VCH-PARAMS} pull ${busybox}
     Should Be Equal As Integers  ${rc}  0
     Should Not Contain  ${output}  Error
@@ -78,14 +78,14 @@ Copy the content of a directory from online container to host
     OperatingSystem.File Should Exist  ${CURDIR}/bar/test.txt
     Remove File  ${CURDIR}/bar/test.txt
 
-Copy a file from online container to host, overwrite dst file
+Copy a file from online container to host, overwrite destination file
     ${rc}  ${output}=  Run And Return Rc And Output  docker %{VCH-PARAMS} cp online:/newdir/test.txt ${CURDIR}/foo.txt
     Should Be Equal As Integers  ${rc}  0
     Should Not Contain  ${output}  Error
     ${content}=  OperatingSystem.Get File  ${CURDIR}/foo.txt
     Should Contain  ${content}   testing
 
-Copy a file from host to online container, dst directory doesn't exist
+Copy a file from host to online container, destination directory doesn't exist
     ${rc}  ${output}=  Run And Return Rc And Output  docker %{VCH-PARAMS} cp ${CURDIR}/foo.txt online:/doesnotexist/
     Should Not Be Equal As Integers  ${rc}  0
     Should Contain  ${output}  no such directory
@@ -106,7 +106,7 @@ Copy a file and directory from host to online container
     Should Be Equal As Integers  ${rc}  0
     Should Not Contain  ${output}  Error
 
-Copy a directory from host to online container, dst is a volume
+Copy a directory from host to online container, destination is a volume
     ${rc}  ${output}=  Run And Return Rc And Output  docker %{VCH-PARAMS} run -d -it --name online_vol -v vol1:/vol1 ${busybox}
     Should Be Equal As Integers  ${rc}  0
     Should Not Contain  ${output}  Error
@@ -118,7 +118,7 @@ Copy a directory from host to online container, dst is a volume
     Should Not Contain  ${output}  Error
     Should Contain  ${output}  bar
 
-Copy a file from host to offline container, dst is a volume shared with an online container
+Copy a file from host to offline container, destination is a volume shared with an online container
     ${rc}  ${output}=  Run And Return Rc And Output  docker %{VCH-PARAMS} create -i --name offline -v vol1:/vol1 ${busybox}
     Should Be Equal As Integers  ${rc}  0
     Should Not Contain  ${output}  Error
@@ -130,7 +130,7 @@ Copy a file from host to offline container, dst is a volume shared with an onlin
     Should Not Contain  ${output}  Error
     Should Contain  ${output}  content
 
-Copy a directory from offline container to host, dst is a volume shared with an online container
+Copy a directory from offline container to host, destination is a volume shared with an online container
     ${rc}  ${output}=  Run And Return Rc And Output  docker %{VCH-PARAMS} cp offline:/vol1 ${CURDIR}
     Should Be Equal As Integers  ${rc}  0
     Should Not Contain  ${output}  Error
@@ -142,7 +142,7 @@ Copy a directory from offline container to host, dst is a volume shared with an 
     Should Be Equal As Integers  ${rc}  0
     Should Not Contain  ${output}  Error
 
-Copy a large file to an online container, dst is a volume
+Copy a large file to an online container, destination is a volume
     ${rc}  ${output}=  Run And Return Rc And Output  docker %{VCH-PARAMS} cp ${CURDIR}/largefile.txt online_vol:/vol1/
     Should Be Equal As Integers  ${rc}  0
     Should Not Contain  ${output}  Error
@@ -226,7 +226,7 @@ Concurrent copy: repeat copy a large file from online container to host several 
     Should Be Equal As Integers  ${rc}  0
     Should Not Contain  ${output}  Error
 
-Sub volumes: copy from host to an online container, dst includes several volumes
+Sub volumes: copy from host to an online container, destination includes several volumes
     ${rc}  ${output}=  Run And Return Rc And Output  docker %{VCH-PARAMS} run -d -it -v A:/mnt/vol1 -v B:/mnt/vol2 --name subVol ${busybox}
     Should Be Equal As Integers  ${rc}  0
     Should Not Contain  ${output}  Error
@@ -240,7 +240,7 @@ Sub volumes: copy from host to an online container, dst includes several volumes
     Should Contain  ${output}  /mnt/vol1/v1.txt
     Should Contain  ${output}  /mnt/vol2/v2.txt
 
-Sub volumes: copy from online container to host, src includes several volumes
+Sub volumes: copy from online container to host, source includes several volumes
     Remove Directory  ${CURDIR}/result1  recursive=True
     ${rc}  ${output}=  Run And Return Rc And Output  docker %{VCH-PARAMS} cp subVol:/mnt ${CURDIR}/result1
     Should Be Equal As Integers  ${rc}  0
@@ -255,7 +255,7 @@ Sub volumes: copy from online container to host, src includes several volumes
     Should Be Equal As Integers  ${rc}  0
     Should Not Contain  ${output}  Error
 
-Sub volumes: copy from host to an offline container, dst includes a shared vol with an online container
+Sub volumes: copy from host to an offline container, destination includes a shared vol with an online container
     ${rc}  ${output}=  Run And Return Rc And Output  docker %{VCH-PARAMS} run -d -it -v vol1:/vol1 --name subVol_on ${busybox}
     Should Be Equal As Integers  ${rc}  0
     Should Not Contain  ${output}  Error
@@ -279,7 +279,7 @@ Sub volumes: copy from host to an offline container, dst includes a shared vol w
     Should Be Equal As Integers  ${rc}  0
     Should Not Contain  ${output}  Error
 
-Sub volumes: copy from an offline container to host, src includes a shared vol with an online container
+Sub volumes: copy from an offline container to host, source includes a shared vol with an online container
     Remove Directory  ${CURDIR}/result2  recursive=True
     ${rc}  ${output}=  Run And Return Rc And Output  docker %{VCH-PARAMS} cp subVol_off:/mnt ${CURDIR}/result2
     Should Be Equal As Integers  ${rc}  0
@@ -296,3 +296,18 @@ Sub volumes: copy from an offline container to host, src includes a shared vol w
     ${rc}  ${output}=  Run And Return Rc And Output  docker %{VCH-PARAMS} rm -f subVol_on
     Should Be Equal As Integers  ${rc}  0
     Should Not Contain  ${output}  Error
+
+Malformed tarball doesn't extract to wrong container from shared volume
+    ${rc}  ${output}=  Run And Return Rc And Output  docker %{VCH-PARAMS} run -itd --name one -v vol1:/vol1 -v vol2:/vol2 ${busybox} /bin/sh
+    Should Be Equal As Integers  ${rc}  0
+    Should Not Contain  ${output}  Error
+    ${rc}  ${output}=  Run And Return Rc And Output  docker %{VCH-PARAMS} create --name two -it -v vol2:/vol2 -v vol1:/vol1 ${busybox}
+    Should Be Equal As Integers  ${rc}  0
+    Should Not Contain  ${output}  Error
+    ${rc}  ${output}=  Run And Return Rc And Output  cat ${CURDIR}/../../resources/archive.tar.gz | docker %{VCH-PARAMS} cp - two:/vol1
+    ${rc}  ${output}=  Run And Return Rc And Output  docker %{VCH-PARAMS} stop one
+    Should Be Equal As Integers  ${rc}  0
+    ${rc}  ${output}=  Run And Return Rc And Output  docker %{VCH-PARAMS} start two
+    Should Be Equal As Integers  ${rc}  0
+    ${rc}  ${output}=  Run And Return Rc And Output  docker %{VCH-PARAMS} exec one ls /tmp
+    Should Not Contain  ${output}  pingme

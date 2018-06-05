@@ -24,6 +24,7 @@ import (
 	log "github.com/Sirupsen/logrus"
 	"gopkg.in/urfave/cli.v1"
 
+	"github.com/vmware/vic/cmd/vic-machine/common"
 	"github.com/vmware/vic/cmd/vic-machine/configure"
 	"github.com/vmware/vic/cmd/vic-machine/create"
 	"github.com/vmware/vic/cmd/vic-machine/debug"
@@ -58,48 +59,55 @@ func main() {
 	configure := configure.NewConfigure()
 	app.Commands = []cli.Command{
 		{
-			Name:   "create",
-			Usage:  "Deploy VCH",
-			Action: create.Run,
-			Flags:  create.Flags(),
+			Name:         "create",
+			Usage:        "Deploy VCH",
+			Action:       create.Run,
+			Flags:        create.Flags(),
+			BashComplete: common.BashComplete(create.Flags),
 		},
 		{
-			Name:   "configure",
-			Usage:  "Update VCH configuration",
-			Action: configure.Run,
-			Flags:  configure.Flags(),
+			Name:         "configure",
+			Usage:        "Update VCH configuration",
+			Action:       configure.Run,
+			Flags:        configure.Flags(),
+			BashComplete: common.BashComplete(configure.Flags),
 		},
 		{
-			Name:   "delete",
-			Usage:  "Delete VCH and associated resources",
-			Action: uninstall.Run,
-			Flags:  uninstall.Flags(),
+			Name:         "delete",
+			Usage:        "Delete VCH and associated resources",
+			Action:       uninstall.Run,
+			Flags:        uninstall.Flags(),
+			BashComplete: common.BashComplete(uninstall.Flags),
 		},
 		{
-			Name:   "ls",
-			Usage:  "List VCHs",
-			Action: list.Run,
-			Flags:  list.Flags(),
+			Name:         "ls",
+			Usage:        "List VCHs",
+			Action:       list.Run,
+			Flags:        list.Flags(),
+			BashComplete: common.BashComplete(list.Flags),
 		},
 		{
-			Name:   "inspect",
-			Usage:  "Inspect VCH",
-			Action: inspect.Run,
-			Flags:  inspect.Flags(),
+			Name:         "inspect",
+			Usage:        "Inspect VCH",
+			Action:       inspect.Run,
+			Flags:        inspect.Flags(),
+			BashComplete: common.BashComplete(inspect.Flags, "help", "config"),
 			Subcommands: []cli.Command{
 				{
-					Name:   "config",
-					Usage:  "Show VCH configuration options",
-					Action: inspect.RunConfig,
-					Flags:  inspect.ConfigFlags(),
+					Name:         "config",
+					Usage:        "Show VCH configuration options",
+					Action:       inspect.RunConfig,
+					Flags:        inspect.ConfigFlags(),
+					BashComplete: common.BashComplete(inspect.ConfigFlags),
 				},
 			},
 		},
 		{
-			Name:   "upgrade",
-			Usage:  "Upgrade VCH to latest version",
-			Action: upgrade.Run,
-			Flags:  upgrade.Flags(),
+			Name:         "upgrade",
+			Usage:        "Upgrade VCH to latest version",
+			Action:       upgrade.Run,
+			Flags:        upgrade.Flags(),
+			BashComplete: common.BashComplete(upgrade.Flags),
 		},
 		{
 			Name:   "version",
@@ -107,20 +115,23 @@ func main() {
 			Action: showVersion,
 		},
 		{
-			Name:   "debug",
-			Usage:  "Debug VCH",
-			Action: debug.Run,
-			Flags:  debug.Flags(),
+			Name:         "debug",
+			Usage:        "Debug VCH",
+			Action:       debug.Run,
+			Flags:        debug.Flags(),
+			BashComplete: common.BashComplete(debug.Flags),
 		},
 		{
-			Name:  "update",
-			Usage: "Modify configuration",
+			Name:         "update",
+			Usage:        "Modify infrastructure configuration",
+			BashComplete: common.BashComplete(nil, "help", "firewall"),
 			Subcommands: []cli.Command{
 				{
-					Name:   "firewall",
-					Usage:  "Modify host firewall",
-					Action: updateFw.Run,
-					Flags:  updateFw.Flags(),
+					Name:         "firewall",
+					Usage:        "Modify host firewall",
+					Action:       updateFw.Run,
+					Flags:        updateFw.Flags(),
+					BashComplete: common.BashComplete(updateFw.Flags),
 				},
 			},
 		},

@@ -31,8 +31,9 @@ import (
 )
 
 const (
-	RestPrefix = "/rest"
-	loginURL   = "/com/vmware/cis/session"
+	RestPrefix          = "/rest"
+	loginURL            = "/com/vmware/cis/session"
+	sessionIDCookieName = "vmware-api-session-id"
 )
 
 type RestClient struct {
@@ -66,6 +67,23 @@ func NewClient(u *url.URL, insecure bool, thumbprint string) *RestClient {
 		scheme:   endpoint.Scheme,
 		HTTP:     &sc.Client,
 	}
+}
+
+// NewClientWithSessionID creates a new REST client with a supplied session ID
+// to re-connect to existing sessions.
+//
+// Note that the session is not checked for validity - to check for a valid
+// session after creating the client, use the Valid method. If the session is
+// no longer valid and the session needs to be re-saved, Login should be called
+// again before calling SessionID to extract the new session ID. Clients
+// created with this function function work in the exact same way as clients
+// created with NewClient, including supporting re-login on invalid sessions on
+// all SDK calls.
+func NewClientWithSessionID(u *url.URL, insecure bool, thumbprint string, sessionID string) *RestClient {
+	c := NewClient(u, insecure, thumbprint)
+	c.setSessionID(sessionID)
+
+	return c
 }
 
 func (c *RestClient) encodeData(data interface{}) (*bytes.Buffer, error) {
@@ -199,4 +217,62 @@ func (c *RestClient) Login(ctx context.Context) error {
 
 func (c *RestClient) newRequest(method, urlStr string, body io.Reader) (*http.Request, error) {
 	return http.NewRequest(method, c.endpoint.String()+urlStr, body)
+}
+
+// SessionID returns the current session ID of the REST client. An empty string
+// means there was no session cookie currently loaded.
+func (c *RestClient) SessionID() string {
+	for _, cookie := range c.cookies {
+		if cookie.Name == sessionIDCookieName {
+			return cookie.Value
+		}
+	}
+	return ""
+}
+
+// setSessionID sets the session cookie with the supplied session ID.
+//
+// This does not necessarily mean the session is valid. The session should be
+// checked with Valid before proceeding, and logged back in if it has expired.
+//
+// This function will overwrite any existing session.
+func (c *RestClient) setSessionID(sessionID string) {
+	Logger.Debugf("Setting existing session ID %q", sessionID)
+	idx := -1
+	for i, cookie := range c.cookies {
+		if cookie.Name == sessionIDCookieName {
+			idx = i
+		}
+	}
+	sessionCookie := &http.Cookie{
+		Name:  sessionIDCookieName,
+		Value: sessionID,
+		Path:  RestPrefix,
+	}
+	if idx > -1 {
+		c.cookies[idx] = sessionCookie
+	} else {
+		c.cookies = append(c.cookies, sessionCookie)
+	}
+}
+
+// Valid checks to see if the session cookies in a REST client are still valid.
+// This should be used when restoring a session to determine if a new login is
+// necessary.
+func (c *RestClient) Valid(ctx context.Context) bool {
+	sessionID := c.SessionID()
+	Logger.Debugf("Checking if session ID %q is still valid", sessionID)
+
+	_, _, statusCode, err := c.clientRequest(ctx, "POST", loginURL+"?~action=get", nil, nil)
+	if err != nil {
+		Logger.Debugf("Error getting current session information for ID %q - session is invalid (%d - %s)", sessionID, statusCode, err)
+	}
+
+	if statusCode == http.StatusOK {
+		Logger.Debugf("Session ID %q is valid", sessionID)
+		return true
+	}
+
+	Logger.Debugf("Session is invalid for %v (%d)", sessionID, statusCode)
+	return false
 }

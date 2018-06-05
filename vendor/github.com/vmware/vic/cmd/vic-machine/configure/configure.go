@@ -48,10 +48,10 @@ type Configure struct {
 
 	certificates common.CertFactory
 
-	upgrade  bool
 	executor *management.Dispatcher
 
 	Force bool
+	help  common.Help
 }
 
 func NewConfigure() *Configure {
@@ -86,32 +86,28 @@ func (c *Configure) Flags() []cli.Flag {
 			Destination: &c.Rollback,
 			Hidden:      true,
 		},
-		cli.BoolFlag{
-			Name:        "upgrade",
-			Usage:       "Upgrade VCH to latest version together with configure",
-			Destination: &c.upgrade,
-			Hidden:      true,
-		},
 	}
 
-	dns := c.dns.DNSFlags(false)
+	dns := c.dns.DNSFlags()
 	target := c.TargetFlags()
-	ops := c.OpsCredentials.Flags(false)
+	ops := c.OpsCredentials.Flags()
 	id := c.IDFlags()
 	volume := c.volStores.Flags()
 	compute := c.ComputeFlags()
+	affinity := c.AffinityFlags()
 	container := c.ContainerFlags()
-	debug := c.DebugFlags(false)
-	cNetwork := c.cNetworks.CNetworkFlags(false)
-	proxies := c.proxies.ProxyFlags(false)
-	memory := c.VCHMemoryLimitFlags(false)
-	cpu := c.VCHCPULimitFlags(false)
+	debug := c.DebugFlags(true)
+	cNetwork := c.cNetworks.CNetworkFlags()
+	proxies := c.proxies.ProxyFlags()
+	memory := c.VCHMemoryLimitFlags()
+	cpu := c.VCHCPULimitFlags()
 	certificates := c.certificates.CertFlags()
 	registries := c.registries.Flags()
+	help := c.help.HelpFlags()
 
 	// flag arrays are declared, now combined
 	var flags []cli.Flag
-	for _, f := range [][]cli.Flag{target, ops, id, compute, container, volume, dns, cNetwork, memory, cpu, certificates, registries, proxies, util, debug} {
+	for _, f := range [][]cli.Flag{target, ops, id, compute, affinity, container, volume, dns, cNetwork, memory, cpu, certificates, registries, proxies, util, debug, help} {
 		flags = append(flags, f...)
 	}
 
@@ -165,7 +161,7 @@ func (c *Configure) processParams(op trace.Operation) error {
 // copyChangedConf takes the mostly-empty new config and copies it to the old one. NOTE: o gets installed on the VCH, not n
 // Currently we cannot automatically override old configuration with any difference in the new configuration, because some options are set during the VCH
 // Creation process, for example, image store path, volume store path, network slot id, etc. So we'll copy changes based on user input
-func (c *Configure) copyChangedConf(o *config.VirtualContainerHostConfigSpec, n *config.VirtualContainerHostConfigSpec) {
+func (c *Configure) copyChangedConf(o *config.VirtualContainerHostConfigSpec, n *config.VirtualContainerHostConfigSpec, clic *cli.Context) {
 	//TODO: copy changed data
 	personaSession := o.ExecutorConfig.Sessions[config.PersonaService]
 	vicAdminSession := o.ExecutorConfig.Sessions[config.VicAdminService]
@@ -204,6 +200,11 @@ func (c *Configure) copyChangedConf(o *config.VirtualContainerHostConfigSpec, n 
 	if c.OpsCredentials.IsSet {
 		o.Username = n.Username
 		o.Token = n.Token
+
+		// if the user explicitly set the `ops-grant-user` option, update the permissions level
+		if clic.IsSet("ops-grant-perms") {
+			o.GrantPermsLevel = n.GrantPermsLevel
+		}
 	}
 
 	// Copy the thumbprint directly since it has already been validated.
@@ -233,6 +234,14 @@ func (c *Configure) copyChangedConf(o *config.VirtualContainerHostConfigSpec, n 
 	if n.RegistryCertificateAuthorities != nil {
 		o.RegistryCertificateAuthorities = n.RegistryCertificateAuthorities
 	}
+
+	o.UseVMGroup = n.UseVMGroup
+
+	if n.VMGroupName != "" {
+		// If we're disabling use of a VM Group, we need to keep track of the name so that we can delete it. This has a
+		// side effect of leaving behind the old VMGroupName value in the VCH's configuration, but it will not be used.
+		o.VMGroupName = n.VMGroupName
+	}
 }
 
 func updateSessionEnv(sess *executor.SessionConfig, envName, envValue string) {
@@ -252,7 +261,7 @@ func updateSessionEnv(sess *executor.SessionConfig, envName, envValue string) {
 
 func (c *Configure) processCertificates(op trace.Operation, client, public, management data.NetworkConfig) error {
 
-	if !c.certificates.NoTLSverify && (c.certificates.Skey == "" || c.certificates.Scert == "") {
+	if c.certificates.Cname == "" && !c.certificates.NoTLSverify && (c.certificates.Skey == "" || c.certificates.Scert == "") {
 		op.Info("No certificate regeneration requested. No new certificates provided. Certificates left unchanged.")
 		return nil
 	}
@@ -293,6 +302,11 @@ func (c *Configure) processCertificates(op trace.Operation, client, public, mana
 }
 
 func (c *Configure) Run(clic *cli.Context) (err error) {
+
+	if c.help.Print(clic) {
+		return nil
+	}
+
 	parentOp := common.NewOperation(clic, c.Debug.Debug)
 	defer func(op trace.Operation) {
 		// urfave/cli will print out exit in error handling, so no more information in main method can be printed out.
@@ -317,17 +331,11 @@ func (c *Configure) Run(clic *cli.Context) (err error) {
 		return errors.New("invalid CLI arguments")
 	}
 
-	// TODO: add additional parameter processing, reuse same code with create command as well
-
-	if c.upgrade {
-		// verify upgrade required parameters here
-	}
-
 	op.Infof("### Configuring VCH ####")
 
 	validator, err := validate.NewValidator(op, c.Data)
 	if err != nil {
-		op.Errorf("Configuring cannot continue - failed to create validator: %s", err)
+		op.Errorf("Configure cannot continue - failed to create validator: %s", err)
 		return errors.New("configure failed")
 	}
 	defer validator.Session.Logout(parentOp) // parentOp is used here to ensure the logout occurs, even in the event of timeout
@@ -337,7 +345,7 @@ func (c *Configure) Run(clic *cli.Context) (err error) {
 		op.Errorf("Configuring cannot continue - target validation failed: %s", err)
 		return errors.New("configure failed")
 	}
-	executor := management.NewDispatcher(validator.Context, validator.Session, nil, c.Force)
+	executor := management.NewDispatcher(validator.Context, validator.Session, management.ConfigureAction, c.Force)
 
 	var vch *vm.VirtualMachine
 	if c.Data.ID != "" {
@@ -364,12 +372,7 @@ func (c *Configure) Run(clic *cli.Context) (err error) {
 		return nil
 	}
 
-	var vchConfig *config.VirtualContainerHostConfigSpec
-	if c.upgrade {
-		vchConfig, err = executor.FetchAndMigrateVCHConfig(vch)
-	} else {
-		vchConfig, err = executor.GetVCHConfig(vch)
-	}
+	vchConfig, err := executor.GetVCHConfig(vch)
 	if err != nil {
 		op.Error("Failed to get Virtual Container Host configuration")
 		op.Error(err)
@@ -400,12 +403,39 @@ func (c *Configure) Run(clic *cli.Context) (err error) {
 		return err
 	}
 
+	// Handle the three options for the --affinity-vm-group flag: unset, true, false.
+	//
+	// If the user hasn't specified the flag, we don't want to make a change. If they have
+	// specified it and are requesting a change, track that.
+	if clic.IsSet("affinity-vm-group") {
+		if !oldData.UseVMGroup && c.Data.UseVMGroup {
+			oldData.CreateVMGroup = true
+		}
+
+		if oldData.UseVMGroup && !c.Data.UseVMGroup {
+			oldData.DeleteVMGroup = true
+		}
+
+		oldData.UseVMGroup = c.Data.UseVMGroup
+	}
+
 	// using new configuration override configuration query from guestinfo
 	if err = oldData.CopyNonEmpty(c.Data); err != nil {
 		op.Error("Configuring cannot continue: copying configuration failed")
 		return err
 	}
+	// Copy original and merged resources
+	// This copy is needed so that we validate only the resource settings
+	// (--mem, --cpu, etc) supplied by the user.
+	inputResources := c.Data.ResourceLimits
+	mergedResources := oldData.ResourceLimits
+
+	// overwriting user input w/merged dataset
 	c.Data = oldData
+
+	// Set the ResourceLimits to the input received from
+	// the user
+	oldData.ResourceLimits = inputResources
 
 	// in Create we process certificates as part of processParams but we need the old conf
 	// to do this in the context of Configure so we need to call this method here instead
@@ -419,13 +449,18 @@ func (c *Configure) Run(clic *cli.Context) (err error) {
 		op.Error("Configuring cannot continue: configuration validation failed")
 		return err
 	}
+	// The user supplied resource information has been validated, so
+	// switch back to the merged results
+	c.Data.ResourceLimits = mergedResources
 
 	// TODO: copy changed configuration here. https://github.com/vmware/vic/issues/2911
-	c.copyChangedConf(vchConfig, newConfig)
+	c.copyChangedConf(vchConfig, newConfig, clic)
 
 	vConfig := validator.AddDeprecatedFields(op, vchConfig, c.Data)
 	vConfig.Timeout = c.Timeout
 	vConfig.VCHSizeIsSet = c.ResourceLimits.IsSet
+	vConfig.CreateVMGroup = c.CreateVMGroup
+	vConfig.DeleteVMGroup = c.DeleteVMGroup
 
 	updating, err := vch.VCHUpdateStatus(op)
 	if err != nil {
@@ -453,9 +488,10 @@ func (c *Configure) Run(clic *cli.Context) (err error) {
 	}()
 
 	if !c.Data.Rollback {
-		err = executor.Configure(vch, vchConfig, vConfig, true)
+		err = executor.Configure(vchConfig, vConfig)
 	} else {
-		err = executor.Rollback(vch, vchConfig, vConfig)
+		executor.Action = management.RollbackAction
+		err = executor.Rollback(vchConfig, vConfig)
 	}
 
 	if err != nil {

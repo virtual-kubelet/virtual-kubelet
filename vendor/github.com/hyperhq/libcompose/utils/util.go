@@ -2,9 +2,11 @@ package utils
 
 import (
 	"encoding/json"
+	"fmt"
 	"sync"
 
 	"github.com/Sirupsen/logrus"
+
 	yaml "github.com/cloudfoundry-incubator/candiedyaml"
 )
 
@@ -108,6 +110,22 @@ func FilterString(data map[string][]string) string {
 	// I can't imagine this would ever fail
 	bytes, _ := json.Marshal(data)
 	return string(bytes)
+}
+
+// LabelFilterString returns a label json string representation of the specifed couple (key,value)
+// that is used as filter for docker.
+func LabelFilterString(key, value string) string {
+	return FilterString(map[string][]string{
+		"label": {fmt.Sprintf("%s=%s", key, value)},
+	})
+}
+
+// LabelFilter returns a label map representation of the specifed couple (key,value)
+// that is used as filter for docker.
+func LabelFilter(key, value string) map[string][]string {
+	return map[string][]string{
+		"label": {fmt.Sprintf("%s=%s", key, value)},
+	}
 }
 
 // Contains checks if the specified string (key) is present in the specified collection.

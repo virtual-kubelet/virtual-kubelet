@@ -933,7 +933,7 @@ func (c *Context) RemoveIDFromScopes(op trace.Operation, id string) ([]*Endpoint
 		return nil, nil // not bound
 	}
 
-	// aliases to remove
+	// marshal the work so we're not iterating over a mutating structure
 	var aliases []string
 	var endpoints []*Endpoint
 	for _, ne := range con.endpoints {
@@ -942,12 +942,16 @@ func (c *Context) RemoveIDFromScopes(op trace.Operation, id string) ([]*Endpoint
 		// save the endpoint info
 		e := con.Endpoint(s).copy()
 
-		if err := s.RemoveContainer(con); err != nil {
-			return nil, err
-		}
-
 		aliases = append(aliases, c.populateAliases(con, s, e)...)
 		endpoints = append(endpoints, e)
+	}
+
+	// remove the container from all bound scopes
+	for _, ne := range endpoints {
+		// this modifies the con.endpoint list so iteration has to occur off the copy
+		if err := ne.scope.RemoveContainer(con); err != nil {
+			return nil, err
+		}
 	}
 
 	c.removeAliases(aliases, con)

@@ -145,3 +145,16 @@ Property Should Not Be Empty
 
     ${actual}=  Run    echo '${OUTPUT}' | jq -r '${jq}'
     Should Not Be Empty    ${actual}
+
+Verify VCH List Empty
+    ${vchs}=  Run  echo '${OUTPUT}' | jq -r '.vchs[]'
+    Log  ${vchs}
+    Length Should Be  ${vchs}  0
+
+Get Docker Params API
+    [Arguments]    ${vch_name}
+    Get Path Under Target    vch
+    ${docker_host}=    Run    echo '${OUTPUT}' | jq -r '.vchs[] | select(.name=="${vch_name}").docker_host'
+    Set Test Variable    ${docker_host}
+    Should Not Be Empty    ${docker_host}
+    Should Not Be Equal    ${docker_host}    null

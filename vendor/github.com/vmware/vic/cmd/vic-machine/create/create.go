@@ -35,6 +35,7 @@ import (
 	"github.com/vmware/vic/lib/install/vchlog"
 	"github.com/vmware/vic/pkg/errors"
 	"github.com/vmware/vic/pkg/trace"
+	"github.com/vmware/vic/pkg/version"
 )
 
 const (
@@ -43,23 +44,6 @@ const (
 	// Max permitted length of Virtual Switch name
 	MaxDisplayNameLen = 31
 )
-
-var EntireOptionHelpTemplate = `NAME:
-   {{.HelpName}} - {{.Usage}}
-
-USAGE:
-   {{.HelpName}}{{if .VisibleFlags}} [command options]{{end}} {{if .ArgsUsage}}{{.ArgsUsage}}{{else}}[arguments...]{{end}}{{if .Category}}
-
-CATEGORY:
-   {{.Category}}{{end}}{{if .Description}}
-
-DESCRIPTION:
-   {{.Description}}{{end}}{{if .VisibleFlags}}
-
-OPTIONS:
-   {{range .Flags}}{{.}}
-   {{end}}{{end}}
-`
 
 // Create has all input parameters for vic-machine create command
 type Create struct {
@@ -76,8 +60,8 @@ type Create struct {
 	memoryReservLimits string
 	cpuReservLimits    string
 
-	advancedOptions bool
-	BridgeIPRange   string
+	help          common.Help
+	BridgeIPRange string
 
 	Proxies common.Proxies
 
@@ -217,7 +201,7 @@ func (c *Create) Flags() []cli.Flag {
 		},
 	}
 	var memory, cpu []cli.Flag
-	memory = append(memory, c.VCHMemoryLimitFlags(true)...)
+	memory = append(memory, c.VCHMemoryLimitFlags()...)
 	memory = append(memory,
 		cli.IntFlag{
 			Name:        "endpoint-memory",
@@ -226,7 +210,7 @@ func (c *Create) Flags() []cli.Flag {
 			Hidden:      true,
 			Destination: &c.MemoryMB,
 		})
-	cpu = append(cpu, c.VCHCPULimitFlags(true)...)
+	cpu = append(cpu, c.VCHCPULimitFlags()...)
 	cpu = append(cpu,
 		cli.IntFlag{
 			Name:        "endpoint-cpu",
@@ -290,30 +274,23 @@ func (c *Create) Flags() []cli.Flag {
 		},
 	}
 
-	help := []cli.Flag{
-		// help options
-		cli.BoolFlag{
-			Name:        "extended-help, x",
-			Usage:       "Show all options - this must be specified instead of --help",
-			Destination: &c.advancedOptions,
-		},
-	}
-
 	target := c.TargetFlags()
-	ops := c.OpsCredentials.Flags(true)
+	ops := c.OpsCredentials.Flags()
 	compute := c.ComputeFlags()
+	affinity := c.AffinityFlags()
 	container := c.ContainerFlags()
 	volume := c.volumeStores.Flags()
 	iso := c.ImageFlags(true)
-	cNetwork := c.containerNetworks.CNetworkFlags(true)
-	dns := c.Nameservers.DNSFlags(true)
-	proxies := c.Proxies.ProxyFlags(true)
+	cNetwork := c.containerNetworks.CNetworkFlags()
+	dns := c.Nameservers.DNSFlags()
+	proxies := c.Proxies.ProxyFlags()
 	kubelet := c.Kubelet.Flags(true)
 	debug := c.DebugFlags(true)
+	help := c.help.HelpFlags()
 
 	// flag arrays are declared, now combined
 	var flags []cli.Flag
-	for _, f := range [][]cli.Flag{target, compute, ops, create, container, volume, dns, networks, cNetwork, memory, cpu, tls, registries, proxies, syslog, iso, util, kubelet, debug, help} {
+	for _, f := range [][]cli.Flag{target, compute, ops, create, affinity, container, volume, dns, networks, cNetwork, memory, cpu, tls, registries, proxies, syslog, iso, util, kubelet, debug, help} {
 		flags = append(flags, f...)
 	}
 
@@ -342,10 +319,6 @@ func (c *Create) ProcessParams(op trace.Operation) error {
 
 	// Pass admin credentials for use as ops credentials if ops credentials are not supplied.
 	if err := c.OpsCredentials.ProcessOpsCredentials(op, true, c.Target.User, c.Target.Password); err != nil {
-		return err
-	}
-
-	if err := c.Kubelet.ProcessKubelet(op, true); err != nil {
 		return err
 	}
 
@@ -667,8 +640,7 @@ func (c *Create) logArguments(op trace.Operation, cliContext *cli.Context) []str
 
 func (c *Create) Run(clic *cli.Context) (err error) {
 
-	if c.advancedOptions {
-		cli.HelpPrinter(clic.App.Writer, EntireOptionHelpTemplate, clic.Command)
+	if c.help.Print(clic) {
 		return nil
 	}
 
@@ -684,6 +656,8 @@ func (c *Create) Run(clic *cli.Context) (err error) {
 	// These operations will be executed without timeout
 	op := common.NewOperation(clic, c.Debug.Debug)
 	op.Infof("### Installing VCH ####")
+	ver := version.GetBuild().ShortVersion()
+	op.Debugf("Version %s", ver)
 
 	defer func() {
 		// urfave/cli will print out exit in error handling, so no more information in main method can be printed out.
@@ -735,7 +709,8 @@ func (c *Create) Run(clic *cli.Context) (err error) {
 	// separate initial validation from dispatch of creation task
 	op.Info("")
 
-	executor := management.NewDispatcher(op, validator.Session, vchConfig, c.Force)
+	executor := management.NewDispatcher(op, validator.Session, management.CreateAction, c.Force)
+	executor.InitDiagnosticLogsFromConf(vchConfig)
 	if err = executor.CreateVCH(vchConfig, vConfig, datastoreLog); err != nil {
 		executor.CollectDiagnosticLogs()
 		op.Error(err)

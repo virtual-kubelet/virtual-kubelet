@@ -57,7 +57,7 @@ Clean up test files and VIC appliance to test server
     Cleanup VIC Appliance On Test Server
 
 *** Test Cases ***
-Try To Exploit VCH With Offline Copy of Malicious Tarball
+Try to exploit VCH with offline copy of malicious tarball
     ${rc}  ${output}=  Run And Return Rc And Output  docker %{VCH-PARAMS} pull ${busybox}
     Should Be Equal As Integers  ${rc}  0
 

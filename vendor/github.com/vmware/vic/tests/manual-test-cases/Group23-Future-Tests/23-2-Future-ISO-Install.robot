@@ -58,7 +58,8 @@ Test
     ${out}=  Run  govc host.esxcli system time set -d 10 -H 10 -m 18 -M 04 -y ${future}
     ${out}=  Run  govc host.esxcli hardware clock set -d 10 -H 10 -m 18 -M 04 -y ${future}
 
-    Install VIC Appliance To Test Server
+    ${out}=  Install VIC Appliance To Test Server
+    Log  ${out}
 
     ${rc}  ${output}=  Run And Return Rc And Output  docker %{VCH-PARAMS} info
     Log  ${output}

@@ -19,6 +19,85 @@ Suite Setup  Conditional Install VIC Appliance To Test Server
 Suite Teardown  Cleanup VIC Appliance On Test Server
 Test Timeout  20 minutes
 
+*** Keywords ***
+Get And Run MITMProxy Container
+    # Need to change this container? Read README.md in vic/tests/resources/dockerfiles/docker-pull-mitm-proxy
+    Wait Until Keyword Succeeds  5x  15 seconds  Pull image  victest/docker-layer-injection-proxy:latest
+    ${rc}  ${output}=  Run And Return Rc And Output  docker %{VCH-PARAMS} run --network public -itd --name=mitm -p 8080:8080 victest/docker-layer-injection-proxy
+    Log  ${output}
+    Should Be Equal As Integers  ${rc}  0
+
+Get And Run Prepared Registry
+    # Need to change this container? Read README.md in vic/tests/resources/dockerfiles/docker-pull-mitm-proxy
+    Wait Until Keyword Succeeds  5x  15 seconds  Pull image  victest/registry-busybox:latest
+    ${rc}  ${output}=  Run And Return Rc And Output  docker %{VCH-PARAMS} run -itd --network public --name=registry -p 5000:5000 victest/registry-busybox
+    Log  ${output}
+    Should Be Equal As Integers  ${rc}  0
+
+Run Docker Ps
+    ${rc}  ${output}=  Run And Return Rc And Output  docker %{VCH-PARAMS} ps
+    Should Be Equal As Integers  ${rc}  0
+    [Return]  ${output}
+
+Get Container Address
+    [Arguments]  ${container-name}  ${docker-ps}
+    ${rc}  ${container}=  Run And Return Rc And Output  echo '${docker-ps}' | grep ${container-name} | awk '{print $(NF-1)}' | cut -d- -f1
+    Should Be Equal As Integers  ${rc}  0
+    [Return]  ${container}
+
+Pull And MITM Prepared Image
+    [Arguments]  ${vch2-params}  ${registry}
+    ${rc}  ${output}=  Run And Return Rc And Output  docker ${vch2-params} pull ${registry}/busybox
+    Log  ${output}
+
+Enable SSH On MITMed VCH
+    ${rc}  ${thumbprint}=  Run And Return Rc And Output  govc about.cert -k -json | jq -r .ThumbprintSHA1
+    Log  ${thumbprint}
+    Should Be Equal As Integers  ${rc}  0
+    ${rc}  ${output}=  Run And Return Rc And Output  bin/vic-machine-linux debug --rootpw password --target %{TEST_URL}%{TEST_DATACENTER} --password %{TEST_PASSWORD} --name VCH-XPLT --user %{TEST_USERNAME} --compute-resource %{TEST_RESOURCE} --enable-ssh --thumbprint=${thumbprint}
+    Log  ${output}
+    Should Be Equal As Integers  ${rc}  0
+
+Check For Injected Binary
+    [Arguments]  ${vch2-IP}
+    ${rc}  ${output}=  Run And Return Rc And Output  sshpass -ppassword ssh ${vch2-IP} -lroot -C -oStrictHostKeyChecking=no "ls /tmp | grep pingme"
+    Log  ${output}
+    Should Not Contain  ${output}  pingme
+
+Deploy Proxified VCH
+    [Arguments]  ${registry}  ${mitm}
+    ${br1}=  Get Environment Variable  BRIDGE_NETWORK
+    Create Unique Bridge Network
+    # BRIDGE_NETWORK gets overwritten by Create Unique Bridge Network. Assign original value to BRIDGE_NETWORK_2 for removal during suite teardown
+
+    # Run VIC Machine Command assumes %{VCH-NAME}
+    # Install VIC Appliance on Test Server assumes a bunch of environment variables
+    # We're just going to eschew helpers and install this VCH manually to avoid mutating hidden environmental state which is difficult to debug
+    ${rc}  ${output}=  Run And Return Rc And Output  bin/vic-machine-linux create --name=VCH-XPLT --target=%{TEST_URL}%{TEST_DATACENTER} --user=%{TEST_USERNAME} --password=%{TEST_PASSWORD} --force=true --compute-resource=%{TEST_RESOURCE} --timeout %{TEST_TIMEOUT} --bridge-network=%{BRIDGE_NETWORK} --container-network=%{PUBLIC_NETWORK}:public --public-network=%{PUBLIC_NETWORK} ${vicmachinetls} --image-store=%{TEST_DATASTORE} --insecure-registry=http://${registry} --http-proxy http://${mitm}
+    Log  ${output}
+
+    ${br2}=  Get Environment Variable  BRIDGE_NETWORK
+    Set Environment Variable  BRIDGE_NETWORK_2  ${br2}
+    # suite teardown fails if we don't set this back, and we're informed not to edit the Suite Teardown at the top of the file, so
+    Set Environment Variable  BRIDGE_NETWORK  ${br1}
+
+    Should Be Equal As Integers  ${rc}  0
+    ${rc}  ${vch2-params}=  Run And Return Rc And Output  echo '${output}' | grep -A1 "Connect to docker" | tail -n1 | cut -d' ' -f4- | sed 's/ info" $//g'
+
+    # this comment fixes syntax highlighting "
+    Should Be Equal As Integers  ${rc}  0
+
+    ${rc}  ${vch2-IP}=  Run And Return Rc And Output  echo '${output}' | grep -A1 "Published ports" | tail -n1 | awk '{print $NF}' | cut -d= -f2
+    Should Be Equal As Integers  ${rc}  0
+    [Return]  ${vch2-IP}  ${vch2-params}
+
+Destroy Proxified VCH
+    Run  bin/vic-machine-linux delete --name=VCH-XPLT --target=%{TEST_URL}%{TEST_DATACENTER} --user=%{TEST_USERNAME} --password=%{TEST_PASSWORD} --force=true
+    ${br1}=  Get Environment Variable  BRIDGE_NETWORK
+    Set Environment Variable  BRIDGE_NETWORK  %{BRIDGE_NETWORK_2}
+    Cleanup VCH Bridge Network
+    Set Environment Variable  BRIDGE_NETWORK  ${br1}
+
 *** Test Cases ***
 Pull nginx
     Wait Until Keyword Succeeds  5x  15 seconds  Pull image  ${nginx}
@@ -159,3 +238,15 @@ Verify image manifest digest against vanilla docker
     Log  ${output}
     Should Be Equal As Integers  ${rc}  0
     Should Contain  ${output}  sha256:be3c11fdba7cfe299214e46edc642e09514dbb9bbefcd0d3836c05a1e0cd0642
+
+Attempt docker pull mitm
+    Get And Run MITMProxy Container
+    Get And Run Prepared Registry
+    ${ps}=  Run Docker Ps
+    ${mitm}=  Get Container Address  mitm  ${ps}
+    ${registry}=  Get Container Address  registry  ${ps}
+    ${vch2-IP}  ${vch2-params}=  Deploy Proxified VCH  ${registry}  ${mitm}
+    Pull And MITM Prepared Image  ${vch2-params}  ${registry}
+    Enable SSH on MITMed VCH
+    Check For Injected Binary  ${vch2-IP}
+    [Teardown]  Destroy Proxified VCH

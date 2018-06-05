@@ -18,6 +18,7 @@ Resource          ../../resources/Util.robot
 Resource          ../../resources/Group23-VIC-Machine-Service-Util.robot
 Suite Setup       Setup
 Suite Teardown    Teardown
+Test Teardown     Run Keyword If Test Failed  Cleanup VIC Appliance On Test Server
 Default Tags
 
 
@@ -26,20 +27,15 @@ Setup
     Start VIC Machine Server
     Install VIC Appliance To Test Server
 
-
 Teardown
-    Cleanup VIC Appliance On Test Server
     Terminate All Processes    kill=True
-
 
 Get VCH List
     Get Path Under Target    vch
 
-
 Get VCH List Within Datacenter
     ${dcID}=    Get Datacenter ID
     Get Path Under Target    datacenter/${dcID}/vch
-
 
 Verify VCH List
     ${expectedId}=    Get VCH ID    %{VCH-NAME}
@@ -51,13 +47,16 @@ Verify VCH List
     Property Should Not Be Empty    .vchs[] | select(.name=="%{VCH-NAME}").upgrade_status
     Property Should Not Be Empty    .vchs[] | select(.name=="%{VCH-NAME}").version
 
-
 Get VCH List Using Session
     Get Path Under Target Using Session    vch
 
 Get VCH List Within Datacenter Using Session
     ${dcID}=    Get Datacenter ID
     Get Path Under Target Using Session    datacenter/${dcID}/vch
+
+Verify VCH Power State
+    [Arguments]  ${expected}
+    Property Should Be Equal  .vchs[] | select(.name=="%{VCH-NAME}").power_state  ${expected}
 
 
 *** Test Cases ***
@@ -89,6 +88,18 @@ Get VCH List Within Datacenter Using Session
     Verify Status Ok
     Verify VCH List
 
+Verify VCH List Power States
+    Get VCH List
+
+    Verify Return Code
+    Verify Status Ok
+    Verify VCH Power State  poweredOn
+    Power Off VM OOB  %{VCH-NAME}
+
+    Get VCH List
+    Verify VCH Power State  poweredOff
+
+
 # TODO: Add test for compute resource (once relevant code is updated to use ID instead of name)
 # TODO: Add test for compute resource within datacenter (once relevant code is updated to use ID instead of name)
 
@@ -98,16 +109,25 @@ Get VCH List Within Invalid Datacenter
     Verify Return Code
     Verify Status Not Found
 
-
 Get VCH List Within Invalid Compute Resource
     Get Path Under Target    vch    compute-resource=INVALID
 
     Verify Return Code
     Verify Status Bad Request
 
-
 Get VCH List Within Invalid Datacenter and Compute Resource
     Get Path Under Target    datacenter/INVALID/vch    compute-resource=INVALID
 
     Verify Return Code
     Verify Status Not Found
+
+
+Get Empty VCH List When No VCH deployed
+    Cleanup VIC Appliance On Test Server
+
+    Get VCH List
+
+    Verify Return Code
+    Verify Status Ok
+
+    Verify VCH List Empty

@@ -158,7 +158,7 @@ func (i *Inspect) run(clic *cli.Context, op trace.Operation, cmd command) (err e
 		return errors.New("inspect failed")
 	}
 
-	executor := management.NewDispatcher(validator.Context, validator.Session, nil, i.Force)
+	executor := management.NewDispatcher(validator.Context, validator.Session, management.InspectAction, i.Force)
 
 	var vch *vm.VirtualMachine
 	if i.Data.ID != "" {
@@ -209,9 +209,6 @@ func (i *Inspect) Run(clic *cli.Context) (err error) {
 	op := common.NewOperation(clic, i.Debug.Debug)
 
 	return i.run(clic, op, func(s state) error {
-		op.Infof("")
-		op.Infof("VCH ID: %s", s.vch.Reference().String())
-
 		installerVer := version.GetBuild()
 
 		op.Info("")

@@ -10,6 +10,7 @@ $testbed = Proc.new do
         "vc" => "vc.0",
         "style" => "fullInstall",
         "desiredPassword" => "e2eFunctionalTest",
+        "memory" => 8192, # 2x default
         "disks" => [ 30 * oneGB, 30 * oneGB, 30 * oneGB],
         "nics" => 2,
         "mountNfs" => ["nfs.0"],

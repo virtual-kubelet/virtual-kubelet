@@ -15,48 +15,15 @@
 *** Settings ***
 Documentation  Test 5-26 - Static IP Address
 Resource  ../../resources/Util.robot
-Suite Setup  Wait Until Keyword Succeeds  10x  10m  Static IP Address Create
+Suite Setup  Setup VC With Static IP
 Suite Teardown  Run Keyword And Ignore Error  Nimbus Cleanup  ${list}
 
+
 *** Keywords ***
-Static IP Address Create
-    [Timeout]    110 minutes
-    Log To Console  Starting Static IP Address test...
-    Set Suite Variable  ${NIMBUS_LOCATION}  NIMBUS_LOCATION=wdc
-    Run Keyword And Ignore Error  Nimbus Cleanup  ${list}  ${false}
+Setup VC With Static IP
     ${name}=  Evaluate  'vic-5-26-' + str(random.randint(1000,9999))  modules=random
-    ${out}=  Deploy Nimbus Testbed  %{NIMBUS_USER}  %{NIMBUS_PASSWORD}  --noSupportBundles --plugin testng --vcvaBuild ${VC_VERSION} --esxBuild ${ESX_VERSION} --testbedName vic-simple-cluster --testbedSpecRubyFile /dbc/pa-dbc1111/mhagen/nimbus-testbeds/testbeds/vic-simple-cluster.rb --runName ${name}
-
-    Open Connection  %{NIMBUS_GW}
-    Wait Until Keyword Succeeds  10 min  30 sec  Login  %{NIMBUS_USER}  %{NIMBUS_PASSWORD}
-    ${vc-ip}=  Get IP  ${name}.vc.0
-    ${pod}=  Fetch POD  ${name}.vc.0
-    Set Suite Variable  ${NIMBUS_POD}  ${pod}
-    Close Connection
-
-    Set Suite Variable  @{list}  %{NIMBUS_USER}-${name}.esx.0  %{NIMBUS_USER}-${name}.esx.1  %{NIMBUS_USER}-${name}.esx.2  %{NIMBUS_USER}-${name}.nfs.0  %{NIMBUS_USER}-${name}.vc.0
-    Log To Console  Finished Creating Cluster ${name}
-
-    ${out}=  Get Static IP Address
-    Set Suite Variable  ${static}  ${out}
-    Append To List  ${list}  %{STATIC_WORKER_NAME}
+    Wait Until Keyword Succeeds  10x  10m  Create Simple VC Cluster With Static IP  ${name}
     
-    Log To Console  Set environment variables up for GOVC
-    Set Environment Variable  GOVC_URL  ${vc-ip}
-    Set Environment Variable  GOVC_USERNAME  Administrator@vsphere.local
-    Set Environment Variable  GOVC_PASSWORD  Admin\!23
-
-    Log To Console  Deploy VIC to the VC cluster
-    Set Environment Variable  TEST_URL_ARRAY  ${vc-ip}
-    Set Environment Variable  TEST_USERNAME  Administrator@vsphere.local
-    Set Environment Variable  TEST_PASSWORD  Admin\!23
-    Set Environment Variable  BRIDGE_NETWORK  bridge
-    Set Environment Variable  PUBLIC_NETWORK  vm-network
-    Remove Environment Variable  TEST_DATACENTER
-    Set Environment Variable  TEST_DATASTORE  nfs0-1
-    Set Environment Variable  TEST_RESOURCE  cls
-    Set Environment Variable  TEST_TIMEOUT  15m
-
 *** Test Cases ***
 Test
     Log To Console  \nStarting test...

@@ -1,4 +1,4 @@
-// Copyright 2017 VMware, Inc. All Rights Reserved.
+// Copyright 2017-2018 VMware, Inc. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -48,11 +48,14 @@ func SetDataFromVM(ctx context.Context, finder Finder, vm *vm.VirtualMachine, d 
 	op := trace.FromContext(ctx, "SetDataFromVM")
 
 	// display name
-	name, err := vm.Name(op)
+	name, err := vm.ObjectName(op)
 	if err != nil {
 		return err
 	}
 	d.DisplayName = name
+
+	// id
+	d.ID = vm.Reference().Value
 
 	// compute resource
 	parent, err := vm.ResourcePool(op)
@@ -72,13 +75,19 @@ func SetDataFromVM(ctx context.Context, finder Finder, vm *vm.VirtualMachine, d 
 	if err != nil {
 		return err
 	}
-	rp, ok := or.(*object.ResourcePool)
-	if !ok {
+
+	// we are attempting to present the resource pool inventory path
+	// in a DRS disabled environment that inventory path could point to a
+	// cluster, so we need to evaluate the type and set the path accordingly
+	switch r := or.(type) {
+	case *object.ResourcePool:
+		d.ComputeResourcePath = r.InventoryPath
+	case *object.ClusterComputeResource:
+		d.ComputeResourcePath = r.InventoryPath
+	default:
 		return fmt.Errorf("parent resource %s is not resource pool", mrp.Parent)
 	}
-	d.ComputeResourcePath = rp.InventoryPath
 
-	// Set VCH resource limits and VCH endpoint VM resource limits
 	setVCHResources(op, parent, d)
 	setApplianceResources(op, vm, d)
 	return nil
@@ -101,7 +110,7 @@ func setApplianceResources(op trace.Operation, vm *vm.VirtualMachine, d *data.Da
 // setVCHResources will populate the configuration data based on the deployed VCH config
 func setVCHResources(op trace.Operation, vch *object.ResourcePool, d *data.Data) error {
 	var p mo.ResourcePool
-	ps := []string{"config.cpuAllocation", "config.memoryAllocation"}
+	ps := []string{"config"}
 
 	if err := vch.Properties(op, vch.Reference(), ps, &p); err != nil {
 		return err
@@ -219,6 +228,7 @@ func NewDataFromConfig(ctx context.Context, finder Finder, conf *config.VirtualC
 	}
 
 	d.ContainerNameConvention = conf.ContainerNameConvention
+	d.UseVMGroup = conf.UseVMGroup
 	return
 }
 

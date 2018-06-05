@@ -17,10 +17,14 @@ package management
 import (
 	"context"
 	"net/url"
+	"path"
 	"testing"
 
 	log "github.com/Sirupsen/logrus"
 
+	"github.com/stretchr/testify/require"
+
+	"github.com/vmware/govmomi/object"
 	"github.com/vmware/govmomi/simulator"
 	"github.com/vmware/vic/lib/config"
 	"github.com/vmware/vic/lib/install/data"
@@ -218,6 +222,13 @@ func testCleanup(op trace.Operation, sess *session.Session, conf *config.Virtual
 		t.Fatal(err)
 		return
 	}
+
+	d.deleteFolder(d.session.VCHFolder)
+
+	// in this case we should expect the folder to be gone.
+	folder, err := d.session.Finder.Folder(d.op, path.Join(d.session.VMFolder.InventoryPath, conf.Name))
+	require.Error(t, err)
+	require.Nil(t, folder)
 }
 
 func testCreateAppliance(op trace.Operation, sess *session.Session, conf *config.VirtualContainerHostConfigSpec, vConf *data.InstallerData, hasErr bool, t *testing.T) {
@@ -250,5 +261,39 @@ func testCreateAppliance(op trace.Operation, sess *session.Session, conf *config
 
 	if hasErr {
 		t.Errorf("No error when error is expected.")
+	}
+
+	// check the folder structure and vch location here
+	if d.isVC {
+		vmFolderPath := d.session.VMFolder.InventoryPath
+		folder, err := d.session.Finder.Folder(d.op, vmFolderPath)
+		require.NoError(t, err)
+		t.Logf("Found VMFolderPath: %s", vmFolderPath)
+
+		children, err := folder.Children(d.op)
+		require.NoError(t, err)
+		for _, child := range children {
+			obj, err := d.session.Finder.ObjectReference(d.op, child.Reference())
+			require.NoError(t, err)
+
+			if folder, ok := obj.(*object.Folder); ok {
+				t.Log("\n")
+				t.Logf("FOUND folder info: %s", folder)
+				t.Logf("INVENTORY PATH: %s", folder.InventoryPath)
+				t.Log("\n")
+			}
+
+		}
+
+		folder, err = d.session.Finder.Folder(d.op, path.Join(vmFolderPath, conf.Name))
+		require.NoError(t, err)
+		require.NotNil(t, folder)
+		require.Equal(t, folder.Name(), conf.Name)
+
+		// also check for the correct location of the VCH
+		vchVM, err := d.session.Finder.VirtualMachine(d.op, path.Join(vmFolderPath, conf.Name, conf.Name))
+		require.NoError(t, err)
+		require.NotNil(t, vchVM)
+
 	}
 }

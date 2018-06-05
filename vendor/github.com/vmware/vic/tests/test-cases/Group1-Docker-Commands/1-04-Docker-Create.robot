@@ -34,6 +34,41 @@ Simple creates
     Should Be Equal As Integers  ${rc}  0
     Should Not Contain  ${output}  Error
 
+Simple Creates Verifying Folder Path
+    ${container1}=  Evaluate  'inventory1' + str(random.randint(1000,9999))  modules=random
+    ${container2}=  Evaluate  'inventory2' + str(random.randint(1000,9999))  modules=random
+    ${container3}=  Evaluate  'inventory3' + str(random.randint(1000,9999))  modules=random
+
+    ${rc}  ${output}=  Run And Return Rc And Output  docker %{VCH-PARAMS} pull ${busybox}
+    Should Be Equal As Integers  ${rc}  0
+    Should Not Contain  ${output}  Error
+    ${rc}  ${output}=  Run And Return Rc And Output  docker %{VCH-PARAMS} create --name ${container1} ${busybox}
+    Should Be Equal As Integers  ${rc}  0
+    Should Not Contain  ${output}  Error
+    Check VM Folder Path  ${container1}
+    ${rc}  ${output}=  Run And Return Rc And Output  docker %{VCH-PARAMS} create --name ${container2} ${busybox}
+    Should Be Equal As Integers  ${rc}  0
+    Should Not Contain  ${output}  Error
+    Check VM Folder Path  ${container2}
+    ${rc}  ${output}=  Run And Return Rc And Output  docker %{VCH-PARAMS} create --name ${container3} ${busybox}
+    Should Be Equal As Integers  ${rc}  0
+    Should Not Contain  ${output}  Error
+    Check VM Folder Path  ${container3}
+
+    # cleanup created containers
+    ${rc}  ${output}=  Run And Return Rc And Output  docker %{VCH-PARAMS} rm -f ${container1}
+    Should Be Equal As Integers  ${rc}  0
+    Should Not Contain  ${output}  Error
+    Check VM Folder Path Doesn't Exist  ${container1}
+    ${rc}  ${output}=  Run And Return Rc And Output  docker %{VCH-PARAMS} rm -f ${container2}
+    Should Be Equal As Integers  ${rc}  0
+    Should Not Contain  ${output}  Error
+    Check VM Folder Path Doesn't Exist  ${container2}
+    ${rc}  ${output}=  Run And Return Rc And Output  docker %{VCH-PARAMS} rm -f ${container3}
+    Should Be Equal As Integers  ${rc}  0
+    Should Not Contain  ${output}  Error
+    Check VM Folder Path Doesn't Exist  ${container3}
+
 Create with anonymous volume
     ${rc}  ${output}=  Run And Return Rc And Output  docker %{VCH-PARAMS} create -v /var/log ${busybox} ls /var/log
     Should Be Equal As Integers  ${rc}  0

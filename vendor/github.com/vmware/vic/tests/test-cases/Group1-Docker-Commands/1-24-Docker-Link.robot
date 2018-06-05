@@ -52,7 +52,7 @@ Link and alias
     # cannot reach first from another network
     ${rc}  ${output}=  Run And Return Rc And Output  docker %{VCH-PARAMS} run debian ping -c1 first
     Should Not Be Equal As Integers  ${rc}  0
-    Should contain  ${output}  unknown host
+    Should Contain Any  ${output}  unknown host  Name or service not known
 
     # the link
     ${rc}  ${output}=  Run And Return Rc And Output  docker %{VCH-PARAMS} run --net jedi --link first:1st debian ping -c1 1st
@@ -67,7 +67,7 @@ Link and alias
     # check if we can use alias "c1" from another container
     ${rc}  ${output}=  Run And Return Rc And Output  docker %{VCH-PARAMS} run --net jedi debian ping -c1 1st
     Should Not Be Equal As Integers  ${rc}  0
-    Should contain  ${output}  unknown host
+    Should Contain Any  ${output}  unknown host  Name or service not known
 
     ${rc}  ${output}=  Run And Return Rc And Output  docker %{VCH-PARAMS} run -it -d --net jedi --net-alias 2nd busybox
     Should Be Equal As Integers  ${rc}  0

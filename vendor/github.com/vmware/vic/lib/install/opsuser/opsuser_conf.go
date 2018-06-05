@@ -1,4 +1,4 @@
-// Copyright 2016-2017 VMware, Inc. All Rights Reserved.
+// Copyright 2016-2018 VMware, Inc. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -31,6 +31,8 @@ var RoleVCenter = types.AuthorizationRole{
 	Name: "vcenter",
 	Privilege: []string{
 		"Datastore.Config",
+		"Global.EnableMethods",
+		"Global.DisableMethods",
 	},
 }
 
@@ -39,11 +41,6 @@ var RoleDataCenter = types.AuthorizationRole{
 	Privilege: []string{
 		"Datastore.Config",
 		"Datastore.FileManagement",
-		"VirtualMachine.Config.AddNewDisk",
-		"VirtualMachine.Config.AdvancedConfig",
-		"VirtualMachine.Config.RemoveDisk",
-		"VirtualMachine.Inventory.Create",
-		"VirtualMachine.Inventory.Delete",
 	},
 }
 
@@ -56,6 +53,7 @@ var RoleCluster = types.AuthorizationRole{
 		"Datastore.DeleteFile",
 		"Datastore.FileManagement",
 		"Host.Config.SystemManagement",
+		"Host.Inventory.EditCluster",
 	},
 }
 
@@ -85,6 +83,7 @@ var RoleEndpoint = types.AuthorizationRole{
 		"DVPortgroup.PolicyOp",
 		"DVPortgroup.ScopeOp",
 		"Resource.AssignVMToPool",
+		"Resource.ColdMigrate",
 		"VirtualMachine.Config.AddExistingDisk",
 		"VirtualMachine.Config.AddNewDisk",
 		"VirtualMachine.Config.AddRemoveDevice",
@@ -93,6 +92,8 @@ var RoleEndpoint = types.AuthorizationRole{
 		"VirtualMachine.Config.RemoveDisk",
 		"VirtualMachine.Config.Rename",
 		"VirtualMachine.GuestOperations.Execute",
+		"VirtualMachine.GuestOperations.Modify",
+		"VirtualMachine.GuestOperations.Query",
 		"VirtualMachine.Interact.DeviceConnection",
 		"VirtualMachine.Interact.PowerOff",
 		"VirtualMachine.Interact.PowerOn",
@@ -101,6 +102,13 @@ var RoleEndpoint = types.AuthorizationRole{
 		"VirtualMachine.Inventory.Register",
 		"VirtualMachine.Inventory.Unregister",
 	},
+}
+
+// RoleEndpointDatastore combines the privileges of RoleDataStore and RoleEndpoint
+// and is applied to the cluster in a non-DRS environment.
+var RoleEndpointDatastore = types.AuthorizationRole{
+	Name:      "endpoint-datastore",
+	Privilege: append(RoleDataStore.Privilege, RoleEndpoint.Privilege...),
 }
 
 var DCReadOnlyConf = rbac.Config{
@@ -113,48 +121,61 @@ var DCReadOnlyConf = rbac.Config{
 	},
 }
 
-// Configuration for the ops-user
-var OpsuserRBACConf = rbac.Config{
-	Resources: []rbac.Resource{
-		{
-			Type:      rbac.VCenter,
-			Propagate: false,
-			Role:      RoleVCenter,
+func buildConfig(clusterRole types.AuthorizationRole) rbac.Config {
+	return rbac.Config{
+		Resources: []rbac.Resource{
+			{
+				Type:      rbac.VCenter,
+				Propagate: false,
+				Role:      RoleVCenter,
+			},
+			{
+				Type:      rbac.Datacenter,
+				Propagate: true,
+				Role:      RoleDataCenter,
+			},
+			{
+				Type:      rbac.Cluster,
+				Propagate: true,
+				Role:      clusterRole,
+			},
+			{
+				Type:      rbac.DatastoreFolder,
+				Propagate: true,
+				Role:      RoleDataStore,
+			},
+			{
+				Type:      rbac.Datastore,
+				Propagate: false,
+				Role:      RoleDataStore,
+			},
+			{
+				Type:      rbac.VSANDatastore,
+				Propagate: false,
+				Role:      RoleDataStore,
+			},
+			{
+				Type:      rbac.Network,
+				Propagate: true,
+				Role:      RoleNetwork,
+			},
+			{
+				Type:      rbac.Endpoint,
+				Propagate: true,
+				Role:      RoleEndpoint,
+			},
 		},
-		{
-			Type:      rbac.Datacenter,
-			Propagate: true,
-			Role:      RoleDataCenter,
-		},
-		{
-			Type:      rbac.Cluster,
-			Propagate: true,
-			Role:      RoleDataStore,
-		},
-		{
-			Type:      rbac.DatastoreFolder,
-			Propagate: true,
-			Role:      RoleDataStore,
-		},
-		{
-			Type:      rbac.Datastore,
-			Propagate: false,
-			Role:      RoleDataStore,
-		},
-		{
-			Type:      rbac.VSANDatastore,
-			Propagate: false,
-			Role:      RoleDataStore,
-		},
-		{
-			Type:      rbac.Network,
-			Propagate: true,
-			Role:      RoleNetwork,
-		},
-		{
-			Type:      rbac.Endpoint,
-			Propagate: true,
-			Role:      RoleEndpoint,
-		},
-	},
+	}
 }
+
+// DRSConf stores the RBAC configuration for the ops-user's roles in a DRS environment.
+var DRSConf = buildConfig(RoleDataStore)
+
+// NoDRSConf stores the configuration for the ops-user's roles in a non-DRS environment.
+// It is different from DRSConf in that RoleEndpointDatastore is used for the cluster
+// instead of RoleDataStore. In a non-DRS environment, we need to apply the Endpoint and
+// Datastore roles at the cluster level since there are no resource pools.
+var NoDRSConf = buildConfig(RoleEndpointDatastore)
+
+// Configuration for the ops-user with increased cluster-level permissions, required for managing DRS VM Groups
+var ClusterConf = buildConfig(RoleCluster)

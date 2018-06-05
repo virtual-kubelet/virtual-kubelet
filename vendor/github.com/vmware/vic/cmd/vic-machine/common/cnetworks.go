@@ -54,7 +54,7 @@ func (c *ContainerNetworks) IsSet() bool {
 		len(c.MappedNetworksFirewalls) > 0
 }
 
-func (c *CNetworks) CNetworkFlags(hidden bool) []cli.Flag {
+func (c *CNetworks) CNetworkFlags() []cli.Flag {
 	return []cli.Flag{
 		cli.StringSliceFlag{
 			Name:  "container-network, cn",
@@ -65,25 +65,25 @@ func (c *CNetworks) CNetworkFlags(hidden bool) []cli.Flag {
 			Name:   "container-network-gateway, cng",
 			Value:  &c.ContainerNetworksGateway,
 			Usage:  "Gateway for the container network's subnet in CONTAINER-NETWORK:SUBNET format, e.g. vsphere-net:172.16.0.1/16",
-			Hidden: hidden,
+			Hidden: true,
 		},
 		cli.StringSliceFlag{
 			Name:   "container-network-ip-range, cnr",
 			Value:  &c.ContainerNetworksIPRanges,
 			Usage:  "IP range for the container network in CONTAINER-NETWORK:IP-RANGE format, e.g. vsphere-net:172.16.0.0/24, vsphere-net:172.16.0.10-172.16.0.20",
-			Hidden: hidden,
+			Hidden: true,
 		},
 		cli.StringSliceFlag{
 			Name:   "container-network-dns, cnd",
 			Value:  &c.ContainerNetworksDNS,
 			Usage:  "DNS servers for the container network in CONTAINER-NETWORK:DNS format, e.g. vsphere-net:8.8.8.8. Ignored if no static IP assigned.",
-			Hidden: hidden,
+			Hidden: true,
 		},
 		cli.StringSliceFlag{
 			Name:   "container-network-firewall, cnf",
 			Value:  &c.ContainerNetworksFirewall,
 			Usage:  "Container network trust level in CONTAINER-NETWORK:LEVEL format. Options: Closed, Outbound, Peers, Published, Open.",
-			Hidden: hidden,
+			Hidden: true,
 		},
 	}
 }

@@ -1,4 +1,4 @@
-# Copyright 2016-2017 VMware, Inc. All Rights Reserved.
+# Copyright 2016-2018 VMware, Inc. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -20,7 +20,6 @@ Test Timeout  20 minutes
 
 *** Keywords ***
 Cleanup Container Firewalls Test Networks
-    ${out}=  Run Keyword If  '%{HOST_TYPE}' == 'ESXi'  Run  govc host.portgroup.remove bridge
     ${out}=  Run Keyword If  '%{HOST_TYPE}' == 'ESXi'  Run  govc host.portgroup.remove open-net
     ${out}=  Run Keyword If  '%{HOST_TYPE}' == 'ESXi'  Run  govc host.portgroup.remove closed-net
     ${out}=  Run Keyword If  '%{HOST_TYPE}' == 'ESXi'  Run  govc host.portgroup.remove published-net
@@ -28,7 +27,6 @@ Cleanup Container Firewalls Test Networks
     ${out}=  Run Keyword If  '%{HOST_TYPE}' == 'ESXi'  Run  govc host.portgroup.remove peers-net-1
     ${out}=  Run Keyword If  '%{HOST_TYPE}' == 'ESXi'  Run  govc host.portgroup.remove peers-net-2
 
-    Run Keyword If  '%{HOST_TYPE}' == 'VC'  Remove VC Distributed Portgroup  bridge
     Run Keyword If  '%{HOST_TYPE}' == 'VC'  Remove VC Distributed Portgroup  open-net
     Run Keyword If  '%{HOST_TYPE}' == 'VC'  Remove VC Distributed Portgroup  closed-net
     Run Keyword If  '%{HOST_TYPE}' == 'VC'  Remove VC Distributed Portgroup  published-net
@@ -40,9 +38,20 @@ Cleanup Container Firewalls Test
     Cleanup VIC Appliance On Test Server
     Cleanup Container Firewalls Test Networks
 
+Cleanup Connectivity Bridge to Public Test
+    ${out}=  Run Keyword If  '%{HOST_TYPE}' == 'ESXi'  Run  govc host.portgroup.remove pub-network
+    Run Keyword If  '%{HOST_TYPE}' == 'VC'  Remove VC Distributed Portgroup  pub-network
+    Cleanup VIC Appliance On Test Server
+
+Cleanup Connectivity Bridge to Management Test
+    ${out}=  Run Keyword If  '%{HOST_TYPE}' == 'ESXi'  Run  govc host.portgroup.remove management
+    Run Keyword If  '%{HOST_TYPE}' == 'VC'  Remove VC Distributed Portgroup  management
+    Cleanup VIC Appliance On Test Server
+
 *** Test Cases ***
 Public network - default
     Set Test Environment Variables
+    Pass Execution If  '%{HOST_TYPE}' == 'VC'  VC needs you to specify a working portgroup for public network, can't rely on default logic
     # Attempt to cleanup old/canceled tests
     Run Keyword And Ignore Error  Cleanup Dangling VMs On Test Server
     Run Keyword And Ignore Error  Cleanup Datastore On Test Server
@@ -65,7 +74,6 @@ Public network - invalid
     Run Keyword And Ignore Error  Cleanup Datastore On Test Server
 
     # Guarantee port group doesn't already exist
-    Run  govc host.portgroup.remove 'AAAAAAAAAA'
     ${out}=  Run Keyword If  '%{HOST_TYPE}' == 'ESXi'  Run  govc host.portgroup.remove 'AAAAAAAAAA'
     Run Keyword If  '%{HOST_TYPE}' == 'VC'  Remove VC Distributed Portgroup  'AAAAAAAAAA'
 
@@ -73,7 +81,7 @@ Public network - invalid
     Should Contain  ${output}  --public-network: network 'AAAAAAAAAA' not found
     Should Contain  ${output}  vic-machine-linux create failed
 
-    Run Keyword And Ignore Error  Cleanup VCH Bridge Network  %{VCH-NAME}
+    Run Keyword If  %{DRONE_BUILD_NUMBER} != 0  Run Keyword And Ignore Error  Cleanup VCH Bridge Network
 
 Public network - invalid vCenter
     Pass execution  Test not implemented
@@ -117,7 +125,7 @@ Management network - invalid
     Should Contain  ${output}  --management-network: network 'AAAAAAAAAA' not found
     Should Contain  ${output}  vic-machine-linux create failed
 
-    Run Keyword And Ignore Error  Cleanup VCH Bridge Network  %{VCH-NAME}
+    Run Keyword If  %{DRONE_BUILD_NUMBER} != 0  Run Keyword And Ignore Error  Cleanup VCH Bridge Network
 
 Management network - invalid vCenter
     Pass execution  Test not implemented
@@ -127,6 +135,7 @@ Management network - unreachable
 
 Management network - valid
     Set Test Environment Variables
+    Pass Execution If  '%{HOST_TYPE}' == 'VC'  VC needs you to specify a working portgroup for public network, can't rely on default logic
     # Attempt to cleanup old/canceled tests
     Run Keyword And Ignore Error  Cleanup Dangling VMs On Test Server
     Run Keyword And Ignore Error  Cleanup Datastore On Test Server
@@ -145,20 +154,17 @@ Connectivity Bridge to Public
     Run Keyword And Ignore Error  Cleanup Dangling VMs On Test Server
     Run Keyword And Ignore Error  Cleanup Datastore On Test Server
 
-    ${out}=  Run Keyword If  '%{HOST_TYPE}' == 'ESXi'  Run  govc host.portgroup.remove bridge
-    ${out}=  Run Keyword If  '%{HOST_TYPE}' == 'ESXi'  Run  govc host.portgroup.remove vm-network
-    Run Keyword If  '%{HOST_TYPE}' == 'VC'  Remove VC Distributed Portgroup  bridge
-    Run Keyword If  '%{HOST_TYPE}' == 'VC'  Remove VC Distributed Portgroup  vm-network
+    ${out}=  Run Keyword If  '%{HOST_TYPE}' == 'ESXi'  Run  govc host.portgroup.remove pub-network
+    Run Keyword If  '%{HOST_TYPE}' == 'VC'  Remove VC Distributed Portgroup  pub-network
 
     Log To Console  Create a public portgroup.
-    ${out}=  Run Keyword If  '%{HOST_TYPE}' == 'ESXi'  Run  govc host.portgroup.add -vswitch vSwitchLAN vm-network
-    ${out}=  Run Keyword If  '%{HOST_TYPE}' == 'VC'  Add VC Distributed Portgroup  test-ds  vm-network
+    ${vlan}=  Get Public Network VLAN ID
+    ${vswitch}=  Run Keyword If  '%{HOST_TYPE}' == 'ESXi'  Run  govc host.vswitch.info -json | jq -r ".Vswitch[0].Name"    
+    ${out}=  Run Keyword If  '%{HOST_TYPE}' == 'ESXi'  Run  govc host.portgroup.add -vlan=${vlan} -vswitch ${vswitch} pub-network
+    ${dvs}=  Run Keyword If  '%{HOST_TYPE}' == 'VC'  Run  govc find -type DistributedVirtualSwitch | head -n1
+    ${rc}  ${output}=  Run Keyword If  '%{HOST_TYPE}' == 'VC'  Run And Return Rc And Output  govc dvs.portgroup.add -vlan=${vlan} -dvs ${dvs} pub-network
 
-    Log To Console  Create a bridge portgroup.
-    ${out}=  Run Keyword If  '%{HOST_TYPE}' == 'ESXi'  Run  govc host.portgroup.add -vswitch vSwitchLAN bridge
-    ${out}=  Run Keyword If  '%{HOST_TYPE}' == 'VC'  Add VC Distributed Portgroup  test-ds  bridge
-
-    ${output}=  Run  bin/vic-machine-linux create --debug 1 --name=%{VCH-NAME} --target=%{TEST_URL}%{TEST_DATACENTER} --thumbprint=%{TEST_THUMBPRINT} --user=%{TEST_USERNAME} --image-store=%{TEST_DATASTORE} --password=%{TEST_PASSWORD} --force=true --bridge-network=bridge --public-network=vm-network --compute-resource=%{TEST_RESOURCE} --container-network vm-network --container-network-firewall vm-network:published --no-tlsverify --insecure-registry wdc-harbor-ci.eng.vmware.com
+    ${output}=  Run  bin/vic-machine-linux create --debug 1 --name=%{VCH-NAME} --target=%{TEST_URL}%{TEST_DATACENTER} --thumbprint=%{TEST_THUMBPRINT} --user=%{TEST_USERNAME} --image-store=%{TEST_DATASTORE} --password=%{TEST_PASSWORD} --force=true --bridge-network=%{BRIDGE_NETWORK} --public-network=pub-network --compute-resource=%{TEST_RESOURCE} --container-network pub-network --container-network-firewall pub-network:published --no-tlsverify --insecure-registry wdc-harbor-ci.eng.vmware.com
 
     Should Contain  ${output}  Installer completed successfully
     Get Docker Params  ${output}  ${true}
@@ -166,7 +172,7 @@ Connectivity Bridge to Public
 
     # this container will listen on :8000 and we're passing the -p option to the VCH so it should be exposed
     Log To Console  Creating public container.
-    ${rc}  ${output}=  Run And Return Rc And Output  docker %{VCH-PARAMS} run -d --net=vm-network -p 8000 --name p1 ${busybox} nc -l -p 8000
+    ${rc}  ${output}=  Run And Return Rc And Output  docker %{VCH-PARAMS} run -d --net=pub-network -p 8000 --name p1 ${busybox} nc -l -p 8000
     Should Be Equal As Integers  ${rc}  0
 
     Log To Console  Getting IP for public container
@@ -179,7 +185,7 @@ Connectivity Bridge to Public
 
     # nc is listening, but since we didn't pass the -p flag to docker, the port should not be exposed.
     Log To Console  Creating public container with no ports exposed.
-    ${rc}  ${output}=  Run And Return Rc And Output  docker %{VCH-PARAMS} run -d --net=vm-network --name p2 ${busybox} nc -l -p 8000
+    ${rc}  ${output}=  Run And Return Rc And Output  docker %{VCH-PARAMS} run -d --net=pub-network --name p2 ${busybox} nc -l -p 8000
     Should Be Equal As Integers  ${rc}  0
 
     Log To Console  Getting IP for public container
@@ -192,7 +198,7 @@ Connectivity Bridge to Public
 
     Log To Console  Port connection test from bridge to public networks succeeded.
 
-    Cleanup VIC Appliance On Test Server
+    [Teardown]  Cleanup Connectivity Bridge to Public Test
 
 Connectivity Bridge to Management
     Set Test Environment Variables
@@ -200,20 +206,17 @@ Connectivity Bridge to Management
     Run Keyword And Ignore Error  Cleanup Dangling VMs On Test Server
     Run Keyword And Ignore Error  Cleanup Datastore On Test Server
 
-    ${out}=  Run Keyword If  '%{HOST_TYPE}' == 'ESXi'  Run  govc host.portgroup.remove bridge
     ${out}=  Run Keyword If  '%{HOST_TYPE}' == 'ESXi'  Run  govc host.portgroup.remove management
-    Run Keyword If  '%{HOST_TYPE}' == 'VC'  Remove VC Distributed Portgroup  bridge
     Run Keyword If  '%{HOST_TYPE}' == 'VC'  Remove VC Distributed Portgroup  management
 
-    Log To Console  Create a bridge portgroup.
-    ${out}=  Run Keyword If  '%{HOST_TYPE}' == 'ESXi'  Run  govc host.portgroup.add -vswitch vSwitchLAN bridge
-    ${out}=  Run Keyword If  '%{HOST_TYPE}' == 'VC'  Add VC Distributed Portgroup  test-ds  bridge
-
     Log To Console  Create a management portgroup.
-    ${out}=  Run Keyword If  '%{HOST_TYPE}' == 'ESXi'  Run  govc host.portgroup.add -vswitch vSwitchLAN management
-    ${out}=  Run Keyword If  '%{HOST_TYPE}' == 'VC'  Add VC Distributed Portgroup  test-ds  management
+    ${vswitch}=  Run Keyword If  '%{HOST_TYPE}' == 'ESXi'  Run  govc host.vswitch.info -json | jq -r ".Vswitch[0].Name"
+    ${out}=  Run Keyword If  '%{HOST_TYPE}' == 'ESXi'  Run  govc host.portgroup.add -vswitch ${vswitch} management
+    ${vlan}=  Evaluate  str(random.randint(1, 195))  modules=random
+    ${dvs}=  Run Keyword If  '%{HOST_TYPE}' == 'VC'  Run  govc find -type DistributedVirtualSwitch | head -n1
+    ${rc}  ${output}=  Run Keyword If  '%{HOST_TYPE}' == 'VC'  Run And Return Rc And Output  govc dvs.portgroup.add -vlan=${vlan} -dvs ${dvs} management
 
-    ${output}=  Run  bin/vic-machine-linux create --debug 1 --name=%{VCH-NAME} --target=%{TEST_URL}%{TEST_DATACENTER} --thumbprint=%{TEST_THUMBPRINT} --user=%{TEST_USERNAME} --image-store=%{TEST_DATASTORE} --password=%{TEST_PASSWORD} --force=true --bridge-network=bridge --compute-resource=%{TEST_RESOURCE} --container-network management --container-network vm-network --container-network-ip-range=management:10.10.10.0/24 --container-network-gateway=management:10.10.10.1/24 --no-tlsverify --insecure-registry wdc-harbor-ci.eng.vmware.com
+    ${output}=  Run  bin/vic-machine-linux create --debug 1 --name=%{VCH-NAME} --target=%{TEST_URL}%{TEST_DATACENTER} --thumbprint=%{TEST_THUMBPRINT} --user=%{TEST_USERNAME} --image-store=%{TEST_DATASTORE} --password=%{TEST_PASSWORD} --force=true --public-network=%{PUBLIC_NETWORK} --bridge-network=%{BRIDGE_NETWORK} --management-network=management --management-network-ip=10.10.10.2/24 --compute-resource=%{TEST_RESOURCE} --container-network management --container-network-ip-range=management:10.10.10.3-10.10.10.13 --container-network-gateway=management:10.10.10.1/24 --no-tlsverify --insecure-registry wdc-harbor-ci.eng.vmware.com
 
     Should Contain  ${output}  Installer completed successfully
     Get Docker Params  ${output}  ${true}
@@ -241,20 +244,19 @@ Connectivity Bridge to Management
     ${ip}=  Run  docker %{VCH-PARAMS} inspect --format '{{range .NetworkSettings.Networks}}{{.IPAddress }}{{end}}' m1
 
     Log To Console  Pinging from bridge to management container.
-    ${id}=  Run  docker %{VCH-PARAMS} run -d ${busybox} ping -c 30 ${ip}
-
-    Log To Console  Attach to running container.
-    ${out}=  Run  docker %{VCH-PARAMS} attach ${id}
+    ${id}=  Run  docker %{VCH-PARAMS} run -d ${busybox} ping -c 3 ${ip}
+    ${rc}=  Run  docker %{VCH-PARAMS} wait ${id}
+    ${out}=  Run  docker %{VCH-PARAMS} logs ${id}
 
     Should Contain  ${out}  100% packet loss
     Log To Console  Ping test succeeded.
 
-    Cleanup VIC Appliance On Test Server
+    [Teardown]  Cleanup Connectivity Bridge to Management Test
 
 Bridge network - vCenter none
+    Set Test Environment Variables
     Run Keyword If  '%{HOST_TYPE}' == 'ESXi'  Pass Execution  Test skipped on ESXi
 
-    Set Test Environment Variables
     # Attempt to cleanup old/canceled tests
     Run Keyword And Ignore Error  Cleanup Dangling VMs On Test Server
     Run Keyword And Ignore Error  Cleanup Datastore On Test Server
@@ -264,12 +266,12 @@ Bridge network - vCenter none
     Should Contain  ${output}  An existing distributed port group must be specified for bridge network on vCenter
 
     # Delete the portgroup added by env vars keyword
-    Cleanup VCH Bridge Network  %{VCH-NAME}
+    Run Keyword If  %{DRONE_BUILD_NUMBER} != 0  Cleanup VCH Bridge Network
 
 Bridge network - ESX none
+    Set Test Environment Variables
     Run Keyword If  '%{HOST_TYPE}' == 'VC'  Pass Execution  Test skipped on VC
 
-    Set Test Environment Variables
     # Attempt to cleanup old/canceled tests
     Run Keyword And Ignore Error  Cleanup Dangling VMs On Test Server
     Run Keyword And Ignore Error  Cleanup Datastore On Test Server
@@ -283,10 +285,10 @@ Bridge network - ESX none
     Cleanup VIC Appliance On Test Server
 
 Bridge network - create bridge network if it doesn't exist
+    Set Test Environment Variables
     Run Keyword If  '%{HOST_TYPE}' == 'VC'  Pass Execution  Test not applicable on vCenter
     # ESX should automatically create the bridge switch & port group AAAAAAAAAA, but vCenter would fail with unknown network error
 
-    Set Test Environment Variables
     # Attempt to cleanup old/canceled tests
     Run Keyword And Ignore Error  Cleanup Dangling VMs On Test Server
     Run Keyword And Ignore Error  Cleanup Datastore On Test Server
@@ -307,17 +309,20 @@ Bridge network - create bridge network if it doesn't exist
     Run  govc host.vswitch.remove 'AAAAAAAAAA'
 
 Bridge network - invalid vCenter
+    Set Test Environment Variables
     Run Keyword If  '%{HOST_TYPE}' == 'ESXi'  Pass Execution  Test skipped on ESXi
 
     Pass execution  Test not implemented
 
 Bridge network - non-DPG
+    Set Test Environment Variables
     Run Keyword If  '%{HOST_TYPE}' == 'ESXi'  Pass Execution  Test skipped on ESXi
 
     Pass execution  Test not implemented
 
 Bridge network - valid
     Set Test Environment Variables
+    Pass Execution If  '%{HOST_TYPE}' == 'VC'  VC needs you to specify a working portgroup for public network, can't rely on default logic
     # Attempt to cleanup old/canceled tests
     Run Keyword And Ignore Error  Cleanup Dangling VMs On Test Server
     Run Keyword And Ignore Error  Cleanup Datastore On Test Server
@@ -346,7 +351,7 @@ Bridge network - reused port group
     Should Contain  ${output}  the bridge network must not be shared with another network role
 
     # Delete the portgroup added by env vars keyword
-    Cleanup VCH Bridge Network  %{VCH-NAME}
+    Run Keyword If  %{DRONE_BUILD_NUMBER} != 0  Cleanup VCH Bridge Network
 
 Bridge network - invalid IP settings
     Set Test Environment Variables
@@ -358,7 +363,7 @@ Bridge network - invalid IP settings
     Should Contain  ${output}  Error parsing bridge network ip range
 
     # Delete the portgroup added by env vars keyword
-    Cleanup VCH Bridge Network  %{VCH-NAME}
+    Run Keyword If  %{DRONE_BUILD_NUMBER} != 0  Cleanup VCH Bridge Network
 
 Bridge network - invalid bridge network range
     Set Test Environment Variables
@@ -370,7 +375,7 @@ Bridge network - invalid bridge network range
     Should Contain  ${output}  --bridge-network-range must be /16 or larger network
 
     # Delete the portgroup added by env vars keyword
-    Cleanup VCH Bridge Network  %{VCH-NAME}
+    Run Keyword If  %{DRONE_BUILD_NUMBER} != 0  Cleanup VCH Bridge Network
 
 Bridge network - valid with IP range
     Pass execution  Test not implemented
@@ -381,20 +386,20 @@ Container network - space in network name invalid
     Run Keyword And Ignore Error  Cleanup Dangling VMs On Test Server
     Run Keyword And Ignore Error  Cleanup Datastore On Test Server
 
-    ${output}=  Run  bin/vic-machine-linux create --name=%{VCH-NAME} --target="%{TEST_USERNAME}:%{TEST_PASSWORD}@%{TEST_URL}" --thumbprint=%{TEST_THUMBPRINT} --image-store=%{TEST_DATASTORE} --bridge-network=bridge --container-network 'VM Network With Spaces' ${vicmachinetls}
+    ${output}=  Run  bin/vic-machine-linux create --name=%{VCH-NAME} --target="%{TEST_USERNAME}:%{TEST_PASSWORD}@%{TEST_URL}" --thumbprint=%{TEST_THUMBPRINT} --image-store=%{TEST_DATASTORE} --public-network=%{PUBLIC_NETWORK} --bridge-network=%{BRIDGE_NETWORK} --container-network 'VM Network With Spaces' ${vicmachinetls}
     Should Contain  ${output}  A network alias must be supplied when network name \\"VM Network With Spaces\\" contains spaces.
     Should Contain  ${output}  vic-machine-linux create failed
 
-    ${output}=  Run  bin/vic-machine-linux create --name=%{VCH-NAME} --target="%{TEST_USERNAME}:%{TEST_PASSWORD}@%{TEST_URL}" --thumbprint=%{TEST_THUMBPRINT} --image-store=%{TEST_DATASTORE} --bridge-network=bridge --container-network 'VM Network With Spaces': ${vicmachinetls}
+    ${output}=  Run  bin/vic-machine-linux create --name=%{VCH-NAME} --target="%{TEST_USERNAME}:%{TEST_PASSWORD}@%{TEST_URL}" --thumbprint=%{TEST_THUMBPRINT} --image-store=%{TEST_DATASTORE} --public-network=%{PUBLIC_NETWORK} --bridge-network=%{BRIDGE_NETWORK} --container-network 'VM Network With Spaces': ${vicmachinetls}
     Should Contain  ${output}  A network alias must be supplied when network name \\"VM Network With Spaces:\\" contains spaces.
     Should Contain  ${output}  vic-machine-linux create failed
 
-    ${output}=  Run  bin/vic-machine-linux create --name=%{VCH-NAME} --target="%{TEST_USERNAME}:%{TEST_PASSWORD}@%{TEST_URL}" --thumbprint=%{TEST_THUMBPRINT} --image-store=%{TEST_DATASTORE} --bridge-network=bridge --container-network 'vm-network':'vm network' ${vicmachinetls}
+    ${output}=  Run  bin/vic-machine-linux create --name=%{VCH-NAME} --target="%{TEST_USERNAME}:%{TEST_PASSWORD}@%{TEST_URL}" --thumbprint=%{TEST_THUMBPRINT} --image-store=%{TEST_DATASTORE} --public-network=%{PUBLIC_NETWORK} --bridge-network=%{BRIDGE_NETWORK} --container-network 'vm-network':'vm network' ${vicmachinetls}
     Should Contain  ${output}  The network alias supplied in \\"vm-network:vm network\\" cannot contain spaces.
     Should Contain  ${output}  vic-machine-linux create failed
 
     # Delete the portgroup added by env vars keyword
-    Cleanup VCH Bridge Network  %{VCH-NAME}
+    Run Keyword If  %{DRONE_BUILD_NUMBER} != 0  Cleanup VCH Bridge Network
 
 Container network - space in network name valid
     Set Test Environment Variables
@@ -403,14 +408,18 @@ Container network - space in network name valid
     Run Keyword And Ignore Error  Cleanup Datastore On Test Server
 
     Log To Console  Create a portgroup with a space in its name
-    ${out}=  Run Keyword If  '%{HOST_TYPE}' == 'ESXi'  Run  govc host.portgroup.add -vswitch vSwitchLAN 'VM Network With Spaces'
-    ${out}=  Run Keyword If  '%{HOST_TYPE}' == 'VC'  Add VC Distributed Portgroup  test-ds  'VM Network With Spaces'
+    ${vswitch}=  Run Keyword If  '%{HOST_TYPE}' == 'ESXi'  Run  govc host.vswitch.info -json | jq -r ".Vswitch[0].Name"
+    ${out}=  Run Keyword If  '%{HOST_TYPE}' == 'ESXi'  Run  govc host.portgroup.add -vswitch ${vswitch} bridge
+    ${dvs}=  Run Keyword If  '%{HOST_TYPE}' == 'VC'  Run  govc find -type DistributedVirtualSwitch | head -n1
+    ${out}=  Run Keyword If  '%{HOST_TYPE}' == 'VC'  Add VC Distributed Portgroup  ${dvs}  bridge
+    
+    ${vlan}=  Get Public Network VLAN ID
+    ${vswitch}=  Run Keyword If  '%{HOST_TYPE}' == 'ESXi'  Run  govc host.vswitch.info -json | jq -r ".Vswitch[0].Name"
+    ${out}=  Run Keyword If  '%{HOST_TYPE}' == 'ESXi'  Run  govc host.portgroup.add -vlan=${vlan} -vswitch ${vswitch} 'VM Network With Spaces'
+    ${dvs}=  Run Keyword If  '%{HOST_TYPE}' == 'VC'  Run  govc find -type DistributedVirtualSwitch | head -n1
+    ${rc}  ${output}=  Run Keyword If  '%{HOST_TYPE}' == 'VC'  Run And Return Rc And Output  govc dvs.portgroup.add -vlan=${vlan} -dvs ${dvs} 'VM Network With Spaces'
 
-    Log To Console  Create a bridge portgroup.
-    ${out}=  Run Keyword If  '%{HOST_TYPE}' == 'ESXi'  Run  govc host.portgroup.add -vswitch vSwitchLAN bridge
-    ${out}=  Run Keyword If  '%{HOST_TYPE}' == 'VC'  Add VC Distributed Portgroup  test-ds  bridge
-
-    ${output}=  Run  bin/vic-machine-linux create --name=%{VCH-NAME} --target="%{TEST_USERNAME}:%{TEST_PASSWORD}@%{TEST_URL}" --thumbprint=%{TEST_THUMBPRINT} --image-store=%{TEST_DATASTORE} --bridge-network=bridge --container-network 'VM Network With Spaces':vmnet --insecure-registry wdc-harbor-ci.eng.vmware.com ${vicmachinetls}
+    ${output}=  Run  bin/vic-machine-linux create --name=%{VCH-NAME} --target="%{TEST_USERNAME}:%{TEST_PASSWORD}@%{TEST_URL}" --thumbprint=%{TEST_THUMBPRINT} --image-store=%{TEST_DATASTORE} --public-network=%{PUBLIC_NETWORK} --bridge-network=%{BRIDGE_NETWORK} --container-network 'VM Network With Spaces':vmnet --insecure-registry wdc-harbor-ci.eng.vmware.com ${vicmachinetls}
     Should Contain  ${output}  Installer completed successfully
     Get Docker Params  ${output}  ${true}
     Log To Console  Installer completed successfully: %{VCH-NAME}
@@ -426,8 +435,6 @@ Container network - space in network name valid
     Run Keyword If  '%{HOST_TYPE}' == 'VC'  Remove VC Distributed Portgroup  'VM Network With Spaces'
     Run Keyword If  '%{HOST_TYPE}' == 'VC'  Remove VC Distributed Portgroup  bridge
 
-    # Delete the portgroup added by env vars keyword
-    Cleanup VCH Bridge Network  %{VCH-NAME}
     Cleanup VIC Appliance On Test Server
 
 Container Firewalls
@@ -442,26 +449,28 @@ Container Firewalls
     Cleanup Container Firewalls Test Networks
 
     Log To Console  Create port groups
-    ${out}=  Run Keyword If  '%{HOST_TYPE}' == 'ESXi'  Run  govc host.portgroup.add -vswitch vSwitchLAN bridge
-    ${out}=  Run Keyword If  '%{HOST_TYPE}' == 'ESXi'  Run  govc host.portgroup.add -vswitch vSwitchLAN open-net
-    ${out}=  Run Keyword If  '%{HOST_TYPE}' == 'ESXi'  Run  govc host.portgroup.add -vswitch vSwitchLAN closed-net
-    ${out}=  Run Keyword If  '%{HOST_TYPE}' == 'ESXi'  Run  govc host.portgroup.add -vswitch vSwitchLAN published-net
-    ${out}=  Run Keyword If  '%{HOST_TYPE}' == 'ESXi'  Run  govc host.portgroup.add -vswitch vSwitchLAN outbound-net
-    ${out}=  Run Keyword If  '%{HOST_TYPE}' == 'ESXi'  Run  govc host.portgroup.add -vswitch vSwitchLAN peers-net-1
-    ${out}=  Run Keyword If  '%{HOST_TYPE}' == 'ESXi'  Run  govc host.portgroup.add -vswitch vSwitchLAN peers-net-2
-    ${out}=  Run Keyword If  '%{HOST_TYPE}' == 'VC'  Add VC Distributed Portgroup  test-ds  bridge
-    ${out}=  Run Keyword If  '%{HOST_TYPE}' == 'VC'  Add VC Distributed Portgroup  test-ds  open-net
-    ${out}=  Run Keyword If  '%{HOST_TYPE}' == 'VC'  Add VC Distributed Portgroup  test-ds  closed-net
-    ${out}=  Run Keyword If  '%{HOST_TYPE}' == 'VC'  Add VC Distributed Portgroup  test-ds  published-net
-    ${out}=  Run Keyword If  '%{HOST_TYPE}' == 'VC'  Add VC Distributed Portgroup  test-ds  outbound-net
-    ${out}=  Run Keyword If  '%{HOST_TYPE}' == 'VC'  Add VC Distributed Portgroup  test-ds  peers-net-1
-    ${out}=  Run Keyword If  '%{HOST_TYPE}' == 'VC'  Add VC Distributed Portgroup  test-ds  peers-net-2
+    ${vlan}=  Get Public Network VLAN ID
+    ${vswitch}=  Run Keyword If  '%{HOST_TYPE}' == 'ESXi'  Run  govc host.vswitch.info -json | jq -r ".Vswitch[0].Name"
+    ${out}=  Run Keyword If  '%{HOST_TYPE}' == 'ESXi'  Run  govc host.portgroup.add -vlan=${vlan} -vswitch ${vswitch} open-net
+    ${out}=  Run Keyword If  '%{HOST_TYPE}' == 'ESXi'  Run  govc host.portgroup.add -vlan=${vlan} -vswitch ${vswitch} closed-net
+    ${out}=  Run Keyword If  '%{HOST_TYPE}' == 'ESXi'  Run  govc host.portgroup.add -vlan=${vlan} -vswitch ${vswitch} published-net
+    ${out}=  Run Keyword If  '%{HOST_TYPE}' == 'ESXi'  Run  govc host.portgroup.add -vlan=${vlan} -vswitch ${vswitch} outbound-net
+    ${out}=  Run Keyword If  '%{HOST_TYPE}' == 'ESXi'  Run  govc host.portgroup.add -vswitch ${vswitch} peers-net-1
+    ${out}=  Run Keyword If  '%{HOST_TYPE}' == 'ESXi'  Run  govc host.portgroup.add -vswitch ${vswitch} peers-net-2
+
+    ${dvs}=  Run Keyword If  '%{HOST_TYPE}' == 'VC'  Run  govc find -type DistributedVirtualSwitch | head -n1
+    ${rc}  ${output}=  Run Keyword If  '%{HOST_TYPE}' == 'VC'  Run And Return Rc And Output  govc dvs.portgroup.add -vlan=${vlan} -dvs ${dvs} open-net
+    ${rc}  ${output}=  Run Keyword If  '%{HOST_TYPE}' == 'VC'  Run And Return Rc And Output  govc dvs.portgroup.add -vlan=${vlan} -dvs ${dvs} closed-net
+    ${rc}  ${output}=  Run Keyword If  '%{HOST_TYPE}' == 'VC'  Run And Return Rc And Output  govc dvs.portgroup.add -vlan=${vlan} -dvs ${dvs} published-net
+    ${rc}  ${output}=  Run Keyword If  '%{HOST_TYPE}' == 'VC'  Run And Return Rc And Output  govc dvs.portgroup.add -vlan=${vlan} -dvs ${dvs} outbound-net
+    ${out}=  Run Keyword If  '%{HOST_TYPE}' == 'VC'  Add VC Distributed Portgroup  ${dvs}  peers-net-1
+    ${out}=  Run Keyword If  '%{HOST_TYPE}' == 'VC'  Add VC Distributed Portgroup  ${dvs}  peers-net-2
 
     ${createcommand}=  catenate  SEPARATOR=\ \ 
     ...  bin/vic-machine-linux create --debug 1 --name=%{VCH-NAME}
     ...  --target=%{TEST_URL}%{TEST_DATACENTER} --thumbprint=%{TEST_THUMBPRINT}
     ...  --user=%{TEST_USERNAME} --image-store=%{TEST_DATASTORE} --password=%{TEST_PASSWORD}
-    ...  --force=true --bridge-network=bridge --compute-resource=%{TEST_RESOURCE} --no-tlsverify
+    ...  --force=true --public-network=%{PUBLIC_NETWORK} --bridge-network=%{BRIDGE_NETWORK} --compute-resource=%{TEST_RESOURCE} --no-tlsverify
     ...  --insecure-registry wdc-harbor-ci.eng.vmware.com
     ...  --container-network open-net --container-network-firewall open-net:open
     ...  --container-network closed-net --container-network-firewall closed-net:closed
@@ -616,10 +625,7 @@ Reset VCH doesn't cause unintentionally exposed ports from container network
     Run Keyword And Ignore Error  Cleanup Dangling VMs On Test Server
     Run Keyword And Ignore Error  Cleanup Datastore On Test Server
 
-    # Create bridge portgroup on VC
-    ${out}=  Run Keyword If  '%{HOST_TYPE}' == 'VC'  Add VC Distributed Portgroup  test-ds  bridge
-
-    ${output}=  Run  bin/vic-machine-linux create --name=%{VCH-NAME} --target="%{TEST_USERNAME}:%{TEST_PASSWORD}@%{TEST_URL}" --thumbprint=%{TEST_THUMBPRINT} --image-store=%{TEST_DATASTORE} --bridge-network=bridge --container-network %{PUBLIC_NETWORK}:vmnet ${vicmachinetls}
+    ${output}=  Run  bin/vic-machine-linux create --name=%{VCH-NAME} --target="%{TEST_USERNAME}:%{TEST_PASSWORD}@%{TEST_URL}" --thumbprint=%{TEST_THUMBPRINT} --image-store=%{TEST_DATASTORE} --public-network=%{PUBLIC_NETWORK} --bridge-network=%{BRIDGE_NETWORK} --container-network %{PUBLIC_NETWORK}:vmnet ${vicmachinetls}
     Log  ${output}
     Should Contain  ${output}  Installer completed successfully
     Get Docker Params  ${output}  ${true}

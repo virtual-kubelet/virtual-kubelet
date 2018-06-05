@@ -1,4 +1,4 @@
-# Copyright 2016-2017 VMware, Inc. All Rights Reserved.
+# Copyright 2016-2018 VMware, Inc. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -20,6 +20,15 @@ Suite Teardown  Cleanup VIC Appliance On Test Server
 Test Timeout  20 minutes
 
 *** Keywords ***
+Verify No Machines
+    [Arguments]  ${list}
+    Should Contain  ${list}  ID
+    Should Contain  ${list}  PATH
+    Should Contain  ${list}  NAME
+    Should Not Contain  ${list}  Error
+    ${machines}=  Get Lines Containing String  ${list}  %{VCH-NAME}
+    Should Be Empty  ${machines}
+
 Verify Listed Machines
     [Arguments]  ${list}
     Should Contain  ${list}  ID

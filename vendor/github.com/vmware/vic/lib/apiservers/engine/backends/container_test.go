@@ -40,9 +40,11 @@ import (
 	"github.com/vmware/vic/lib/apiservers/engine/proxy"
 	plclient "github.com/vmware/vic/lib/apiservers/portlayer/client"
 	plscopes "github.com/vmware/vic/lib/apiservers/portlayer/client/scopes"
+	"github.com/vmware/vic/lib/apiservers/portlayer/models"
 	plmodels "github.com/vmware/vic/lib/apiservers/portlayer/models"
 	"github.com/vmware/vic/lib/config/executor"
 	"github.com/vmware/vic/lib/metadata"
+	"github.com/vmware/vic/pkg/trace"
 )
 
 //***********
@@ -333,6 +335,21 @@ func (m *MockContainerProxy) State(ctx context.Context, vc *viccontainer.VicCont
 		Running: true,
 	}
 	return state, nil
+}
+
+func (m *MockContainerProxy) GetStateFromHandle(op trace.Operation, handle string) (string, string, error) {
+	return "", "", nil
+}
+
+func (m *MockContainerProxy) InspectTask(op trace.Operation, handle string, eid string, cid string) (*models.TaskInspectResponse, error) {
+	return nil, nil
+}
+func (m *MockContainerProxy) BindTask(op trace.Operation, handle string, eid string) (string, error) {
+	return "", nil
+}
+
+func (m *MockContainerProxy) WaitTask(op trace.Operation, cid string, cname string, id string) error {
+	return nil
 }
 
 func (m *MockContainerProxy) Wait(ctx context.Context, vc *viccontainer.VicContainer, timeout time.Duration) (*types.ContainerState, error) {
@@ -770,7 +787,11 @@ func TestPortInformation(t *testing.T) {
 	cache.ContainerCache().AddContainer(co)
 
 	// unless there are entries in vicnetwork.ContainerByPort we won't report them as bound
-	ports := network.PortForwardingInformation(co, ips)
+	ports := network.PortForwardingInformation(nil, ips)
+	assert.Empty(t, ports, "No ports should be returned for nil container")
+
+	// unless there are entries in vicnetwork.ContainerByPort we won't report them as bound
+	ports = network.PortForwardingInformation(co, ips)
 	assert.Empty(t, ports, "There should be no bound IPs at this point for forwarding")
 
 	// the current port binding should show up as a direct port

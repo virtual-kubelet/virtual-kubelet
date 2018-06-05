@@ -1,4 +1,4 @@
-// Copyright 2016-2017 VMware, Inc. All Rights Reserved.
+// Copyright 2016-2018 VMware, Inc. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,6 +16,7 @@ package management
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"sync"
 
@@ -57,6 +58,7 @@ func (d *Dispatcher) DeleteVCH(conf *config.VirtualContainerHostConfigSpec, cont
 	if vmm == nil {
 		return nil
 	}
+	d.appliance = vmm
 
 	d.parentResourcepool, err = d.getComputeResource(vmm, conf)
 	if err != nil {
@@ -69,8 +71,10 @@ func (d *Dispatcher) DeleteVCH(conf *config.VirtualContainerHostConfigSpec, cont
 		d.op.Warnf("No container VMs found, but proceeding with delete of VCH due to --force")
 		err = nil
 	}
+
+	// Proceed to delete containers.
 	if d.parentResourcepool != nil {
-		if err = d.DeleteVCHInstances(vmm, conf, containers); err != nil {
+		if err = d.DeleteVCHInstances(conf, containers); err != nil {
 			d.op.Error(err)
 			if !d.force {
 				// if container delete failed, do not remove anything else
@@ -105,6 +109,9 @@ func (d *Dispatcher) DeleteVCH(conf *config.VirtualContainerHostConfigSpec, cont
 		return err
 	}
 
+	// delete the VCH folder
+	d.deleteFolder(d.session.VCHFolder)
+
 	defaultrp, err := d.session.Cluster.ResourcePool(d.op)
 	if err != nil {
 		return err
@@ -118,6 +125,11 @@ func (d *Dispatcher) DeleteVCH(conf *config.VirtualContainerHostConfigSpec, cont
 	if err = d.destroyResourcePoolIfEmpty(conf); err != nil {
 		d.op.Warnf("VCH resource pool is not removed: %s", err)
 	}
+
+	if err = d.deleteVMGroupIfUsed(conf); err != nil {
+		d.op.Warnf("VCH DRS VM group is not removed: %s", err)
+	}
+
 	return nil
 }
 
@@ -216,7 +228,9 @@ func (d *Dispatcher) detachAttachedDisks(v *vm.VirtualMachine) error {
 	return err
 }
 
-func (d *Dispatcher) DeleteVCHInstances(vmm *vm.VirtualMachine, conf *config.VirtualContainerHostConfigSpec, containers *DeleteContainers) error {
+// DeleteVCHInstances will delete all containers in the target resource pool or folder.  Additionally, it will detach
+// disks of the target VCH
+func (d *Dispatcher) DeleteVCHInstances(conf *config.VirtualContainerHostConfigSpec, containers *DeleteContainers) error {
 	defer trace.End(trace.Begin(conf.Name, d.op))
 
 	deletePoweredOnContainers := d.force || (containers != nil && *containers == AllContainers)
@@ -230,11 +244,44 @@ func (d *Dispatcher) DeleteVCHInstances(vmm *vm.VirtualMachine, conf *config.Vir
 
 	var err error
 	var children []*vm.VirtualMachine
-	if children, err = d.parentResourcepool.GetChildrenVMs(d.op, d.session); err != nil {
-		return err
+
+	vchFolder, err := d.appliance.Folder(d.op)
+	if err != nil {
+		d.op.Errorf("Failed to obtain the VCH folder: %s", err)
+		return fmt.Errorf("Failed to obtain the VCH folder. See vic-machine.log for more details. ")
+	}
+	// set the VCH Folder on session
+	d.session.VCHFolder = vchFolder
+	// if we have a vchFolder and it's not the VMFolder then gather the children via the folder
+	if vchFolder != nil && vchFolder.Reference() != d.session.VMFolder.Reference() {
+		// vch parent inventory folder exists, get the children from it.
+		d.op.Debugf("Finding children in VCH Folder: %s", vchFolder.InventoryPath)
+		folderChildren, err := vchFolder.Children(d.op)
+		if err != nil {
+			return err
+		}
+
+		for _, child := range folderChildren {
+			vmObj, ok := child.(*object.VirtualMachine)
+			if ok {
+				childVM := vm.NewVirtualMachine(d.op, d.session, vmObj.Reference())
+				// The destroy method is disabled for all vic created vms so we need to enable
+				cErr := childVM.EnableDestroy(d.op)
+				if cErr != nil {
+					d.op.Debugf("Unable to enable the destroy task on vm(%s): due to %s", childVM.InventoryPath, cErr)
+				}
+				children = append(children, childVM)
+			}
+		}
+	} else {
+		// Find the children in the RP
+		d.op.Debugf("Finding children in VCH resource pool")
+		if children, err = d.parentResourcepool.GetChildrenVMs(d.op); err != nil {
+			return err
+		}
 	}
 
-	if d.session.Datastore, err = d.getImageDatastore(vmm, conf, ignoreFailureToFindImageStores); err != nil {
+	if d.session.Datastore, err = d.getImageDatastore(d.appliance, conf, ignoreFailureToFindImageStores); err != nil {
 		return err
 	}
 
@@ -249,7 +296,7 @@ func (d *Dispatcher) DeleteVCHInstances(vmm *vm.VirtualMachine, conf *config.Vir
 
 		if ok {
 			// Do not delete a VCH in the target RP if it is not the target VCH
-			if child.Reference() != vmm.Reference() {
+			if child.Reference() != d.appliance.Reference() {
 				d.op.Debugf("Skipping VCH in the resource pool that is not the targeted VCH: %s", child)
 				continue
 			}
@@ -273,11 +320,18 @@ func (d *Dispatcher) DeleteVCHInstances(vmm *vm.VirtualMachine, conf *config.Vir
 
 		wg.Add(1)
 		go func(child *vm.VirtualMachine) {
+			name, err := child.ObjectName(d.op)
 			defer wg.Done()
 			if err = d.deleteVM(child, deletePoweredOnContainers); err != nil {
 				mu.Lock()
 				errs = append(errs, err.Error())
 				mu.Unlock()
+			}
+
+			if name != "" {
+				d.op.Debugf("Successfully deleted container: %s", name)
+			} else {
+				d.op.Debugf("Successfully deleted container: %q", child.Reference())
 			}
 		}(child)
 	}

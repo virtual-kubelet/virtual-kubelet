@@ -1,18 +1,18 @@
 package docker
 
 import (
-	"github.com/hyperhq/hypercli/cliconfig"
-	"github.com/hyperhq/libcompose/project"
+	"github.com/docker/docker/cliconfig"
+	"github.com/docker/libcompose/project"
 )
 
 // Context holds context meta information about a libcompose project and docker
 // client information (like configuration file, builder to use, …)
 type Context struct {
 	project.Context
-	ClientFactory project.ClientFactory
+	Builder       Builder
+	ClientFactory ClientFactory
 	ConfigDir     string
 	ConfigFile    *cliconfig.ConfigFile
-	AuthLookup    AuthLookup
 }
 
 func (c *Context) open() error {

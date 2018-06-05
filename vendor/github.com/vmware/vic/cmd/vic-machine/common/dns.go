@@ -29,13 +29,13 @@ type DNS struct {
 	IsSet bool
 }
 
-func (d *DNS) DNSFlags(hidden bool) []cli.Flag {
+func (d *DNS) DNSFlags() []cli.Flag {
 	return []cli.Flag{
 		cli.StringSliceFlag{
 			Name:   "dns-server",
 			Value:  &d.DNS,
 			Usage:  "DNS server for the client, public, and management networks. Defaults to 8.8.8.8 and 8.8.4.4 when VCH uses static IP",
-			Hidden: hidden,
+			Hidden: true,
 		},
 	}
 }

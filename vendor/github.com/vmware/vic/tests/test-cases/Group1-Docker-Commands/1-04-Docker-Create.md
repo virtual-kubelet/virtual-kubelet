@@ -72,3 +72,20 @@ This test requires that a vSphere server is running and available
 
 # Possible Problems:
 None
+
+=======
+
+# Simple Creates Verifying Folder Path
+
+## Purpose:
+Enforce that we are creating the cvm's under the folder which owns the VCH appliance itself.
+
+## Test Steps:
+1. Pull busybox
+2. Deploy 3 containers with identifiable names and check their folder paths.
+3. Remove the 3 containers.
+
+## expected outcome:
+* step 1 should complete with rc of 0.
+* step 2 should complete with rc of 0 for all containers. All checks for container folder pathing should succeed as well.
+* step 3 Should complete with rc of 0.

@@ -8,8 +8,8 @@ To verify vic-machine configure can upgrade with --upgrade specified
 This test requires that a vSphere server is running and available
 
 # Test Steps:
-1. Download vic_7315.tar.gz from gcp
-2. Deploy VIC 7315 to vsphere server
+1. Download vic_1.2.1.tar.gz from gcp
+2. Deploy VIC 1.2.1 to vsphere server
 3. Using latest version vic-machine to configure this VCH
 
 # Expected Outcome:

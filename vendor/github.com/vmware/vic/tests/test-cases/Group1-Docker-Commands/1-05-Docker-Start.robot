@@ -128,3 +128,30 @@ Simple start with attach
     Should Contain  ${output}  bin
     Should Contain  ${output}  root
     Should Contain  ${output}  var
+
+Start with parallel inspection loop
+    ${rc}  ${output}=  Run And Return Rc And Output  docker %{VCH-PARAMS} pull ${busybox}
+    Should Be Equal As Integers  ${rc}  0
+    # tight ps loop to force state based refresh from transient state
+    ${ps-pid}=  Start Process  while true; do docker %{VCH-PARAMS} ps -a >/dev/null; done  shell=${true}
+
+    ${name}=  Generate Random String  15
+    ${rc}  ${containerA}=  Run And Return Rc And Output  docker %{VCH-PARAMS} run -dit --name ${name} ${busybox} 
+    Should Be Equal As Integers  ${rc}  0
+
+    # ensure the network aliases are present for the named container
+    ${rc}  ${containerB}=  Run And Return Rc And Output  docker %{VCH-PARAMS} create ${busybox} nslookup ${name}
+    Should Be Equal As Integers  ${rc}  0
+    ${rc}=  Run And Return Rc  docker %{VCH-PARAMS} start ${containerB}
+    Should Be Equal As Integers  ${rc}  0
+
+    # once we've started the loop is no longer useful and just pollutes the logs
+    Terminate Process  ${ps-pid}
+
+    ${rc}  ${exitCode}=  Run And Return Rc And Output  docker %{VCH-PARAMS} wait ${containerB}
+    Should Be Equal As Integers  ${rc}  0
+    Should Be Equal As Integers  ${exitCode}  0
+
+    ${rc}  ${out}=  Run And Return Rc And Output  docker %{VCH-PARAMS} logs ${containerB}
+    Should Be Equal As Integers  ${rc}  0
+    Log  ${out}

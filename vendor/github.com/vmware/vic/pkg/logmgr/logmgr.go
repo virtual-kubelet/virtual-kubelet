@@ -155,7 +155,7 @@ func (lm *LogManager) AddLogRotate(logFilePath string, ri RotateInterval, maxSiz
 func (lm *LogManager) Reload(*tether.ExecutorConfig) error { return nil }
 
 // Start log rotate loop.
-func (lm *LogManager) Start() error {
+func (lm *LogManager) Start(system tether.System) error {
 	if len(lm.logFiles) == 0 {
 		lm.op.Errorf("Attempt to start logrotate with no log files configured.")
 		return nil

@@ -56,6 +56,9 @@ type Toolbox struct {
 	authIDs map[string]struct{}
 
 	stop chan struct{}
+
+	// System interface for basic operations
+	baseOp System
 }
 
 var (
@@ -78,7 +81,7 @@ func NewToolbox() *Toolbox {
 }
 
 // Start implementation of the tether.Extension interface
-func (t *Toolbox) Start() error {
+func (t *Toolbox) Start(system System) error {
 	t.stop = make(chan struct{})
 	on := make(chan struct{})
 
@@ -87,6 +90,8 @@ func (t *Toolbox) Start() error {
 		close(on)
 		return nil
 	}
+
+	t.baseOp = system
 
 	err := t.Service.Start()
 	if err != nil {
@@ -147,9 +152,16 @@ func (t *Toolbox) InContainer() *Toolbox {
 	cmd.Authenticate = t.containerAuthenticate
 	cmd.ProcessStartCommand = t.containerStartCommand
 
+	ar := func(u *url.URL, r *tar.Reader) error {
+		return toolboxOverrideArchiveRead(t.baseOp, u, r)
+	}
+	aw := func(u *url.URL, w *tar.Writer) error {
+		return toolboxOverrideArchiveWrite(t.baseOp, u, w)
+	}
+
 	cmd.FileServer.RegisterFileHandler(hgfs.ArchiveScheme, &hgfs.ArchiveHandler{
-		Read:  toolboxOverrideArchiveRead,
-		Write: toolboxOverrideArchiveWrite,
+		Read:  ar,
+		Write: aw,
 	})
 
 	return t
@@ -270,7 +282,7 @@ func (t *Toolbox) halt() error {
 }
 
 // toolboxOverrideArchiveRead is the online DataSink Override Handler
-func toolboxOverrideArchiveRead(u *url.URL, tr *tar.Reader) error {
+func toolboxOverrideArchiveRead(system System, u *url.URL, tr *tar.Reader) error {
 
 	// special behavior when using disk-labels and filterspec
 	diskLabel := u.Query().Get(shared.DiskLabelQueryName)
@@ -284,19 +296,31 @@ func toolboxOverrideArchiveRead(u *url.URL, tr *tar.Reader) error {
 			return err
 		}
 
-		diskPath, err := mountDiskLabel(op, diskLabel)
+		diskPath, err := mountDiskLabel(op, system, diskLabel)
 		if err != nil {
 			op.Errorf(err.Error())
 			return err
 		}
+
 		defer unmount(op, diskPath)
 
 		// no need to join on u.Path here. u.Path == spec.Rebase, but
 		// Unpack will rebase tar headers for us. :thumbsup:
-		err = archive.InvokeUnpack(op, tr, spec, diskPath)
+
+		op.Debugf("Unpacking tar archive to %s", diskPath)
+		waitChan, err := system.LaunchUtility(func() (*os.Process, error) {
+			cmd, err := archive.OnlineUnpack(op, tr, spec, diskPath)
+			return cmd.Process, err
+		})
+
 		if err != nil {
-			op.Errorf(err.Error())
+			return err
 		}
+
+		if rc := <-waitChan; rc != 0 {
+			return fmt.Errorf("Got nonzero exit code from unpack binary: %d", rc)
+		}
+
 		op.Debugf("Finished reading from tar archive to path %s: %s", u.Path, u.String())
 		return err
 	}
@@ -305,7 +329,7 @@ func toolboxOverrideArchiveRead(u *url.URL, tr *tar.Reader) error {
 }
 
 // toolboxOverrideArchiveWrite is the Online DataSource Override Handler
-func toolboxOverrideArchiveWrite(u *url.URL, tw *tar.Writer) error {
+func toolboxOverrideArchiveWrite(system System, u *url.URL, tw *tar.Writer) error {
 
 	// special behavior when using disk-labels and filterspec
 	diskLabel := u.Query().Get(shared.DiskLabelQueryName)
@@ -325,7 +349,7 @@ func toolboxOverrideArchiveWrite(u *url.URL, tw *tar.Writer) error {
 		}
 
 		// get the container fs mount
-		diskPath, err := mountDiskLabel(op, diskLabel)
+		diskPath, err := mountDiskLabel(op, system, diskLabel)
 		if err != nil {
 			op.Errorf(err.Error())
 			return err
@@ -383,7 +407,7 @@ func toolboxOverrideArchiveWrite(u *url.URL, tw *tar.Writer) error {
 	return defaultArchiveHandler.Write(u, tw)
 }
 
-func mountDiskLabel(op trace.Operation, label string) (string, error) {
+func mountDiskLabel(op trace.Operation, system System, label string) (string, error) {
 	// We know the vmdk will always be attached at '/'
 	if label == "containerfs" {
 		return "/", nil
@@ -396,7 +420,7 @@ func mountDiskLabel(op trace.Operation, label string) (string, error) {
 		return "", fmt.Errorf("failed to create mountpoint %s: %s", tmpDir, err)
 	}
 
-	err = baseOp.MountLabel(op, label, tmpDir)
+	err = system.MountLabel(op, label, tmpDir)
 	if err != nil {
 		os.Remove(tmpDir)
 		op.Errorf("failed to mount label %s at %s: %s", label, tmpDir, err)

@@ -48,6 +48,9 @@ Basic Validation
 * Only the expected VCH is deleted
 
 
+Negative Cases
+--------------
+
 ###  4. Delete invalid VCH
 
 #### Test Steps:
@@ -246,3 +249,19 @@ Note: Because it is more difficult to verify the existence or deletion of anonym
 
 #### Expected Outcome:
 * The deletion fails with a 500 Internal Server Error and the VCH, powered on container, volume store, and volume all remain
+
+
+Interoperability
+----------------
+
+### 18. Create an VCH with an old version of the CLI and attempt to delete it
+
+(Not implemented.)
+
+
+Concurrency
+-----------
+
+### 19. Attempt to delete a VCH while it is already being deleted
+
+(Not implemented.)
