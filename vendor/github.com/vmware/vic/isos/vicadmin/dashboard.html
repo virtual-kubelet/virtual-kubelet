@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<!-- saved from url=(0030)http://10.20.232.35/community/ -->
+<html itemscope="" itemtype="http://schema.org/Organization" lang="en-US">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <title>VIC: {{.Hostname}}</title>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+    <meta content="yes" name="apple-mobile-web-app-capable">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+    <!-- Styles -->
+    <link rel="stylesheet" href="css/clarity-ui.min.css">
+    <link rel="stylesheet" href="css/fontello.css">
+    <link rel="stylesheet" href="css/style.css">
+
+  </head>
+
+  <body id="body" class="page-community layout-community">
+
+    <div class="main-nav">
+      <header class="header">
+        <div class="branding">
+          <a href="http://www.vmware.com"><img src="images/vmw-logo.svg" class="logo"></a>
+          <span class="title">vSphere Integrated Containers</span>
+        </div>
+        <a role="button" class="github btn btn-primary" href="http://www.github.com/vmware/vic">
+          <i class="icon-github-circled" style="vertical-align: middle;"></i>
+          View on Github
+        </a>
+        <a role="button" class="logout btn btn-primary"  href="/logout">
+
+          Log Out
+        </a>
+      </header>
+    </div>
+
+    <div class="main-container">
+      <main class="content-area">
+        <section class="community-top-section">
+          <h1 id="community">Admin Portal for {{.Hostname}} </h1>
+          <h4 id="community">{{.Version}}</h4>
+        </section>
+
+        <section>
+          <div class="row">
+            <div class="col-md-6">
+
+              <div class="card card-block">
+                <h3 class="card-title">Status</h3>
+                <div class="row">
+                  <div class="sixty">Virtual Container Host (VCH){{.VCHIssues}}</div>
+                  <div class="forty">{{.VCHStatus}}</div>
+                </div>
+                <div class="row">
+                  <div class="sixty">Registry and Internet Connectivity{{.NetworkIssues}}</div>
+                  <div class="forty">{{.NetworkStatus}}</div>
+                </div>
+                {{if .VCHReachable}}
+                <div class="row">
+                  <div class="sixty">Firewall{{.FirewallIssues}}</div>
+                  <div class="forty">{{.FirewallStatus}}</div>
+                </div>
+                <div class="row">
+                  <div class="sixty">License{{.LicenseIssues}}</div>
+                  <div class="forty">{{.LicenseStatus}}</div>
+                </div>
+                {{end}}
+              </div>
+
+              <div class="card card-block">
+                <h3 class="card-title">Virtual Container Host Info</h3>
+                <p class="card-text">Docker Endpoint: {{.HostIP}}:{{.DockerPort}}</p>
+                <p class="card-text">System Time: {{.SystemTime}}</p>
+                {{.StorageRemaining}}
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="card card-block">
+                <h3 class="card-title">Logs</h3>
+                <div class="row">
+                  <div class="sixty"><a href="/logs.zip">Log Bundle</a></div>
+                </div>
+                {{if .VCHReachable}}
+                <div class="row">
+                  <div class="sixty"><a href="/container-logs.zip">Log Bundle with container logs</a></div>
+                </div>
+                <div class="row">
+                  <div class="sixty"><a href="/logs/docker-personality.log">Docker Personality</a></div>
+                  <div class="forty"><a href="/logs/tail/docker-personality.log">Live Log</a></div>
+                </div>
+                <div class="row">
+                  <div class="sixty"><a href="/logs/port-layer.log">Port Layer Service</a></div>
+                  <div class="forty"><a href="/logs/tail/port-layer.log">Live Log</a></div>
+                </div>
+                <div class="row">
+                  <div class="sixty"><a href="/logs/init.log">Initialization & watchdog</a></div>
+                  <div class="forty"><a href="/logs/tail/init.log">Live Log</a></div>
+                </div>
+                <div class="row">
+                  <div class="sixty"><a href="/logs/vicadmin.log">Admin Server</a></div>
+                  <div class="forty"><a href="/logs/tail/vicadmin.log">Live Log</a></div>
+                </div>
+                <div class="row">
+                    <div class="sixty"><a href="/logs/kubelet-starter.log">Kubelet Starter</a></div>
+                    <div class="forty"><a href="/logs/tail/kubelet-starter.log">Live Log</a></div>
+                </div>
+                <div class="row">
+                    <div class="sixty"><a href="/logs/virtual-kubelet.log">Virtual Kubelet</a></div>
+                    <div class="forty"><a href="/logs/tail/virtual-kubelet.log">Live Log</a></div>
+                </div>
+                {{else}}
+                <div class="row">
+                  <div class="sixty">
+                    <span class="error-message">Other logs are unavailable due to vSphere connection issues.
+                      Please see the log bundle and
+                    <a href="https://vmware.github.io/vic/assets/files/html/vic_admin/vicadmin_status_ref.html">documentation</a>
+                    to troubleshoot the issue.
+                  </span>
+                  </div>
+                </div>
+                {{end}}
+              </div>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+  </body>
+</html>

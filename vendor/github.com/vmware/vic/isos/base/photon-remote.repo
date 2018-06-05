@@ -1,0 +1,6 @@
+[photon]
+name=VMware Photon Linux 1.0(x86_64)
+baseurl=https://vmware.bintray.com/photon_release_1.0_x86_64/
+gpgkey=file:///etc/pki/rpm-gpg/VMWARE-RPM-GPG-KEY
+gpgcheck=0
+enabled=1

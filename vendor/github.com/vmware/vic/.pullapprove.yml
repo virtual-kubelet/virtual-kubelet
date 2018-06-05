@@ -1,0 +1,260 @@
+version: 2
+group_defaults:
+  required: 1
+  author_approval:
+    auto: true
+  approve_by_comment:
+    enabled: true
+    approve_regex: 'Approved|:shipit:|:sheep::it:|:\+1:|LGTM|lgtm'
+  reset_on_push:
+    enabled: false
+
+groups:
+  contributors:
+    required: 3
+    teams:
+      - vic-maintainers
+
+  tether:
+    users:
+      - hickeng
+      - vburenin
+    conditions:
+      files:
+        include:
+          - "cmd/tether/*"
+          - "lib/tether/*"
+
+  build-ci-infra:
+    users:
+      - mhagen-vmware
+      - rajanashok
+      - rogeliosanchez
+      - mdharamadas1
+    conditions:
+      files:
+        include:
+          - "demos/*"
+          - "infra/*"
+          - "tests/*"
+
+  design-docs:
+    users:
+      - hickeng
+    conditions:
+      files:
+        include:
+          - "doc/design/*"
+
+  docs:
+    users:
+      - stuclem
+      - mdubya66
+      - alextopuzov
+    conditions:
+      files:
+        include:
+          - "doc/*"
+        exclude:
+          - "doc/design/*"
+          - "doc/bundle/*"
+
+  nightlies:
+    users:
+      - rajanashok
+      - mhagen-vmware
+      - rogeliosanchez
+      - mdharamadas1
+    conditions:
+      files:
+        include:
+          - "tests/nightly/*"
+
+  log:
+    users:
+      - cgtexmex
+      - zjs
+    conditions:
+      files:
+        include:
+          - "pkg/log/*"
+
+  docker-persona:
+    users:
+      - sflxn
+      - cgtexmex
+      - jzt
+      - vburenin
+      - anchal-agrawal
+    conditions:
+      files:
+        include:
+          - "lib/apiservers/engine/*"
+          - "cmd/docker/*"
+        exclude:
+          - "lib/apiservers/portlayer/*"
+
+  install:
+    users:
+      - zjs
+      - anchal-agrawal
+    conditions:
+      files:
+        include:
+          - "cmd/vic-machine/*"
+          - "lib/install/*"
+  upgrade:
+    users:
+      - zjs
+      - anchal-agrawal
+    conditions:
+      files:
+        include:
+          - "lib/migration/*"
+
+  vic-machine-service:
+    users:
+      - zjs
+      - AngieCris
+    conditions:
+      files:
+        include:
+          - "cmd/vic-machine-server/*"
+          - "lib/apiservers/service/*"
+
+  config:
+    users:
+      - hickeng
+    conditions:
+      files:
+        include:
+          - "lib/config/*"
+          - "lib/metadata/*"
+
+  vicadmin:
+    users:
+      - jzt
+      - gigawhitlocks
+      - sgairo
+    conditions:
+      files:
+        include:
+          - "cmd/vicadmin/*"
+          - "lib/vicadmin/*"
+          - "isos/vicadmin/*"
+
+  port-layer-exec-interaction:
+    users:
+      - cgtexmex
+      - hickeng
+      - matthewavery
+    conditions:
+      files:
+        include:
+          - "lib/portlayer/attach/*"
+          - "lib/portlayer/exec/*"
+          - "lib/portlayer/exec2/*"
+
+  port-layer-storage:
+    users:
+      - jzt
+      - matthewavery
+    conditions:
+      files:
+        include:
+          - "lib/portlayer/storage/*"
+
+  port-layer-store:
+    users:
+      - cgtexmex
+    conditions:
+      files:
+        include:
+          - "lib/portlayer/store/*"
+
+
+  package-kv-store:
+    users:
+      - jzt
+      - matthewavery
+    conditions:
+      files:
+        include:
+          - "pkg/kvstore/*"
+
+  port-layer-network:
+    users:
+      - hmahmood
+      - hickeng
+    conditions:
+      files:
+        include:
+          - "cmd/vic-dns/*"
+          - "lib/dns/*"
+          - "lib/dhcp/*"
+          - "lib/portlayer/network/*"
+
+  events:
+    users:
+      - cgtexmex
+      - hickeng
+      - dougm
+    conditions:
+      files:
+        include:
+          - "lib/portlayer/event/*"
+
+  imagec:
+    users:
+      - jzt
+    conditions:
+      files:
+        include:
+          - "lib/imagec/*"
+
+  vendor:
+    users:
+      - mdubya66
+      - dougm
+    conditions:
+      files:
+        include:
+          - "vendor/*"
+  ui:
+    users:
+      - jooskim
+      - cristianfalcone
+      - jak-atx
+    conditions:
+      files:
+        include:
+          - "ui/*"
+
+  ui-cmd:
+    users:
+      - andrewtchin
+    conditions:
+      files:
+        include:
+          - "cmd/vic-ui/*"
+
+  pullapprove:
+    users:
+      - gigawhitlocks
+      - anchal-agrawal
+    conditions:
+      files:
+        include:
+          - ".pullapprove.yml"
+
+  drone:
+    users:
+      - jakedsouza
+      - rajanashok
+      - mhagen-vmware
+      - mdharamadas1
+    conditions:
+      files:
+        include:
+          - ".drone.yml"
+          - ".drone.sec"

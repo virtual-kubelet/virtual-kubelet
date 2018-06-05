@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html itemscope="" itemtype="http://schema.org/Organization" lang="en-US">
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+        <title>VCH Admin</title>
+        <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+        <meta content="yes" name="apple-mobile-web-app-capable">
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+        <!-- Styles -->
+        <link rel="stylesheet" href="css/clarity-ui.min.css">
+        <link rel="stylesheet" href="css/fontello.css">
+        <link rel="stylesheet" href="css/style.css">
+
+    </head>
+
+    <body id="body" class="page-community layout-community">
+
+        <div class="main-nav">
+            <header class="header">
+                <div class="branding">
+                    <a href="http://www.vmware.com"><img src="images/vmw-logo.svg" class="logo"></a>
+                    <span class="title">vSphere Integrated Containers</span>
+                </div>
+                <a role="button" class="github btn btn-primary" href="http://www.github.com/vmware/vic">
+                    <i class="icon-github-circled" style="vertical-align: middle;"></i>
+                    View on Github
+                </a>
+            </header>
+        </div>
+
+        <div class="main-container">
+            <main class="content-area">
+
+                <section>
+                    <div class="row ">
+                        <div class="col-md-6 center">
+
+                            <div class="card card-block text-xs-center">
+                              <h2 class="card-title">{{.Hostname}} Login</h2>
+			      <h3 class="error-message"> {{.InvalidLogin}}</h3>
+
+                                <form method="post">
+                                    <label for="username">vSphere or ESXi Username:</label>
+                                    <input type="text" name="username" autofocus><br />
+                                    <label for="password">vSphere or ESXi Password:</label>
+                                    <input type="password" name="password" autocomplete="off"><br /><br/>
+                                    <input type="submit" value="Log in">
+                                </form>
+
+                            </div>
+                            <div class="card card-block text-xs-center">
+                              <p class="card-text">Appliance System Time: {{.SystemTime}}</p>
+                            </div>
+
+                        </div>
+                    </div>
+                </section>
+            </main>
+        </div>
+    </body>
+</html>

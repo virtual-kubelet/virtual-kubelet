@@ -1,0 +1,13 @@
+#Begin /etc/pam.d/chage
+
+# always allow root
+auth      sufficient  pam_rootok.so
+account   sufficient  pam_rootok.so
+
+# include system defaults for session
+session   include     system-session
+
+# Always permit for authentication updates
+password  required    pam_permit.so
+
+# End /etc/pam.d/chage
