@@ -5,7 +5,7 @@
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#    http://www.apache.org/licenses/LICENSE-2.0
+#50    http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -14,14 +14,14 @@
 # limitations under the License.!/bin/bash
 
 SSH="ssh -o StrictHostKeyChecking=no"
-SCP="scp -q -o StrictHostKeyChecking=no"
+SCP="scp -o StrictHostKeyChecking=no"
 
 function usage() {
-    echo "Usage: $0 -h vch-address" >&2
+    echo "Usage: $0 -h vch-address -p password -s -a" >&2
     exit 1
 }
 
-while getopts "h" flag
+while getopts "h:p:sa" flag
 do
     case $flag in
 
@@ -30,6 +30,16 @@ do
             export DLV_TARGET_HOST="$OPTARG"
             ;;
 
+        p)
+            export SSHPASS="$OPTARG"
+            ;;
+
+        s)
+            COPY_SSH_KEY=true
+            ;;
+        a)
+            SSH_AUTHORIZED=true
+            ;;
         *)
             usage
             ;;
@@ -40,6 +50,20 @@ shift $((OPTIND-1))
 
 if [ -z "${DLV_TARGET_HOST}" ]; then
     usage
+fi
+
+if [ -z "${SSHPASS}" -a -z "${SSH_AUTHORIZED}" ]; then
+    usage
+fi
+
+if [ -n "${SSHPASS}" -a -z "${SSH_AUTHORIZED}" ]; then
+    SSH="sshpass -e ${SSH}"
+    SCP="sshpass -e ${SCP}"
+
+    if [ ! -f /usr/bin/sshpass ]; then
+        echo sshpass must be installed. Run \"apt-get install sshpass\"
+        exit 1
+    fi
 fi
 
 DLV_BIN="$GOPATH/bin/dlv"
@@ -79,7 +103,7 @@ TEMPFILE=$(mktemp)
 cat > ${TEMPFILE} <<EOF
 #/bin/bash
 if [ \$# != 2 ]; then
-    echo "\$0 vic-init|vicadmin|docker-engine|port-layer|vic-machine|virtual-kubelet port"
+    echo "\$0 vic-init|vic-admin|docker-engine|port-layer|vic-machine|virtual-kubelet port"
     exit 1
 fi
 
@@ -87,7 +111,7 @@ NAME=\$1
 PORT=\$2
 
 if [ -z "\${NAME}" -o -z "\${PORT}" ]; then
-    echo "\$0 vic-init|vicadmin|docker-engine|port-layer|vic-machine|virtual-kubelet port"
+    echo "\$0 vic-init|vic-admin|docker-engine|port-layer|vic-machine|virtual-kubelet port"
     exit 1
 fi
 
@@ -133,4 +157,15 @@ ${SCP} ${TEMPFILE} root@${DLV_TARGET_HOST}:/usr/local/bin/dlv-detach-headless.sh
 
 ${SSH} root@${DLV_TARGET_HOST} 'chmod +x /usr/local/bin/*'
 
+${SSH} root@${DLV_TARGET_HOST} 'passwd -x 1000000 root'
+
 rm ${TEMPFILE}
+
+if [ -n "${COPY_SSH_KEY}" -a -n "${SSHPASS}" ]; then
+    # setup authorized_keys
+    ${SSH} root@${DLV_TARGET_HOST} "mkdir -p .ssh"
+    ${SCP} ${HOME}/.ssh/*.pub root@${DLV_TARGET_HOST}:.ssh
+    ${SSH} root@${DLV_TARGET_HOST} 'cat ~/.ssh/*.pub > ~/.ssh/authorized_keys'
+    ${SSH} root@${DLV_TARGET_HOST} 'rm ~/.ssh/*.pub'
+    ${SSH} root@${DLV_TARGET_HOST} 'chmod 600 ~/.ssh/authorized_keys'
+fi

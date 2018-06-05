@@ -3,10 +3,7 @@
 # docker tag local-repo gcr.io/eminent-nation-87317/local-repo:x
 # gcloud auth login
 # gcloud docker -- push gcr.io/eminent-nation-87317/local-repo:x
-# open vpn to CI cluster then run:
-# docker tag local-repo 192.168.31.15/library/local-repo:x
-# docker push 192.168.31.15/library/local-repo:x
-
+#
 # Running:
 # docker run -d -p 80:80 local-repo
 FROM fedora:21

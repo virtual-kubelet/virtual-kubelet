@@ -156,6 +156,64 @@ func (c *containerBase) updates(op trace.Operation) (*containerBase, error) {
 	return base, nil
 }
 
+// determine if the containerVM has started - this could pick up stale data in the started field for an out-of-band
+// power change such as HA or user intervention where we have not had an opportunity to reset the entry.
+func (c *containerBase) cleanStart(op trace.Operation) bool {
+	if len(c.ExecConfig.Sessions) == 0 {
+		op.Warnf("Container %c has no sessions stored in in-memory config", c.ExecConfig.ID)
+		return true
+	}
+
+	for _, session := range c.ExecConfig.Sessions {
+		if session.Started != "true" {
+			return false
+		}
+	}
+	return true
+}
+
+// determine if the containerVM has ever been started - we use the session started time for this as we have no
+// cVM global record to indicate the fact.
+func (c *containerBase) hasStarted(op trace.Operation) bool {
+	if len(c.ExecConfig.Sessions) == 0 {
+		op.Warnf("Container %c has no sessions stored in in-memory config", c.ExecConfig.ID)
+		return true
+	}
+
+	for _, session := range c.ExecConfig.Sessions {
+		if session.Detail.StartTime != 0 || session.Detail.StopTime != 0 {
+			return true
+		}
+	}
+	return false
+}
+
+// State returns the state of the containerVM based on data in the handle, with no refresh
+func (c *containerBase) State(op trace.Operation) State {
+	powerState := c.Runtime.PowerState
+	state := StateUnknown
+
+	switch powerState {
+	case types.VirtualMachinePowerStatePoweredOn:
+		if c.cleanStart(op) {
+			state = StateRunning
+		} else {
+			// could be stopping but this is a better guess and is still transient
+			state = StateStarting
+		}
+	case types.VirtualMachinePowerStatePoweredOff:
+		if c.hasStarted(op) {
+			state = StateStopped
+		} else {
+			state = StateCreated
+		}
+	case types.VirtualMachinePowerStateSuspended:
+		state = StateSuspended
+	}
+
+	return state
+}
+
 func (c *containerBase) ReloadConfig(op trace.Operation) error {
 	defer trace.End(trace.Begin(c.ExecConfig.ID, op))
 
@@ -211,12 +269,7 @@ func (c *containerBase) start(op trace.Operation) error {
 		return NotYetExistError{c.ExecConfig.ID}
 	}
 
-	// Power on
-	_, err := c.vm.WaitForResult(op, func(op context.Context) (tasks.Task, error) {
-		return c.vm.PowerOn(op)
-	})
-
-	return err
+	return c.vm.PowerOn(op)
 }
 
 func (c *containerBase) stop(op trace.Operation, waitTime *int32) error {

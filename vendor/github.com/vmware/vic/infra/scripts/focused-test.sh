@@ -20,7 +20,7 @@
 #
 
 if [ -z "$1" ]; then
-    export REMOTE=$(git remote -v | grep "github.com/vmware/vic.git (fetch)" | awk '{print$1;exit}')/master
+    export REMOTE=$(git remote -v | grep "github.com.vmware/vic.git (fetch)" | awk '{print$1;exit}')/master
     echo "Using ${REMOTE} as default remote"
 else
     echo "Using ${REMOTE} as specified remote"

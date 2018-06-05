@@ -1,4 +1,4 @@
-// Copyright 2016 VMware, Inc. All Rights Reserved.
+// Copyright 2016-2018 VMware, Inc. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -91,9 +91,14 @@ type Session struct {
 	Host       *object.HostSystem
 	Pool       *object.ResourcePool
 
+	// Default vSphere VMFolder
 	VMFolder *object.Folder
+	// Folder where appliance is located
+	VCHFolder *object.Folder
 
 	Finder *find.Finder
+
+	DRSEnabled *bool
 }
 
 // RoundTripFunc alias
@@ -122,9 +127,7 @@ func LimitConcurrency(rt http.RoundTripper, limit int) http.RoundTripper {
 	})
 }
 
-// NewSession creates a new Session struct. If config is nil,
-// it creates a Flags object from the command line arguments or
-// environment, and uses that instead to create a Session.
+// NewSession creates a new Session struct.
 func NewSession(config *Config) *Session {
 	return &Session{Config: config}
 }
@@ -299,9 +302,12 @@ func (s *Session) Connect(ctx context.Context) (*Session, error) {
 	return s, nil
 }
 
-// Populate resolves the set of cached resources that should be presented
-// This returns accumulated error detail if there is ambiguity, but sets all
-// unambiguous or correct resources.
+// Populate caches resources on the session object.  These resources
+// are based off of the config provided at session creation.
+//
+// vic specific:
+// The values that end in Path (DataCenterPath, ClusterPath, etc..) are
+// either from the CLI or have been retreived from the appliance extraConfig
 func (s *Session) Populate(ctx context.Context) (*Session, error) {
 	op := trace.FromContext(ctx, "Populate")
 
@@ -327,6 +333,14 @@ func (s *Session) Populate(ctx context.Context) (*Session, error) {
 		errs = append(errs, fmt.Sprintf("Failure finding cluster (%s): %s", s.ClusterPath, err.Error()))
 	} else {
 		op.Debugf("Cached cluster: %s", s.ClusterPath)
+		// if we have a cluster lets get DRS Status
+		if s.Cluster != nil && s.Cluster.Reference().Type == "ClusterComputeResource" {
+			cc := object.NewClusterComputeResource(s.Client.Client, s.Cluster.Reference())
+			clusterConfig, _ := cc.Configuration(op)
+			if clusterConfig != nil {
+				s.DRSEnabled = clusterConfig.DrsConfig.Enabled
+			}
+		}
 	}
 
 	s.Datastore, err = finder.DatastoreOrDefault(op, s.DatastorePath)
@@ -360,6 +374,14 @@ func (s *Session) Populate(ctx context.Context) (*Session, error) {
 			op.Debugf("Cached folders: %s", s.DatacenterPath)
 		}
 		s.VMFolder = folders.VmFolder
+		// We don't persist the VCH folder location so set
+		// the VCH folder to the default VM folder.
+		// The actual location of the VCH will be determined later
+		// and this folder ref will be updated accordingly.
+		//
+		// This will provide standalone ESXi and backwards
+		// compatibility to non-folder versions.
+		s.VCHFolder = folders.VmFolder
 	}
 
 	if len(errs) > 0 {

@@ -100,8 +100,6 @@ func main() {
 	os.Setenv("PORTLAYER_ADDR", portlayerAddr)
 
 	op.Infof("KUBELET_NAME = %s", os.Getenv("KUBELET_NAME"))
-	op.Infof("KUBERNETES_SERVICE_HOST = %s", os.Getenv("KUBERNETES_SERVICE_HOST"))
-	op.Infof("KUBERNETES_SERVICE_PORT = %s", os.Getenv("KUBERNETES_SERVICE_PORT"))
 	op.Infof("PERSONA_ADDR = %s", os.Getenv("PERSONA_ADDR"))
 	op.Infof("PORTLAYER_ADDR = %s", os.Getenv("PORTLAYER_ADDR"))
 

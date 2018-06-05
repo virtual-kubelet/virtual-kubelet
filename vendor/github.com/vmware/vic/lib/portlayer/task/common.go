@@ -17,7 +17,7 @@ package task
 import (
 	"fmt"
 
-	"github.com/vmware/govmomi/vim25/types"
+	"github.com/vmware/vic/lib/config/executor"
 	"github.com/vmware/vic/lib/migration/feature"
 	"github.com/vmware/vic/lib/portlayer/exec"
 	"github.com/vmware/vic/pkg/trace"
@@ -32,33 +32,33 @@ func toggleActive(op *trace.Operation, h interface{}, id string, active bool) (i
 		return nil, fmt.Errorf("Type assertion failed for %#+v", handle)
 	}
 
-	stasks := handle.ExecConfig.Sessions
-	etasks := handle.ExecConfig.Execs
+	op.Debugf("target task ID: %s", id)
+	op.Debugf("session tasks during inspect: %s", handle.ExecConfig.Sessions)
+	// print all of them, otherwise we will have to assemble the id list regardless of
+	// the log level at the moment. If there is a way to check the log level we should
+	// do that. since the other approach will slow down all calls to toggleActive.
+	op.Debugf("exec tasks during inspect: %s", handle.ExecConfig.Execs)
 
-	taskS, okS := stasks[id]
-	taskE, okE := etasks[id]
-
-	if !okS && !okE {
-		return nil, fmt.Errorf("unknown task ID: %s", id)
-	}
-
-	task := taskS
-	if handle.Runtime != nil && handle.Runtime.PowerState != types.VirtualMachinePowerStatePoweredOff {
-		op.Debugf("Task bind configuration applies to ephemeral set")
+	var task *executor.SessionConfig
+	if taskS, okS := handle.ExecConfig.Sessions[id]; okS {
+		task = taskS
+	} else if taskE, okE := handle.ExecConfig.Execs[id]; okE {
 		task = taskE
-
-		if err := compatible(handle); err != nil {
-			return nil, err
-		}
 	}
 
 	// if no task has been joined that can be manipulated in the container's current state
 	if task == nil {
-		return nil, fmt.Errorf("Cannot modify task %s in current state", id)
+		// FIXME return a compatibility style error here. Propagate it back to the user.
+		if err := compatible(handle); err != nil {
+			return nil, err
+		}
+
+		// NOTE: this was the previous error, before merging we need to decide which one to use.
+		// return nil, fmt.Errorf("Cannot modify task %s in current state", id)
+		return nil, TaskNotFoundError{msg: fmt.Sprintf("Cannot find task %s", id)}
 	}
 
 	op.Debugf("Toggling active state of task %s (%s): %t", id, task.Cmd.Path, active)
-
 	task.Active = active
 	handle.Reload()
 

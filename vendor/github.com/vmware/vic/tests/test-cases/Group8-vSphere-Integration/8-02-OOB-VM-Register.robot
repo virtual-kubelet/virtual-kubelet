@@ -19,23 +19,31 @@ Suite Teardown  Extra Cleanup
 
 *** Keywords ***
 Extra Cleanup
-    ${out}=  Run Keyword And Ignore Error  Run  govc vm.destroy ${old-vm}
-    ${out}=  Run Keyword And Ignore Error  Run  govc pool.destroy host/*/Resources/${old-vm}
-    ${out}=  Run Keyword And Ignore Error  Run  govc datastore.rm ${old-vm}
-    ${out}=  Run Keyword And Ignore Error  Run  govc host.portgroup.remove ${old-vm}-bridge
-    Cleanup VIC Appliance On Test Server
+    Run Keyword And Continue On Failure  Manually Cleanup VCH  %{GROUP-8-VCH}
+    Run Keyword And Continue On Failure  Cleanup VIC Appliance On Test Server
 
 *** Test Cases ***
 Verify VIC Still Works When Different VM Is Registered
-    Install VIC Appliance To Test Server
+    Install VIC Appliance To Test Server  cleanup=${false}
     Set Suite Variable  ${old-vm}  %{VCH-NAME}
-    Install VIC Appliance To Test Server
+    Set Environment Variable  GROUP-8-VCH  ${old-vm}
 
+    Remove Environment Variable  BRIDGE_NETWORK
+    Install VIC Appliance To Test Server  cleanup=${false}
+
+    ${out}=  Run  govc ls vm/${old-vm}
+    Should Contain  ${out}  ${old-vm}/${old-vm}
     ${out}=  Run  govc vm.power -off ${old-vm}
     Should Contain  ${out}  OK
     ${out}=  Run  govc vm.unregister ${old-vm}
     Should Be Empty  ${out}
-    ${out}=  Run  govc vm.register ${old-vm}/${old-vm}.vmx
+
+    # At this point the vm is unregistered and we will need to reregister this vm...
+    # we need to put it into the original inventory folder. so we need to fetch that
+    # path. We also want to be explicit about the resource pool.
+    ${old-vm-folder}=  Run  govc find / -name ${old-vm} -type f
+    ${old-vm-pool}=  Run  govc find / -name ${old-vm} -type p
+    ${out}=  Run  govc vm.register -pool ${old-vm-pool} -folder ${old-vm-folder} ${old-vm}/${old-vm}.vmx
     Should Be Empty  ${out}
 
     ${out}=  Run  docker %{VCH-PARAMS} ps -a
@@ -45,5 +53,3 @@ Verify VIC Still Works When Different VM Is Registered
     Should Contain  ${out}  COMMAND
 
     Run Regression Tests
-
-    ${out}=  Run  govc vm.destroy ${old-vm}

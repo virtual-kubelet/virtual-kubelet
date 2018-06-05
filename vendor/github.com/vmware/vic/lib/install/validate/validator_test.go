@@ -1,4 +1,4 @@
-// Copyright 2016-2017 VMware, Inc. All Rights Reserved.
+// Copyright 2016-2018 VMware, Inc. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -23,12 +23,10 @@ import (
 	"os"
 	"strings"
 	"testing"
-	"time"
 
 	log "github.com/Sirupsen/logrus"
-	"github.com/stretchr/testify/require"
-
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/vmware/govmomi/find"
 	"github.com/vmware/govmomi/simulator"
@@ -43,6 +41,7 @@ import (
 	"github.com/vmware/vic/pkg/trace"
 	"github.com/vmware/vic/pkg/vsphere/rbac"
 	"github.com/vmware/vic/pkg/vsphere/session"
+	"github.com/vmware/vic/pkg/vsphere/test"
 )
 
 func init() {
@@ -957,7 +956,8 @@ func TestDCReadOnlyPermsFromConfigSimulatorVPX(t *testing.T) {
 	require.NotNil(t, configSpec)
 
 	// Set up the Authz Manager
-	mgr := opsuser.NewRBACManager(ctx, v.Session.Vim25(), v.Session, &opsuser.DCReadOnlyConf, configSpec)
+	mgr, err := opsuser.NewRBACManager(ctx, v.Session, &opsuser.DCReadOnlyConf, configSpec)
+	require.NoError(t, err)
 
 	resourcePermission, err := mgr.SetupDCReadOnlyPermissions(ctx)
 	require.NoError(t, err)
@@ -988,12 +988,7 @@ func TestOpsUserPermsFromConfigSimulatorVPX(t *testing.T) {
 
 	fmt.Println(s.URL.String())
 
-	config := &session.Config{
-		Service:   s.URL.String(),
-		Insecure:  true,
-		Keepalive: time.Duration(5) * time.Minute,
-	}
-	sess, err := session.NewSession(config).Connect(ctx)
+	sess, err := test.SessionWithVPX(ctx, s.URL.String())
 	require.NoError(t, err)
 
 	input := GetVcsimInputConfig(ctx, s.URL)
@@ -1005,8 +1000,14 @@ func TestOpsUserPermsFromConfigSimulatorVPX(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, configSpec)
 
+	// Create the folder the VCH is supposed to be in, for testing that the endpoint
+	// role is applied to the folder.
+	_, err = sess.VMFolder.CreateFolder(ctx, configSpec.Name)
+	require.NoError(t, err)
+
 	// Set up the Authz Manager
-	mgr := opsuser.NewRBACManager(ctx, sess.Vim25(), nil, &opsuser.OpsuserRBACConf, configSpec)
+	mgr, err := opsuser.NewRBACManager(ctx, sess, &opsuser.DRSConf, configSpec)
+	require.NoError(t, err)
 
 	resourcePermissions, err := mgr.SetupRolesAndPermissions(ctx)
 	require.NoError(t, err)

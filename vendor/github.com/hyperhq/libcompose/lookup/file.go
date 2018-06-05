@@ -61,6 +61,14 @@ func (f *FileConfigLookup) ResolvePath(path, inFile string) string {
 	if len(vs) != 2 || filepath.IsAbs(vs[0]) {
 		return path
 	}
+
+	if !strings.HasPrefix(vs[0], "./") && !strings.HasPrefix(vs[0], "~/") &&
+		!strings.HasPrefix(vs[0], "/") {
+
+		logrus.Warnf("The mapping \"%s\" is ambiguous. In a future version of Docker, it will "+
+			"designate a \"named\" volume (see https://github.com/docker/docker/pull/14242). "+
+			"To prevent unexpected behaviour, change it to \"./%s\".", vs[0], vs[0])
+	}
 	vs[0] = relativePath(vs[0], inFile)
 	return strings.Join(vs, ":")
 }

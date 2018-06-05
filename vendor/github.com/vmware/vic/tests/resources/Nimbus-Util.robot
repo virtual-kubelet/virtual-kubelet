@@ -16,8 +16,8 @@
 Documentation  This resource contains any keywords related to using the Nimbus cluster
 
 *** Variables ***
-${ESX_VERSION}  ob-5969303  #6.5 RTM vsphere65u1
-${VC_VERSION}  ob-5973321   #6.5 RTM vsphere65u1
+${ESX_VERSION}  ob-7867845
+${VC_VERSION}  ob-7867539
 ${NIMBUS_ESX_PASSWORD}  e2eFunctionalTest
 ${NIMBUS_LOCATION}  ${EMPTY}
 
@@ -59,7 +59,8 @@ Deploy Nimbus ESXi Server
     Wait Until Keyword Succeeds  2 min  30 sec  Login  ${user}  ${password}
 
     :FOR  ${IDX}  IN RANGE  1  5
-    \   ${out}=  Execute Command  ${NIMBUS_LOCATION} nimbus-esxdeploy ${name} --disk=48000000 --ssd=24000000 --memory=8192 --lease=1 --nics 2 ${version}
+    \   ${out}=  Execute Command  ${NIMBUS_LOCATION} nimbus-esxdeploy ${name} --disk=48000000 --ssd=24000000 --memory=8192 --lease=0.25 --nics 2 ${version}
+    \   Log  ${out}
     \   # Make sure the deploy actually worked
     \   ${status}=  Run Keyword And Return Status  Should Contain  ${out}  To manage this VM use
     \   Exit For Loop If  ${status}
@@ -114,6 +115,7 @@ Deploy Multiple Nimbus ESXi Servers in Parallel
     @{processes}=  Create List
     :FOR  ${name}  IN  @{names}
     \    ${output}=  Deploy Nimbus ESXi Server Async  ${name}
+    \    Log  ${output}
     \    Append To List  ${processes}  ${output}
 
     :FOR  ${process}  IN  @{processes}
@@ -145,7 +147,8 @@ Deploy Nimbus vCenter Server
     Wait Until Keyword Succeeds  2 min  30 sec  Login  ${user}  ${password}
 
     :FOR  ${IDX}  IN RANGE  1  5
-    \   ${out}=  Execute Command  ${NIMBUS_LOCATION} nimbus-vcvadeploy --lease=1 --vcvaBuild ${version} ${name}
+    \   ${out}=  Execute Command  ${NIMBUS_LOCATION} nimbus-vcvadeploy --lease=0.25 --vcvaBuild ${version} ${name}
+    \   Log  ${out}
     \   # Make sure the deploy actually worked
     \   ${status}=  Run Keyword And Return Status  Should Contain  ${out}  Overall Status: Succeeded
     \   Exit For Loop If  ${status}
@@ -171,14 +174,14 @@ Deploy Nimbus ESXi Server Async
     [Tags]  secret
     [Arguments]  ${name}  ${version}=${ESX_VERSION}
     Log To Console  \nDeploying Nimbus ESXi server: ${name}
-    ${out}=  Run Secret SSHPASS command  %{NIMBUS_USER}  '%{NIMBUS_PASSWORD}'  '${NIMBUS_LOCATION} nimbus-esxdeploy ${name} --disk\=48000000 --ssd\=24000000 --memory\=8192 --lease=1 --nics 2 ${version}'
+    ${out}=  Run Secret SSHPASS command  %{NIMBUS_USER}  '%{NIMBUS_PASSWORD}'  '${NIMBUS_LOCATION} nimbus-esxdeploy ${name} --disk\=48000000 --ssd\=24000000 --memory\=8192 --lease=0.25 --nics 2 ${version}'
     [Return]  ${out}
 
 Run Secret SSHPASS command
     [Tags]  secret
     [Arguments]  ${user}  ${password}  ${cmd}
 
-    ${out}=  Start Process  sshpass -p ${password} ssh -o StrictHostKeyChecking\=no ${user}@%{NIMBUS_GW} ${cmd}  shell=True
+    ${out}=  Start Process  sshpass -p ${password} ssh -o StrictHostKeyChecking\=no -o ServerAliveInterval\=60 -o ServerAliveCountMax\=10 ${user}@%{NIMBUS_GW} ${cmd}  shell=True
     [Return]  ${out}
 
 Deploy Nimbus vCenter Server Async
@@ -186,7 +189,7 @@ Deploy Nimbus vCenter Server Async
     [Arguments]  ${name}  ${version}=${VC_VERSION}
     Log To Console  \nDeploying Nimbus VC server: ${name}
 
-    ${out}=  Run Secret SSHPASS command  %{NIMBUS_USER}  '%{NIMBUS_PASSWORD}'  '${NIMBUS_LOCATION} nimbus-vcvadeploy --lease=1 --vcvaBuild ${version} ${name}'
+    ${out}=  Run Secret SSHPASS command  %{NIMBUS_USER}  '%{NIMBUS_PASSWORD}'  '${NIMBUS_LOCATION} nimbus-vcvadeploy --lease=0.25 --vcvaBuild ${version} ${name}'
     [Return]  ${out}
 
 Deploy Nimbus Testbed
@@ -195,7 +198,7 @@ Deploy Nimbus Testbed
     Wait Until Keyword Succeeds  2 min  30 sec  Login  ${user}  ${password}
 
     :FOR  ${IDX}  IN RANGE  1  5
-    \   ${out}=  Execute Command  ${NIMBUS_LOCATION} nimbus-testbeddeploy --lease=1 ${testbed}
+    \   ${out}=  Execute Command  ${NIMBUS_LOCATION} nimbus-testbeddeploy --lease 0.25 ${testbed}
     \   Log  ${out}
     \   # Make sure the deploy actually worked
     \   ${status}=  Run Keyword And Return Status  Should Contain  ${out}  "deployment_result"=>"PASS"
@@ -242,7 +245,7 @@ Create a VSAN Cluster
     [Timeout]    110 minutes
     Log To Console  \nStarting basic VSAN cluster deploy...
     Run Keyword And Ignore Error  Nimbus Cleanup  ${list}  ${false}
-    ${out}=  Deploy Nimbus Testbed  %{NIMBUS_USER}  %{NIMBUS_PASSWORD}  --plugin testng --lease 1 --noStatsDump --noSupportBundles --vcvaBuild ${VC_VERSION} --esxPxeDir ${ESX_VERSION} --esxBuild ${ESX_VERSION} --testbedName vcqa-vsan-simple-pxeBoot-vcva --runName ${name}
+    ${out}=  Deploy Nimbus Testbed  %{NIMBUS_USER}  %{NIMBUS_PASSWORD}  --plugin testng --lease 0.25 --noStatsDump --noSupportBundles --vcvaBuild ${VC_VERSION} --esxPxeDir ${ESX_VERSION} --esxBuild ${ESX_VERSION} --testbedName vcqa-vsan-simple-pxeBoot-vcva --runName ${name}
     Should Contain  ${out}  .vcva-${VC_VERSION}' is up. IP:
     ${out}=  Split To Lines  ${out}
     :FOR  ${line}  IN  @{out}
@@ -367,7 +370,7 @@ Setup Network For Simple VC Cluster
 Create A Distributed Switch
     [Arguments]  ${datacenter}  ${dvs}=test-ds
     Log To Console  \nCreate a distributed switch
-    ${out}=  Run  govc dvs.create -product-version 5.5.0 -dc=${datacenter} ${dvs}
+    ${out}=  Run  govc dvs.create -dc=${datacenter} ${dvs}
     Should Contain  ${out}  OK
 
 Create Three Distributed Port Groups
@@ -399,35 +402,46 @@ Get Vsphere Version
     \   ${status}=  Run Keyword And Return Status  Should Contain  ${line}  Version:
     \   Run Keyword And Return If  ${status}  Fetch From Right  ${line}  ${SPACE}
 
-Deploy Nimbus NFS Datastore
+Deploy Simple NFS Testbed
     [Arguments]  ${user}  ${password}  ${additional-args}=
     ${name}=  Evaluate  'NFS-' + str(random.randint(1000,9999)) + str(time.clock())  modules=random,time
-    Log To Console  \nDeploying Nimbus NFS server: ${name}
+    Log To Console  \nDeploying Nimbus NFS testbed: ${name}
     Open Connection  %{NIMBUS_GW}
     Wait Until Keyword Succeeds  2 min  30 sec  Login  ${user}  ${password}
 
-    ${out}=  Execute Command  ${NIMBUS_LOCATION} nimbus-nfsdeploy ${name} ${additional-args}
+    ${out}=  Execute Command  ${NIMBUS_LOCATION} nimbus-testbeddeploy --testbedName nfs --runName ${name} ${additional-args}
+    Log  ${out}
     # Make sure the deploy actually worked
-    Should Contain  ${out}  To manage this VM use
-    # Now grab the IP address and return the name and ip for later use
-    @{out}=  Split To Lines  ${out}
-    :FOR  ${item}  IN  @{out}
-    \   ${status}  ${message}=  Run Keyword And Ignore Error  Should Contain  ${item}  IP is
-    \   Run Keyword If  '${status}' == 'PASS'  Set Suite Variable  ${line}  ${item}
-    @{gotIP}=  Split String  ${line}  ${SPACE}
-    ${ip}=  Remove String  @{gotIP}[5]  ,
+    Should Contain  ${out}  ${name}.nfs.0' is up. IP:
 
-    Log To Console  Successfully deployed new NFS server - ${user}-${name}
-    Close connection
-    [Return]  ${user}-${name}  ${ip}
+    Open Connection  %{NIMBUS_GW}
+    Wait Until Keyword Succeeds  10 min  30 sec  Login  %{NIMBUS_USER}  %{NIMBUS_PASSWORD}
+    ${nfs-ip}=  Get IP  ${name}.nfs.0
+    ${nfs-ro-ip}=  Get IP  ${name}.nfs.1
+    ${esx-ip}=  Get IP  ${name}.esx.0
+    Close Connection
+
+    Log To Console  \nNFS IP: ${nfs-ip}
+    Log To Console  \nNFS READ-Only IP: ${nfs-ro-ip}
+    Log To Console  \nESX IP: ${esx-ip}
+
+    [Return]  ${user}-${name}.nfs.0  ${user}-${name}.nfs.1  ${user}-${name}.esx.0  ${nfs-ip}  ${nfs-ro-ip}  ${esx-ip}
 
 Change ESXi Server Password
     [Arguments]  ${password}
     ${out}=  Run  govc host.account.update -id root -password ${password}
     Should Be Empty  ${out}
 
+Check License Present
+    ${license}=  Run  govc license.ls
+    Log  ${license}
+    Should Contain      ${license}  Key
+    Should Not Contain  ${license}  SecurityError
+
 Check License Features
+    Check License Present
     ${out}=  Run  govc object.collect -json $(govc object.collect -s - content.licenseManager) licenses | jq '.[].Val.LicenseManagerLicenseInfo[].Properties[] | select(.Key == "feature") | .Value'
+    Log  ${out}
     Should Contain  ${out}  serialuri
     Should Contain  ${out}  dvs
 
@@ -438,6 +452,45 @@ Power Off Host
     Login  root  ${NIMBUS_ESX_PASSWORD}
     ${out}=  Execute Command  poweroff -d 0 -f
     Close connection
+
+Create Simple VC Cluster With Static IP
+    [Arguments]  ${name}=vic-simple-vc-static-ip
+    [Timeout]    110 minutes
+    Set Suite Variable  ${NIMBUS_LOCATION}  NIMBUS_LOCATION=wdc
+    Run Keyword And Ignore Error  Nimbus Cleanup  ${list}  ${false}
+    Log To Console  Create a new simple vc cluser with static ip support...
+    ${out}=  Deploy Nimbus Testbed  %{NIMBUS_USER}  %{NIMBUS_PASSWORD}  --noSupportBundles --plugin testng --vcvaBuild ${VC_VERSION} --esxBuild ${ESX_VERSION} --testbedName vic-simple-cluster --testbedSpecRubyFile /dbc/pa-dbc1111/mhagen/nimbus-testbeds/testbeds/vic-simple-cluster.rb --runName ${name}
+    Log  ${out}
+
+    Open Connection  %{NIMBUS_GW}
+    Wait Until Keyword Succeeds  10 min  30 sec  Login  %{NIMBUS_USER}  %{NIMBUS_PASSWORD}
+    ${vc-ip}=  Get IP  ${name}.vc.0
+    ${pod}=  Fetch POD  ${name}.vc.0
+    Set Suite Variable  ${NIMBUS_POD}  ${pod}
+    Close Connection
+
+    Set Suite Variable  @{list}  %{NIMBUS_USER}-${name}.esx.0  %{NIMBUS_USER}-${name}.esx.1  %{NIMBUS_USER}-${name}.esx.2  %{NIMBUS_USER}-${name}.nfs.0  %{NIMBUS_USER}-${name}.vc.0
+    Log To Console  Finished Creating Cluster ${name}
+
+    ${out}=  Get Static IP Address
+    Set Suite Variable  ${static}  ${out}
+    Append To List  ${list}  %{STATIC_WORKER_NAME}
+
+    Log To Console  Set environment variables up for GOVC
+    Set Environment Variable  GOVC_URL  ${vc-ip}
+    Set Environment Variable  GOVC_USERNAME  Administrator@vsphere.local
+    Set Environment Variable  GOVC_PASSWORD  Admin\!23
+
+    Log To Console  Deploy VIC to the VC cluster
+    Set Environment Variable  TEST_URL_ARRAY  ${vc-ip}
+    Set Environment Variable  TEST_USERNAME  Administrator@vsphere.local
+    Set Environment Variable  TEST_PASSWORD  Admin\!23
+    Set Environment Variable  BRIDGE_NETWORK  bridge
+    Set Environment Variable  PUBLIC_NETWORK  vm-network
+    Remove Environment Variable  TEST_DATACENTER
+    Set Environment Variable  TEST_DATASTORE  nfs0-1
+    Set Environment Variable  TEST_RESOURCE  cls
+    Set Environment Variable  TEST_TIMEOUT  15m
 
 Create Static IP Worker
     Open Connection  %{NIMBUS_GW}

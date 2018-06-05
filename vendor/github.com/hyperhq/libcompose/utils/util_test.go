@@ -170,6 +170,28 @@ func TestFilterString(t *testing.T) {
 	}
 }
 
+func TestLabelFilter(t *testing.T) {
+	filters := []struct {
+		key      string
+		value    string
+		expected string
+	}{
+		{
+			"key", "value", `{"label":["key=value"]}`,
+		}, {
+			"key", "", `{"label":["key="]}`,
+		}, {
+			"", "", `{"label":["="]}`,
+		},
+	}
+	for _, filter := range filters {
+		actual := LabelFilterString(filter.key, filter.value)
+		if actual != filter.expected {
+			t.Fatalf("Expected '%s for key=%s and value=%s, got %s", filter.expected, filter.key, filter.value, actual)
+		}
+	}
+}
+
 func TestContains(t *testing.T) {
 	cases := []struct {
 		collection []string

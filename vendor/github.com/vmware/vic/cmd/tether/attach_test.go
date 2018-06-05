@@ -81,7 +81,7 @@ func (t *testAttachServer) Reload(config *tether.ExecutorConfig) error {
 	return t.attachServerSSH.Reload(config)
 }
 
-func (t *testAttachServer) Start() error {
+func (t *testAttachServer) Start(sys tether.System) error {
 	log.Info("opening ttyS0 pipe pair for backchannel (server)")
 	c, err := os.OpenFile(path.Join(pathPrefix, "ttyS0c"), os.O_WRONLY|syscall.O_NOCTTY, 0777)
 	if err != nil {

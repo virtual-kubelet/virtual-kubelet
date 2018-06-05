@@ -15,18 +15,16 @@ func DefaultDependentServices(p *Project, s Service) []ServiceRelationship {
 	}
 
 	result := []ServiceRelationship{}
-	for _, link := range config.Links {
+	for _, link := range config.Links.Slice() {
 		result = append(result, NewServiceRelationship(link, RelTypeLink))
 	}
 
-	/*
-		for _, volumesFrom := range config.VolumesFrom {
-			result = append(result, NewServiceRelationship(volumesFrom, RelTypeVolumesFrom))
-		}
+	for _, volumesFrom := range config.VolumesFrom {
+		result = append(result, NewServiceRelationship(volumesFrom, RelTypeVolumesFrom))
+	}
 
-		result = appendNs(p, result, s.Config().NetworkMode, RelTypeNetNamespace)
-		result = appendNs(p, result, s.Config().Ipc, RelTypeIpcNamespace)
-	*/
+	result = appendNs(p, result, s.Config().Net, RelTypeNetNamespace)
+	result = appendNs(p, result, s.Config().Ipc, RelTypeIpcNamespace)
 
 	return result
 }
@@ -63,7 +61,7 @@ func GetContainerFromIpcLikeConfig(p *Project, conf string) string {
 		return ""
 	}
 
-	if p.ServiceConfigs.Has(name) {
+	if p.Configs.Has(name) {
 		return name
 	}
 	return ""

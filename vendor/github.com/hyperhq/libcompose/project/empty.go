@@ -1,25 +1,21 @@
 package project
 
-import (
-	"github.com/hyperhq/libcompose/project/options"
-)
-
 // EmptyService is a struct that implements Service but does nothing.
 type EmptyService struct {
 }
 
 // Create implements Service.Create but does nothing.
-func (e *EmptyService) Create(options options.Create) error {
+func (e *EmptyService) Create() error {
 	return nil
 }
 
 // Build implements Service.Build but does nothing.
-func (e *EmptyService) Build(buildOptions options.Build) error {
+func (e *EmptyService) Build() error {
 	return nil
 }
 
 // Up implements Service.Up but does nothing.
-func (e *EmptyService) Up(options options.Up) error {
+func (e *EmptyService) Up() error {
 	return nil
 }
 
@@ -29,22 +25,27 @@ func (e *EmptyService) Start() error {
 }
 
 // Stop implements Service.Stop() but does nothing.
-func (e *EmptyService) Stop(timeout int) error {
+func (e *EmptyService) Stop() error {
+	return nil
+}
+
+// Down implements Service.Down but does nothing.
+func (e *EmptyService) Down() error {
 	return nil
 }
 
 // Delete implements Service.Delete but does nothing.
-func (e *EmptyService) Delete(options options.Delete) error {
+func (e *EmptyService) Delete() error {
 	return nil
 }
 
 // Restart implements Service.Restart but does nothing.
-func (e *EmptyService) Restart(timeout int) error {
+func (e *EmptyService) Restart() error {
 	return nil
 }
 
 // Log implements Service.Log but does nothing.
-func (e *EmptyService) Log(follow bool) error {
+func (e *EmptyService) Log() error {
 	return nil
 }
 
@@ -54,7 +55,7 @@ func (e *EmptyService) Pull() error {
 }
 
 // Kill implements Service.Kill but does nothing.
-func (e *EmptyService) Kill(signal string) error {
+func (e *EmptyService) Kill() error {
 	return nil
 }
 
@@ -64,7 +65,7 @@ func (e *EmptyService) Containers() ([]Container, error) {
 }
 
 // Scale implements Service.Scale but does nothing.
-func (e *EmptyService) Scale(count int, timeout int) error {
+func (e *EmptyService) Scale(count int) error {
 	return nil
 }
 
@@ -80,15 +81,5 @@ func (e *EmptyService) Pause() error {
 
 // Unpause implements Service.Pause but does nothing.
 func (e *EmptyService) Unpause() error {
-	return nil
-}
-
-// Run implements Service.Run but does nothing.
-func (e *EmptyService) Run(commandParts []string) (int, error) {
-	return 0, nil
-}
-
-// RemoveImage implements Service.RemoveImage but does nothing.
-func (e *EmptyService) RemoveImage(imageType options.ImageType) error {
 	return nil
 }

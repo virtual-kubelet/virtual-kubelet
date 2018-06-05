@@ -1,8 +1,8 @@
 package docker
 
 import (
-	"github.com/hyperhq/libcompose/config"
-	"github.com/hyperhq/libcompose/project"
+	"github.com/docker/libcompose/config"
+	"github.com/docker/libcompose/project"
 )
 
 // ServiceFactory is an implementation of project.ServiceFactory.

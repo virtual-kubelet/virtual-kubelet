@@ -661,7 +661,15 @@
                 "shares": { "$ref": "#/definitions/Shares" }
               }
             },
-            "resource": { "$ref": "#/definitions/Managed_Object" }
+            "resource": { "$ref": "#/definitions/Managed_Object" },
+            "affinity": {
+              "type": "object",
+              "properties": {
+                "use_vm_group": {
+                  "type": "boolean"
+                }
+              }
+            }
           }
         },
         "network": {
@@ -857,6 +865,9 @@
           "type": "string"
         },
         "version": {
+          "type": "string"
+        },
+        "power_state": {
           "type": "string"
         },
         "upgrade_status": {

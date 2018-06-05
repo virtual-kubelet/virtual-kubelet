@@ -84,7 +84,7 @@ func (h *VCHDatacenterDelete) Handle(params operations.DeleteTargetTargetDatacen
 }
 
 func deleteVCH(op trace.Operation, d *data.Data, validator *validate.Validator, specification *models.DeletionSpecification) error {
-	executor := management.NewDispatcher(validator.Context, validator.Session, nil, false)
+	executor := management.NewDispatcher(validator.Context, validator.Session, management.DeleteAction, false)
 	vch, err := executor.NewVCHFromID(d.ID)
 	if err != nil {
 		return util.NewError(http.StatusNotFound, fmt.Sprintf("Failed to find VCH: %s", err))

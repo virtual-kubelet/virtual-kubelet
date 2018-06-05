@@ -19,6 +19,7 @@ import (
 
 	"context"
 
+	"github.com/vmware/govmomi/vim25/types"
 	"github.com/vmware/vic/pkg/uid"
 	"github.com/vmware/vic/pkg/vsphere/session"
 )
@@ -36,6 +37,7 @@ type containerCache struct {
 	cache map[string]*Container
 }
 
+// Containers is an in-memory cache of containerVMs.
 var Containers *containerCache
 
 func NewContainerCache() {
@@ -83,6 +85,26 @@ func (conCache *containerCache) Containers(states []State) []*Container {
 	}
 
 	return containers
+}
+
+// TODO: rework this and Containers above to remove duplication of iteration and filtering logic.
+func (conCache *containerCache) References() []types.ManagedObjectReference {
+	conCache.m.RLock()
+	defer conCache.m.RUnlock()
+	// cache contains 2 items for each container
+	capacity := len(conCache.cache) / 2
+	references := make([]types.ManagedObjectReference, 0, capacity)
+
+	for id, con := range conCache.cache {
+		// is the key a proper ID?
+		if !isContainerID(id) {
+			continue
+		}
+
+		references = append(references, con.VMReference())
+	}
+
+	return references
 }
 
 // puts a container in the cache and will overwrite an existing container

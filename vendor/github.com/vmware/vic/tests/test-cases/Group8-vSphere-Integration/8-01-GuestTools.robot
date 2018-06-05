@@ -52,7 +52,7 @@ Stop container VM using guest shutdown
     Should Be Equal As Integers  ${rc}  0
     ${rc}  ${output}=  Run And Return Rc And Output  govc vm.power -s ${name}-*
     Should Be Equal As Integers  ${rc}  0
-    Wait Until Keyword Succeeds  20x  500 milliseconds  Assert VM Power State  ${name}  poweredOff
+    Wait Until Keyword Succeeds  20x  3s  Assert VM Power State  ${name}  poweredOff
 
 Signal container VM using vix command
     ${rc}=  Run And Return Rc  docker %{VCH-PARAMS} pull ${busybox}

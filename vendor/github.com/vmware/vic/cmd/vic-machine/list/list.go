@@ -1,4 +1,4 @@
-// Copyright 2016 VMware, Inc. All Rights Reserved.
+// Copyright 2016-2018 VMware, Inc. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -104,19 +104,20 @@ func (l *List) prettyPrint(op trace.Operation, cli *cli.Context, vchs []*vm.Virt
 
 		vchConfig, err := executor.GetNoSecretVCHConfig(vch)
 		var version string
+		var upgradeStatus string
 		if err != nil {
-			op.Error("Failed to get Virtual Container Host configuration")
-			op.Error(err)
+			op.Warnf("Failed to get Virtual Container Host configuration for VCH %q: %s", vch.Reference().Value, err)
+			op.Warnf("Skip listing VCH %q", vch.Reference().Value)
 			version = "unknown"
+			upgradeStatus = "unknown"
 		} else {
 			version = vchConfig.Version.ShortVersion()
+			upgradeStatus = l.upgradeStatusMessage(op, vch, installerVer, vchConfig.Version)
 		}
-
-		parentPath := path.Dir(path.Dir(vch.InventoryPath))
-		name := path.Base(vch.InventoryPath)
-		upgradeStatus := l.upgradeStatusMessage(op, vch, installerVer, vchConfig.Version)
+		// When the VCH was found the inventory path was overwritten with the resource pool path, so
+		// to print the path to the pool we need to call Dir twice.
 		data = append(data,
-			items{vch.Reference().Value, parentPath, name, version, upgradeStatus})
+			items{vch.Reference().Value, path.Dir(path.Dir(vch.InventoryPath)), vch.Name(), version, upgradeStatus})
 	}
 	t := template.New("vic-machine ls")
 	// #nosec: Errors unhandled.
@@ -175,7 +176,8 @@ func (l *List) Run(clic *cli.Context) (err error) {
 		op.Errorf("List cannot continue - compute resource validation failed: %s", err)
 		return errors.New("list failed")
 	}
-	executor := management.NewDispatcher(validator.Context, validator.Session, nil, false)
+
+	executor := management.NewDispatcher(validator.Context, validator.Session, management.ListAction, false)
 	vchs, err := executor.SearchVCHs(validator.ClusterPath)
 	if err != nil {
 		op.Errorf("List cannot continue - failed to search VCHs in %s: %s", validator.ResourcePoolPath, err)

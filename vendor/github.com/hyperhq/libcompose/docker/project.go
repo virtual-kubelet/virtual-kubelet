@@ -1,42 +1,20 @@
 package docker
 
 import (
-	"fmt"
-	"os"
-	"path/filepath"
-
 	"github.com/Sirupsen/logrus"
-	"github.com/hyperhq/libcompose/config"
-	"github.com/hyperhq/libcompose/lookup"
-	"github.com/hyperhq/libcompose/project"
+
+	"github.com/docker/libcompose/lookup"
+	"github.com/docker/libcompose/project"
 )
 
-// ComposeVersion is name of docker-compose.yml file syntax supported version
-const ComposeVersion = "1.5.0"
-
 // NewProject creates a Project with the specified context.
-func NewProject(context *Context) (project.APIProject, error) {
+func NewProject(context *Context) (*project.Project, error) {
 	if context.ResourceLookup == nil {
 		context.ResourceLookup = &lookup.FileConfigLookup{}
 	}
 
 	if context.EnvironmentLookup == nil {
-		cwd, err := os.Getwd()
-		if err != nil {
-			return nil, err
-		}
-		context.EnvironmentLookup = &lookup.ComposableEnvLookup{
-			Lookups: []config.EnvironmentLookup{
-				&lookup.EnvfileLookup{
-					Path: filepath.Join(cwd, ".env"),
-				},
-				&lookup.OsEnvLookup{},
-			},
-		}
-	}
-
-	if context.AuthLookup == nil {
-		context.AuthLookup = &ConfigAuthLookup{context}
+		context.EnvironmentLookup = &lookup.OsEnvLookup{}
 	}
 
 	if context.ServiceFactory == nil {
@@ -45,12 +23,19 @@ func NewProject(context *Context) (project.APIProject, error) {
 		}
 	}
 
-	if context.ClientFactory == nil {
-		return nil, fmt.Errorf("please provide the client to operate the Hyper.sh")
+	if context.Builder == nil {
+		context.Builder = NewDaemonBuilder(context)
 	}
 
-	// FIXME(vdemeester) Remove the context duplication ?
-	p := project.NewProject(context.ClientFactory, &context.Context)
+	if context.ClientFactory == nil {
+		factory, err := NewDefaultClientFactory(ClientOpts{})
+		if err != nil {
+			return nil, err
+		}
+		context.ClientFactory = factory
+	}
+
+	p := project.NewProject(&context.Context)
 
 	err := p.Parse()
 	if err != nil {

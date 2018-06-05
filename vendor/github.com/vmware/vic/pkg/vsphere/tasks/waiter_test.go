@@ -22,6 +22,7 @@ import (
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/vmware/govmomi"
 	"github.com/vmware/govmomi/find"
@@ -332,6 +333,21 @@ func (vm *faultyVirtualMachine) PowerOffVMTask(c *types.PowerOffVM_Task) soap.Ha
 	return r
 }
 
+// Override Destroy_Task to inject a fault
+func (vm *faultyVirtualMachine) DestroyTask(c *types.Destroy_Task) soap.HasFault {
+	r := &methods.Destroy_TaskBody{}
+
+	task := simulator.NewTask(vm)
+
+	r.Res = &types.Destroy_TaskResponse{
+		Returnval: task.Self,
+	}
+
+	task.Run()
+
+	return r
+}
+
 // MarkAsTemplate implements a non-Task method to inject vm.fault
 func (vm *faultyVirtualMachine) MarkAsTemplate(c *types.MarkAsTemplate) soap.HasFault {
 	return &methods.MarkAsTemplateBody{
@@ -413,11 +429,70 @@ func TestSoapFaults(t *testing.T) {
 		return vm.PowerOff(ctx)
 	})
 	if err == nil {
-		t.Error("expected error")
+		t.Error("expected TaskInProgress error")
 	}
 	if IsRetryError(op, err) {
 		t.Error(err)
 	}
+
+	// Test that InvalidArgument fault should be a retryable error but not a transient error
+	fvm.fault = new(types.InvalidArgument)
+	task, err = vm.Destroy(op)
+	res, err = task.WaitForResult(op, nil)
+
+	assert.NotNil(t, err)
+	err = soap.WrapVimFault(res.Error.Fault)
+	require.True(t, IsInvalidArgumentError(err), "expected InvalidArgument")
+	require.True(t, IsRetryError(op, err), "InvalidArgument should be a retryable error")
+	require.False(t, IsTransientError(op, err), "InvalidArgument should not be a transient error")
+
+	// Test MethodDisabled fault
+	fvm.fault = new(types.MethodDisabled)
+	task, err = vm.Destroy(op)
+	res, err = task.WaitForResult(op, nil)
+
+	assert.NotNil(t, err)
+	require.True(t, IsMethodDisabledError(soap.WrapVimFault(res.Error.Fault)), "expected MethodDisabled")
+	require.False(t, IsMethodDisabledError(soap.WrapVimFault(new(types.ConcurrentAccess))), "expected not MethodDisabled")
+
+	fvm.fault = new(types.MethodDisabledFault)
+	task, err = vm.Destroy(op)
+	res, err = task.WaitForResult(op, nil)
+
+	assert.NotNil(t, err)
+	require.True(t, IsMethodDisabledError(soap.WrapVimFault(res.Error.Fault)), "expected MethodDisabledFault")
+
+	// Test ConcurrentAccess fault
+	fvm.fault = new(types.ConcurrentAccess)
+	task, err = vm.Destroy(op)
+	res, err = task.WaitForResult(op, nil)
+
+	assert.NotNil(t, err)
+	require.True(t, IsConcurrentAccessError(soap.WrapVimFault(res.Error.Fault)), "expected ConcurrentAccess")
+	require.False(t, IsConcurrentAccessError(soap.WrapVimFault(new(types.MethodDisabled))), "expected not ConcurrentAccess")
+
+	fvm.fault = new(types.ConcurrentAccessFault)
+	task, err = vm.Destroy(op)
+	res, err = task.WaitForResult(op, nil)
+
+	assert.NotNil(t, err)
+	require.True(t, IsConcurrentAccessError(soap.WrapVimFault(res.Error.Fault)), "expected ConcurrentAccessFault")
+
+	// Test ManagedObjectNotFound fault
+	fvm.fault = new(types.ManagedObjectNotFound)
+	task, err = vm.Destroy(op)
+	res, err = task.WaitForResult(op, nil)
+
+	assert.NotNil(t, err)
+	require.True(t, IsNotFoundError(soap.WrapVimFault(res.Error.Fault)), "expected ManagedObjectNotFound")
+	require.False(t, IsNotFoundError(soap.WrapVimFault(new(types.MethodDisabled))), "expected not ManagedObjectNotFound")
+
+	fvm.fault = new(types.ManagedObjectNotFoundFault)
+	task, err = vm.Destroy(op)
+	res, err = task.WaitForResult(op, nil)
+
+	assert.NotNil(t, err)
+	require.True(t, IsNotFoundError(soap.WrapVimFault(res.Error.Fault)), "expected ManagedObjectNotFoundFault")
 
 	// Test with retry
 	fvm.fault = new(types.TaskInProgress)

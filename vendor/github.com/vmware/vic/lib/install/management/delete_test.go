@@ -1,4 +1,4 @@
-// Copyright 2016-2017 VMware, Inc. All Rights Reserved.
+// Copyright 2016-2018 VMware, Inc. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -113,7 +113,7 @@ func testUpgrade(computePath string, name string, v *validate.Validator, setting
 
 		t.Errorf("Failed to get vch configuration: %s", err)
 	}
-	if err := d.Configure(vch, conf, settings, false); err != nil {
+	if err := d.Configure(conf, settings); err != nil {
 		t.Errorf("Failed to upgrade: %s", err)
 	}
 }
@@ -188,10 +188,17 @@ func testDeleteVCH(v *validate.Validator, conf *config.VirtualContainerHostConfi
 	if vm != nil {
 		t.Errorf("Should not found vm %s", vm.Reference())
 	}
-
 	if err != nil {
 		t.Errorf("Unexpected error to get appliance VM: %s", err)
 	}
+
+	// Verify that the VCH folder (if created on VC) is deleted after VCH delete.
+	folderPath := path.Join(d.session.VMFolder.InventoryPath, conf.Name)
+	vchFolder, err := d.session.Finder.Folder(d.op, folderPath)
+	if vchFolder != nil || err == nil {
+		t.Errorf("Should not have found VCH folder %q after VCH delete", folderPath)
+	}
+
 	// delete VM does not clean up resource pool after VM is removed, so resource pool could not be removed
 }
 

@@ -5,7 +5,7 @@ Test 6-17 - Verify vic-machine configure TLS function
 Verify vic-machine configure certificates
 
 # References:
-* vic-machine-linux configure -h
+* vic-machine-linux configure -x
 
 # Environment:
 This test requires that a vSphere server is running and available. One VCH is created for the suite and used throughout by each test so that we don't have to call create & configure in each test (which would duplicate the work of 6-13-TLS).

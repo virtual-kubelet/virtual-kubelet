@@ -37,7 +37,7 @@ Check vsphere event stream
     # ensure that portlayer log contains the powered on event - this string comes in the e.Message portion of the vSphere event
     # and may be prone to Localization which would cause this test to fail.
     # for efficiency We assume that if we saw powered on then "${id} Created" would also have matched
-    Portlayer Log Should Match Regexp  ${name}-${shortid} on \\s\\S* in \\S* is powered on
+    Portlayer Log Should Match Regexp  ${name}-${shortid}  powered on
 
     # delete the session to suppress reception of events
     ${rc}  ${out}=  Run And Return Rc And Output  govc session.ls
@@ -59,4 +59,4 @@ Check vsphere event stream
 
     # Assert that the power off event is present
     # Would prefer to do this as a tail on the live log but no idea how to do stream processing in robot
-    Wait Until Keyword Succeeds  1m  10s  Portlayer Log Should Match Regexp  ${name}-${shortid} on \\s*\\S* in \\S* is powered off
+    Wait Until Keyword Succeeds  1m  10s  Portlayer Log Should Match Regexp  ${name}-${shortid}  powered off

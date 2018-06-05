@@ -38,6 +38,17 @@ Verify container is running and remove it
     Should Be Equal As Integers  ${rc}  0
     Should Not Contain  ${output}  Error
 
+Verify container is removed
+    [Arguments]  ${containerName}
+    ${rc}  ${output}=  Run And Return Rc And Output  docker %{VCH-PARAMS} ps -a --format '{{.Names}}'
+    Should Be Equal As Integers  ${rc}  0
+    ${rc}  ${output2}=  Run And Return Rc And Output  govc find / -type m
+    Should Be Equal As Integers  ${rc}  0
+    # Verify docker persona cleaned up properly
+    Should Not Contain  ${output}  ${containerName}
+    # Verify that vSphere VMs were cleaned up properly
+    Should Not Contain  ${output2}  ${containerName}
+
 *** Test Cases ***
 Simple docker run
     ${rc}  ${output}=  Run And Return Rc And Output  docker %{VCH-PARAMS} run ${busybox} /bin/ash -c "dmesg;echo END_OF_THE_TEST"
@@ -207,3 +218,26 @@ Docker run --hostname to set hostname and domainname
     Should Be Equal As Integers  ${rc}  0
     Should Contain  ${output}  vic.test
 
+Docker run --rm concurrent
+    ${IN_HAAS}=  Run Keyword And Return Status  Should Contain  %{HAAS_URL_ARRAY}  %{TEST_URL}
+    Run Keyword Unless  ${IN_HAAS}  Pass Execution  This test is too resource intensive for Nimbus currently
+
+    # Make sure all old containers are cleaned up first, to maximize likelihood of not hitting insufficient resources issue
+    ${rc}  ${output}=  Run And Return Rc And Output  docker %{VCH-PARAMS} ps -aq | xargs docker %{VCH-PARAMS} rm -f
+    
+    ${rc}  ${output}=  Run And Return Rc And Output  docker %{VCH-PARAMS} pull ${ubuntu}
+    Should Be Equal As Integers  ${rc}  0
+
+    ${pids}=  Create List
+    :FOR  ${idx}  IN RANGE  0  16
+    \   ${pid}=  Start Process  docker %{VCH-PARAMS} run -d --rm --name rm-concurrent-${idx} --cpuset-cpus 1 --memory 1GB ubuntu /bin/sh -c'a\=0; while [ $a -lt 75 ]; do echo "line $a"; a\=expr $a + 1; sleep 2; done;'  shell=True
+    \   Append To List  ${pids}  ${pid}
+
+    :FOR  ${pid}  IN  @{pids}
+    \   Log To Console  \nWaiting for ${pid}
+    \   ${res}=  Wait For Process  ${pid}
+    \   Log  ${res.stdout}
+    \   Should Be Equal As Integers  ${res.rc}  0
+
+    :FOR  ${idx}  IN RANGE  0  16
+    \   Wait Until Keyword Succeeds  10x  3s  Verify container is removed  rm-concurrent-${idx}

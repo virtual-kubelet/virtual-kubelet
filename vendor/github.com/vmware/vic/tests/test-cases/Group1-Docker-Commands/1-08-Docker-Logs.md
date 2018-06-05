@@ -11,7 +11,7 @@ To verify that docker logs command is supported by VIC appliance
 This test requires that a vSphere server is running and available
 
 # Test Steps:
-1. Deploy VIC build 7315 to appliance to vSphere server
+1. Deploy VIC build 0.8.0 to appliance to vSphere server
 2. Issue docker run -d busybox sh -c "echo These pretzels are making me thirsty"
 3. Issue docker logs <ID1>
 4. Issue docker logs --timestamps <ID1>

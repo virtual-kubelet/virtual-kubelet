@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	yaml "github.com/cloudfoundry-incubator/candiedyaml"
-	yamlTypes "github.com/hyperhq/libcompose/yaml"
+	yamlTypes "github.com/docker/libcompose/yaml"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -16,36 +16,36 @@ func newTestConfig() TestConfig {
 	return TestConfig{
 		SystemContainers: map[string]*ServiceConfig{
 			"udev": {
-				Image:   "udev",
-				Restart: "always",
-				//			NetworkMode: "host",
-				//			Privileged:  true,
-				//			DNS:         []string{"8.8.8.8", "8.8.4.4"},
-				Environment: yamlTypes.MaporEqualSlice([]string{
+				Image:      "udev",
+				Restart:    "always",
+				Net:        "host",
+				Privileged: true,
+				DNS:        yamlTypes.NewStringorslice("8.8.8.8", "8.8.4.4"),
+				Environment: yamlTypes.NewMaporEqualSlice([]string{
 					"DAEMON=true",
 				}),
-				Labels: yamlTypes.SliceorMap{
+				Labels: yamlTypes.NewSliceorMap(map[string]string{
 					"io.rancher.os.detach": "true",
 					"io.rancher.os.scope":  "system",
+				}),
+				VolumesFrom: []string{
+					"system-volumes",
 				},
-				//			VolumesFrom: []string{
-				//				"system-volumes",
-				//			},
-				//			Ulimits: yamlTypes.Ulimits{
-				//				Elements: []yamlTypes.Ulimit{
-				//					yamlTypes.NewUlimit("nproc", 65557, 65557),
-				//				},
-				//			},
+				Ulimits: yamlTypes.Ulimits{
+					Elements: []yamlTypes.Ulimit{
+						yamlTypes.NewUlimit("nproc", 65557, 65557),
+					},
+				},
 			},
 			"system-volumes": {
-				Image: "state",
-				//			NetworkMode: "none",
-				//			ReadOnly:    true,
-				//			Privileged:  true,
-				Labels: yamlTypes.SliceorMap{
+				Image:      "state",
+				Net:        "none",
+				ReadOnly:   true,
+				Privileged: true,
+				Labels: yamlTypes.NewSliceorMap(map[string]string{
 					"io.rancher.os.createonly": "true",
 					"io.rancher.os.scope":      "system",
-				},
+				}),
 				Volumes: []string{
 					"/dev:/host/dev",
 					"/var/lib/rancher/conf:/var/lib/rancher/conf",
@@ -55,9 +55,7 @@ func newTestConfig() TestConfig {
 					"/var/run:/var/run",
 					"/var/log:/var/log",
 				},
-				// Logging: Log{
-				//		Driver: "json-file",
-				//},
+				LogDriver: "json-file",
 			},
 		},
 	}

@@ -1,4 +1,4 @@
-# Copyright 2016-2017 VMware, Inc. All Rights Reserved.
+# Copyright 2016-2018 VMware, Inc. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -34,7 +34,7 @@ Simple VSAN Setup
     \   Exit For Loop If  ${status}
 
     Set Suite Variable  @{list}  ${user}-${name}.vcva-${VC_VERSION}  ${user}-${name}.esx.0  ${user}-${name}.esx.1  ${user}-${name}.esx.2  ${user}-${name}.esx.3  ${user}-${name}.nfs.0  ${user}-${name}.iscsi.0
-
+    
     Log To Console  Set environment variables up for GOVC
     Set Environment Variable  GOVC_URL  ${vc-ip}
     Set Environment Variable  GOVC_USERNAME  Administrator@vsphere.local
@@ -57,10 +57,16 @@ Simple VSAN Setup
     Set Environment Variable  TEST_RESOURCE  cls
     Set Environment Variable  TEST_TIMEOUT  15m
 
+
+Check VSAN DOMs In Datastore
+    [Arguments]  ${test_datastore}
+    ${out}=  Run  govc datastore.vsan.dom.ls -ds ${test_datastore} -l -o
+    Should Be Empty  ${out}
+
+
 *** Test Cases ***
 Simple VSAN
-    ${out}=  Run  govc datastore.vsan.dom.ls -ds %{TEST_DATASTORE} -l -o
-    Should Be Empty  ${out}
+    Wait Until Keyword Succeeds  10x  30s  Check VSAN DOMs In Datastore  %{TEST_DATASTORE}
 
     Custom Testbed Keepalive  /dbc/pa-dbc1111/mhagen
 
@@ -68,5 +74,4 @@ Simple VSAN
     Run Regression Tests
     Cleanup VIC Appliance On Test Server
 
-    ${out}=  Run  govc datastore.vsan.dom.ls -ds %{TEST_DATASTORE} -l -o
-    Should Be Empty  ${out}
+    Wait Until Keyword Succeeds  10x  30s  Check VSAN DOMs In Datastore  %{TEST_DATASTORE}

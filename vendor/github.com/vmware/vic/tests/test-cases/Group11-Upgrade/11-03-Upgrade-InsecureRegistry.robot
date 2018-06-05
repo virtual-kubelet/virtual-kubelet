@@ -18,7 +18,7 @@ Resource  ../../resources/Util.robot
 #Test Teardown  Cleanup Test Environment
 
 *** Variables ***
-${test_vic_version}  7315
+${test_vic_version}  1.2.1
 ${vic_success}  Installer completed successfully
 ${docker_bridge_network}  bridge
 ${docker_daemon_default_port}  2375

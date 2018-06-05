@@ -20,7 +20,7 @@ func TestStringorsliceYaml(t *testing.T) {
 	s := StructStringorslice{}
 	yaml.Unmarshal([]byte(str), &s)
 
-	assert.Equal(t, Stringorslice{"bar", "baz"}, s.Foo)
+	assert.Equal(t, []string{"bar", "baz"}, s.Foo.parts)
 
 	d, err := yaml.Marshal(&s)
 	assert.Nil(t, err)
@@ -28,7 +28,7 @@ func TestStringorsliceYaml(t *testing.T) {
 	s2 := StructStringorslice{}
 	yaml.Unmarshal(d, &s2)
 
-	assert.Equal(t, Stringorslice{"bar", "baz"}, s2.Foo)
+	assert.Equal(t, []string{"bar", "baz"}, s2.Foo.parts)
 }
 
 type StructSliceorMap struct {
@@ -47,7 +47,7 @@ func TestSliceOrMapYaml(t *testing.T) {
 	s := StructSliceorMap{}
 	yaml.Unmarshal([]byte(str), &s)
 
-	assert.Equal(t, SliceorMap{"bar": "baz", "far": "faz"}, s.Foos)
+	assert.Equal(t, map[string]string{"bar": "baz", "far": "faz"}, s.Foos.parts)
 
 	d, err := yaml.Marshal(&s)
 	assert.Nil(t, err)
@@ -55,7 +55,7 @@ func TestSliceOrMapYaml(t *testing.T) {
 	s2 := StructSliceorMap{}
 	yaml.Unmarshal(d, &s2)
 
-	assert.Equal(t, SliceorMap{"bar": "baz", "far": "faz"}, s2.Foos)
+	assert.Equal(t, map[string]string{"bar": "baz", "far": "faz"}, s2.Foos.parts)
 }
 
 var sampleStructSliceorMap = `
@@ -73,7 +73,7 @@ func TestUnmarshalSliceOrMap(t *testing.T) {
 
 func TestStr2SliceOrMapPtrMap(t *testing.T) {
 	s := map[string]*StructSliceorMap{"udav": {
-		Foos: SliceorMap{"io.rancher.os.bar": "baz", "io.rancher.os.far": "true"},
+		Foos: SliceorMap{map[string]string{"io.rancher.os.bar": "baz", "io.rancher.os.far": "true"}},
 		Bars: []string{},
 	}}
 	d, err := yaml.Marshal(&s)
@@ -104,9 +104,9 @@ func TestMaporsliceYaml(t *testing.T) {
 	s := StructMaporslice{}
 	yaml.Unmarshal([]byte(str), &s)
 
-	assert.Equal(t, 2, len(s.Foo))
-	assert.True(t, contains(s.Foo, "bar=baz"))
-	assert.True(t, contains(s.Foo, "far=faz"))
+	assert.Equal(t, 2, len(s.Foo.parts))
+	assert.True(t, contains(s.Foo.parts, "bar=baz"))
+	assert.True(t, contains(s.Foo.parts, "far=faz"))
 
 	d, err := yaml.Marshal(&s)
 	assert.Nil(t, err)
@@ -114,9 +114,9 @@ func TestMaporsliceYaml(t *testing.T) {
 	s2 := StructMaporslice{}
 	yaml.Unmarshal(d, &s2)
 
-	assert.Equal(t, 2, len(s2.Foo))
-	assert.True(t, contains(s2.Foo, "bar=baz"))
-	assert.True(t, contains(s2.Foo, "far=faz"))
+	assert.Equal(t, 2, len(s2.Foo.parts))
+	assert.True(t, contains(s2.Foo.parts, "bar=baz"))
+	assert.True(t, contains(s2.Foo.parts, "far=faz"))
 }
 
 var sampleStructCommand = `command: bash`
@@ -126,8 +126,9 @@ func TestUnmarshalCommand(t *testing.T) {
 	err := yaml.Unmarshal([]byte(sampleStructCommand), s)
 
 	assert.Nil(t, err)
-	assert.Equal(t, Command{"bash"}, s.Command)
-	assert.Nil(t, s.Entrypoint)
+	assert.Equal(t, []string{"bash"}, s.Command.Slice())
+	assert.Nil(t, s.Entrypoint.Slice())
+
 	bytes, err := yaml.Marshal(s)
 	assert.Nil(t, err)
 
@@ -135,8 +136,8 @@ func TestUnmarshalCommand(t *testing.T) {
 	err = yaml.Unmarshal(bytes, s2)
 
 	assert.Nil(t, err)
-	assert.Equal(t, Command{"bash"}, s2.Command)
-	assert.Nil(t, s2.Entrypoint)
+	assert.Equal(t, []string{"bash"}, s2.Command.Slice())
+	assert.Nil(t, s2.Entrypoint.Slice())
 }
 
 var sampleEmptyCommand = `{}`
@@ -146,17 +147,17 @@ func TestUnmarshalEmptyCommand(t *testing.T) {
 	err := yaml.Unmarshal([]byte(sampleEmptyCommand), s)
 
 	assert.Nil(t, err)
-	assert.Nil(t, s.Command)
+	assert.Nil(t, s.Command.Slice())
 
 	bytes, err := yaml.Marshal(s)
 	assert.Nil(t, err)
-	assert.Equal(t, "{}", strings.TrimSpace(string(bytes)))
+	assert.Equal(t, "entrypoint: []\ncommand: []", strings.TrimSpace(string(bytes)))
 
 	s2 := &StructCommand{}
 	err = yaml.Unmarshal(bytes, s2)
 
 	assert.Nil(t, err)
-	assert.Nil(t, s2.Command)
+	assert.Nil(t, s2.Command.Slice())
 }
 
 func TestMarshalUlimit(t *testing.T) {

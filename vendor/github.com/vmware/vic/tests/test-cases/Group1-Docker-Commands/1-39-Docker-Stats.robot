@@ -42,7 +42,7 @@ Create test containers
     Should Be Equal As Integers  ${rc}  0
     Set Environment Variable  STOPPER  ${output}
     ${stress}=  Get Container ShortID  %{STRESSED}
-    Set Environment Variable  VM-PATH  vm/*${stress}
+    Set Environment Variable  VM-PATH  vm/%{VCH-NAME}/*${stress}
 
 Check Memory Usage
     ${vmomiMemory}=  Get Average Active Memory  %{VM-PATH}

@@ -17,7 +17,7 @@ Documentation  Test 5-4 - High Availability
 Resource  ../../resources/Util.robot
 Suite Setup  Wait Until Keyword Succeeds  10x  10m  High Availability Setup
 Suite Teardown  Nimbus Cleanup  ${list}
-Test Teardown  Run Keyword If Test Failed  Gather Logs From Test Server
+Test Teardown  Run Keyword If Test Failed  Gather vSphere Logs
 
 *** Variables ***
 ${esx_number}=  3
@@ -172,12 +172,14 @@ Test
     @{running}=  Create List
     :FOR  ${index}  IN RANGE  3
     \     ${rc}  ${c}=  Run And Return Rc And Output  docker %{VCH-PARAMS} run -itd busybox
+    \     Log  ${c}
     \     Should Be Equal As Integers  ${rc}  0
     \     Append To List  ${running}  ${c}
 
     @{stopped}=  Create List
     :FOR  ${index}  IN RANGE  3
     \     ${rc}  ${c}=  Run And Return Rc And Output  docker %{VCH-PARAMS} run -d busybox ls
+    \     Log  ${c}
     \     Should Be Equal As Integers  ${rc}  0
     \     Append To List  ${stopped}  ${c}
 

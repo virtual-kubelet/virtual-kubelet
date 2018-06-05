@@ -31,6 +31,7 @@ groups:
       - rajanashok
       - rogeliosanchez
       - mdharamadas1
+      - singhshwetaQE
     conditions:
       files:
         include:
@@ -65,6 +66,7 @@ groups:
       - mhagen-vmware
       - rogeliosanchez
       - mdharamadas1
+      - singhshwetaQE
     conditions:
       files:
         include:
@@ -220,15 +222,6 @@ groups:
       files:
         include:
           - "vendor/*"
-  ui:
-    users:
-      - jooskim
-      - cristianfalcone
-      - jak-atx
-    conditions:
-      files:
-        include:
-          - "ui/*"
 
   ui-cmd:
     users:
@@ -253,6 +246,7 @@ groups:
       - rajanashok
       - mhagen-vmware
       - mdharamadas1
+      - singhshwetaQE
     conditions:
       files:
         include:

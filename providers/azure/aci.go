@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"os"
@@ -13,6 +14,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/gorilla/websocket"
 	"github.com/virtual-kubelet/virtual-kubelet/manager"
 	client "github.com/virtual-kubelet/virtual-kubelet/providers/azure/client"
 	"github.com/virtual-kubelet/virtual-kubelet/providers/azure/client/aci"
@@ -21,11 +23,11 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/tools/remotecommand"
 )
 
 // The service account secret mount path.
 const serviceAccountSecretMountPath = "/var/run/secrets/kubernetes.io/serviceaccount"
-
 const virtualKubeletDNSNameLabel = "virtualkubelet.io/dnsnamelabel"
 
 // ACIProvider implements the virtual-kubelet provider interface and communicates with Azure's ACI APIs.
@@ -315,6 +317,69 @@ func (p *ACIProvider) GetContainerLogs(namespace, podName, containerName string,
 	}
 
 	return logContent, err
+}
+
+// ExecInContainer executes a command in a container in the pod, copying data
+// between in/out/err and the container's stdin/stdout/stderr.
+func (p *ACIProvider) ExecInContainer(name string, uid types.UID, container string, cmd []string, in io.Reader, out, errstream io.WriteCloser, tty bool, resize <-chan remotecommand.TerminalSize, timeout time.Duration) error {
+	cg, _, _ := p.aciClient.GetContainerGroup(p.resourceGroup, name)
+
+	// Set default terminal size
+	terminalSize := remotecommand.TerminalSize{
+		Height: 60,
+		Width:  120,
+	}
+
+	if resize != nil {
+		terminalSize = <-resize // Receive terminal resize event if resize stream is present
+	}
+
+	xcrsp, _ := p.aciClient.LaunchExec(p.resourceGroup, cg.Name, container, cmd[0], terminalSize)
+
+	wsUri := xcrsp.WebSocketUri
+	password := xcrsp.Password
+
+	c, _, _ := websocket.DefaultDialer.Dial(wsUri, nil)
+	c.WriteMessage(websocket.TextMessage, []byte(password)) // Websocket password needs to be sent before WS terminal is active, is this ACI specific?
+
+	// Cleanup on exit
+	defer c.Close()
+	defer out.Close()
+
+	if in != nil {
+		// Inputstream
+		go func() {
+			for {
+				var msg = make([]byte, 512)
+				_, err := in.Read(msg)
+				if err == io.EOF {
+					// Handle EOF
+				}
+				if err != nil {
+					// Handle errors
+					return
+				}
+				if string(msg) != "" {
+					c.WriteMessage(websocket.BinaryMessage, msg)
+				}
+
+			}
+		}()
+	}
+
+	if out != nil {
+		//Outputstream
+		for {
+			_, cr, err := c.NextReader()
+			if err != nil {
+				// Handle errors
+				break
+			}
+			io.Copy(out, cr)
+		}
+	}
+
+	return nil
 }
 
 // GetPodStatus returns the status of a pod by name that is running inside ACI

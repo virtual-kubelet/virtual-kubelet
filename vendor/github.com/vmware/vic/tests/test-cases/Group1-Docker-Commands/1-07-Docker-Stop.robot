@@ -143,17 +143,19 @@ Attempt to stop a container that has been started out of band
     Wait Until Keyword Succeeds  10x  3s  Assert Kill Signal  ${container}  False
 
 Restart a stopped container
-    ${rc}  ${output}=  Run And Return Rc And Output  docker %{VCH-PARAMS} create -it ${busybox} /bin/ls
-    Should Be Equal As Integers  ${rc}  0
-    Should Not Contain  ${output}  Error:
-    ${rc}  ${output}=  Run And Return Rc And Output  docker %{VCH-PARAMS} start ${output}
-    Should Be Equal As Integers  ${rc}  0
-    Should Not Contain  ${output}  Error:
-    ${shortID}=  Get container shortID  ${output}
-    Wait Until VM Powers Off  *-${shortID}
-    ${rc}  ${output}=  Run And Return Rc And Output  docker %{VCH-PARAMS} start ${output}
-    Should Be Equal As Integers  ${rc}  0
-    Should Not Contain  ${output}  Error:
+    ${status}=  Get State Of Github Issue  6700
+    Run Keyword If  '${status}' == 'closed'  Fail  Test 1-07-Docker-Stop.robot needs to be updated now that Issue #6700 has been resolved
+    #${rc}  ${output}=  Run And Return Rc And Output  docker %{VCH-PARAMS} create -it ${busybox} /bin/ls
+    #Should Be Equal As Integers  ${rc}  0
+    #Should Not Contain  ${output}  Error:
+    #${rc}  ${output}=  Run And Return Rc And Output  docker %{VCH-PARAMS} start ${output}
+    #Should Be Equal As Integers  ${rc}  0
+    #Should Not Contain  ${output}  Error:
+    #${shortID}=  Get container shortID  ${output}
+    #Wait Until VM Powers Off  *-${shortID}
+    #${rc}  ${output}=  Run And Return Rc And Output  docker %{VCH-PARAMS} start ${output}
+    #Should Be Equal As Integers  ${rc}  0
+    #Should Not Contain  ${output}  Error:
 
 Stop a container with Docker 1.13 CLI
     ${rc}=  Run And Return Rc  docker %{VCH-PARAMS} pull ${busybox}

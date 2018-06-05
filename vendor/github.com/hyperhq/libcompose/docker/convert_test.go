@@ -4,10 +4,10 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/docker/libcompose/config"
+	"github.com/docker/libcompose/lookup"
+	"github.com/docker/libcompose/yaml"
 	shlex "github.com/flynn/go-shlex"
-	"github.com/hyperhq/libcompose/config"
-	"github.com/hyperhq/libcompose/lookup"
-	"github.com/hyperhq/libcompose/yaml"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -41,8 +41,8 @@ func TestParseLabels(t *testing.T) {
 	fooLabel := "foo.label"
 	fooLabelValue := "service.config.value"
 	sc := &config.ServiceConfig{
-		Entrypoint: yaml.Command([]string{bashCmd}),
-		Labels:     yaml.SliceorMap{fooLabel: "service.config.value"},
+		Entrypoint: yaml.NewCommand(bashCmd),
+		Labels:     yaml.NewSliceorMap(map[string]string{fooLabel: "service.config.value"}),
 	}
 	cfg, _, err := Convert(sc, ctx.Context)
 	assert.Nil(t, err)
@@ -50,9 +50,9 @@ func TestParseLabels(t *testing.T) {
 	cfg.Labels[fooLabel] = "FUN"
 	cfg.Entrypoint[0] = "less"
 
-	assert.Equal(t, fooLabelValue, sc.Labels[fooLabel])
+	assert.Equal(t, fooLabelValue, sc.Labels.MapParts()[fooLabel])
 	assert.Equal(t, "FUN", cfg.Labels[fooLabel])
 
-	assert.Equal(t, yaml.Command{bashCmd}, sc.Entrypoint)
+	assert.Equal(t, []string{bashCmd}, sc.Entrypoint.Slice())
 	assert.Equal(t, []string{"less"}, []string(cfg.Entrypoint))
 }

@@ -13,10 +13,11 @@
 # limitations under the License
 
 *** Settings ***
-Documentation  Test 5-1 - Distributed Switch
+Documentation  Test 5-5 - Heterogeneous ESXi
 Resource  ../../resources/Util.robot
 Suite Setup  Wait Until Keyword Succeeds  10x  10m  Heterogenous ESXi Setup
 Suite Teardown  Run Keyword And Ignore Error  Nimbus Cleanup  ${list}
+Force Tags  hetero
 
 *** Keywords ***
 Heterogenous ESXi Setup
@@ -29,7 +30,7 @@ Heterogenous ESXi Setup
     Run Keyword And Ignore Error  Cleanup Nimbus PXE folder  %{NIMBUS_USER}  %{NIMBUS_PASSWORD}
     ${esx1}  ${esx1-ip}=  Deploy Nimbus ESXi Server  %{NIMBUS_USER}  %{NIMBUS_PASSWORD}  3029944
     Append To List  ${list}  ${esx1}
-    
+
     Run Keyword And Ignore Error  Cleanup Nimbus PXE folder  %{NIMBUS_USER}  %{NIMBUS_PASSWORD}
     ${esx2}  ${esx2-ip}=  Deploy Nimbus ESXi Server  %{NIMBUS_USER}  %{NIMBUS_PASSWORD}  5572656
     Append To List  ${list}  ${esx2}
@@ -43,13 +44,6 @@ Heterogenous ESXi Setup
     Log  ${output.stdout}
     Log  ${output.stderr}
     ${status}=  Run Keyword And Return Status  Should Contain  ${output.stdout}  Overall Status: Succeeded
-
-    # Try again, if the VC failed quickly we might have enough time to try again
-    ${pid-vc}=  Run Keyword Unless  ${status}  Deploy Nimbus vCenter Server Async  ${vc}
-    ${output}=  Run Keyword Unless  ${status}  Wait For Process  ${pid-vc}  timeout=40 minutes  on_timeout=terminate
-    Run Keyword Unless  ${status}  Log  ${output.stdout}
-    Run Keyword Unless  ${status}  Log  ${output.stderr}
-    Run Keyword Unless  ${status}  Should Contain  ${output.stdout}  Overall Status: Succeeded
 
     Open Connection  %{NIMBUS_GW}
     Wait Until Keyword Succeeds  2 min  30 sec  Login  %{NIMBUS_USER}  %{NIMBUS_PASSWORD}
@@ -76,7 +70,8 @@ Heterogenous ESXi Setup
     ${vc-ver}=  Fetch From Right  ${vc-ver}  ${SPACE}
     Run Keyword If  '${vc-ver}' == '6.5.0'  Add Host To VCenter  ${esx3-ip}  root  ha-datacenter  e2eFunctionalTest
 
-    Create A Distributed Switch  ha-datacenter
+    ${out}=  Run  govc dvs.create -product-version 5.5.0 -dc=ha-datacenter test-ds
+    Should Contain  ${out}  OK
 
     Create Three Distributed Port Groups  ha-datacenter
 

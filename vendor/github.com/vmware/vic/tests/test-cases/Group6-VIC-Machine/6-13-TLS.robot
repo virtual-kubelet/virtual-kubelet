@@ -18,6 +18,24 @@ Resource  ../../resources/Util.robot
 Test Teardown  Run Keyword If Test Failed  Cleanup VIC Appliance On Test Server
 Test Timeout  20 minutes
 
+*** Keywords ***
+Check that requests with invalid host field are rejected
+    ${rc}  ${output}=  Run And Return Rc And Output  curl -vvv -H"Host: please.ddos" %{DOCKER_HOST}/_ping
+    Should Contain  ${output}  invalid host header
+    Should Contain  ${output}  500 Internal Server Error
+    Should Contain  ${output}  to requested host please.ddos
+    Should Not Contain  ${output}  200 OK
+
+Check that normal requests are accepted
+    ${rc}  ${output}=  Run And Return Rc And Output  curl -vvv %{DOCKER_HOST}/_ping
+    Should Contain  ${output}  200 OK
+    Should Not Contain  ${output}  500 Internal Server Error
+
+    # also make sure it works if the port isn't part of the host header
+    ${rc}  ${output}=  Run And Return Rc And Output  curl -vvv -H"Host: %{VCH-IP}" %{DOCKER_HOST}/_ping
+    Should Contain  ${output}  200 OK
+    Should Not Contain  ${output}  500 Internal Server Error
+
 *** Test Cases ***
 Create VCH - defaults with --no-tls
     Set Test Environment Variables
@@ -29,6 +47,8 @@ Create VCH - defaults with --no-tls
     Get Docker Params  ${output}  ${true}
     Log To Console  Installer completed successfully: %{VCH-NAME}
 
+    Check that requests with invalid host field are rejected
+    Check that normal requests are accepted
 
     Run Regression Tests
     Cleanup VIC Appliance On Test Server

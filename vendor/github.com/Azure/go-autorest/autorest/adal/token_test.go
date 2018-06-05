@@ -15,6 +15,7 @@ package adal
 //  limitations under the License.
 
 import (
+	"context"
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/x509"
@@ -24,10 +25,10 @@ import (
 	"math/big"
 	"net/http"
 	"net/url"
-	"os"
 	"reflect"
 	"strconv"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -148,7 +149,7 @@ func TestServicePrincipalTokenRefreshUsesPOST(t *testing.T) {
 	}
 }
 
-func TestServicePrincipalTokenFromMSIRefreshUsesPOST(t *testing.T) {
+func TestServicePrincipalTokenFromMSIRefreshUsesGET(t *testing.T) {
 	resource := "https://resource"
 	cb := func(token Token) error { return nil }
 
@@ -165,8 +166,8 @@ func TestServicePrincipalTokenFromMSIRefreshUsesPOST(t *testing.T) {
 		(func() SendDecorator {
 			return func(s Sender) Sender {
 				return SenderFunc(func(r *http.Request) (*http.Response, error) {
-					if r.Method != "POST" {
-						t.Fatalf("adal: ServicePrincipalToken#Refresh did not correctly set HTTP method -- expected %v, received %v", "POST", r.Method)
+					if r.Method != "GET" {
+						t.Fatalf("adal: ServicePrincipalToken#Refresh did not correctly set HTTP method -- expected %v, received %v", "GET", r.Method)
 					}
 					if h := r.Header.Get("Metadata"); h != "true" {
 						t.Fatalf("adal: ServicePrincipalToken#Refresh did not correctly set Metadata header for MSI")
@@ -183,6 +184,39 @@ func TestServicePrincipalTokenFromMSIRefreshUsesPOST(t *testing.T) {
 
 	if body.IsOpen() {
 		t.Fatalf("the response was not closed!")
+	}
+}
+
+func TestServicePrincipalTokenFromMSIRefreshCancel(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	endpoint, _ := GetMSIVMEndpoint()
+
+	spt, err := NewServicePrincipalTokenFromMSI(endpoint, "https://resource")
+	if err != nil {
+		t.Fatalf("Failed to get MSI SPT: %v", err)
+	}
+
+	c := mocks.NewSender()
+	c.AppendAndRepeatResponse(mocks.NewResponseWithStatus("Internal server error", http.StatusInternalServerError), 5)
+
+	var wg sync.WaitGroup
+	wg.Add(1)
+	start := time.Now()
+	end := time.Now()
+
+	go func() {
+		spt.SetSender(c)
+		err = spt.RefreshWithContext(ctx)
+		end = time.Now()
+		wg.Done()
+	}()
+
+	cancel()
+	wg.Wait()
+	time.Sleep(5 * time.Millisecond)
+
+	if end.Sub(start) >= time.Second {
+		t.Fatalf("TestServicePrincipalTokenFromMSIRefreshCancel failed to cancel")
 	}
 }
 
@@ -285,6 +319,39 @@ func TestServicePrincipalTokenCertficateRefreshSetsBody(t *testing.T) {
 			values["grant_type"][0] != "client_credentials" ||
 			values["resource"][0] != "resource" {
 			t.Fatalf("adal: ServicePrincipalTokenCertificate#Refresh did not correctly set the HTTP Request Body.")
+		}
+	})
+}
+
+func TestServicePrincipalTokenUsernamePasswordRefreshSetsBody(t *testing.T) {
+	spt := newServicePrincipalTokenUsernamePassword(t)
+	testServicePrincipalTokenRefreshSetsBody(t, spt, func(t *testing.T, b []byte) {
+		body := string(b)
+
+		values, _ := url.ParseQuery(body)
+		if values["client_id"][0] != "id" ||
+			values["grant_type"][0] != "password" ||
+			values["username"][0] != "username" ||
+			values["password"][0] != "password" ||
+			values["resource"][0] != "resource" {
+			t.Fatalf("adal: ServicePrincipalTokenUsernamePassword#Refresh did not correctly set the HTTP Request Body.")
+		}
+	})
+}
+
+func TestServicePrincipalTokenAuthorizationCodeRefreshSetsBody(t *testing.T) {
+	spt := newServicePrincipalTokenAuthorizationCode(t)
+	testServicePrincipalTokenRefreshSetsBody(t, spt, func(t *testing.T, b []byte) {
+		body := string(b)
+
+		values, _ := url.ParseQuery(body)
+		if values["client_id"][0] != "id" ||
+			values["grant_type"][0] != OAuthGrantTypeAuthorizationCode ||
+			values["code"][0] != "code" ||
+			values["client_secret"][0] != "clientSecret" ||
+			values["redirect_uri"][0] != "http://redirectUri/getToken" ||
+			values["resource"][0] != "resource" {
+			t.Fatalf("adal: ServicePrincipalTokenAuthorizationCode#Refresh did not correctly set the HTTP Request Body.")
 		}
 	})
 }
@@ -412,12 +479,12 @@ func TestServicePrincipalTokenRefreshUnmarshals(t *testing.T) {
 	err := spt.Refresh()
 	if err != nil {
 		t.Fatalf("adal: ServicePrincipalToken#Refresh returned an unexpected error (%v)", err)
-	} else if spt.AccessToken != "accessToken" ||
-		spt.ExpiresIn != "3600" ||
-		spt.ExpiresOn != expiresOn ||
-		spt.NotBefore != expiresOn ||
-		spt.Resource != "resource" ||
-		spt.Type != "Bearer" {
+	} else if spt.token.AccessToken != "accessToken" ||
+		spt.token.ExpiresIn != "3600" ||
+		spt.token.ExpiresOn != expiresOn ||
+		spt.token.NotBefore != expiresOn ||
+		spt.token.Resource != "resource" ||
+		spt.token.Type != "Bearer" {
 		t.Fatalf("adal: ServicePrincipalToken#Refresh failed correctly unmarshal the JSON -- expected %v, received %v",
 			j, *spt)
 	}
@@ -425,7 +492,7 @@ func TestServicePrincipalTokenRefreshUnmarshals(t *testing.T) {
 
 func TestServicePrincipalTokenEnsureFreshRefreshes(t *testing.T) {
 	spt := newServicePrincipalToken()
-	expireToken(&spt.Token)
+	expireToken(&spt.token)
 
 	body := mocks.NewBody(newTokenJSON("test", "test"))
 	resp := mocks.NewResponseWithBodyAndStatus(body, http.StatusOK, "OK")
@@ -451,9 +518,26 @@ func TestServicePrincipalTokenEnsureFreshRefreshes(t *testing.T) {
 	}
 }
 
+func TestServicePrincipalTokenEnsureFreshFails(t *testing.T) {
+	spt := newServicePrincipalToken()
+	expireToken(&spt.token)
+
+	c := mocks.NewSender()
+	c.SetError(fmt.Errorf("some failure"))
+
+	spt.SetSender(c)
+	err := spt.EnsureFresh()
+	if err == nil {
+		t.Fatal("adal: ServicePrincipalToken#EnsureFresh didn't return an error")
+	}
+	if _, ok := err.(TokenRefreshError); !ok {
+		t.Fatal("adal: ServicePrincipalToken#EnsureFresh didn't return a TokenRefreshError")
+	}
+}
+
 func TestServicePrincipalTokenEnsureFreshSkipsIfFresh(t *testing.T) {
 	spt := newServicePrincipalToken()
-	setTokenToExpireIn(&spt.Token, 1000*time.Second)
+	setTokenToExpireIn(&spt.token, 1000*time.Second)
 
 	f := false
 	c := mocks.NewSender()
@@ -520,7 +604,7 @@ func TestRefreshCallbackErrorPropagates(t *testing.T) {
 // This demonstrates the danger of manual token without a refresh token
 func TestServicePrincipalTokenManualRefreshFailsWithoutRefresh(t *testing.T) {
 	spt := newServicePrincipalTokenManual()
-	spt.RefreshToken = ""
+	spt.token.RefreshToken = ""
 	err := spt.Refresh()
 	if err == nil {
 		t.Fatalf("adal: ServicePrincipalToken#Refresh should have failed with a ManualTokenSecret without a refresh token")
@@ -550,27 +634,41 @@ func TestNewServicePrincipalTokenFromMSI(t *testing.T) {
 	}
 }
 
-func TestGetVMEndpoint(t *testing.T) {
-	tempSettingsFile, err := ioutil.TempFile("", "ManagedIdentity-Settings")
+func TestNewServicePrincipalTokenFromMSIWithUserAssignedID(t *testing.T) {
+	resource := "https://resource"
+	userID := "abc123"
+	cb := func(token Token) error { return nil }
+
+	spt, err := NewServicePrincipalTokenFromMSIWithUserAssignedID("http://msiendpoint/", resource, userID, cb)
 	if err != nil {
-		t.Fatal("Couldn't write temp settings file")
-	}
-	defer os.Remove(tempSettingsFile.Name())
-
-	settingsContents := []byte(`{
-		"url": "http://msiendpoint/"
-	}`)
-
-	if _, err := tempSettingsFile.Write(settingsContents); err != nil {
-		t.Fatal("Couldn't fill temp settings file")
+		t.Fatalf("Failed to get MSI SPT: %v", err)
 	}
 
-	endpoint, err := getMSIVMEndpoint(tempSettingsFile.Name())
+	// check some of the SPT fields
+	if _, ok := spt.secret.(*ServicePrincipalMSISecret); !ok {
+		t.Fatal("SPT secret was not of MSI type")
+	}
+
+	if spt.resource != resource {
+		t.Fatal("SPT came back with incorrect resource")
+	}
+
+	if len(spt.refreshCallbacks) != 1 {
+		t.Fatal("SPT had incorrect refresh callbacks.")
+	}
+
+	if spt.clientID != userID {
+		t.Fatal("SPT had incorrect client ID")
+	}
+}
+
+func TestGetVMEndpoint(t *testing.T) {
+	endpoint, err := GetMSIVMEndpoint()
 	if err != nil {
 		t.Fatal("Coudn't get VM endpoint")
 	}
 
-	if endpoint != "http://msiendpoint/" {
+	if endpoint != msiEndpoint {
 		t.Fatal("Didn't get correct endpoint")
 	}
 }
@@ -650,5 +748,15 @@ func newServicePrincipalTokenCertificate(t *testing.T) *ServicePrincipalToken {
 	}
 
 	spt, _ := NewServicePrincipalTokenFromCertificate(TestOAuthConfig, "id", certificate, privateKey, "resource")
+	return spt
+}
+
+func newServicePrincipalTokenUsernamePassword(t *testing.T) *ServicePrincipalToken {
+	spt, _ := NewServicePrincipalTokenFromUsernamePassword(TestOAuthConfig, "id", "username", "password", "resource")
+	return spt
+}
+
+func newServicePrincipalTokenAuthorizationCode(t *testing.T) *ServicePrincipalToken {
+	spt, _ := NewServicePrincipalTokenFromAuthorizationCode(TestOAuthConfig, "id", "clientSecret", "code", "http://redirectUri/getToken", "resource")
 	return spt
 }

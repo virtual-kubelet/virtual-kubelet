@@ -1,4 +1,4 @@
-// Copyright 2017 VMware, Inc. All Rights Reserved.
+// Copyright 2017-2018 VMware, Inc. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -95,7 +95,7 @@ func (h *VCHDatacenterGet) Handle(params operations.GetTargetTargetDatacenterDat
 }
 
 func getVCH(op trace.Operation, d *data.Data, validator *validate.Validator) (*models.VCH, error) {
-	executor := management.NewDispatcher(validator.Context, validator.Session, nil, false)
+	executor := management.NewDispatcher(validator.Context, validator.Session, management.NoAction, false)
 	vch, err := executor.NewVCHFromID(d.ID)
 	if err != nil {
 		return nil, util.NewError(http.StatusNotFound, fmt.Sprintf("Failed to inspect VCH: %s", err))
@@ -127,6 +127,9 @@ func vchToModel(op trace.Operation, vch *vm.VirtualMachine, d *data.Data, execut
 
 	// compute
 	model.Compute = &models.VCHCompute{
+		Affinity: &models.VCHComputeAffinity{
+			UseVMGroup: vchConfig.UseVMGroup,
+		},
 		CPU: &models.VCHComputeCPU{
 			Limit:       asMHz(d.ResourceLimits.VCHCPULimitsMHz),
 			Reservation: asMHz(d.ResourceLimits.VCHCPUReservationsMHz),
@@ -246,7 +249,10 @@ func vchToModel(op trace.Operation, vch *vm.VirtualMachine, d *data.Data, execut
 	}
 	model.Runtime.PowerState = string(powerState)
 
-	model.Runtime.DockerHost, model.Runtime.AdminPortal = getAddresses(vchConfig)
+	model.Runtime.DockerHost, model.Runtime.AdminPortal, err = getAddresses(executor, vchConfig)
+	if err != nil {
+		op.Warn("Failed to get docker host and admin portal address: %s", err)
+	}
 
 	// syslog_addr: syslog server address
 	if syslogConfig := vchConfig.Diagnostics.SysLogConfig; syslogConfig != nil {

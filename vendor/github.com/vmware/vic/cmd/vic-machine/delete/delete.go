@@ -121,7 +121,7 @@ func (d *Uninstall) Run(clic *cli.Context) (err error) {
 		return errors.New("delete failed")
 	}
 
-	executor := management.NewDispatcher(validator.Context, validator.Session, nil, d.Force)
+	executor := management.NewDispatcher(validator.Context, validator.Session, management.DeleteAction, d.Force)
 
 	var vch *vm.VirtualMachine
 	if d.Data.ID != "" {

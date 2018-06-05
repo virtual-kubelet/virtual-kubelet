@@ -1834,6 +1834,12 @@
 							"$ref": "#/definitions/Error"
 						}
 					},
+					"428": {
+						"description": "target resource is not powered on",
+						"schema": {
+							"$ref": "#/definitions/Error"
+						}
+					},
 					"500": {
 						"description": "Wait of task failed",
 						"schema": {

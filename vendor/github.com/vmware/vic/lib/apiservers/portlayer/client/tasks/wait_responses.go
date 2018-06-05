@@ -37,6 +37,13 @@ func (o *WaitReader) ReadResponse(response runtime.ClientResponse, consumer runt
 		}
 		return nil, result
 
+	case 428:
+		result := NewWaitPreconditionRequired()
+		if err := result.readResponse(response, consumer, o.formats); err != nil {
+			return nil, err
+		}
+		return nil, result
+
 	case 500:
 		result := NewWaitInternalServerError()
 		if err := result.readResponse(response, consumer, o.formats); err != nil {
@@ -88,6 +95,35 @@ func (o *WaitNotFound) Error() string {
 }
 
 func (o *WaitNotFound) readResponse(response runtime.ClientResponse, consumer runtime.Consumer, formats strfmt.Registry) error {
+
+	o.Payload = new(models.Error)
+
+	// response payload
+	if err := consumer.Consume(response.Body(), o.Payload); err != nil && err != io.EOF {
+		return err
+	}
+
+	return nil
+}
+
+// NewWaitPreconditionRequired creates a WaitPreconditionRequired with default headers values
+func NewWaitPreconditionRequired() *WaitPreconditionRequired {
+	return &WaitPreconditionRequired{}
+}
+
+/*WaitPreconditionRequired handles this case with default header values.
+
+target resource is not powered on
+*/
+type WaitPreconditionRequired struct {
+	Payload *models.Error
+}
+
+func (o *WaitPreconditionRequired) Error() string {
+	return fmt.Sprintf("[PUT /tasks][%d] waitPreconditionRequired  %+v", 428, o.Payload)
+}
+
+func (o *WaitPreconditionRequired) readResponse(response runtime.ClientResponse, consumer runtime.Consumer, formats strfmt.Registry) error {
 
 	o.Payload = new(models.Error)
 

@@ -33,7 +33,7 @@ type ResourceLimits struct {
 	IsSet bool
 }
 
-func (r *ResourceLimits) VCHMemoryLimitFlags(hidden bool) []cli.Flag {
+func (r *ResourceLimits) VCHMemoryLimitFlags() []cli.Flag {
 	return []cli.Flag{
 		cli.GenericFlag{
 			Name:  "memory, mem",
@@ -44,18 +44,18 @@ func (r *ResourceLimits) VCHMemoryLimitFlags(hidden bool) []cli.Flag {
 			Name:   "memory-reservation, memr",
 			Value:  flags.NewOptionalInt(&r.VCHMemoryReservationsMB),
 			Usage:  "VCH resource pool memory reservation in MB",
-			Hidden: hidden,
+			Hidden: true,
 		},
 		cli.GenericFlag{
 			Name:   "memory-shares, mems",
 			Value:  flags.NewSharesFlag(&r.VCHMemoryShares),
 			Usage:  "VCH resource pool memory shares in level or share number, e.g. high, normal, low, or 163840",
-			Hidden: hidden,
+			Hidden: true,
 		},
 	}
 }
 
-func (r *ResourceLimits) VCHCPULimitFlags(hidden bool) []cli.Flag {
+func (r *ResourceLimits) VCHCPULimitFlags() []cli.Flag {
 	return []cli.Flag{
 		cli.GenericFlag{
 			Name:  "cpu",
@@ -66,13 +66,13 @@ func (r *ResourceLimits) VCHCPULimitFlags(hidden bool) []cli.Flag {
 			Name:   "cpu-reservation, cpur",
 			Value:  flags.NewOptionalInt(&r.VCHCPUReservationsMHz),
 			Usage:  "VCH resource pool reservation in MHz",
-			Hidden: hidden,
+			Hidden: true,
 		},
 		cli.GenericFlag{
 			Name:   "cpu-shares, cpus",
 			Value:  flags.NewSharesFlag(&r.VCHCPUShares),
-			Usage:  "VCH VCH resource pool vCPUs shares, in level or share number, e.g. high, normal, low, or 4000",
-			Hidden: hidden,
+			Usage:  "VCH resource pool vCPUs shares, in level or share number, e.g. high, normal, low, or 4000",
+			Hidden: true,
 		},
 	}
 }

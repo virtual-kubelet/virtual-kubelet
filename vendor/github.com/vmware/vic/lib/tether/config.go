@@ -21,6 +21,8 @@ import (
 	"os/exec"
 	"sync"
 
+	log "github.com/Sirupsen/logrus"
+
 	"github.com/vmware/vic/lib/config/executor"
 	"github.com/vmware/vic/pkg/dio"
 	"github.com/vmware/vic/pkg/ip"
@@ -131,6 +133,7 @@ type SessionConfig struct {
 	// Blocks launching the process.
 	// The channel contains no value; we’re only interested in its closed property.
 	ClearToLaunch chan struct{} `vic:"0.1" scope:"read-only" recurse:"depth=0"`
+	once          sync.Once
 
 	wait *sync.WaitGroup
 
@@ -181,4 +184,62 @@ type DHCPInfo struct {
 	Assigned    net.IPNet
 	Nameservers []net.IP
 	Gateway     net.IPNet
+}
+
+// block sets the blocking behaviour of session launches to the argument.
+// does NOT take a lock
+func (session *SessionConfig) block(blocked bool) {
+	if blocked == session.RunBlock && blocked == (session.ClearToLaunch != nil) {
+		// already configured
+		return
+	}
+
+	if blocked && session.Cmd.Process != nil {
+		log.Warnf("Refusing to block launched session: %s", session.ID)
+		return
+	}
+
+	if blocked {
+		log.Debugf("Blocking session launch: %s", session.ID)
+		session.RunBlock = true
+		session.ClearToLaunch = make(chan struct{})
+		return
+	}
+
+	// protect against multiple closes of the channel - the unblocker
+	// may not be able to take a session lock so cannot have that code clean
+	// up reliably
+	defer func() {
+		recover()
+	}()
+
+	log.Debugf("Unblocking session: %s", session.ID)
+	close(session.ClearToLaunch)
+	session.ClearToLaunch = nil
+	// reset Runblock to unblock process start next time
+	session.RunBlock = false
+}
+
+// Unblock takes a lock and constructs a function to call for releasing
+// an explicit block. Does NOT take a session lock
+func (session *SessionConfig) Unblock() func() {
+	launchChannel := session.ClearToLaunch
+	if !session.RunBlock || launchChannel == nil || session.Started != "" {
+		// if we're not in a blockable state return a no-op function
+		return func() {}
+	}
+
+	return func() {
+		session.once.Do(func() {
+			defer func() {
+				recover()
+			}()
+
+			log.Infof("Unblocking the launch of %s", session.ID)
+			// make sure that portlayer received the container id back - this will block
+			// in the write until the launch code is ready to consume the entry
+			launchChannel <- struct{}{}
+			log.Infof("Unblocked the launch of %s", session.ID)
+		})
+	}
 }

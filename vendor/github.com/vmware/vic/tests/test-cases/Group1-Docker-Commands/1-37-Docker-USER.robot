@@ -59,3 +59,23 @@ Run as uid 0 group 0 With -u
     ${rc}    ${output}=    Run And Return Rc And Output    docker %{VCH-PARAMS} run -u 0:0 busybox whoami
     Should Be Equal As Integers    ${rc}       0
     Should Contain                 ${output}   root
+
+Run as user from dockerfile with specific home directory
+    ${rc}    ${cid}=       Run And Return Rc And Output    docker %{VCH-PARAMS} pull ${alpine}
+    Should Be Equal As Integers    ${rc}       0
+    ${rc}    ${cid}=       Run And Return Rc And Output    docker %{VCH-PARAMS} run -d ${alpine} adduser -h /home/testuser -s /bin/ash -D testuser
+    Should Be Equal As Integers    ${rc}       0
+    ${rc}=                 Run And Return Rc               docker %{VCH-PARAMS} wait ${cid}
+    Should Be Equal As Integers    ${rc}       0
+    ${rc}  ${imgid}=       Run And Return Rc And Output    docker %{VCH-PARAMS} commit ${cid} testuserimg
+    Should Be Equal As Integers    ${rc}       0
+    ${rc}    ${home}=       Run And Return Rc And Output   docker %{VCH-PARAMS} run -i -u testuser testuserimg /bin/ash -c 'echo $HOME'
+    Should Be Equal As Integers    ${rc}       0
+    Should Be Equal As Strings     ${home}     /home/testuser
+
+Root user home directory set correctly
+    ${rc}    ${cid}=       Run And Return Rc And Output    docker %{VCH-PARAMS} pull ${alpine}
+    Should Be Equal As Integers    ${rc}       0
+    ${rc}    ${home}=       Run And Return Rc And Output   docker %{VCH-PARAMS} run -i -u root ${alpine} /bin/ash -c 'echo $HOME'
+    Should Be Equal As Integers    ${rc}       0
+    Should Be Equal As Strings     ${home}     /root

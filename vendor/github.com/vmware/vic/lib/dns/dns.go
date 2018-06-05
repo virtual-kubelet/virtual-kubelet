@@ -20,6 +20,7 @@ import (
 	"math/rand"
 	"net"
 	"os"
+	"strconv"
 	"strings"
 
 	"sync"
@@ -39,6 +40,7 @@ const (
 	DefaultTTL       = 600 * time.Second
 	DefaultCacheSize = 1024
 	DefaultTimeout   = 4 * time.Second
+	hexDigit         = "0123456789abcdef"
 )
 
 var (
@@ -638,4 +640,82 @@ func (s *Server) Stop() {
 // Wait block until wg returns
 func (s *Server) Wait() {
 	s.wg.Wait()
+}
+
+// SetOfDomains is a type for storing string-type domain names as an unsorted set
+//     var f SetOfDomains
+//     f = make(map[string]bool)
+// Store in the set
+//     f["foo.com"] = true
+// then to check to see if something is in the 'set':
+//     if f["foo.com"] {
+type SetOfDomains map[string]bool
+
+// ReverseLookup returns a set of FQDNs for ipAddr from nameservers in /etc/resolv.conf
+// /etc/hosts and /etc/nsswitch.conf are ignored by this function
+func ReverseLookup(ipAddr string) (domains SetOfDomains) {
+	domains = make(map[string]bool)
+
+	address, err := reverseaddr(ipAddr)
+	if err != nil {
+		log.Errorf("%s", err)
+		return
+	}
+
+	nameservers := resolvconf()
+	for _, n := range nameservers {
+		dnsClient := new(mdns.Client)
+		msg := new(mdns.Msg)
+
+		msg.SetQuestion(address, mdns.TypePTR)
+		r, _, err := dnsClient.Exchange(msg, n+":53")
+		if err != nil {
+			log.Warnf("got error \"%s\" from %s", err, n)
+			continue
+		}
+
+		if len(r.Answer) == 0 {
+			log.Warnf("no reply from %s", n)
+			continue
+		}
+
+		for _, a := range r.Answer {
+			switch a := a.(type) {
+			case *mdns.PTR:
+				// cut the . off the end of the returned record & store it
+				domains[strings.TrimSuffix(a.Ptr, ".")] = true
+			default:
+				log.Debugf("got nonstandard answer %s (from nameserver %s)", a, n)
+			}
+		}
+	}
+
+	return
+}
+
+// reverseaddr returns the in-addr.arpa. or ip6.arpa. hostname of the IP
+// address addr suitable for rDNS (PTR) record lookup or an error if it fails
+// to parse the IP address.
+// this helper func was lifted from stdlib -- net/dnsclient.go
+func reverseaddr(addr string) (arpa string, err error) {
+	ip := net.ParseIP(addr)
+	if ip == nil {
+		return "", &net.DNSError{Err: "unrecognized address", Name: addr}
+	}
+	if ip.To4() != nil {
+		return strconv.FormatUint(uint64(ip[15]), 10) + "." + strconv.FormatUint(uint64(ip[14]), 10) + "." + strconv.FormatUint(uint64(ip[13]), 10) + "." + strconv.FormatUint(uint64(ip[12]), 10) + ".in-addr.arpa.", nil
+	}
+	// Must be IPv6
+	buf := make([]byte, 0, len(ip)*4+len("ip6.arpa."))
+	// Add it, in reverse, to the buffer
+	for i := len(ip) - 1; i >= 0; i-- {
+		v := ip[i]
+		buf = append(buf, hexDigit[v&0xF])
+		buf = append(buf, '.')
+		buf = append(buf, hexDigit[v>>4])
+		buf = append(buf, '.')
+	}
+	// Append "ip6.arpa." and return (buf already has the final .)
+	buf = append(buf, "ip6.arpa."...)
+	return string(buf), nil
 }

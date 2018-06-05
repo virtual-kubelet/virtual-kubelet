@@ -162,32 +162,25 @@ func (handler *ContainersHandlersImpl) StateChangeHandler(params containers.Stat
 	return containers.NewStateChangeOK().WithPayload(h.String())
 }
 
+// GetStateHandler returns the state AS HELD IN THE HANDLE. This state is not updated and should not be assumed
+// to represent actual state at the time of call. This method is provided so that a single consistent view of
+// state data can be used for making decisions. The handle used contains a changeVersion that will protect against
+// underlying state changes if attempting to apply modifications.
 func (handler *ContainersHandlersImpl) GetStateHandler(params containers.GetStateParams) middleware.Responder {
-	defer trace.End(trace.Begin(fmt.Sprintf("handle(%s)", params.Handle)))
+	op := trace.NewOperation(context.Background(), "get state from handle: %s", params.Handle)
 
-	// NOTE: I've no idea why GetStateHandler takes a handle instead of an ID - hopefully there was a reason for an inspection
-	// operation to take this path
 	h := exec.GetHandle(params.Handle)
 	if h == nil || h.ExecConfig == nil {
 		return containers.NewGetStateNotFound()
 	}
 
-	container := exec.Containers.Container(h.ExecConfig.ID)
-	if container == nil {
-		return containers.NewGetStateNotFound()
-	}
-
-	var state string
-	switch container.CurrentState() {
+	state := h.State(op)
+	switch state {
 	case exec.StateRunning:
-		state = "RUNNING"
-
 	case exec.StateStopped:
-		state = "STOPPED"
-
 	case exec.StateCreated:
-		state = "CREATED"
-
+	case exec.StateStarting:
+	case exec.StateSuspended:
 	default:
 		return containers.NewGetStateDefault(http.StatusServiceUnavailable)
 	}
@@ -195,7 +188,7 @@ func (handler *ContainersHandlersImpl) GetStateHandler(params containers.GetStat
 	return containers.NewGetStateOK().WithPayload(
 		&models.ContainerGetStateResponse{
 			Handle: h.String(),
-			State:  state,
+			State:  state.String(),
 		})
 }
 

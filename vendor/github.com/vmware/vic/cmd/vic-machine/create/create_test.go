@@ -93,3 +93,10 @@ func TestSetFields(t *testing.T) {
 	option := c.SetFields()
 	assert.NotNil(t, option)
 }
+
+func TestProcessSysLog(t *testing.T) {
+	c := NewCreate()
+	c.SyslogAddr = ""
+	r := c.ProcessSyslog()
+	assert.Nil(t, r, "Should be nil, SyslogAddr is empty")
+}

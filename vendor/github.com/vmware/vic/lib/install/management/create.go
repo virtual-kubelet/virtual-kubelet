@@ -1,4 +1,4 @@
-// Copyright 2016-2017 VMware, Inc. All Rights Reserved.
+// Copyright 2016-2018 VMware, Inc. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,7 +15,6 @@
 package management
 
 import (
-	"context"
 	"fmt"
 	"path"
 	"path/filepath"
@@ -26,11 +25,9 @@ import (
 	"github.com/vmware/vic/lib/install/data"
 	"github.com/vmware/vic/lib/install/opsuser"
 	"github.com/vmware/vic/lib/install/vchlog"
-	"github.com/vmware/vic/lib/progresslog"
 	"github.com/vmware/vic/pkg/errors"
 	"github.com/vmware/vic/pkg/retry"
 	"github.com/vmware/vic/pkg/trace"
-	"github.com/vmware/vic/pkg/vsphere/tasks"
 )
 
 const (
@@ -44,6 +41,24 @@ func (d *Dispatcher) CreateVCH(conf *config.VirtualContainerHostConfigSpec, sett
 	defer trace.End(trace.Begin(conf.Name, d.op))
 
 	var err error
+
+	// Resource Pools are only available in DRS Enabled environments, so
+	// the resource pool path will be determined on that setting.
+	//
+	// In a DRS disabled environment resource pools aren't available and all
+	// VMs will reside in the cluster pool.  Attempting to create a pool would
+	// result in an error and vic-machine failure.
+	//
+	// DRS Enabled:
+	// append the appliance name to the path with the goal of having the
+	// pool name match the appliance name.
+	// DRS Disabled:
+	// only use the compute path which will avoid a pool creation attempt.
+	if d.session.DRSEnabled != nil && !*d.session.DRSEnabled {
+		d.vchPoolPath = settings.ResourcePoolPath
+	} else {
+		d.vchPoolPath = path.Join(settings.ResourcePoolPath, conf.Name)
+	}
 
 	if err = d.checkExistence(conf, settings); err != nil {
 		return err
@@ -73,18 +88,22 @@ func (d *Dispatcher) CreateVCH(conf *config.VirtualContainerHostConfigSpec, sett
 	}
 	receiver.Signal(datastoreReadySignal)
 
-	if err = d.uploadImages(settings.ImageFiles); err != nil {
-		return errors.Errorf("Uploading images failed with %s. Exiting...", err)
+	if err = d.uploadISOs(settings.ImageFiles); err != nil {
+		return errors.Errorf("Uploading vic isos failed with %s. Exiting...", err)
 	}
 
 	if conf.ShouldGrantPerms() {
-		err = opsuser.GrantOpsUserPerms(d.op, d.session.Vim25(), conf)
+		err = opsuser.GrantOpsUserPerms(d.op, d.session, conf)
 		if err != nil {
 			return errors.Errorf("Cannot init ops-user permissions, failure: %s. Exiting...", err)
 		}
 	}
 
-	return d.startAppliance(conf)
+	if err = d.createVMGroup(conf); err != nil {
+		return err
+	}
+
+	return d.appliance.PowerOn(d.op)
 }
 
 func (d *Dispatcher) createPool(conf *config.VirtualContainerHostConfigSpec, settings *data.InstallerData) error {
@@ -100,26 +119,11 @@ func (d *Dispatcher) createPool(conf *config.VirtualContainerHostConfigSpec, set
 	return nil
 }
 
-func (d *Dispatcher) startAppliance(conf *config.VirtualContainerHostConfigSpec) error {
-	defer trace.End(trace.Begin("", d.op))
-
-	var err error
-	_, err = d.appliance.WaitForResult(d.op, func(ctx context.Context) (tasks.Task, error) {
-		return d.appliance.PowerOn(ctx)
-	})
-
-	if err != nil {
-		return errors.Errorf("Failed to power on appliance %s. Exiting...", err)
-	}
-
-	return nil
-}
-
-func (d *Dispatcher) uploadImages(files map[string]string) error {
+func (d *Dispatcher) uploadISOs(files map[string]string) error {
 	defer trace.End(trace.Begin("", d.op))
 
 	// upload the images
-	d.op.Info("Uploading images for container")
+	d.op.Info("Uploading ISO images")
 
 	// Build retry config
 	backoffConf := retry.NewBackoffConfig()
@@ -129,43 +133,41 @@ func (d *Dispatcher) uploadImages(files map[string]string) error {
 
 	for key, image := range files {
 		baseName := filepath.Base(image)
-		finalMessage := ""
 		// upload function that is passed to retry
 		isoTargetPath := path.Join(d.vmPathName, key)
 
 		operationForRetry := func() error {
+			op, cancel := trace.WithCancel(&d.op, "uploadISOs")
+			defer cancel()
+
 			// attempt to delete the iso image first in case of failed upload
 			dc := d.session.Datacenter
 			fm := d.session.Datastore.NewFileManager(dc, false)
 			ds := d.session.Datastore
 
 			// check iso first
-			d.op.Debugf("Checking if file already exists: %s", isoTargetPath)
-			_, err := ds.Stat(d.op, isoTargetPath)
+			op.Debugf("Checking if file already exists: %s", isoTargetPath)
+			_, err := ds.Stat(op, isoTargetPath)
 			if err != nil {
 				switch err.(type) {
 				case object.DatastoreNoSuchFileError:
-					d.op.Debug("File not found. Nothing to do.")
+					op.Debug("File not found. Nothing to do.")
 				case object.DatastoreNoSuchDirectoryError:
-					d.op.Debug("Directory not found. Nothing to do.")
+					op.Debug("Directory not found. Nothing to do.")
 				default:
-					d.op.Debugf("ISO file already exists, deleting: %s", isoTargetPath)
+					op.Debugf("ISO file already exists, deleting: %s", isoTargetPath)
 					err := fm.Delete(d.op, isoTargetPath)
 					if err != nil {
-						d.op.Debugf("Failed to delete image (%s) with error (%s)", image, err.Error())
+						op.Debugf("Failed to delete image (%s) with error (%s)", image, err.Error())
 						return err
 					}
 				}
 			}
 
-			d.op.Infof("Uploading %s as %s", baseName, key)
+			op.Infof("Uploading %s as %s", baseName, key)
 
-			ul := progresslog.NewUploadLogger(d.op.Infof, baseName, time.Second*3)
-			// need to wait since UploadLogger is asynchronous.
-			defer ul.Wait()
-
-			return d.session.Datastore.UploadFile(d.op, image, path.Join(d.vmPathName, key),
-				progresslog.UploadParams(ul))
+			return d.session.Datastore.UploadFile(op, image, path.Join(d.vmPathName, key),
+				nil)
 		}
 
 		// counter for retry decider
@@ -188,7 +190,7 @@ func (d *Dispatcher) uploadImages(files map[string]string) error {
 
 		uploadErr := retry.DoWithConfig(operationForRetry, uploadRetryDecider, backoffConf)
 		if uploadErr != nil {
-			finalMessage = fmt.Sprintf("\t\tUpload failed for %q: %s\n", image, uploadErr)
+			finalMessage := fmt.Sprintf("\t\tUpload failed for %q: %s\n", image, uploadErr)
 			if d.force {
 				finalMessage = fmt.Sprintf("%s\t\tContinuing despite failures (due to --force option)\n", finalMessage)
 				finalMessage = fmt.Sprintf("%s\t\tNote: The VCH will not function without %q...", finalMessage, image)
@@ -226,6 +228,9 @@ func (d *Dispatcher) cleanupAfterCreationFailed(conf *config.VirtualContainerHos
 			d.op.Debug("Successfully cleaned up dangling bridge network.")
 		}
 	}
+
+	// Delete the VCH Folder
+	d.deleteFolder(d.session.VCHFolder)
 }
 
 // cleanupEmptyPool cleans up any dangling empty VCH resource pool when creating this VCH. no-op when VCH pool is nonempty.

@@ -38,7 +38,7 @@ Delete with defaults
 
     ${ret}=  Run  bin/vic-machine-linux delete --target %{TEST_URL} --thumbprint=%{TEST_THUMBPRINT} --user %{TEST_USERNAME} --password=%{TEST_PASSWORD}
     Should Contain  ${ret}  vic-machine-linux delete failed:  resource pool
-    Should Contain  ${ret}  /Resources/virtual-container-host' not found
+    Should Contain  ${ret}  Didn't find VM \\"virtual-container-host\\" in resource pool
 
 Wrong Password No Panic
     Set Test Environment Variables
@@ -99,4 +99,4 @@ Check That VMOMI Sessions Don't Leak From VIC Machine
     ${thumbprint}=  Get Thumbprint From Log  ${output}
     Should Not Have VMOMI Session  ${thumbprint}
 
-    Run Keyword And Ignore Error  Cleanup VCH Bridge Network  %{VCH-NAME}
+    Run Keyword If  %{DRONE_BUILD_NUMBER} != 0  Run Keyword And Ignore Error  Cleanup VCH Bridge Network

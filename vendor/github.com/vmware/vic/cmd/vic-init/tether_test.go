@@ -69,7 +69,7 @@ type Mocker struct {
 }
 
 // Start implements the extension method
-func (t *Mocker) Start() error {
+func (t *Mocker) Start(system tether.System) error {
 	return nil
 }
 
@@ -114,8 +114,8 @@ func (t *Mocker) HandleSessionExit(config *tether.ExecutorConfig, session *tethe
 	}
 }
 
-func (t *Mocker) ProcessEnv(env []string) []string {
-	return t.Base.ProcessEnv(env)
+func (t *Mocker) ProcessEnv(session *tether.SessionConfig) []string {
+	return t.Base.ProcessEnv(session)
 }
 
 // SetHostname sets both the kernel hostname and /etc/hostname to the specified string

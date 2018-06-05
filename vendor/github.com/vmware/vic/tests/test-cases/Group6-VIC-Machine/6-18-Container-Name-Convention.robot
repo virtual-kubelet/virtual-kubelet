@@ -25,28 +25,28 @@ Container name convention with id
     Run  docker %{VCH-PARAMS} pull ${busybox}
     ${containerID}=  Run  docker %{VCH-PARAMS} run -d ${busybox}
     ${shortId}=  Get container shortID  ${containerID}
-    ${output}=  Run  govc ls vm
+    ${output}=  Run  govc ls vm/%{VCH-NAME}
     Should Contain  ${output}  %{VCH-NAME}-${shortID}
 
     Run  docker %{VCH-PARAMS} rename ${containerID} renamed-container
-    ${output}=  Run  govc ls vm
+    ${output}=  Run  govc ls vm/%{VCH-NAME}
     # confirm that the cnc is still in force
     Should Contain  ${output}  %{VCH-NAME}-${shortID}
 
     Run  docker %{VCH-PARAMS} rm -f ${containerID}
     Run Regression Tests
-    
+ 
 Container name convention with name
     Set Test Environment Variables
     Install VIC Appliance To Test Server With Current Environment Variables  additional-args=--container-name-convention %{VCH-NAME}-{name}
     Run  docker %{VCH-PARAMS} pull ${busybox}
     ${containerID}=  Run  docker %{VCH-PARAMS} run -d ${busybox}
     ${name}=  Get container name  ${containerID}
-    ${output}=  Run  govc ls vm
+    ${output}=  Run  govc ls vm/%{VCH-NAME}
     Should Contain  ${output}  %{VCH-NAME}-${name}
 
     Run  docker %{VCH-PARAMS} rename ${containerID} renamed-container
-    ${output}=  Run  govc ls vm
+    ${output}=  Run  govc ls vm/%{VCH-NAME}
     # confirm that the cnc is still in force but updated for new container name
     Should Contain  ${output}  %{VCH-NAME}-renamed-container
 

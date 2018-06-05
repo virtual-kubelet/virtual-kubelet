@@ -1,4 +1,4 @@
-// Copyright 2016 VMware, Inc. All Rights Reserved.
+// Copyright 2016-2018 VMware, Inc. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -18,9 +18,11 @@ import (
 	"net/url"
 
 	"github.com/vmware/govmomi/object"
+	"github.com/vmware/govmomi/vim25/types"
 	"github.com/vmware/vic/lib/config"
 	"github.com/vmware/vic/lib/config/executor"
 	"github.com/vmware/vic/lib/portlayer/event"
+	"github.com/vmware/vic/pkg/trace"
 )
 
 var Config Configuration
@@ -37,6 +39,13 @@ type Configuration struct {
 
 	// Resource pool is the working version of the compute resource config
 	ResourcePool *object.ResourcePool
+
+	// Cluster is the working reference to the cluster the VCH is present in
+	Cluster *object.ComputeResource
+
+	// SelfReference is a reference to the endpointVM, added for VM group membership
+	SelfReference types.ManagedObjectReference
+
 	// Parent resource will be a VirtualApp on VC
 	VirtualApp *object.VirtualApp
 
@@ -53,4 +62,7 @@ type Configuration struct {
 
 	// Datastore URLs for image stores - the top layer is [0], the bottom layer is [len-1]
 	ImageStores []url.URL `vic:"0.1" scope:"read-only" key:"storage/image_stores"`
+
+	// addToVMGroup sends signal for batching dispatcher to add container VM to VMGroup
+	addToVMGroup func(trace.Operation) error
 }

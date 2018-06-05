@@ -76,7 +76,7 @@ func (m *MountDataSink) Import(op trace.Operation, spec *archive.FilterSpec, dat
 	// This assumes that m.Path was opened with a useful path (i.e. absolute) as that argument is what's
 	// returned by Name.
 	op.Infof("Importing supplied data stream to %s", name)
-	return archive.Unpack(op, data, spec, name)
+	return archive.OfflineUnpack(op, data, spec, name)
 }
 
 func (m *MountDataSink) Close() error {

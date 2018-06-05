@@ -4,7 +4,6 @@ import (
 	"sync"
 
 	log "github.com/Sirupsen/logrus"
-	"github.com/hyperhq/libcompose/project/events"
 )
 
 type serviceWrapper struct {
@@ -56,7 +55,7 @@ func (s *serviceWrapper) Ignore() {
 	defer s.done.Done()
 
 	s.state = StateExecuted
-	s.project.Notify(events.ServiceUpIgnored, s.service.Name(), nil)
+	s.project.Notify(EventServiceUpIgnored, s.service.Name(), nil)
 }
 
 func (s *serviceWrapper) waitForDeps(wrappers map[string]*serviceWrapper) bool {
@@ -71,7 +70,7 @@ func (s *serviceWrapper) waitForDeps(wrappers map[string]*serviceWrapper) bool {
 
 		if wrapper, ok := wrappers[dep.Target]; ok {
 			if wrapper.Wait() == ErrRestart {
-				s.project.Notify(events.ProjectReload, wrapper.service.Name(), nil)
+				s.project.Notify(EventProjectReload, wrapper.service.Name(), nil)
 				s.err = ErrRestart
 				return false
 			}
@@ -83,7 +82,7 @@ func (s *serviceWrapper) waitForDeps(wrappers map[string]*serviceWrapper) bool {
 	return true
 }
 
-func (s *serviceWrapper) Do(wrappers map[string]*serviceWrapper, start, done events.EventType, action func(service Service) error) {
+func (s *serviceWrapper) Do(wrappers map[string]*serviceWrapper, start, done EventType, action func(service Service) error) {
 	defer s.done.Done()
 
 	if s.state == StateExecuted {
@@ -101,7 +100,7 @@ func (s *serviceWrapper) Do(wrappers map[string]*serviceWrapper, start, done eve
 	s.err = action(s.service)
 	if s.err == ErrRestart {
 		s.project.Notify(done, s.service.Name(), nil)
-		s.project.Notify(events.ProjectReloadTrigger, s.service.Name(), nil)
+		s.project.Notify(EventProjectReloadTrigger, s.service.Name(), nil)
 	} else if s.err != nil {
 		log.Errorf("Failed %s %s : %v", start, s.name, s.err)
 	} else {

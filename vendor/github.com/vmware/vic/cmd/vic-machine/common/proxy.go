@@ -29,20 +29,20 @@ type Proxies struct {
 	IsSet      bool
 }
 
-func (p *Proxies) ProxyFlags(hidden bool) []cli.Flag {
+func (p *Proxies) ProxyFlags() []cli.Flag {
 	return []cli.Flag{
 		// proxies
 		cli.GenericFlag{
 			Name:   "https-proxy",
 			Value:  flags.NewOptionalString(&p.HTTPSProxy),
 			Usage:  "An HTTPS proxy for use when fetching images, in the form https://fqdn_or_ip:port",
-			Hidden: hidden,
+			Hidden: true,
 		},
 		cli.GenericFlag{
 			Name:   "http-proxy",
 			Value:  flags.NewOptionalString(&p.HTTPProxy),
 			Usage:  "An HTTP proxy for use when fetching images, in the form http://fqdn_or_ip:port",
-			Hidden: hidden,
+			Hidden: true,
 		},
 	}
 }

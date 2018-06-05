@@ -22,11 +22,11 @@ import (
 	"github.com/vmware/govmomi/govc/host/esxcli"
 	"github.com/vmware/govmomi/license"
 	"github.com/vmware/govmomi/object"
-	"github.com/vmware/govmomi/vim25/mo"
 	"github.com/vmware/govmomi/vim25/soap"
 	"github.com/vmware/govmomi/vim25/types"
 	"github.com/vmware/vic/lib/config"
 	"github.com/vmware/vic/lib/constants"
+	"github.com/vmware/vic/lib/install/data"
 	"github.com/vmware/vic/pkg/errors"
 	"github.com/vmware/vic/pkg/trace"
 	"github.com/vmware/vic/pkg/vsphere/optmanager"
@@ -384,6 +384,7 @@ func (v *Validator) ManagementNetAllowed(ctx context.Context, mgmtIP net.IPNet,
 		TargetIP: mgmtIP}
 }
 
+// CheckLicense checks license features on the Validator's target
 func (v *Validator) CheckLicense(ctx context.Context) {
 	op := trace.FromContext(ctx, "CheckLicense")
 
@@ -416,6 +417,7 @@ func (v *Validator) assignedLicenseHasFeature(la []types.LicenseAssignmentManage
 	return false
 }
 
+// checkAssignedLicenses checks for the features required on vCenter
 func (v *Validator) checkAssignedLicenses(op trace.Operation) error {
 	var hosts []*object.HostSystem
 	var invalidLic []string
@@ -474,6 +476,7 @@ func (v *Validator) checkAssignedLicenses(op trace.Operation) error {
 	return nil
 }
 
+// checkLicense checks for the features required on standalone ESXi
 func (v *Validator) checkLicense(op trace.Operation) error {
 	var invalidLic []string
 	client := v.Session.Client.Client
@@ -483,7 +486,6 @@ func (v *Validator) checkLicense(op trace.Operation) error {
 	if err != nil {
 		return err
 	}
-	v.checkEvalLicense(op, licenses)
 
 	features := []string{"serialuri"}
 
@@ -506,62 +508,80 @@ func (v *Validator) checkLicense(op trace.Operation) error {
 	return nil
 }
 
-func (v *Validator) checkEvalLicense(op trace.Operation, licenses []types.LicenseManagerLicenseInfo) {
-	for _, l := range licenses {
-		if l.EditionKey == "eval" {
-			op.Warn("Evaluation license detected. VIC may not function if evaluation expires or insufficient license is later assigned.")
-		}
-	}
-}
-
-// isStandaloneHost checks if host is ESX or vCenter with single host
-func (v *Validator) isStandaloneHost() bool {
-	cl := v.Session.Cluster.Reference()
-
-	if cl.Type != "ClusterComputeResource" {
-		return true
-	}
-	return false
-}
-
-// drs checks that DRS is enabled
-func (v *Validator) CheckDrs(ctx context.Context) {
-	if v.DisableDRSCheck {
-		return
-	}
-	op := trace.FromContext(ctx, "CheckDrs")
+// CheckDRS will validate DRS settings.  If DRS is disabled then config
+// options surrounding resource pools will be ignored.
+func (v *Validator) CheckDRS(ctx context.Context, input *data.Data) {
+	op := trace.FromContext(ctx, "CheckDRS")
 	defer trace.End(trace.Begin("", op))
 
 	errMsg := "DRS check SKIPPED"
-	if !v.sessionValid(op, errMsg) {
+	if !v.sessionValid(op, errMsg) || !v.Session.IsVC() {
 		return
 	}
 
-	cl := v.Session.Cluster
-	ref := cl.Reference()
-
-	if v.isStandaloneHost() {
+	// TODO:  Cluster should only every be a cluster
+	if v.Session.Cluster.Reference().Type != "ClusterComputeResource" {
 		op.Info("DRS check SKIPPED - target is standalone host")
 		return
 	}
 
-	var ccr mo.ClusterComputeResource
-
-	err := cl.Properties(op, ref, []string{"configurationEx"}, &ccr)
-	if err != nil {
-		msg := fmt.Sprintf("Failed to validate DRS config: %s", err)
-		v.NoteIssue(errors.New(msg))
-		return
+	// TODO: @ROBO - if we can't verify DRS is vic placement acceptable
+	// TODO: Practice DRY -- this is also in session.Populate
+	if v.Session.DRSEnabled == nil {
+		cc := object.NewClusterComputeResource(v.Session.Client.Client, v.Session.Cluster.Reference())
+		clusterConfig, err := cc.Configuration(op)
+		if err != nil {
+			op.Error("DRS check FAILED")
+			op.Errorf("  vSphere communication error: %s", err)
+			v.NoteIssue(errors.New("Unable to verify DRS Status"))
+			return
+		}
+		v.Session.DRSEnabled = clusterConfig.DrsConfig.Enabled
 	}
 
-	z := ccr.ConfigurationEx.(*types.ClusterConfigInfoEx).DrsConfig
+	// if DRS is disabled warn
+	if !*v.Session.DRSEnabled {
+		op.Warn("DRS is recommended, but is disabled:")
+		op.Warnf("  VIC will select container hosts from %q", v.Session.Cluster.InventoryPath)
 
-	if !(*z.Enabled) {
-		op.Error("DRS check FAILED")
-		op.Errorf("  DRS must be enabled on cluster %q", v.Session.Cluster.InventoryPath)
-		v.NoteIssue(errors.New("DRS must be enabled to use VIC"))
+		// DRS is disabled so there are no resource pools -- if resource pool config options have
+		// been provided let the user know that they will not be used
+		var disabled []string
+		if input.VCHCPULimitsMHz != nil {
+			disabled = append(disabled, "CPU Limit")
+			input.VCHCPULimitsMHz = nil
+		}
+		if input.VCHCPUReservationsMHz != nil {
+			disabled = append(disabled, "CPU Reservation")
+			input.VCHCPUReservationsMHz = nil
+		}
+		if input.VCHCPUShares != nil {
+			disabled = append(disabled, "CPU Shares")
+			input.VCHCPUShares = nil
+		}
+		if input.VCHMemoryLimitsMB != nil {
+			disabled = append(disabled, "Memory Limit")
+			input.VCHMemoryLimitsMB = nil
+		}
+		if input.VCHMemoryReservationsMB != nil {
+			disabled = append(disabled, "Memory Reservation")
+			input.VCHMemoryReservationsMB = nil
+		}
+		if input.VCHMemoryShares != nil {
+			disabled = append(disabled, "Memory Shares")
+			input.VCHMemoryShares = nil
+		}
+
+		if len(disabled) > 0 {
+			op.Warn("  Provided VCH Resource Pool options are ignored:")
+			for i := range disabled {
+				op.Warnf("    %s", disabled[i])
+			}
+		}
 		return
+
 	}
+
 	op.Info("DRS check OK on:")
 	op.Infof("  %q", v.Session.Cluster.InventoryPath)
 }

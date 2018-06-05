@@ -160,7 +160,8 @@ func (d *Helper) Mkdir(ctx context.Context, createParentDirectories bool, dirs .
 	return mkdir(op, d.s, d.fm, createParentDirectories, path.Join(d.RootURL.String(), path.Join(dirs...)))
 }
 
-// Ls returns a list of dirents at the given path (relative to root)
+// Ls returns a list of dirents at the given path (relative to root), given a search pattern
+// (default to all files under the path if no pattern is provided)
 //
 // A note aboutpaths and the datastore browser.
 // None of these work paths work
@@ -179,9 +180,13 @@ func (d *Helper) Mkdir(ctx context.Context, createParentDirectories bool, dirs .
 // The only URI that works on VC + VSAN.
 // r, err := ds.Ls(ctx, "[vsanDatastore] /0ea65357-0494-d42d-2ede-000c292dc5b5")
 //
-func (d *Helper) Ls(ctx context.Context, p string) (*types.HostDatastoreBrowserSearchResults, error) {
+func (d *Helper) Ls(ctx context.Context, p string, match ...string) (*types.HostDatastoreBrowserSearchResults, error) {
+	if len(match) == 0 {
+		match = []string{"*"}
+	}
+
 	spec := types.HostDatastoreBrowserSearchSpec{
-		MatchPattern: []string{"*"},
+		MatchPattern: match,
 		Details: &types.FileQueryFlags{
 			FileType:  true,
 			FileOwner: types.NewBool(true),

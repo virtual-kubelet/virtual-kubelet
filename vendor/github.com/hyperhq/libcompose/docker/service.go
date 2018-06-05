@@ -2,18 +2,17 @@ package docker
 
 import (
 	"fmt"
-	"strconv"
 	"strings"
+
+	"golang.org/x/net/context"
 
 	"github.com/Sirupsen/logrus"
 	"github.com/docker/engine-api/client"
 	"github.com/docker/go-connections/nat"
-	"github.com/hyperhq/libcompose/config"
-	"github.com/hyperhq/libcompose/labels"
-	"github.com/hyperhq/libcompose/project"
-	"github.com/hyperhq/libcompose/project/options"
-	"github.com/hyperhq/libcompose/utils"
-	"golang.org/x/net/context"
+	"github.com/docker/libcompose/config"
+	"github.com/docker/libcompose/project"
+	"github.com/docker/libcompose/utils"
+	"github.com/docker/libcompose/yaml"
 )
 
 // Service is a project.Service implementations.
@@ -49,20 +48,20 @@ func (s *Service) DependentServices() []project.ServiceRelationship {
 
 // Create implements Service.Create. It ensures the image exists or build it
 // if it can and then create a container.
-func (s *Service) Create(options options.Create) error {
+func (s *Service) Create() error {
 	containers, err := s.collectContainers()
 	if err != nil {
 		return err
 	}
 
-	imageName, err := s.ensureImageExists(options.NoBuild)
+	imageName, err := s.ensureImageExists()
 	if err != nil {
 		return err
 	}
 
 	if len(containers) != 0 {
 		return s.eachContainer(func(c *Container) error {
-			return s.recreateIfNeeded(imageName, c, options.NoRecreate, options.ForceRecreate)
+			return s.recreateIfNeeded(imageName, c)
 		})
 	}
 
@@ -72,7 +71,7 @@ func (s *Service) Create(options options.Create) error {
 
 func (s *Service) collectContainers() ([]*Container, error) {
 	client := s.context.ClientFactory.Create(s)
-	containers, err := GetContainersByFilter(client, labels.SERVICE.Eq(s.name), labels.PROJECT.Eq(s.context.Project.Name))
+	containers, err := GetContainersByFilter(client, SERVICE.Eq(s.name), PROJECT.Eq(s.context.Project.Name))
 	if err != nil {
 		return nil, err
 	}
@@ -80,13 +79,9 @@ func (s *Service) collectContainers() ([]*Container, error) {
 	result := []*Container{}
 
 	for _, container := range containers {
-		containerNumber, err := strconv.Atoi(container.Labels[labels.NUMBER.Str()])
-		if err != nil {
-			return nil, err
-		}
 		// Compose add "/" before name, so Name[1] will store actaul name.
 		name := strings.SplitAfter(container.Names[0], "/")
-		result = append(result, NewContainer(client, name[1], containerNumber, s))
+		result = append(result, NewContainer(client, name[1], s))
 	}
 
 	return result, nil
@@ -101,7 +96,7 @@ func (s *Service) createOne(imageName string) (*Container, error) {
 	return containers[0], err
 }
 
-func (s *Service) ensureImageExists(noBuild bool) (string, error) {
+func (s *Service) ensureImageExists() (string, error) {
 	err := s.imageExists()
 
 	if err == nil {
@@ -112,14 +107,12 @@ func (s *Service) ensureImageExists(noBuild bool) (string, error) {
 		return "", err
 	}
 
-	/*
-		if s.Config().Build.Context != "" {
-			if noBuild {
-				return "", fmt.Errorf("Service %q needs to be built, but no-build was specified", s.name)
-			}
-			return s.imageName(), s.build(options.Build{})
+	if s.Config().Build != "" {
+		if s.context.NoBuild {
+			return "", fmt.Errorf("Service %q needs to be built, but no-build was specified", s.name)
 		}
-	*/
+		return s.imageName(), s.build()
+	}
 
 	return s.imageName(), s.Pull()
 }
@@ -141,15 +134,19 @@ func (s *Service) imageName() string {
 // Build implements Service.Build. If an imageName is specified or if the context has
 // no build to work with it will do nothing. Otherwise it will try to build
 // the image and returns an error if any.
-func (s *Service) Build(buildOptions options.Build) error {
+func (s *Service) Build() error {
 	if s.Config().Image != "" {
 		return nil
 	}
-	return s.build(buildOptions)
+	return s.build()
 }
 
-func (s *Service) build(buildOptions options.Build) error {
-	return nil
+func (s *Service) build() error {
+	if s.context.Builder == nil {
+		return fmt.Errorf("Cannot build an image without a builder configured")
+	}
+
+	return s.context.Builder.Build(s.imageName(), s.context.Project, s)
 }
 
 func (s *Service) constructContainers(imageName string, count int) ([]*Container, error) {
@@ -168,25 +165,24 @@ func (s *Service) constructContainers(imageName string, count int) ([]*Container
 		}
 		namer = NewSingleNamer(s.serviceConfig.ContainerName)
 	} else {
-		namer, err = NewNamer(client, s.context.Project.Name, s.name, false)
-		if err != nil {
-			return nil, err
-		}
+		namer = NewNamer(client, s.context.Project.Name, s.name)
 	}
 
-	for i := len(result); i < count; i++ {
-		containerName, containerNumber := namer.Next()
+	defer namer.Close()
 
-		c := NewContainer(client, containerName, containerNumber, s)
+	for i := len(result); i < count; i++ {
+		containerName := namer.Next()
+
+		c := NewContainer(client, containerName, s)
 
 		dockerContainer, err := c.Create(imageName)
 		if err != nil {
 			return nil, err
 		}
 
-		logrus.Debugf("Created container %s: %v", dockerContainer.ID, dockerContainer.Name)
+		logrus.Debugf("Created container %s: %v", dockerContainer.ID, dockerContainer.Names)
 
-		result = append(result, NewContainer(client, containerName, containerNumber, s))
+		result = append(result, NewContainer(client, containerName, s))
 	}
 
 	return result, nil
@@ -194,42 +190,40 @@ func (s *Service) constructContainers(imageName string, count int) ([]*Container
 
 // Up implements Service.Up. It builds the image if needed, creates a container
 // and start it.
-func (s *Service) Up(options options.Up) error {
+func (s *Service) Up() error {
 	containers, err := s.collectContainers()
 	if err != nil {
 		return err
 	}
 
 	var imageName = s.imageName()
-	if len(containers) == 0 || !options.NoRecreate {
-		imageName, err = s.ensureImageExists(options.NoBuild)
+	if len(containers) == 0 || !s.context.NoRecreate {
+		imageName, err = s.ensureImageExists()
 		if err != nil {
 			return err
 		}
 	}
 
-	return s.up(imageName, true, options)
+	return s.up(imageName, true)
 }
 
 // Run implements Service.Run. It runs a one of command within the service container.
-func (s *Service) Run(ctx context.Context, commandParts []string) (int, error) {
-	imageName, err := s.ensureImageExists(false)
+func (s *Service) Run(commandParts []string) (int, error) {
+	imageName, err := s.ensureImageExists()
 	if err != nil {
 		return -1, err
 	}
 
 	client := s.context.ClientFactory.Create(s)
 
-	namer, err := NewNamer(client, s.context.Project.Name, s.name, true)
-	if err != nil {
-		return -1, err
-	}
+	namer := NewNamer(client, s.context.Project.Name, s.name+"_run")
+	defer namer.Close()
 
-	containerName, containerNumber := namer.Next()
+	containerName := namer.Next()
 
-	c := NewOneOffContainer(client, containerName, containerNumber, s)
+	c := NewContainer(client, containerName, s)
 
-	return c.Run(ctx, imageName, &config.ServiceConfig{Command: commandParts, Tty: true, StdinOpen: true})
+	return c.Run(imageName, &config.ServiceConfig{Command: yaml.NewCommand(commandParts...), Tty: true, StdinOpen: true})
 }
 
 // Info implements Service.Info. It returns an project.InfoSet with the containers
@@ -254,10 +248,10 @@ func (s *Service) Info(qFlag bool) (project.InfoSet, error) {
 
 // Start implements Service.Start. It tries to start a container without creating it.
 func (s *Service) Start() error {
-	return s.up("", false, options.Up{})
+	return s.up("", false)
 }
 
-func (s *Service) up(imageName string, create bool, options options.Up) error {
+func (s *Service) up(imageName string, create bool) error {
 	containers, err := s.collectContainers()
 	if err != nil {
 		return err
@@ -275,7 +269,7 @@ func (s *Service) up(imageName string, create bool, options options.Up) error {
 
 	return s.eachContainer(func(c *Container) error {
 		if create {
-			if err := s.recreateIfNeeded(imageName, c, options.NoRecreate, options.ForceRecreate); err != nil {
+			if err := s.recreateIfNeeded(imageName, c); err != nil {
 				return err
 			}
 		}
@@ -284,8 +278,8 @@ func (s *Service) up(imageName string, create bool, options options.Up) error {
 	})
 }
 
-func (s *Service) recreateIfNeeded(imageName string, c *Container, noRecreate, forceRecreate bool) error {
-	if noRecreate {
+func (s *Service) recreateIfNeeded(imageName string, c *Container) error {
+	if s.context.NoRecreate {
 		return nil
 	}
 	outOfSync, err := c.OutOfSync(imageName)
@@ -295,10 +289,10 @@ func (s *Service) recreateIfNeeded(imageName string, c *Container, noRecreate, f
 
 	logrus.WithFields(logrus.Fields{
 		"outOfSync":     outOfSync,
-		"ForceRecreate": forceRecreate,
-		"NoRecreate":    noRecreate}).Debug("Going to decide if recreate is needed")
+		"ForceRecreate": s.context.ForceRecreate,
+		"NoRecreate":    s.context.NoRecreate}).Debug("Going to decide if recreate is needed")
 
-	if forceRecreate || outOfSync {
+	if s.context.ForceRecreate || outOfSync {
 		logrus.Infof("Recreating %s", s.name)
 		if _, err := c.Recreate(imageName); err != nil {
 			return err
@@ -329,43 +323,50 @@ func (s *Service) eachContainer(action func(*Container) error) error {
 }
 
 // Stop implements Service.Stop. It stops any containers related to the service.
-func (s *Service) Stop(timeout int) error {
+func (s *Service) Stop() error {
 	return s.eachContainer(func(c *Container) error {
-		return c.Stop(timeout)
+		return c.Stop()
+	})
+}
+
+// Down implements Service.Down. It stops any containers related to the service and removes them.
+func (s *Service) Down() error {
+	return s.eachContainer(func(c *Container) error {
+		return c.Down()
 	})
 }
 
 // Restart implements Service.Restart. It restarts any containers related to the service.
-func (s *Service) Restart(timeout int) error {
+func (s *Service) Restart() error {
 	return s.eachContainer(func(c *Container) error {
-		return c.Restart(timeout)
+		return c.Restart()
 	})
 }
 
 // Kill implements Service.Kill. It kills any containers related to the service.
-func (s *Service) Kill(signal string) error {
+func (s *Service) Kill() error {
 	return s.eachContainer(func(c *Container) error {
-		return c.Kill(signal)
+		return c.Kill()
 	})
 }
 
 // Delete implements Service.Delete. It removes any containers related to the service.
-func (s *Service) Delete(options options.Delete) error {
+func (s *Service) Delete() error {
 	return s.eachContainer(func(c *Container) error {
-		return c.Delete(options.RemoveVolume)
+		return c.Delete()
 	})
 }
 
 // Log implements Service.Log. It returns the docker logs for each container related to the service.
-func (s *Service) Log(follow bool) error {
+func (s *Service) Log() error {
 	return s.eachContainer(func(c *Container) error {
-		return c.Log(follow)
+		return c.Log()
 	})
 }
 
 // Scale implements Service.Scale. It creates or removes containers to have the specified number
 // of related container to the service to run.
-func (s *Service) Scale(scale int, timeout int) error {
+func (s *Service) Scale(scale int) error {
 	if s.specificiesHostPort() {
 		logrus.Warnf("The \"%s\" service specifies a port on the host. If multiple containers for this service are created on a single host, the port will clash.", s.Name())
 	}
@@ -374,12 +375,12 @@ func (s *Service) Scale(scale int, timeout int) error {
 	err := s.eachContainer(func(c *Container) error {
 		foundCount++
 		if foundCount > scale {
-			err := c.Stop(timeout)
+			err := c.Down()
 			if err != nil {
 				return err
 			}
-			// FIXME(vdemeester) remove volume in scale by default ?
-			return c.Delete(false)
+
+			return c.Delete()
 		}
 		return nil
 	})
@@ -389,7 +390,7 @@ func (s *Service) Scale(scale int, timeout int) error {
 	}
 
 	if foundCount != scale {
-		imageName, err := s.ensureImageExists(false)
+		imageName, err := s.ensureImageExists()
 		if err != nil {
 			return err
 		}
@@ -399,7 +400,7 @@ func (s *Service) Scale(scale int, timeout int) error {
 		}
 	}
 
-	return s.up("", false, options.Up{})
+	return s.up("", false)
 }
 
 // Pull implements Service.Pull. It pulls the image of the service and skip the service that
@@ -426,23 +427,6 @@ func (s *Service) Unpause() error {
 	return s.eachContainer(func(c *Container) error {
 		return c.Unpause()
 	})
-}
-
-// RemoveImage implements Service.RemoveImage. It removes images used for the service
-// depending on the specified type.
-func (s *Service) RemoveImage(imageType options.ImageType) error {
-	switch imageType {
-	case "local":
-		if s.Config().Image != "" {
-			return nil
-		}
-		return removeImage(s.context.ClientFactory.Create(s), s.imageName())
-	case "all":
-		return removeImage(s.context.ClientFactory.Create(s), s.imageName())
-	default:
-		// Don't do a thing, should be validated up-front
-		return nil
-	}
 }
 
 // Containers implements Service.Containers. It returns the list of containers

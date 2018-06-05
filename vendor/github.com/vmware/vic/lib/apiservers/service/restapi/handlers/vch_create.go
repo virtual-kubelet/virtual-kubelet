@@ -1,4 +1,4 @@
-// Copyright 2017 VMware, Inc. All Rights Reserved.
+// Copyright 2017-2018 VMware, Inc. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -186,6 +186,10 @@ func buildCreate(op trace.Operation, d *data.Data, finder finder, vch *models.VC
 				return nil, util.NewError(http.StatusBadRequest, "Resource pool must be specified (by name or id)")
 			}
 			c.ComputeResourcePath = resourcePath
+
+			if vch.Compute.Affinity != nil {
+				c.UseVMGroup = vch.Compute.Affinity.UseVMGroup
+			}
 		}
 
 		if vch.Network != nil {
@@ -471,7 +475,7 @@ func handleCreate(op trace.Operation, c *create.Create, validator *validate.Vali
 	vConfig.HTTPProxy = c.HTTPProxy
 	vConfig.HTTPSProxy = c.HTTPSProxy
 
-	executor := management.NewDispatcher(op, validator.Session, nil, false)
+	executor := management.NewDispatcher(op, validator.Session, management.CreateAction, false)
 	err = executor.CreateVCH(vchConfig, vConfig, receiver)
 	if err != nil {
 		return nil, util.NewError(http.StatusInternalServerError, fmt.Sprintf("Failed to create VCH: %s", err))

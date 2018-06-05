@@ -1,4 +1,4 @@
-// Copyright 2016-2017 VMware, Inc. All Rights Reserved.
+// Copyright 2016-2018 VMware, Inc. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -39,8 +39,48 @@ func (v *Validator) compute(op trace.Operation, input *data.Data, conf *config.V
 		return
 	}
 
-	// TODO: for vApp creation assert that the name doesn't exist
 	// TODO: for RP creation assert whatever we decide about the pool - most likely that it's empty
+}
+
+func (v *Validator) checkVMGroup(op trace.Operation, input *data.Data, conf *config.VirtualContainerHostConfigSpec) {
+	defer trace.End(trace.Begin("", op))
+
+	if input.UseVMGroup {
+		if !v.IsVC() {
+			v.NoteIssue(errors.New("DRS VM Groups may only be configured when using VC"))
+			return
+		}
+
+		if v.Session.DRSEnabled == nil || !*v.Session.DRSEnabled {
+			v.NoteIssue(errors.New("DRS VM Groups may not be used without DRS"))
+			return
+		}
+
+		conf.UseVMGroup = input.UseVMGroup
+		// For now, we always name the VM Group based on the name of the VCH
+		conf.VMGroupName = conf.Name
+
+		if input.ID != "" && !input.CreateVMGroup {
+			op.Debug("Skipping DRS VM Group existence check as VCH has already been created")
+			return
+		}
+
+		if v.Session.Cluster == nil {
+			// We already note a more helpful issue for this following the compute method's call to ResourcePoolHelper.
+			v.NoteIssue(errors.New("Unable to determine presence of DRS VM Groups due to previous errors"))
+			return
+		}
+
+		exists, err := VMGroupExists(op, v.Session.Cluster, conf.VMGroupName)
+		if err != nil {
+			v.NoteIssue(err)
+			return
+		}
+		if exists {
+			v.NoteIssue(errors.Errorf("DRS VM Group named %q already exists", conf.VMGroupName))
+			return
+		}
+	}
 }
 
 func (v *Validator) inventoryPath(op trace.Operation, obj object.Reference) string {
@@ -56,19 +96,19 @@ func (v *Validator) inventoryPath(op trace.Operation, obj object.Reference) stri
 // ResourcePoolHelper finds a resource pool from the input compute path and shows
 // suggestions if unable to do so when the path is ambiguous.
 func (v *Validator) ResourcePoolHelper(ctx context.Context, path string) (*object.ResourcePool, error) {
-	op := trace.FromContext(ctx, "DatastoreHelper")
+	op := trace.FromContext(ctx, "ResourcePoolHelper")
 	defer trace.End(trace.Begin(path, op))
 
 	// if compute-resource is unspecified is there a default
 	if path == "" {
-		if v.Session.Pool != nil {
-			op.Debugf("Using default resource pool for compute resource: %q", v.Session.Pool.InventoryPath)
-			return v.Session.Pool, nil
+		if v.Session.Pool == nil {
+			// if no path specified and no default available the show all
+			v.suggestComputeResource(op)
+			return nil, errors.New("No unambiguous default compute resource available: --compute-resource must be specified")
 		}
 
-		// if no path specified and no default available the show all
-		v.suggestComputeResource(op)
-		return nil, errors.New("No unambiguous default compute resource available: --compute-resource must be specified")
+		path = v.Session.Pool.InventoryPath
+		op.Debugf("Using default resource pool for compute resource: %q", v.Session.Pool.InventoryPath)
 	}
 
 	pool, err := v.Session.Finder.ResourcePool(op, path)
