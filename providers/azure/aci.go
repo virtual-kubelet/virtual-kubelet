@@ -630,8 +630,8 @@ func (p *ACIProvider) getVolumes(pod *v1.Pod) ([]aci.Volume, error) {
 				AzureFile: &aci.AzureFileVolume{
 					ShareName:          v.AzureFile.ShareName,
 					ReadOnly:           v.AzureFile.ReadOnly,
-					StorageAccountName: string(secret.Data["StorageAccountName"]),
-					StorageAccountKey:  string(secret.Data["StorageAccountKey"]),
+					StorageAccountName: string(secret.Data["azurestorageaccountname"]),
+					StorageAccountKey:  string(secret.Data["azurestorageaccountkey"]),
 				},
 			})
 			continue
