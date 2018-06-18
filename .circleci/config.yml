@@ -3,7 +3,7 @@ jobs:
   build:
     docker:
       # specify the version
-      - image: circleci/golang:1.9
+      - image: circleci/golang:1.10
 
     working_directory: /go/src/github.com/virtual-kubelet/virtual-kubelet
     steps:
@@ -17,7 +17,7 @@ jobs:
           echo 'export KUBECONFIG=${outputPathKubeConfigFile}' >> $BASH_ENV
       - run:
           name: Dependencies
-          command: go get -v -t -d ./...
+          command: V=1 make deps
       - run:
           name: Build
           command: V=1 make build
