@@ -1,0 +1,11 @@
+[Unit]
+Description=Modify file permissions for VIC target
+After=basic.target
+
+[Service]
+Type=oneshot
+ExecStart=/etc/systemd/scripts/permissions-setup
+RemainAfterExit=yes
+
+[Install]
+WantedBy=vic.target

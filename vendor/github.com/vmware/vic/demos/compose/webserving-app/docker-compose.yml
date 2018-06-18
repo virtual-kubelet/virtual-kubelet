@@ -1,0 +1,30 @@
+version: '3'
+
+networks:
+  my_net:
+    driver: bridge
+
+services:
+  web_server:
+    image: victest/web_elgg
+    container_name: web_server
+    networks:
+      - my_net
+    ports:
+      - "8080:8080"
+
+  mysql_server:
+    image: victest/web_db
+    container_name: mysql_server
+    command: [bash, -c, "/execute.sh"]
+    networks:
+       - my_net
+    environment:
+       - web_host=192.168.60.130 
+       - root_password=root  
+       
+  memcache_server:
+    image: cloudsuite/web-serving:memcached_server
+    container_name: memcache_server
+    networks:
+       - my_net    

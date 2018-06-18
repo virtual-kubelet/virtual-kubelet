@@ -1,0 +1,164 @@
+#!/bin/bash
+
+set -x
+
+echo 1 > /proc/sys/net/ipv4/conf/all/arp_notify
+echo 1 > /proc/sys/net/ipv4/conf/default/arp_notify
+
+echo "Loading drivers"
+drivers=("vmxnet3" \
+	"nfnetlink" \
+	"iptable_filter" \
+	"xt_conntrack" \
+    "nf_nat_redirect" \
+    "xt_REDIRECT" \
+    "nf_nat_ipv4" \
+    "iptable_nat" \
+	"nf_conntrack" \
+	"nf_conntrack_ipv4" \
+	"nf_defrag_ipv4" \
+	"ipt_REJECT"\
+	"nf_reject_ipv4"\
+	"nfsv3")
+
+for i in ${drivers[@]}; do
+    /usr/sbin/modprobe $i
+done
+
+# Create VIC chain
+iptables -N VIC
+# Set the default policy on all chains to drop traffic
+iptables -P INPUT DROP
+iptables -P OUTPUT DROP
+iptables -P FORWARD DROP
+# Direct any incoming/outgoing traffic immediately to VIC chain
+iptables -A INPUT -j VIC
+iptables -A OUTPUT -j VIC
+# Always allow traffic on loopback interface
+iptables -A INPUT -i lo -j ACCEPT
+iptables -A OUTPUT -o lo -j ACCEPT
+iptables -A FORWARD -i lo -o lo -j ACCEPT
+
+echo "Waiting for disks to present by label"
+until [[ $(ls -1 /dev/disk/by-label | wc -l) -eq $(ls -1 /sys/block | wc -l) ]]; do sleep 0.1;done
+
+if [[ $(ls -1 /dev/disk/by-path/*scsi* | wc -l) -ne $(ls -1 /dev/disk/by-id/*scsi* | wc -l) ]]; then
+    echo "Multi-image mode"
+    # this can and should be removed in favour of a more customized config approach
+    # for now we set up the initramfs to look like the containerfs
+    mkdir -p ${MOUNTPOINT}/.tether/{etc,lib,lib64,usr,run,sbin}
+    mount --bind /lib /.tether/lib
+    mount --bind /lib64 /.tether/lib64
+    mount --bind /usr /.tether/usr
+    mount --bind /run /.tether/run
+    mount --bind /sbin /.tether/sbin
+
+    # this one shouldn't be needed and wasn't for a while - unclear why that cahnged and we suddenly have a symlink to it from /etc/resolv.conf.
+    # have tried ensuring the target of the symlink exists, but we just get "does not exist" later (something deleting it maybe?)
+    rm -f /etc/resolv.conf
+
+    touch /etc/{hostname,hosts,resolv.conf}
+    touch /.tether/etc/{hostname,hosts,resolv.conf}
+
+    ln -s /usr/sbin/haveged /.tether/
+    ln -s /sbin/*tables* /.tether/
+
+    # here for now, but should move into tether to support any kind of hotadd/run-in-pod logic
+    for i in /dev/disk/by-label/*; do
+        target=/mnt/images/$(basename $i)/rootfs
+        mkdir -p $target
+        mount $i $target
+
+        # support normal process/system tool operation in the chroot
+        mkdir -p ${target}/{proc,sys,dev}
+        mount --bind /proc $target/proc
+        mount --bind /sys $target/sys
+        mount --bind /dev $target/dev
+    done
+
+    echo "Starting tether"
+    exec /bin/tether
+    # will never run past here due to exec
+fi    
+
+
+MOUNTPOINT="/mnt/containerfs"
+mkdir -p ${MOUNTPOINT}
+# the ID here is the ddb.uuid from the vmdk descriptor. It is set in lib/tether/shared/constants.go
+# ideally this would be moved to somewhere it does not need to be kept in sync manually.
+# TODO: this needs testing with additional scsi controllers and an understanding as to what that
+# 6000 prefix actually entails
+ROOTFS="/dev/disk/by-id/wwn-0x60002233445566778899aabbccddeeff"
+
+echo "Waiting for rootfs"
+# https://github.com/vmware/vic/issues/6379
+# grab dmesg output and dump to debug log if mount doesn't occur in a useful timeframe (2min)
+if timeout --signal=KILL 2m mount -t ext4 ${ROOTFS} ${MOUNTPOINT}; then
+    # ensure mountpoint exists
+    mkdir -p ${MOUNTPOINT}/.tether
+
+    # ensure that no matter what we have access to required devices
+    # WARNING WARNING WARNING WARNING WARNING
+    # if the tmpfs is not large enough odd hangs can occur and the ESX event log will
+    # report the guest disabling the CPU
+    mount -t tmpfs -o size=64m tmpfs ${MOUNTPOINT}/.tether/
+
+    # enable full system functionality in the container
+    ln -s lib64 ${MOUNTPOINT}/.tether/lib
+    mkdir -p ${MOUNTPOINT}/.tether/{lib64,usr/lib/iptables,run}
+
+    echo "Publishing modules within container"
+    mkdir -p ${MOUNTPOINT}/lib/modules
+    mkdir -p ${MOUNTPOINT}/.tether/lib/modules
+    mount --bind ${MOUNTPOINT}/.tether/lib/modules ${MOUNTPOINT}/lib/modules
+    cp -pr /lib/modules/* ${MOUNTPOINT}/lib/modules/
+
+    # switch to the new root
+    echo "prepping for switch to container filesystem"
+
+    cp /bin/tether ${MOUNTPOINT}/.tether/tether
+
+    echo 'tether tmpfs size before copying libraries: '
+    df -k ${MOUNTPOINT}/.tether
+
+    # ldd of xtables-multi yields the following list of libraries we need to
+    # copy into our initrd.  We need these binaries in order to call iptables
+    #
+    # before the switch-root.  linux-vdso.so.1 (0x00007ffc94d0d000)
+    # libip4tc.so.0 => /baz/lib/libip4tc.so.0 (0x00007f97fc721000)
+    # libip6tc.so.0 => /baz/lib/libip6tc.so.0 (0x00007f97fc519000)
+    # libxtables.so.11 => /baz/lib/libxtables.so.11 (0x00007f97fc30c000)
+    # libm.so.6 => /lib64/libm.so.6 (0x00007f97fc00e000)
+    # libgcc_s.so.1 => /lib64/libgcc_s.so.1 (0x00007f97fbdf7000)
+    # libc.so.6 => /baz/lib/libc.so.6 (0x00007f97fba53000)
+    # libdl.so.2 => /baz/lib/libdl.so.2 (0x00007f97fb84f000)
+    # /lib64/ld-linux-x86-64.so.2 (0x00007f97fc929000)
+
+    cp -a /sbin/*tables* ${MOUNTPOINT}/.tether/
+    cp -a /lib/libm.* /lib/libm-* /lib/libgcc_s* /lib/libip*tc* /lib/libxtables* /lib/libdl* /lib/libc.so* /lib/libc-* ${MOUNTPOINT}/.tether/lib
+    cp -a /lib64/ld-* ${MOUNTPOINT}/.tether/lib64
+    cp -r /usr/lib/iptables ${MOUNTPOINT}/.tether/usr/lib/
+    cp /lib/libhavege.so.1  ${MOUNTPOINT}/.tether/lib
+    cp /usr/sbin/haveged ${MOUNTPOINT}/.tether/
+
+    echo 'tether tmpfs size after copying libraries: '
+    df -k ${MOUNTPOINT}/.tether
+
+    until [[ $(ls -1 /dev/disk/by-label | wc -l) -eq $(ls -1 /sys/block | wc -l) ]]; do sleep 0.1;done
+
+    echo "switching to the new mount"
+    systemctl switch-root ${MOUNTPOINT} /.tether/tether 2>&1
+    echo "switched to the new mount"
+else
+    # TODO: what do we do here? we really need to somehow report an error
+    # fail hard
+    echo "Unable to chroot into container filesystem"
+
+    # dump dmesg data in case there's a system problem injecting or loading the root filesystem
+    dmesg
+    # because dmesg is long and will wrap over console
+    echo "dmesg dump due to root filesystem mount failure"
+fi
+
+# Shut the system down
+systemctl poweroff

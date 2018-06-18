@@ -1,0 +1,34 @@
+# Building:
+# docker build --no-cache -t local-repo -f LocalRepo .
+# docker tag local-repo gcr.io/eminent-nation-87317/local-repo:x
+# gcloud auth login
+# gcloud docker -- push gcr.io/eminent-nation-87317/local-repo:x
+# open vpn to CI cluster then run:
+# docker tag local-repo 192.168.31.15/library/local-repo:x
+# docker push 192.168.31.15/library/local-repo:x
+
+# Running:
+# docker run -d -p 80:80 local-repo
+FROM fedora:21
+
+RUN yum install yum-plugin-ovl -y && yum install wget createrepo nginx -y
+
+RUN mkdir /usr/share/nginx/html/photon && mkdir /usr/share/nginx/html/photon-updates
+
+ENV EXCLUDE_LIST "index.html*,openjdk*,openjre*,perl*,postgresql*,python-*,\
+python3*,ruby*,subversion*,gnome*,NetworkManager*,cloud*,docker*,grub*,ktap*,\
+kubernetes*,linux-docs*,linux-sound*,linux-tools*,docbook*,httpd*,go-*,jna*,\
+linux-debuginfo*,linux-dev*,linux-docs*,linux-drivers*,linux-oprofile*,linux-sound*,\
+linux-tools*,linux-esx-debuginfo*,linux-esx-devel*,linux-esx-docs*,nginx*,sysdig*"
+
+RUN wget -e robots=off -r -nH -nd -np -R $EXCLUDE_LIST https://vmware.bintray.com/photon_release_1.0_x86_64/x86_64/ -P /usr/share/nginx/html/photon
+RUN wget -e robots=off -r -nH -nd -np -R $EXCLUDE_LIST https://dl.bintray.com/vmware/photon_updates_1.0_x86_64/x86_64/ -P /usr/share/nginx/html/photon-updates
+
+RUN createrepo /usr/share/nginx/html/photon
+RUN createrepo /usr/share/nginx/html/photon-updates
+
+RUN echo "daemon off;" >> /etc/nginx/nginx.conf
+
+EXPOSE 80
+
+CMD [ "/usr/sbin/nginx" ]
