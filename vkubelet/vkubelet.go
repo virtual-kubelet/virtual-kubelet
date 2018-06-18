@@ -28,6 +28,10 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 )
 
+const (
+        PodStatusReason_ProviderFailed = "ProviderFailed"
+)
+
 // Server masquarades itself as a kubelet and allows for the virtual node to be backed by non-vm/node providers.
 type Server struct {
 	nodeName        string
@@ -331,7 +335,7 @@ func (s *Server) createPod(pod *corev1.Pod) error {
 	if origErr := s.provider.CreatePod(pod); origErr != nil {
 		pod.ResourceVersion = "" // Blank out resource version to prevent object has been modified error
 		pod.Status.Phase = corev1.PodFailed
-		pod.Status.Reason = "ProviderFailed"
+		pod.Status.Reason = PodStatusReason_ProviderFailed
 		pod.Status.Message = origErr.Error()
 
 		_, err := s.k8sClient.CoreV1().Pods(pod.Namespace).UpdateStatus(pod)
@@ -374,6 +378,10 @@ func (s *Server) updatePodStatuses() {
 	pods := s.resourceManager.GetPods()
 	for _, pod := range pods {
 		if pod.DeletionTimestamp != nil && pod.Status.Phase == corev1.PodSucceeded {
+			continue
+		}
+
+		if pod.Status.Phase == corev1.PodFailed && pod.Status.Reason == PodStatusReason_ProviderFailed {
 			continue
 		}
 
