@@ -88,10 +88,16 @@ type VicContainerProxy interface {
 	UnbindContainerFromNetwork(ctx context.Context, vc *viccontainer.VicContainer, handle string) (string, error)
 	CommitContainerHandle(ctx context.Context, handle, containerID string, waitTime int32) error
 
+	// TODO: we should not be returning a swagger model here, however we do not have a solid architected return for this yet.
+	InspectTask(op trace.Operation, handle string, eid string, cid string) (*models.TaskInspectResponse, error)
+	BindTask(op trace.Operation, handle string, eid string) (string, error)
+	WaitTask(op trace.Operation, cid string, cname string, eid string) error
+
 	Handle(ctx context.Context, id, name string) (string, error)
 
 	Stop(ctx context.Context, vc *viccontainer.VicContainer, name string, seconds *int, unbound bool) error
 	State(ctx context.Context, vc *viccontainer.VicContainer) (*types.ContainerState, error)
+	GetStateFromHandle(op trace.Operation, handle string) (string, string, error)
 	Wait(ctx context.Context, vc *viccontainer.VicContainer, timeout time.Duration) (*types.ContainerState, error)
 	Signal(ctx context.Context, vc *viccontainer.VicContainer, sig uint64) error
 	Resize(ctx context.Context, id string, height, width int32) error
@@ -489,6 +495,115 @@ func (c *ContainerProxy) CommitContainerHandle(ctx context.Context, handle, cont
 	return nil
 }
 
+func (c *ContainerProxy) InspectTask(op trace.Operation, handle string, eid string, cid string) (*models.TaskInspectResponse, error) {
+	defer trace.End(trace.Begin(fmt.Sprintf("handle(%s), eid(%s), cid(%s)", handle, eid, cid)))
+
+	if c.client == nil {
+		return nil, errors.NillPortlayerClientError("ContainerProxy")
+	}
+
+	// inspect the Task to obtain ProcessConfig
+	config := &models.TaskInspectConfig{
+		Handle: handle,
+		ID:     eid,
+	}
+
+	// FIXME: right now we are only using this path for exec targets. But later the error messages may need to be changed
+	// to be more accurate.
+	params := tasks.NewInspectParamsWithContext(op).WithConfig(config)
+	resp, err := c.client.Tasks.Inspect(params)
+	if err != nil {
+		switch err := err.(type) {
+		case *tasks.InspectNotFound:
+			// These error types may need to be expanded. NotFoundError does not fit here.
+			op.Errorf("received a TaskNotFound error during task inspect: %s", err.Payload.Message)
+			return nil, errors.TaskPoweredOffError(cid)
+		case *tasks.InspectInternalServerError:
+			op.Errorf("received an internal server error during task inspect: %s", err.Payload.Message)
+			return nil, errors.InternalServerError(err.Payload.Message)
+		default:
+			// right now Task inspection in the portlayer does not return a conflict error
+			return nil, errors.InternalServerError(err.Error())
+		}
+	}
+	return resp.Payload, nil
+}
+
+func (c *ContainerProxy) BindTask(op trace.Operation, handle string, eid string) (string, error) {
+	defer trace.End(trace.Begin(fmt.Sprintf("handle(%s), eid(%s)", handle, eid)))
+
+	if c.client == nil {
+		return "", errors.NillPortlayerClientError("ContainerProxy")
+	}
+
+	bindconfig := &models.TaskBindConfig{
+		Handle: handle,
+		ID:     eid,
+	}
+	bindparams := tasks.NewBindParamsWithContext(op).WithConfig(bindconfig)
+
+	// call Bind with bindparams
+	resp, err := c.client.Tasks.Bind(bindparams)
+	if err != nil {
+		switch err := err.(type) {
+		case *tasks.BindNotFound:
+			op.Errorf("received TaskNotFound error during task bind: %s", err.Payload.Message)
+			return "", errors.TaskBindPowerError()
+		case *tasks.BindInternalServerError:
+			op.Errorf("received unexpected error attempting to bind task(%s) for handle(%s): %s", eid, handle, err.Payload.Message)
+			return "", errors.InternalServerError(err.Payload.Message)
+		default:
+			op.Errorf("received unexpected error attempting to bind task(%s) for handle(%s): %s", eid, handle, err.Error())
+			return "", errors.InternalServerError(err.Error())
+		}
+
+	}
+
+	respHandle, ok := resp.Payload.Handle.(string)
+	if !ok {
+		op.Errorf("Unable to marshal string object from BindTask response for handle(%s) on eid(%s)", handle, eid)
+		// TODO: perhaps a better error message here?
+		return "", errors.InternalServerError("An unknown error occurred during the handling of this request")
+	}
+
+	return respHandle, nil
+}
+
+func (c *ContainerProxy) WaitTask(op trace.Operation, cid string, cname string, eid string) error {
+	if c.client == nil {
+		return errors.NillPortlayerClientError("ContainerProxy")
+	}
+
+	handle, err := c.Handle(op, cid, cname)
+	if err != nil {
+		return err
+	}
+
+	// wait the Task to start
+	config := &models.TaskWaitConfig{
+		Handle: handle,
+		ID:     eid,
+	}
+
+	params := tasks.NewWaitParamsWithContext(op).WithConfig(config)
+	_, err = c.client.Tasks.Wait(params)
+	if err != nil {
+		switch err := err.(type) {
+		case *tasks.WaitNotFound:
+			return errors.InternalServerError(fmt.Sprintf("the Container(%s) has been shutdown during execution of the exec operation", cid))
+		case *tasks.WaitPreconditionRequired:
+			return errors.InternalServerError(fmt.Sprintf("container(%s) must be powered on in order to perform the desired exec operation", cid))
+		case *tasks.WaitInternalServerError:
+			return errors.InternalServerError(err.Payload.Message)
+		default:
+			return errors.InternalServerError(err.Error())
+		}
+	}
+
+	return nil
+
+}
+
 // Stop will stop (shutdown) a VIC container.
 //
 // returns
@@ -616,6 +731,28 @@ func (c *ContainerProxy) State(ctx context.Context, vc *viccontainer.VicContaine
 		return nil, err
 	}
 	return inspectJSON.State, nil
+}
+
+// GetStateFromHandle takes a handle and returns the state of the container based on that handle. Also returns handle that comes back with the response.
+func (c *ContainerProxy) GetStateFromHandle(op trace.Operation, handle string) (string, string, error) {
+	defer trace.End(trace.Begin(fmt.Sprintf("handle(%s)", handle), op))
+
+	if c.client == nil {
+		return "", "", errors.NillPortlayerClientError("ContainerProxy")
+	}
+
+	params := containers.NewGetStateParams().WithHandle(handle)
+	resp, err := c.client.Containers.GetState(params)
+	if err != nil {
+		switch err := err.(type) {
+		case *containers.GetStateNotFound:
+			return handle, "", errors.NotFoundError(err.Payload.Message)
+		default:
+			return handle, "", errors.InternalServerError(err.Error())
+		}
+	}
+
+	return resp.Payload.Handle, resp.Payload.State, nil
 }
 
 // ExitCode returns container exitCode
