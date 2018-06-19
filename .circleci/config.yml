@@ -24,3 +24,6 @@ jobs:
       - run:
           name: Tests
           command: V=1 CI=1 SKIP_AWS_E2E=1 make test
+      - run:
+          name: Gofmt
+          command: bash scripts/verify-gofmt.sh
