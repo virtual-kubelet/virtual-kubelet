@@ -211,7 +211,7 @@ func (s *Server) Run() error {
 			FieldSelector: fields.OneTermEqualSelector("spec.nodeName", s.nodeName).String(),
 		}
 
-		pods, err := s.k8sClient.CoreV1().Pods(s.namespace).List(opts)
+		pods, err := s.k8sClient.CoreV1().Pods(corev1.NamespaceAll).List(opts)
 		if err != nil {
 			log.Fatal("Failed to list pods", err)
 		}
@@ -219,7 +219,7 @@ func (s *Server) Run() error {
 		s.reconcile()
 
 		opts.ResourceVersion = pods.ResourceVersion
-		s.podWatcher, err = s.k8sClient.CoreV1().Pods(s.namespace).Watch(opts)
+		s.podWatcher, err = s.k8sClient.CoreV1().Pods(corev1.NamespaceAll).Watch(opts)
 		if err != nil {
 			log.Fatal("Failed to watch pods", err)
 		}
