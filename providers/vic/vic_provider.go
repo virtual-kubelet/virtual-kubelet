@@ -28,6 +28,8 @@ import (
 	"github.com/virtual-kubelet/virtual-kubelet/providers/vic/proxy"
 	"github.com/virtual-kubelet/virtual-kubelet/providers/vic/utils"
 
+	"net"
+
 	"k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -120,6 +122,7 @@ func waitForVCH(op trace.Operation, plClient *client.PortLayer, personaAddr stri
 	backoffConf := retry.NewBackoffConfig()
 	backoffConf.MaxInterval = 2 * time.Second
 	backoffConf.InitialInterval = 500 * time.Millisecond
+	backoffConf.MaxElapsedTime = 10 * time.Minute
 
 	// Wait for portlayer to start up
 	systemProxy := vicproxy.NewSystemProxy(plClient)
@@ -262,34 +265,56 @@ func (v *VicProvider) GetPodStatus(namespace, name string) (*v1.PodStatus, error
 	defer trace.End(trace.Begin("GetPodStatus", op))
 
 	now := metav1.NewTime(time.Now())
-
-	status := &v1.PodStatus{
-		Phase:     v1.PodRunning,
-		HostIP:    "1.2.3.4",
-		PodIP:     "5.6.7.8",
+	errorStatus := &v1.PodStatus{
+		Phase:     v1.PodUnknown,
 		StartTime: &now,
 		Conditions: []v1.PodCondition{
 			{
 				Type:   v1.PodInitialized,
-				Status: v1.ConditionTrue,
+				Status: v1.ConditionUnknown,
 			},
 			{
 				Type:   v1.PodReady,
-				Status: v1.ConditionTrue,
+				Status: v1.ConditionUnknown,
 			},
 			{
 				Type:   v1.PodScheduled,
-				Status: v1.ConditionTrue,
+				Status: v1.ConditionUnknown,
 			},
 		},
 	}
 
-	pod, err := v.GetPod(namespace, name)
+	// Look for the pod in our cache of running pods
+	vp, err := v.podCache.Get(op, namespace, name)
 	if err != nil {
-		return status, err
+		return errorStatus, err
 	}
 
-	for _, container := range pod.Spec.Containers {
+	// Instantiate status object
+	statusReporter, err := operations.NewPodStatus(v.client, v.isolationProxy)
+	if err != nil {
+		return errorStatus, err
+	}
+
+	var nodeAddress string
+	nodeAddresses := v.NodeAddresses()
+	if len(nodeAddresses) > 0 {
+		nodeAddress = nodeAddresses[0].Address
+	} else {
+		nodeAddress = "0.0.0.0"
+	}
+	status, err := statusReporter.GetStatus(op, vp.ID, name, nodeAddress)
+	if err != nil {
+		return errorStatus, err
+	}
+
+	if vp.Pod.Status.StartTime != nil {
+		status.StartTime = vp.Pod.Status.StartTime
+	} else {
+		status.StartTime = &now
+	}
+
+	for _, container := range vp.Pod.Spec.Containers {
 		status.ContainerStatuses = append(status.ContainerStatuses, v1.ContainerStatus{
 			Name:         container.Name,
 			Image:        container.Image,
@@ -297,7 +322,7 @@ func (v *VicProvider) GetPodStatus(namespace, name string) (*v1.PodStatus, error
 			RestartCount: 0,
 			State: v1.ContainerState{
 				Running: &v1.ContainerStateRunning{
-					StartedAt: now,
+					StartedAt: *status.StartTime,
 				},
 			},
 		})
@@ -390,7 +415,25 @@ func (v *VicProvider) NodeConditions() []v1.NodeCondition {
 // NodeAddresses returns a list of addresses for the node status
 // within Kubernetes.
 func (v *VicProvider) NodeAddresses() []v1.NodeAddress {
-	return nil
+	addrs, err := net.InterfaceAddrs()
+	if err != nil {
+		return []v1.NodeAddress{}
+	}
+
+	var outAddresses []v1.NodeAddress
+	for _, addr := range addrs {
+		ipnet, ok := addr.(*net.IPNet)
+		if !ok || ipnet.IP.IsLoopback() || ipnet.IP.To4() == nil {
+			continue
+		}
+		outAddress := v1.NodeAddress{
+			Type:    v1.NodeInternalIP,
+			Address: ipnet.IP.String(),
+		}
+		outAddresses = append(outAddresses, outAddress)
+	}
+
+	return outAddresses
 }
 
 // NodeDaemonEndpoints returns NodeDaemonEndpoints for the node status

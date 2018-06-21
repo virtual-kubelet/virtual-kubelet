@@ -36,8 +36,10 @@ type IsolationProxy interface {
 	UnbindScope(op trace.Operation, handle string, name string) (string, interface{}, error)
 
 	Handle(op trace.Operation, id, name string) (string, error)
-	State(op trace.Operation, id, name string) (string, error)
 	Remove(op trace.Operation, id string, force bool) error
+
+	State(op trace.Operation, id, name string) (string, error)
+	EpAddresses(op trace.Operation, id, name string) ([]string, error)
 }
 
 type VicIsolationProxy struct {
@@ -440,29 +442,6 @@ func (v *VicIsolationProxy) SetState(op trace.Operation, handle, name, state str
 	return resp.Payload, nil
 }
 
-func (v *VicIsolationProxy) State(op trace.Operation, id, name string) (string, error) {
-	defer trace.End(trace.Begin(id, op))
-
-	if v.client == nil {
-		return "", vicerrors.NillPortlayerClientError("IsolationProxy")
-	}
-
-	results, err := v.client.Containers.GetContainerInfo(containers.NewGetContainerInfoParamsWithContext(op).WithID(id))
-	if err != nil {
-		switch err := err.(type) {
-		case *containers.GetContainerInfoNotFound:
-			return "", vicerrors.NotFoundError(name)
-		case *containers.GetContainerInfoInternalServerError:
-			return "", vicerrors.InternalServerError(err.Payload.Message)
-		default:
-			return "", vicerrors.InternalServerError(fmt.Sprintf("Unknown error from the interaction port layer: %s", err))
-		}
-	}
-
-	state := results.Payload.ContainerConfig.State
-	return state, nil
-}
-
 func (v *VicIsolationProxy) Remove(op trace.Operation, id string, force bool) error {
 	defer trace.End(trace.Begin(id, op))
 
@@ -479,6 +458,57 @@ func (v *VicIsolationProxy) Remove(op trace.Operation, id string, force bool) er
 	removeOK, err := v.client.Containers.ContainerRemove(params)
 	op.Debugf("ContainerRemove returned %# +v", removeOK)
 	return err
+}
+
+func (v *VicIsolationProxy) State(op trace.Operation, id, name string) (string, error) {
+	defer trace.End(trace.Begin(id, op))
+
+	payload, err := v.getInfo(op, id, name)
+	if err != nil {
+		return "", err
+	}
+
+	state := payload.ContainerConfig.State
+	return state, nil
+}
+
+func (v *VicIsolationProxy) EpAddresses(op trace.Operation, id, name string) ([]string, error) {
+	defer trace.End(trace.Begin(id, op))
+
+	payload, err := v.getInfo(op, id, name)
+	if err != nil {
+		return nil, err
+	}
+
+	addresses := make([]string, 0)
+	for _, ep := range payload.Endpoints {
+		addresses = append(addresses, ep.Address)
+	}
+
+	return addresses, nil
+}
+
+// Private methods
+func (v *VicIsolationProxy) getInfo(op trace.Operation, id, name string) (*models.ContainerInfo, error) {
+	defer trace.End(trace.Begin(id, op))
+
+	if v.client == nil {
+		return nil, vicerrors.NillPortlayerClientError("IsolationProxy")
+	}
+
+	results, err := v.client.Containers.GetContainerInfo(containers.NewGetContainerInfoParamsWithContext(op).WithID(id))
+	if err != nil {
+		switch err := err.(type) {
+		case *containers.GetContainerInfoNotFound:
+			return nil, vicerrors.NotFoundError(name)
+		case *containers.GetContainerInfoInternalServerError:
+			return nil, vicerrors.InternalServerError(err.Payload.Message)
+		default:
+			return nil, vicerrors.InternalServerError(fmt.Sprintf("Unknown error from port layer: %s", err))
+		}
+	}
+
+	return results.Payload, nil
 }
 
 //------------------------------------

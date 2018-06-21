@@ -187,6 +187,29 @@ func (_m *IsolationProxy) CreateHandleTask(op trace.Operation, handle string, id
 	return r0, r1
 }
 
+// EpAddresses provides a mock function with given fields: op, id, name
+func (_m *IsolationProxy) EpAddresses(op trace.Operation, id string, name string) ([]string, error) {
+	ret := _m.Called(op, id, name)
+
+	var r0 []string
+	if rf, ok := ret.Get(0).(func(trace.Operation, string, string) []string); ok {
+		r0 = rf(op, id, name)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]string)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(trace.Operation, string, string) error); ok {
+		r1 = rf(op, id, name)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // Handle provides a mock function with given fields: op, id, name
 func (_m *IsolationProxy) Handle(op trace.Operation, id string, name string) (string, error) {
 	ret := _m.Called(op, id, name)
