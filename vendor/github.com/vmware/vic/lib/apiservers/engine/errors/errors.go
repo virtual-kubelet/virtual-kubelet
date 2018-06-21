@@ -92,6 +92,18 @@ func NotFoundError(msg string) error {
 	return derr.NewRequestNotFoundError(fmt.Errorf("No such container: %s", msg))
 }
 
+func TaskInspectNotFoundError(msg string) error {
+	return derr.NewRequestNotFoundError(fmt.Errorf("No container was found with exec id: %s", msg))
+}
+
+func TaskBindPowerError() error {
+	return derr.NewRequestNotFoundError(fmt.Errorf("the container has been stopped"))
+}
+
+func TaskPoweredOffError(msg string) error {
+	return derr.NewRequestNotFoundError(fmt.Errorf("container (%s) has been stopped", msg))
+}
+
 func ImageNotFoundError(image, tag string) error {
 	return derr.NewRequestNotFoundError(fmt.Errorf("An image does not exist locally with the tag: %s", image))
 }

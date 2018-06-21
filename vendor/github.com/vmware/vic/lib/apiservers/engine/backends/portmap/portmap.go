@@ -22,6 +22,7 @@ import (
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/docker/libnetwork/iptables"
+	//viccontainer "github.com/vmware/vic/lib/apiservers/engine/backends/container"
 )
 
 type Operation int

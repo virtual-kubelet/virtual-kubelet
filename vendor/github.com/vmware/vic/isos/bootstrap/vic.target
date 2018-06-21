@@ -1,5 +1,0 @@
-[Unit]
-Description=vSphere Integrated Containers
-Requires=basic.target
-After=basic.target
-AllowIsolate=yes
