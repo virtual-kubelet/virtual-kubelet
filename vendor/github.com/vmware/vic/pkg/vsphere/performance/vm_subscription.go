@@ -26,13 +26,12 @@ import (
 
 	"github.com/vmware/vic/pkg/trace"
 	"github.com/vmware/vic/pkg/vsphere/session"
-	"github.com/vmware/vic/pkg/vsphere/vm"
 )
 
 // vmSubscription is a 1:1 relationship to a Virtual Machine and a
 // 1:M relationship to subscribers
 type vmSubscription struct {
-	vm *vm.VirtualMachine
+	vm *object.VirtualMachine
 	id string
 
 	pub                 *pubsub.Publisher
@@ -171,7 +170,7 @@ func newVMSubscription(op trace.Operation, session *session.Session, moref types
 	}
 
 	sub := &vmSubscription{
-		vm:                  vm.NewVirtualMachine(op.Context, session, moref),
+		vm:                  object.NewVirtualMachine(session.Vim25(), moref),
 		deviceInstanceToKey: make(map[string]string),
 	}
 

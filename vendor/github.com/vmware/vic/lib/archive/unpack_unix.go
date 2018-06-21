@@ -30,6 +30,8 @@ import (
 	"github.com/vmware/vic/pkg/trace"
 )
 
+type binaryPath string
+
 const (
 	// fileWriteFlags is a collection of flags configuring our writes for general tar behavior
 	//
@@ -37,9 +39,15 @@ const (
 	// O_TRUNC = truncate file to 0 length if it does exist(overwrite the file)
 	// O_WRONLY = We use this since we do not intend to read, we only need to write.
 	fileWriteFlags = os.O_CREATE | os.O_TRUNC | os.O_WRONLY
+
+	// Location of the unpack binary inside of containers
+	containerBinaryPath binaryPath = "/.tether/unpack"
+
+	// Location of the unpack binary inside the endpoint VM
+	applianceBinaryPath binaryPath = "/bin/unpack"
 )
 
-// InvokeUnpack will unpack the given tarstream(if it is a tar stream) on the local filesystem based on the specified root
+// UnpackNoChroot will unpack the given tarstream(if it is a tar stream) on the local filesystem based on the specified root
 // combined with any rebase from the path spec
 //
 // the pathSpec will include the following elements
@@ -48,7 +56,7 @@ const (
 // - exlude : marks paths that are to be excluded from the write
 // - rebase : marks the the write path that will be tacked onto (appended or prepended? TODO improve this comment) the "root". e.g /tmp/unpack + /my/target/path = /tmp/unpack/my/target/path
 // N.B. tarStream MUST BE TERMINATED WITH EOF or this function will hang forever!
-func InvokeUnpack(op trace.Operation, tarStream io.Reader, filter *FilterSpec, root string) error {
+func UnpackNoChroot(op trace.Operation, tarStream io.Reader, filter *FilterSpec, root string) error {
 	op.Debugf("unpacking archive to root: %s, filter: %+v", root, filter)
 
 	// Online datasource is sending a tar reader instead of an io reader.
@@ -131,71 +139,158 @@ func InvokeUnpack(op trace.Operation, tarStream io.Reader, filter *FilterSpec, r
 	return nil
 }
 
-// Unpack hooks into a binary present in the appliance vm called unpack in order to execute InvokeUnpack inside of a chroot. This method works identically to InvokeUnpack, except that it will not function in areas where the binary is not present at /bin/unpack
-func Unpack(op trace.Operation, tarStream io.Reader, filter *FilterSpec, root string) error {
+// OfflineUnpack wraps Unpack for usage in contexts without a childReaper, namely when copying to an offline container with docker cp
+func OfflineUnpack(op trace.Operation, tarStream io.Reader, filter *FilterSpec, root string) error {
+
+	var cmd *exec.Cmd
+	var err error
+	if cmd, err = unpack(op, tarStream, filter, root, applianceBinaryPath); err != nil {
+		return err
+	}
+
+	if err = cmd.Wait(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// OnlineUnpack will extract a tar stream tarStream to folder root inside of a running container
+func OnlineUnpack(op trace.Operation, tarStream io.Reader, filter *FilterSpec, root string) (*exec.Cmd, error) {
+	return unpack(op, tarStream, filter, root, containerBinaryPath)
+}
+
+func streamCopy(op trace.Operation, stdin io.WriteCloser, tarStream io.Reader) error {
+	// if we're passed a stream that doesn't cast to a tar.Reader copy the tarStream to the binary via stdin; the binary will stream it to InvokeUnpack unchanged
+	var err error
+	tr, ok := tarStream.(*tar.Reader)
+	if !ok {
+		defer stdin.Close()
+		if _, err := io.Copy(stdin, tarStream); err != nil {
+			op.Errorf("Error copying tarStream: %s", err.Error())
+			return err
+		}
+		return nil
+	}
+
+	tw := tar.NewWriter(stdin)
+	defer tw.Close()
+	var th *tar.Header
+	for {
+		th, err = tr.Next()
+		if err == io.EOF {
+			tw.Close()
+			return nil
+		}
+		if err != nil {
+			op.Errorf("error reading tar header %s", err)
+			return err
+		}
+		op.Debugf("processing tar header: asset(%s), size(%d)", th.Name, th.Size)
+		err = tw.WriteHeader(th)
+		if err != nil {
+			op.Errorf("error writing tar header %s", err)
+			return err
+		}
+		var k int64
+		k, err = io.Copy(tw, tr)
+		op.Debugf("wrote %d bytes", k)
+		if err != nil {
+			op.Errorf("error writing file body bytes to stdin %s", err)
+			return err
+		}
+	}
+}
+
+func DockerUnpack(op trace.Operation, root string, tarStream io.Reader) (int64, error) {
+	fi, err := os.Stat(root)
+	if err != nil {
+		// the target unpack path does not exist. We should not get here.
+		return 0, err
+	}
+
+	if !fi.IsDir() {
+		return 0, fmt.Errorf("unpack root target is not a directory: %s", root)
+	}
+
+	// #nosec: 193 applianceBinaryPath is a constant, not a variable
+	cmd := exec.Command(string(applianceBinaryPath), root)
+
+	stdin, err := cmd.StdinPipe()
+
+	if err != nil {
+		return 0, err
+	}
+
+	if stdin == nil {
+		err = errors.New("stdin was nil")
+		return 0, err
+	}
+
+	if err = cmd.Start(); err != nil {
+		return 0, err
+	}
+
+	bytesWritten := make(chan int64, 1)
+	go func() {
+		defer stdin.Close()
+		var n int64
+		if n, err = io.Copy(stdin, tarStream); err != nil {
+			op.Errorf("Error copying tarStream: %s", err.Error())
+		}
+		bytesWritten <- n
+	}()
+
+	if err = cmd.Wait(); err != nil {
+		return 0, err
+	}
+
+	return <-bytesWritten, nil
+}
+
+// Unpack runs the binary compiled in cmd/unpack.go which creates a chroot at `root` and passes `op`, `tarStream`, and `filter` to InvokeUnpack for extraction of the tar on the filesystem. `binPath` should be either ApplianceBinaryPath or ContainerBinaryPath. Unpack returns a `Cmd` to allow use in conjunction with the tether's `LaunchUtility`, so it is necessary to call `cmd.Wait` after `Unpack` exits e.g. OfflineUnpack, if not being used in conjunction with LaunchUtility and the childReaper.
+func unpack(op trace.Operation, tarStream io.Reader, filter *FilterSpec, root string, binPath binaryPath) (*exec.Cmd, error) {
 
 	fi, err := os.Stat(root)
 	if err != nil {
 		// the target unpack path does not exist. We should not get here.
 		op.Errorf("tar unpack target does not exist: %s", root)
-		return err
+		return nil, err
 	}
 
 	if !fi.IsDir() {
 		err := fmt.Errorf("unpack root target is not a directory: %s", root)
 		op.Error(err)
-		return err
+		return nil, err
 	}
 
 	encodedFilter, err := EncodeFilterSpec(op, filter)
 	if err != nil {
 		op.Error(err)
-		return err
+		return nil, err
 	}
 
 	// Prepare to launch the binary, which will create a chroot at root and then invoke InvokeUnpack
 	// #nosec: Subprocess launching with variable. -- neither variable is user input & both are bounded inputs so this is fine
-	cmd := exec.Command("/bin/unpack", op.ID(), root, *encodedFilter)
+	// "/bin/unpack" on appliance
+	// "/.tether/unpack" inside container
+	cmd := exec.Command(string(binPath), root, *encodedFilter)
 
-	//stdin
 	stdin, err := cmd.StdinPipe()
 
 	if err != nil {
 		op.Error(err)
-		return err
+		return nil, err
 	}
 
 	if stdin == nil {
 		err = errors.New("stdin was nil")
 		op.Error(err)
-		return err
-	}
-	done := make(chan error)
-	go func() {
-		// copy the tarStream to the binary via stdin; the binary will stream it to InvokeUnpack unchanged
-		defer stdin.Close()
-		if _, err := io.Copy(stdin, tarStream); err != nil {
-			op.Errorf("Error copying tarStream: %s", err.Error())
-		}
-		done <- err
-	}()
-
-	out, err := cmd.CombinedOutput()
-	if len(out) == 0 {
-		op.Debug("No output from command")
-	} else {
-		// output should just be trace messages
-		op.Debugf("%s", string(out))
+		return nil, err
 	}
 
-	if err != nil {
-		stdin.Close()
-		op.Errorf("Command returned error %s", err.Error())
-		return err
-	}
+	go streamCopy(op, stdin, tarStream)
 
-	// This error gets logged by the goroutine if it is non-nil.
-	// This receive is just functioning as a wait
-	err = <-done
-	return err
+	return cmd, cmd.Start()
+
 }

@@ -43,7 +43,7 @@ const (
 // - strip : The strip string will indicate the
 // - exlude : marks paths that are to be excluded from the write operation
 // - rebase : marks the the write path that will be tacked onto the "root". e.g /tmp/unpack + /my/target/path = /tmp/unpack/my/target/path
-func Unpack(op trace.Operation, tarStream io.Reader, filter *FilterSpec, root string) error {
+func Unpack(op trace.Operation, tarStream io.Reader, filter *FilterSpec, root string, _ string) error {
 	op.Debugf("unpacking archive to root: %s, filter: %+v", root, filter)
 
 	// Online datasource is sending a tar reader instead of an io reader.
