@@ -274,6 +274,11 @@ func (s *Server) updateNode() {
 
 	n.ResourceVersion = "" // Blank out resource version to prevent object has been modified error
 	n.Status.Conditions = s.provider.NodeConditions()
+
+	capacity := s.provider.Capacity()
+	n.Status.Capacity = capacity
+	n.Status.Allocatable = capacity
+
 	n, err = s.k8sClient.CoreV1().Nodes().UpdateStatus(n)
 	if err != nil {
 		log.Println("Failed to update node:", err)
