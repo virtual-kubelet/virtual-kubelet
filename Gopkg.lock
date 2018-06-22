@@ -32,6 +32,18 @@
   version = "v0.4.7"
 
 [[projects]]
+  name = "github.com/PuerkitoBio/purell"
+  packages = ["."]
+  revision = "0bcb03f4b4d0a9428594752bd2a3b9aa0a9d4bd4"
+  version = "v1.1.0"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/PuerkitoBio/urlesc"
+  packages = ["."]
+  revision = "de5bf2ad457846296e2031421a34e2568e304e35"
+
+[[projects]]
   name = "github.com/Sirupsen/logrus"
   packages = ["."]
   revision = "c155da19408a8799da419ed3eeb0cb5db0ad5dbc"
@@ -203,15 +215,6 @@
   packages = ["."]
   revision = "47565b4f722fb6ceae66b95f853feed578a4a51c"
   version = "v0.3.3"
-
-[[projects]]
-  name = "github.com/docker/libcompose"
-  packages = [
-    "utils",
-    "yaml"
-  ]
-  revision = "7c59e343cd9d1f3f5577b5bfb71f6486beb4c006"
-  version = "v0.4.0"
 
 [[projects]]
   name = "github.com/docker/libnetwork"
@@ -448,6 +451,7 @@
     "pkg/tarsum",
     "pkg/term",
     "pkg/term/windows",
+    "pkg/urlutil",
     "pkg/version",
     "reference",
     "registry"
@@ -456,9 +460,12 @@
 
 [[projects]]
   name = "github.com/hyperhq/libcompose"
-  packages = ["config"]
-  revision = "47186a61e8fafdbe1cd3955cc041f8eec97e4b6f"
-  version = "v0.2.0"
+  packages = [
+    "config",
+    "utils",
+    "yaml"
+  ]
+  revision = "15d3a105140f968f5d4f62d2f44afd22a24a98fb"
 
 [[projects]]
   name = "github.com/imdario/mergo"
@@ -500,6 +507,16 @@
   packages = ["."]
   revision = "c3beff4c2358b44d0493c7dda585e7db7ff28ae6"
   version = "v1.7.6"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/mailru/easyjson"
+  packages = [
+    "buffer",
+    "jlexer",
+    "jwriter"
+  ]
+  revision = "3fdea8d05856a0c8df22ed4bc71b3219245e4485"
 
 [[projects]]
   branch = "master"
@@ -710,14 +727,11 @@
     "pkg/trace",
     "pkg/version",
     "pkg/vsphere/extraconfig",
-    "pkg/vsphere/extraconfig/vmomi",
     "pkg/vsphere/performance",
     "pkg/vsphere/session",
-    "pkg/vsphere/sys",
-    "pkg/vsphere/tasks",
-    "pkg/vsphere/vm"
+    "pkg/vsphere/sys"
   ]
-  revision = "aaff393e268f9ba7a70f55455174e671ce27f3ef"
+  revision = "24e7742b481d328dc0d5b68c992750b7aef4550d"
 
 [[projects]]
   branch = "master"
@@ -744,10 +758,9 @@
   revision = "bd5ef7bd5415a7ac448318e64f11a24cd21e594b"
 
 [[projects]]
-  branch = "master"
   name = "github.com/xeipuuv/gojsonschema"
   packages = ["."]
-  revision = "2c8e4be869c17540b336bab0ea18b8d73e6a28b7"
+  revision = "0c8571ac0ce161a5feb57375a9cdf148c98c0f70"
 
 [[projects]]
   branch = "master"
@@ -765,8 +778,8 @@
   name = "golang.org/x/net"
   packages = [
     "context",
-    "http/httpguts",
     "context/ctxhttp",
+    "http/httpguts",
     "http2",
     "http2/hpack",
     "idna",
@@ -802,10 +815,17 @@
     "unicode/bidi",
     "unicode/cldr",
     "unicode/norm",
-    "unicode/rangetable"
+    "unicode/rangetable",
+    "width"
   ]
   revision = "f21a4dfb5e38f5895301dc265a8def02365cc3d0"
   version = "v0.3.0"
+
+[[projects]]
+  branch = "master"
+  name = "golang.org/x/time"
+  packages = ["rate"]
+  revision = "fbb02b2291d28baffd63558aa44b4b56f178d650"
 
 [[projects]]
   branch = "master"
@@ -843,18 +863,6 @@
   ]
   revision = "41344da2231b913fa3d983840a57a6b1b7b631a1"
   version = "v1.12.0"
-
-[[projects]]
-  branch = "master"
-  name = "golang.org/x/time"
-  packages = ["rate"]
-  revision = "fbb02b2291d28baffd63558aa44b4b56f178d650"
-
-[[projects]]
-  branch = "master"
-  name = "golang.org/x/time"
-  packages = ["rate"]
-  revision = "fbb02b2291d28baffd63558aa44b4b56f178d650"
 
 [[projects]]
   name = "gopkg.in/inf.v0"
@@ -904,13 +912,13 @@
   revision = "53d615ae3f440f957cb9989d989d597f047262d9"
 
 [[projects]]
-  branch = "master"
   name = "k8s.io/apimachinery"
   packages = [
     "pkg/api/errors",
     "pkg/api/meta",
     "pkg/api/resource",
     "pkg/apis/meta/v1",
+    "pkg/apis/meta/v1/unstructured",
     "pkg/apis/meta/v1beta1",
     "pkg/conversion",
     "pkg/conversion/queryparams",
@@ -942,7 +950,8 @@
     "pkg/watch",
     "third_party/forked/golang/reflect"
   ]
-  revision = "13b73596e4b63e03203e86f6d9c7bcc1b937c62f"
+  revision = "302974c03f7e50f16561ba237db776ab93594ef6"
+  version = "kubernetes-1.10.0"
 
 [[projects]]
   name = "k8s.io/client-go"
@@ -1040,6 +1049,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "78bbfe28d4d9a3dc7f506a80b31c877133e9db027e30e1b006e0d6f6aaf5c73e"
+  inputs-digest = "6125e24314e26b6b5fb9a7cd98e4f23fa2e551d882485d1ff5f481abdfd792aa"
   solver-name = "gps-cdcl"
   solver-version = 1

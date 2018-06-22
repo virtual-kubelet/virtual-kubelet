@@ -1,5 +1,0 @@
-[photon-updates]
-name=VMware Photon Linux 1.0(x86_64)
-baseurl=http://wdc-yum-builder-ci.eng.vmware.com/photon-updates
-gpgcheck=0
-enabled=1
