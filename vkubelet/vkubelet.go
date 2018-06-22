@@ -19,6 +19,7 @@ import (
 	"github.com/virtual-kubelet/virtual-kubelet/providers/hypersh"
 	"github.com/virtual-kubelet/virtual-kubelet/providers/mock"
 	"github.com/virtual-kubelet/virtual-kubelet/providers/vic"
+	"github.com/virtual-kubelet/virtual-kubelet/providers/openstack"
 	"github.com/virtual-kubelet/virtual-kubelet/providers/web"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -112,6 +113,11 @@ func New(nodeName, operatingSystem, namespace, kubeConfig, taint, provider, prov
 		if err != nil {
 			return nil, err
 		}
+	case "openstack":
+		p, err = openstack.NewZunProvider(providerConfig, rm, nodeName, operatingSystem, daemonEndpointPort)
+		if err != nil {
+			return nil, err
+		}
 	case "mock":
 		p, err = mock.NewMockProvider(providerConfig, nodeName, operatingSystem, internalIP, daemonEndpointPort)
 		if err != nil {
@@ -139,7 +145,6 @@ func New(nodeName, operatingSystem, namespace, kubeConfig, taint, provider, prov
 		resourceManager: rm,
 		provider:        p,
 	}
-
 	if err = s.registerNode(); err != nil {
 		return s, err
 	}
