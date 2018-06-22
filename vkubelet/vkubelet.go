@@ -279,6 +279,8 @@ func (s *Server) updateNode() {
 	n.Status.Capacity = capacity
 	n.Status.Allocatable = capacity
 
+	n.Status.Addresses = s.provider.NodeAddresses()
+	
 	n, err = s.k8sClient.CoreV1().Nodes().UpdateStatus(n)
 	if err != nil {
 		log.Println("Failed to update node:", err)
