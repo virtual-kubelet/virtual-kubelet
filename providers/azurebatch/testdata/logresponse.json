@@ -1,0 +1,6 @@
+{"log":"[Vector addition of 50000 elements]\n","stream":"stdout","time":"2018-05-30T17:02:49.967357287Z"}
+{"log":"Copy input data from the host memory to the CUDA device\n","stream":"stdout","time":"2018-05-30T17:02:49.967417086Z"}
+{"log":"CUDA kernel launch with 196 blocks of 256 threads\n","stream":"stdout","time":"2018-05-30T17:02:49.967423286Z"}
+{"log":"Copy output data from the CUDA device to the host memory\n","stream":"stdout","time":"2018-05-30T17:02:49.967427386Z"}
+{"log":"Test PASSED\n","stream":"stdout","time":"2018-05-30T17:02:49.967431286Z"}
+{"log":"Done\n","stream":"stdout","time":"2018-05-30T17:02:49.967435286Z"}

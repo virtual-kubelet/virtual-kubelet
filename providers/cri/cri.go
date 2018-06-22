@@ -616,7 +616,7 @@ func readLogFile(filename string, tail int) (string, error) {
 		lines = append(lines, scanner.Text())
 	}
 	if tail > 0 && tail < len(lines) {
-		lines = lines[len(lines)-tail : len(lines)]
+		lines = lines[len(lines)-tail:]
 	}
 	return strings.Join(lines, ""), nil
 }
@@ -636,7 +636,7 @@ func (p *CRIProvider) GetContainerLogs(namespace, podName, containerName string,
 	}
 	container := pod.containers[containerName]
 	if container == nil {
-		return "", fmt.Errorf("Cannot find container %s in pod %s namespace %s", containerName, pod, namespace)
+		return "", fmt.Errorf("Cannot find container %s in pod %s namespace %s", containerName, podName, namespace)
 	}
 
 	return readLogFile(container.LogPath, tail)

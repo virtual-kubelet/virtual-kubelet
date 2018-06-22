@@ -25,3 +25,9 @@ credentials.json
 
 # VS Code files
 .vscode/
+
+# Terraform ignores
+**/.terraform/**
+**/terraform-provider-kubernetes
+**/*.tfstate*
+debug

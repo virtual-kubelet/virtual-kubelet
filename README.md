@@ -20,6 +20,7 @@ The best description is "Kubernetes API on top, programmable back."
 * [Usage](#usage)
 * [Providers](#providers)
     + [Azure Container Instances Provider](#azure-container-instances-provider)
+	+ [Azure Batch GPU Provider](./providers/azurebatch/README.md)
     + [AWS Fargate Provider](#aws-fargate-provider)
     + [Hyper.sh Provider](#hypersh-provider)
     + [Adding a New Provider via the Provider Interface](#adding-a-new-provider-via-the-provider-interface)
