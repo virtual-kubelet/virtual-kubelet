@@ -9,3 +9,6 @@ resource_group_name = "vkgpu"
 
 // The location of all resources
 resource_group_location = "westeurope"
+
+// Virtual Kubelet docker image 
+virtualkubelet_docker_image = "microsoft/virtual-kubelet"

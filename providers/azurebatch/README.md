@@ -21,14 +21,15 @@ The following Terraform template deploys an AKS cluster with the Virtual Kubelet
 3. Download the latest version of the Community Kubernetes Provider for Terraform. Get the correct link [from here](https://github.com/sl1pm4t/terraform-provider-kubernetes/releases) and use it as follows: (Current official Terraform K8s provider doesn't support `Deployments`)
 
 ```shell
-curl -L -o PUT_RELASE_BINARY_LINK_YOU_FOUND_HERE | gunzip > terraform-provider-kubernetes
+curl -L -o - PUT_RELASE_BINARY_LINK_YOU_FOUND_HERE | gunzip > terraform-provider-kubernetes
 chmod +x ./terraform-provider-kubernetes
 ```
 
-4. Use `terraform plan -var-file=./vars.example.tfvars` and `terraform apply -var-file=./vars.example.tfvars` to deploy the template
-5. Run `kubectl describe deployment/vkdeployment` to check the virtual kubelet is running correctly.
-6. Run `kubectl create -f examplegpujob.yaml`
-7. Run `pods=$(kubectl get pods --selector=app=examplegpupod --show-all --output=jsonpath={.items..metadata.name})` then `kubectl logs $pods` to view the logs. Should see:
+4. Use `terraform init` to initialize the template
+5. Use `terraform plan -var-file=./vars.example.tfvars` and `terraform apply -var-file=./vars.example.tfvars` to deploy the template
+6. Run `kubectl describe deployment/vkdeployment` to check the virtual kubelet is running correctly.
+7. Run `kubectl create -f examplegpupod.yaml`
+8. Run `pods=$(kubectl get pods --selector=app=examplegpupod --show-all --output=jsonpath={.items..metadata.name})` then `kubectl logs $pods` to view the logs. Should see:
 
 ```text
 	[Vector addition of 50000 elements]

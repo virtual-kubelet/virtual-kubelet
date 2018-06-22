@@ -40,7 +40,7 @@ module "azurebatch" {
 
 module "virtualkubelet" {
   source                      = "virtualkubelet"
-  virtualkubelet_docker_image = "lawrencegripper/vkgpu:v0.1"
+  virtualkubelet_docker_image = "${var.virtualkubelet_docker_image}"
 
   cluster_client_key         = "${module.aks.cluster_client_key}"
   cluster_client_certificate = "${module.aks.cluster_client_certificate}"

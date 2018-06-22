@@ -109,7 +109,7 @@ func convertTaskStatusToContainerState(t *batch.CloudTask) (containerState apiv1
 		containerState = apiv1.ContainerState{
 			Waiting: &apiv1.ContainerStateWaiting{
 				Message: "Waiting for machine in AzureBatch",
-				Reason:  "active",
+				Reason:  "Queued",
 			},
 		}
 	case batch.TaskStateRunning:

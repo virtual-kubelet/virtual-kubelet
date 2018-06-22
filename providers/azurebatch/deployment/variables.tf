@@ -17,3 +17,7 @@ variable "resource_group_location" {
   description = "Resource group location"
   type        = "string"
 }
+
+variable "virtualkubelet_docker_image" {
+  type = "string"
+}
