@@ -312,7 +312,7 @@ Notice that Virtual-Kubelet nodes are tainted by default to avoid unexpected pod
 Run the application with the [kubectl create][kubectl-create] command.
 
 ```cli
-kubectl create -f virtual-kubelet-test.yml
+kubectl create -f virtual-kubelet-test.yaml
 ```
 
 Use the [kubectl get pods][kubectl-get] command with the `-o wide` argument to output a list of pods with the scheduled node.
