@@ -1,0 +1,24 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: pauseexample1
+spec:
+  containers:
+  - name: pauseexample1
+    imagePullPolicy: Always
+    image: gcr.io/google_containers/pause:1.0
+    resources:
+      requests:
+        memory: 1G
+        cpu: 1
+    ports:
+    - containerPort: 80
+      name: http
+      protocol: TCP
+    - containerPort: 443
+      name: https
+  dnsPolicy: ClusterFirst
+  nodeName: virtual-kubelet
+  tolerations:
+  - key: azure.com/aci
+    effect: NoSchedule

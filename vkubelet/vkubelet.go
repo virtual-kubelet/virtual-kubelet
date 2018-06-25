@@ -13,6 +13,7 @@ import (
 	"github.com/virtual-kubelet/virtual-kubelet/manager"
 	"github.com/virtual-kubelet/virtual-kubelet/providers/aws"
 	"github.com/virtual-kubelet/virtual-kubelet/providers/azure"
+	"github.com/virtual-kubelet/virtual-kubelet/providers/azurebatch"
 	"github.com/virtual-kubelet/virtual-kubelet/providers/cri"
 	"github.com/virtual-kubelet/virtual-kubelet/providers/hypersh"
 	"github.com/virtual-kubelet/virtual-kubelet/providers/mock"
@@ -87,6 +88,11 @@ func New(nodeName, operatingSystem, namespace, kubeConfig, taint, provider, prov
 		}
 	case "azure":
 		p, err = azure.NewACIProvider(providerConfig, rm, nodeName, operatingSystem, internalIP, daemonEndpointPort)
+		if err != nil {
+			return nil, err
+		}
+	case "azurebatch":
+		p, err = azurebatch.NewBatchProvider(providerConfig, rm, nodeName, operatingSystem, internalIP, daemonEndpointPort)
 		if err != nil {
 			return nil, err
 		}

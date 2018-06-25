@@ -3,6 +3,7 @@ package vkubelet
 import (
 	"github.com/virtual-kubelet/virtual-kubelet/providers/aws"
 	"github.com/virtual-kubelet/virtual-kubelet/providers/azure"
+	"github.com/virtual-kubelet/virtual-kubelet/providers/azurebatch"
 	"github.com/virtual-kubelet/virtual-kubelet/providers/cri"
 	"github.com/virtual-kubelet/virtual-kubelet/providers/hypersh"
 	"github.com/virtual-kubelet/virtual-kubelet/providers/web"
@@ -14,6 +15,7 @@ var _ Provider = (*aws.FargateProvider)(nil)
 var _ Provider = (*azure.ACIProvider)(nil)
 var _ Provider = (*hypersh.HyperProvider)(nil)
 var _ Provider = (*web.BrokerProvider)(nil)
+var _ Provider = (*azurebatch.Provider)(nil)
 var _ Provider = (*cri.CRIProvider)(nil)
 
 // Provider contains the methods required to implement a virtual-kubelet provider.
