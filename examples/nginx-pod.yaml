@@ -15,7 +15,9 @@ spec:
       name: https
   dnsPolicy: ClusterFirst
   nodeSelector:
-    kubernetes.io/hostname: virtual-kubelet-myaciconnector-linux
+    kubernetes.io/role: agent
+    beta.kubernetes.io/os: linux
+    type: virtual-kubelet
   tolerations:
   - key: azure.com/aci
     effect: NoSchedule

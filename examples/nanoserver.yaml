@@ -11,7 +11,9 @@ spec:
   dnsPolicy: Default
   restartPolicy: OnFailure
   nodeSelector:
-    kubernetes.io/hostname: virtual-kubelet-myaciconnector-win
+    kubernetes.io/role: agent
+    beta.kubernetes.io/os: windows
+    type: virtual-kubelet
   automountServiceAccountToken: false
   tolerations:
   - key: azure.com/aci

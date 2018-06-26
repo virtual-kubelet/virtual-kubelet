@@ -5,6 +5,9 @@
 *.dylib
 bin/
 
+# Certificates
+*.pem
+
 # Test binary, build with `go test -c`
 *.test
 
@@ -25,3 +28,9 @@ credentials.json
 
 # VS Code files
 .vscode/
+
+# Terraform ignores
+**/.terraform/**
+**/terraform-provider-kubernetes
+**/*.tfstate*
+debug

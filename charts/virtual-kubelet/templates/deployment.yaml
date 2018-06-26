@@ -34,7 +34,7 @@ spec:
         - name: credentials
           mountPath: "/etc/virtual-kubelet"
         command: ["virtual-kubelet"]
-        args: ["--provider", "azure", "--namespace", "default", "--nodename", {{ default "virtual-kubelet" .Values.env.nodeName | quote }} , "--os", {{ default "Linux" .Values.env.nodeOsType | quote }}, "--taint", {{ default "azure.com/aci" .Values.env.nodeTaint | quote }}]
+        args: ["--provider", "azure", "--namespace", {{ default "" .Values.env.monitoredNamespace | quote }}, "--nodename", {{ default "virtual-kubelet" .Values.env.nodeName | quote }} , "--os", {{ default "Linux" .Values.env.nodeOsType | quote }}, "--taint", {{ default "azure.com/aci" .Values.env.nodeTaint | quote }}]
       volumes:
       - name: credentials
         secret:

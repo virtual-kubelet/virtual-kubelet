@@ -173,10 +173,22 @@ func NewACIProvider(config string, rm *manager.ResourceManager, nodeName, operat
 	}
 
 	// Set sane defaults for Capacity in case config is not supplied
-	p.cpu = "20"
-	p.memory = "100Gi"
-	p.pods = "20"
+	p.cpu = "1000"
+	p.memory = "4Ti"
+	p.pods = "1000"
 
+	if cpuQuota := os.Getenv("ACI_QUOTA_CPU"); cpuQuota != "" {
+		p.cpu = cpuQuota
+	}
+
+	if memoryQuota := os.Getenv("ACI_QUOTA_MEMORY"); memoryQuota != "" {
+		p.memory = memoryQuota
+	}
+
+	if podsQuota := os.Getenv("ACI_QUOTA_POD"); podsQuota != "" {
+		p.pods = podsQuota
+	}
+	
 	p.operatingSystem = operatingSystem
 	p.nodeName = nodeName
 	p.internalIP = internalIP

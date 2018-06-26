@@ -13,6 +13,7 @@ import (
 	"github.com/virtual-kubelet/virtual-kubelet/manager"
 	"github.com/virtual-kubelet/virtual-kubelet/providers/aws"
 	"github.com/virtual-kubelet/virtual-kubelet/providers/azure"
+	"github.com/virtual-kubelet/virtual-kubelet/providers/azurebatch"
 	"github.com/virtual-kubelet/virtual-kubelet/providers/cri"
 	"github.com/virtual-kubelet/virtual-kubelet/providers/hypersh"
 	"github.com/virtual-kubelet/virtual-kubelet/providers/mock"
@@ -87,6 +88,11 @@ func New(nodeName, operatingSystem, namespace, kubeConfig, taint, provider, prov
 		}
 	case "azure":
 		p, err = azure.NewACIProvider(providerConfig, rm, nodeName, operatingSystem, internalIP, daemonEndpointPort)
+		if err != nil {
+			return nil, err
+		}
+	case "azurebatch":
+		p, err = azurebatch.NewBatchProvider(providerConfig, rm, nodeName, operatingSystem, internalIP, daemonEndpointPort)
 		if err != nil {
 			return nil, err
 		}
@@ -274,6 +280,13 @@ func (s *Server) updateNode() {
 
 	n.ResourceVersion = "" // Blank out resource version to prevent object has been modified error
 	n.Status.Conditions = s.provider.NodeConditions()
+
+	capacity := s.provider.Capacity()
+	n.Status.Capacity = capacity
+	n.Status.Allocatable = capacity
+
+	n.Status.Addresses = s.provider.NodeAddresses()
+	
 	n, err = s.k8sClient.CoreV1().Nodes().UpdateStatus(n)
 	if err != nil {
 		log.Println("Failed to update node:", err)

@@ -2,6 +2,15 @@
 
 
 [[projects]]
+  name = "github.com/Azure/azure-sdk-for-go"
+  packages = [
+    "services/batch/2017-09-01.6.0/batch",
+    "version"
+  ]
+  revision = "51228ee60b238eaa5a9d53adc82ebd8b321bca4f"
+  version = "v15.1.1"
+
+[[projects]]
   branch = "master"
   name = "github.com/Azure/go-ansiterm"
   packages = [
@@ -13,8 +22,12 @@
 [[projects]]
   name = "github.com/Azure/go-autorest"
   packages = [
+    "autorest",
     "autorest/adal",
-    "autorest/date"
+    "autorest/azure",
+    "autorest/date",
+    "autorest/to",
+    "autorest/validation"
   ]
   revision = "eaa7994b2278094c904d31993d26f56324db3052"
   version = "v10.8.1"
@@ -503,6 +516,12 @@
   revision = "7cafcd837844e784b526369c9bce262804aebc60"
 
 [[projects]]
+  name = "github.com/lawrencegripper/pod2docker"
+  packages = ["."]
+  revision = "9a9182c0c682798fe214fa11df7bfca83048d433"
+  version = "v0.5.1"
+
+[[projects]]
   name = "github.com/magiconair/properties"
   packages = ["."]
   revision = "c3beff4c2358b44d0493c7dda585e7db7ff28ae6"
@@ -575,6 +594,12 @@
   packages = ["difflib"]
   revision = "792786c7400a136282c1664665ae0a8db921c6c2"
   version = "v1.0.0"
+
+[[projects]]
+  name = "github.com/satori/go.uuid"
+  packages = ["."]
+  revision = "f58768cc1a7a7e77a3bd49e98cdd21419399b6a3"
+  version = "v1.2.0"
 
 [[projects]]
   name = "github.com/spf13/afero"
@@ -1049,6 +1074,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "6125e24314e26b6b5fb9a7cd98e4f23fa2e551d882485d1ff5f481abdfd792aa"
+  inputs-digest = "8f3ca80656c580339bc7105912693cf126c4952c476e7052cbd9de4ef73d9e75"
   solver-name = "gps-cdcl"
   solver-version = 1
