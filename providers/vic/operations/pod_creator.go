@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/kr/pretty"
 
@@ -17,6 +18,7 @@ import (
 	"github.com/vmware/vic/pkg/trace"
 
 	"k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 type PodCreator interface {
@@ -143,6 +145,8 @@ func (v *VicPodCreator) CreatePod(op trace.Operation, pod *v1.Pod, start bool) e
 		if err != nil {
 			return err
 		}
+		now := metav1.NewTime(time.Now())
+		vp.Pod.Status.StartTime = &now
 	}
 
 	return nil

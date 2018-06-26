@@ -12,6 +12,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"fmt"
+
 	"github.com/virtual-kubelet/virtual-kubelet/providers/vic/cache"
 	"github.com/virtual-kubelet/virtual-kubelet/providers/vic/proxy"
 	proxymocks "github.com/virtual-kubelet/virtual-kubelet/providers/vic/proxy/mocks"
@@ -30,7 +31,13 @@ const (
 	podName   = "busybox-sleep"
 	podHandle = "fakehandle"
 
-	fakeEP = "fake-endpoint"
+	fakeEP        = "fake-endpoint"
+	stateRunning  = "Running"
+	stateStarting = "Starting"
+	stateStopping = "Stopping"
+	stateStopped  = "Stopped"
+	stateRemoving = "Removing"
+	stateRemoved  = "Removed"
 )
 
 func createMocks(t *testing.T) (*proxymocks.ImageStore, *proxymocks.IsolationProxy, cache.PodCache, trace.Operation) {
