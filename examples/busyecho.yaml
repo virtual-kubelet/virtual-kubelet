@@ -20,7 +20,10 @@ spec:
     - containerPort: 443
       name: https
   dnsPolicy: ClusterFirst
-  nodeName: virtual-kubelet
+  nodeSelector:
+    kubernetes.io/role: agent
+    beta.kubernetes.io/os: linux
+    type: virtual-kubelet
   tolerations:
   - key: azure.com/aci
     effect: NoSchedule
