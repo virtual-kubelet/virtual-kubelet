@@ -12,6 +12,7 @@ import (
 	"reflect"
 	"strings"
 	"time"
+	"io"
 
 	"github.com/gorilla/websocket"
 	"github.com/virtual-kubelet/virtual-kubelet/manager"
@@ -22,6 +23,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/tools/remotecommand"
 )
 
 // The service account secret mount path.
