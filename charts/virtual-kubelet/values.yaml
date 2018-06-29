@@ -14,6 +14,7 @@ env:
   nodeOsType: 
   apiserverCert: 
   apiserverKey: 
+  monitoredNamespace: 
 
 # Install Default RBAC roles and bindings
 rbac:

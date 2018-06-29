@@ -21,9 +21,9 @@
 #  version = "2.4.0"
 
 [prune]
-  [[prune.project]]
-    unused-packages = true
-    name = "k8s.io/kubernetes"
+  unused-packages = true
+  non-go = true
+  go-tests = true
 
 [[constraint]]
   branch = "master"
@@ -45,35 +45,90 @@
   name = "github.com/hyperhq/hyper-api"
   revision = "18c77d3f9fe0abebb41b45c12f383ecac46f4ff1"
 
-[[constraint]]
-  name = "github.com/hyperhq/libcompose"
-  revision = "15d3a105140f968f5d4f62d2f44afd22a24a98fb"
 
-[[constraint]]
-  name = "github.com/xeipuuv/gojsonschema"
-  revision = "0c8571ac0ce161a5feb57375a9cdf148c98c0f70"
 
 [[constraint]]
   name = "github.com/gorilla/mux"
   version = "1.6.0"
 
 [[constraint]]
-  name = "k8s.io/client-go"
-  version = "7.0.0"
-
-[[constraint]]
   name = "github.com/hyperhq/hypercli"
   revision = "29217d318cab52815518a1126d57ca010de83e4d"
+
+[[constraint]]
+  name = "github.com/Azure/azure-sdk-for-go"
+  version = "15.1.1"
+
+[[constraint]]
+  name = "github.com/lawrencegripper/pod2docker"
+  version = "0.5.1"
 
 [[constraint]]
   name = "github.com/aws/aws-sdk-go"
   version = "1.13.38"
 
 [[constraint]]
-  name = "github.com/golang/protobuf"
-  version = "1.1.0"
-
-[[constraint]]
   name = "k8s.io/kubernetes"
   version = "1.10.0"
 
+[[constraint]]
+  name = "k8s.io/apimachinery"
+  version = "kubernetes-1.10.0"
+
+[[constraint]]
+  name = "k8s.io/client-go"
+  version = "7.0.0"
+
+
+# These are required for HyperHQ
+[[override]]
+  name = "github.com/xeipuuv/gojsonschema"
+  revision = "0c8571ac0ce161a5feb57375a9cdf148c98c0f70"
+
+[[override]]
+  name = "github.com/docker/libcompose"
+  version = "0.2.0"
+
+[[override]]
+  name = "github.com/hyperhq/libcompose"
+  revision = "15d3a105140f968f5d4f62d2f44afd22a24a98fb"
+
+[[constraint]]
+  branch = "feature/wolfpack"
+  name = "github.com/vmware/vic"
+
+[[override]]
+  name = "github.com/docker/docker"
+  revision = "49bf474f9ed7ce7143a59d1964ff7b7fd9b52178"
+
+[[override]]
+  name = "github.com/vishvananda/netlink"
+  revision = "482f7a52b758233521878cb6c5904b6bd63f3457"
+
+[[override]]
+  name = "github.com/opencontainers/runtime-spec"
+  revision = "1c7c27d043c2a5e513a44084d2b10d77d1402b8c"
+
+[[override]]
+  name = "github.com/go-openapi/analysis"
+  revision = "d5a75b7d751ca3f11ad5d93cfe97405f2c3f6a47"
+
+[[override]]
+  name = "github.com/go-openapi/errors"
+  revision = "fc3f73a224499b047eda7191e5d22e1e9631e86f"
+
+[[override]]
+  name = "github.com/go-openapi/loads"
+  revision = "6bb6486231e079ea125c0f39994ed3d0c53399ed"
+
+[[override]]
+  name = "github.com/go-openapi/runtime"
+  revision = "3b13ebb46790d871d74a6c2450fa4b1280f90854"
+
+[[override]]
+  name = "github.com/go-openapi/strfmt"
+  revision = "0cb3db44c13bad3b3f567b762a66751972a310cc"
+
+[[override]]
+  name = "github.com/go-openapi/validate"
+  revision = "035dcd74f1f61e83debe1c22950dc53556e7e4b2"

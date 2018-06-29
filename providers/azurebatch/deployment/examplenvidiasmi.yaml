@@ -1,0 +1,20 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: exampegpujob
+spec:
+  containers:
+  - image: nvidia/cuda
+    command: ["nvidia-smi"]
+    imagePullPolicy: Always
+    name: nvidia
+    resources:
+      requests:
+        memory: 1G
+        cpu: 1
+      limits:
+          nvidia.com/gpu: 1 # requesting 1 GPU
+  nodeName: virtual-kubelet
+  tolerations:
+  - key: azure.com/batch
+    effect: NoSchedule

@@ -14,9 +14,12 @@ import (
 	"github.com/virtual-kubelet/virtual-kubelet/manager"
 	"github.com/virtual-kubelet/virtual-kubelet/providers/aws"
 	"github.com/virtual-kubelet/virtual-kubelet/providers/azure"
+	"github.com/virtual-kubelet/virtual-kubelet/providers/azurebatch"
 	"github.com/virtual-kubelet/virtual-kubelet/providers/cri"
+	"github.com/virtual-kubelet/virtual-kubelet/providers/huawei"
 	"github.com/virtual-kubelet/virtual-kubelet/providers/hypersh"
 	"github.com/virtual-kubelet/virtual-kubelet/providers/mock"
+	"github.com/virtual-kubelet/virtual-kubelet/providers/vic"
 	"github.com/virtual-kubelet/virtual-kubelet/providers/web"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -26,6 +29,10 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
+)
+
+const (
+        PodStatusReason_ProviderFailed = "ProviderFailed"
 )
 
 // Server masquarades itself as a kubelet and allows for the virtual node to be backed by non-vm/node providers.
@@ -86,8 +93,18 @@ func New(v *options.VKubeletRunOptions) (*Server, error) {
 		if err != nil {
 			return nil, err
 		}
+	case "azurebatch":
+		p, err = azurebatch.NewBatchProvider(providerConfig, rm, nodeName, operatingSystem, internalIP, daemonEndpointPort)
+		if err != nil {
+			return nil, err
+		}
 	case "hyper":
 		p, err = hypersh.NewHyperProvider(v.ProviderConfig, rm, v.NodeName, v.OperatingSystem)
+		if err != nil {
+			return nil, err
+		}
+	case "vic":
+		p, err = vic.NewVicProvider(providerConfig, rm, nodeName, operatingSystem)
 		if err != nil {
 			return nil, err
 		}
@@ -103,6 +120,11 @@ func New(v *options.VKubeletRunOptions) (*Server, error) {
 		}
 	case "cri":
 		p, err = cri.NewCRIProvider(v.NodeName, v.OperatingSystem, internalIP, rm, daemonEndpointPort)
+		if err != nil {
+			return nil, err
+		}
+	case "huawei":
+		p, err = huawei.NewCCIProvider(providerConfig, rm, nodeName, operatingSystem, internalIP, daemonEndpointPort)
 		if err != nil {
 			return nil, err
 		}
@@ -187,47 +209,62 @@ func (s *Server) registerNode() error {
 // Run starts the server, registers it with Kubernetes and begins watching/reconciling the cluster.
 // Run will block until Stop is called or a SIGINT or SIGTERM signal is received.
 func (s *Server) Run() error {
+	shouldStop := false
+
 	sig := make(chan os.Signal, 1)
 	signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM)
 	go func() {
 		<-sig
+		shouldStop = true
 		s.Stop()
 	}()
 
-	opts := metav1.ListOptions{
-		FieldSelector: fields.OneTermEqualSelector("spec.nodeName", s.nodeName).String(),
-	}
-
-	pods, err := s.k8sClient.CoreV1().Pods(s.namespace).List(opts)
-	if err != nil {
-		log.Fatal(err)
-	}
-	s.resourceManager.SetPods(pods)
-	s.reconcile()
-
-	opts.ResourceVersion = pods.ResourceVersion
-	s.podWatcher, err = s.k8sClient.CoreV1().Pods(s.namespace).Watch(opts)
-	if err != nil {
-		log.Fatal(err)
-	}
-
 	for {
-		select {
-		case ev, ok := <-s.podWatcher.ResultChan():
-			if !ok {
-				return nil
-			}
-
-			switch ev.Type {
-			case watch.Added:
-				s.resourceManager.AddPod(ev.Object.(*corev1.Pod))
-			case watch.Modified:
-				s.resourceManager.UpdatePod(ev.Object.(*corev1.Pod))
-			case watch.Deleted:
-				s.resourceManager.DeletePod(ev.Object.(*corev1.Pod))
-			}
-			s.reconcile()
+		opts := metav1.ListOptions{
+			FieldSelector: fields.OneTermEqualSelector("spec.nodeName", s.nodeName).String(),
 		}
+
+		pods, err := s.k8sClient.CoreV1().Pods(s.namespace).List(opts)
+		if err != nil {
+			log.Fatal("Failed to list pods", err)
+		}
+		s.resourceManager.SetPods(pods)
+		s.reconcile()
+
+		opts.ResourceVersion = pods.ResourceVersion
+		s.podWatcher, err = s.k8sClient.CoreV1().Pods(s.namespace).Watch(opts)
+		if err != nil {
+			log.Fatal("Failed to watch pods", err)
+		}
+
+		loop:
+		for {
+			select {
+			case ev, ok := <-s.podWatcher.ResultChan():
+				if !ok {
+					if shouldStop {
+						log.Println("Pod watcher is stopped.")
+						return nil
+					}
+
+					log.Println("Pod watcher connection is closed unexpectedly.")
+					break loop
+				}
+
+				log.Println("Pod watcher event is received:", ev.Type)
+				switch ev.Type {
+				case watch.Added:
+					s.resourceManager.AddPod(ev.Object.(*corev1.Pod))
+				case watch.Modified:
+					s.resourceManager.UpdatePod(ev.Object.(*corev1.Pod))
+				case watch.Deleted:
+					s.resourceManager.DeletePod(ev.Object.(*corev1.Pod))
+				}
+				s.reconcile()
+			}
+		}
+
+		time.Sleep(5 * time.Second)
 	}
 }
 
@@ -250,6 +287,13 @@ func (s *Server) updateNode() {
 
 	n.ResourceVersion = "" // Blank out resource version to prevent object has been modified error
 	n.Status.Conditions = s.provider.NodeConditions()
+
+	capacity := s.provider.Capacity()
+	n.Status.Capacity = capacity
+	n.Status.Allocatable = capacity
+
+	n.Status.Addresses = s.provider.NodeAddresses()
+	
 	n, err = s.k8sClient.CoreV1().Nodes().UpdateStatus(n)
 	if err != nil {
 		log.Println("Failed to update node:", err)
@@ -311,7 +355,7 @@ func (s *Server) createPod(pod *corev1.Pod) error {
 	if origErr := s.provider.CreatePod(pod); origErr != nil {
 		pod.ResourceVersion = "" // Blank out resource version to prevent object has been modified error
 		pod.Status.Phase = corev1.PodFailed
-		pod.Status.Reason = "ProviderFailed"
+		pod.Status.Reason = PodStatusReason_ProviderFailed
 		pod.Status.Message = origErr.Error()
 
 		_, err := s.k8sClient.CoreV1().Pods(pod.Namespace).UpdateStatus(pod)
@@ -354,6 +398,10 @@ func (s *Server) updatePodStatuses() {
 	pods := s.resourceManager.GetPods()
 	for _, pod := range pods {
 		if pod.DeletionTimestamp != nil && pod.Status.Phase == corev1.PodSucceeded {
+			continue
+		}
+
+		if pod.Status.Phase == corev1.PodFailed && pod.Status.Reason == PodStatusReason_ProviderFailed {
 			continue
 		}
 
