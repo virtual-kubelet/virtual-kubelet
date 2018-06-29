@@ -642,6 +642,13 @@ func (p *CRIProvider) GetContainerLogs(namespace, podName, containerName string,
 	return readLogFile(container.LogPath, tail)
 }
 
+// ExecInContainer executes a command in a container in the pod, copying data
+// between in/out/err and the container's stdin/stdout/stderr.
+// TODO: Implementation
+func (p *CRIProvider) ExecInContainer(name string, uid types.UID, container string, cmd []string, in io.Reader, out, err io.WriteCloser, tty bool, resize <-chan remotecommand.TerminalSize, timeout time.Duration) error {
+	log.Printf("receive ExecInContainer %q\n", container)
+	
+
 // Find a pod by name and namespace. Pods are indexed by UID
 func (p *CRIProvider) findPodByName(namespace, name string) *CRIPod {
 	var found *CRIPod

@@ -21,6 +21,7 @@ import (
 	"k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	apitypes "k8s.io/apimachinery/pkg/types"
 )
 
 var host = "tcp://*.hyper.sh:443"
@@ -316,6 +317,14 @@ func (p *HyperProvider) GetPod(namespace, name string) (pod *v1.Pod, err error) 
 // GetContainerLogs retrieves the logs of a container by name from the provider.
 func (p *HyperProvider) GetContainerLogs(namespace, podName, containerName string, tail int) (string, error) {
 	return "", nil
+}
+
+// ExecInContainer executes a command in a container in the pod, copying data
+// between in/out/err and the container's stdin/stdout/stderr.
+// TODO: Implementation
+func (p *HyperProvider) ExecInContainer(name string, uid apitypes.UID, container string, cmd []string, in io.Reader, out, err io.WriteCloser, tty bool, resize <-chan remotecommand.TerminalSize, timeout time.Duration) error {
+	log.Printf("receive ExecInContainer %q\n", container)
+	return nil
 }
 
 // GetPodStatus returns the status of a pod by name that is running inside hyper.sh

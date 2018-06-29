@@ -175,6 +175,14 @@ func (p *FargateProvider) GetContainerLogs(namespace, podName, containerName str
 	return p.cluster.GetContainerLogs(namespace, podName, containerName, tail)
 }
 
+// ExecInContainer executes a command in a container in the pod, copying data
+// between in/out/err and the container's stdin/stdout/stderr.
+// TODO: Implementation
+func (p *FargateProvider) ExecInContainer(name string, uid types.UID, container string, cmd []string, in io.Reader, out, err io.WriteCloser, tty bool, resize <-chan remotecommand.TerminalSize, timeout time.Duration) error {
+	log.Printf("receive ExecInContainer %q\n", container)
+	return nil
+}
+
 // GetPodStatus retrieves the status of a pod by name from the provider.
 func (p *FargateProvider) GetPodStatus(namespace, name string) (*corev1.PodStatus, error) {
 	log.Printf("Received GetPodStatus request for %s/%s.\n", namespace, name)
