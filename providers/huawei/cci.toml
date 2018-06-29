@@ -1,0 +1,9 @@
+# example configuration file for Huawei CCI virtual-kubelet provider.
+
+Project = "default"
+Region = "southchina"
+Service = "CCI"
+OperatingSystem = "Linux"
+CPU = "20"
+Memory = "100Gi"
+Pods = "20"
