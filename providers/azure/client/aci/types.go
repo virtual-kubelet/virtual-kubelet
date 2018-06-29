@@ -275,3 +275,21 @@ type VolumeMount struct {
 	MountPath string `json:"mountPath,omitempty"`
 	ReadOnly  bool   `json:"readOnly,omitempty"`
 }
+
+// TerminalSize is the size of the Launch Exec terminal
+type TerminalSize struct {
+	Rows int `json:"rows,omitempty"`
+	Cols int `json:"cols,omitempty"`
+}
+
+// ExecRequest is a request for Launch Exec API response for ACI.
+type ExecRequest struct {
+	Command      string       `json:"command,omitempty"`
+	TerminalSize TerminalSize `json:"terminalSize,omitempty"`
+}
+
+// ExecRequest is a request for Launch Exec API response for ACI.
+type ExecResponse struct {
+	WebSocketUri string `json:"webSocketUri,omitempty"`
+	Password     string `json:"password,omitempty"`
+}
