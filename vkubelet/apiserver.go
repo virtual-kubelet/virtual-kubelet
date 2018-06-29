@@ -7,8 +7,11 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"strings"
+	"time"
 
 	"github.com/gorilla/mux"
+	"k8s.io/kubernetes/pkg/kubelet/server/remotecommand"
 )
 
 var p Provider
