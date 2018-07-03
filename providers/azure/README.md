@@ -120,7 +120,7 @@ that you've created an [AKS cluster](https://docs.microsoft.com/en-us/azure/aks/
 
 To install the ACI Connector use the az cli and the aks namespace. Make sure to use the resource group of the aks cluster you've created and the name of the aks cluster you've created. You can choose the connector name to be anything. Choose any command below to install the Linux, Windows, or both the Windows and Linux Connector.
 
-Note: You need to specify the --aci-resource-group, due to a bug in the az cli. The resource groupis the auto-generated. To find the name navigate to the Azure Portal resource groups, scroll down and find the name that matches MC_aks cluster name_aks rg_location.
+Note: You need to specify the --aci-resource-group, due to a bug in the az cli. The resource group is the auto-generated. To find the name navigate to the Azure Portal resource groups, scroll down and find the name that matches MC_aks cluster name_aks rg_location.
 
 1. Install the Linux ACI Connector
 
