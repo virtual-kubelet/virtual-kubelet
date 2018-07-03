@@ -3,16 +3,17 @@ package azure
 import (
 	"bytes"
 	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"os"
 	"reflect"
 	"strings"
 	"time"
-	"io"
 
 	"github.com/gorilla/websocket"
 	"github.com/virtual-kubelet/virtual-kubelet/manager"
@@ -353,7 +354,7 @@ func (p *ACIProvider) ExecInContainer(name string, uid types.UID, container stri
 	password := xcrsp.Password
 
 	c, _, _ := websocket.DefaultDialer.Dial(wsUri, nil)
-	c.WriteMessage(websocket.TextMessage, []byte(password)) // Websocket password needs to be sent before WS terminal is active, is this ACI specific?
+	c.WriteMessage(websocket.TextMessage, []byte(password)) // Websocket password needs to be sent before WS terminal is active
 
 	// Cleanup on exit
 	defer c.Close()
@@ -364,7 +365,7 @@ func (p *ACIProvider) ExecInContainer(name string, uid types.UID, container stri
 		go func() {
 			for {
 				var msg = make([]byte, 512)
-				_, err := in.Read(msg)
+				n, err := in.Read(msg)
 				if err == io.EOF {
 					// Handle EOF
 				}
@@ -372,8 +373,8 @@ func (p *ACIProvider) ExecInContainer(name string, uid types.UID, container stri
 					// Handle errors
 					return
 				}
-				if string(msg) != "" {
-					c.WriteMessage(websocket.BinaryMessage, msg)
+				if n > 0 { // Only call WriteMessage if there is data to send
+					c.WriteMessage(websocket.BinaryMessage, msg[:n])
 				}
 
 			}
