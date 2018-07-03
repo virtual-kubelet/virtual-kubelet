@@ -340,7 +340,18 @@ func (p *ACIProvider) GetPodFullName(namespace string, pod string) string {
 // ExecInContainer executes a command in a container in the pod, copying data
 // between in/out/err and the container's stdin/stdout/stderr.
 func (p *ACIProvider) ExecInContainer(name string, uid types.UID, container string, cmd []string, in io.Reader, out, errstream io.WriteCloser, tty bool, resize <-chan remotecommand.TerminalSize, timeout time.Duration) error {
-	cg, _, _ := p.aciClient.GetContainerGroup(p.resourceGroup, name)
+	// Cleanup on exit
+	if out != nil {
+		defer out.Close()
+	}
+	if errstream != nil {
+		defer errstream.Close()
+	}
+
+	cg, err, _ := p.aciClient.GetContainerGroup(p.resourceGroup, name)
+	if err != nil {
+		return err
+	}
 
 	// Set default terminal size
 	terminalSize := remotecommand.TerminalSize{
@@ -352,7 +363,10 @@ func (p *ACIProvider) ExecInContainer(name string, uid types.UID, container stri
 		terminalSize = <-resize // Receive terminal resize event if resize stream is present
 	}
 
-	xcrsp, _ := p.aciClient.LaunchExec(p.resourceGroup, cg.Name, container, cmd[0], terminalSize)
+	xcrsp, err := p.aciClient.LaunchExec(p.resourceGroup, cg.Name, container, cmd[0], terminalSize)
+	if err != nil {
+		return err
+	}
 
 	wsUri := xcrsp.WebSocketUri
 	password := xcrsp.Password
