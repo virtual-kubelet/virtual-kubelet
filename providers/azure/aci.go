@@ -332,6 +332,11 @@ func (p *ACIProvider) GetContainerLogs(namespace, podName, containerName string,
 	return logContent, err
 }
 
+// Get full pod name as defined in the provider context
+func (p *ACIProvider) GetPodFullName(namespace string, pod string) string {
+	return fmt.Sprintf("%s-%s", namespace, pod)
+}
+
 // ExecInContainer executes a command in a container in the pod, copying data
 // between in/out/err and the container's stdin/stdout/stderr.
 func (p *ACIProvider) ExecInContainer(name string, uid types.UID, container string, cmd []string, in io.Reader, out, errstream io.WriteCloser, tty bool, resize <-chan remotecommand.TerminalSize, timeout time.Duration) error {

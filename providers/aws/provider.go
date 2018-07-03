@@ -2,9 +2,9 @@ package aws
 
 import (
 	"fmt"
+	"io"
 	"log"
 	"time"
-	"io"
 
 	"github.com/virtual-kubelet/virtual-kubelet/manager"
 	"github.com/virtual-kubelet/virtual-kubelet/providers/aws/fargate"
@@ -176,6 +176,11 @@ func (p *FargateProvider) GetPod(namespace, name string) (*corev1.Pod, error) {
 func (p *FargateProvider) GetContainerLogs(namespace, podName, containerName string, tail int) (string, error) {
 	log.Printf("Received GetContainerLogs request for %s/%s/%s.\n", namespace, podName, containerName)
 	return p.cluster.GetContainerLogs(namespace, podName, containerName, tail)
+}
+
+// Get full pod name as defined in the provider context
+func (p *FargateProvider) GetPodFullName(namespace string, pod string) string {
+	return ""
 }
 
 // ExecInContainer executes a command in a container in the pod, copying data
