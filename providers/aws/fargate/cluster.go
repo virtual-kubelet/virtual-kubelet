@@ -13,6 +13,10 @@ import (
 	k8sTypes "k8s.io/apimachinery/pkg/types"
 )
 
+const (
+	clusterFailureReasonMissing = "MISSING"
+)
+
 // ClusterConfig contains a Fargate cluster's configurable parameters.
 type ClusterConfig struct {
 	Region                  string
@@ -83,7 +87,7 @@ func NewCluster(config *ClusterConfig) (*Cluster, error) {
 
 	// Check if the cluster already exists.
 	err = cluster.describe()
-	if err != nil {
+	if err != nil && !strings.Contains(err.Error(), clusterFailureReasonMissing) {
 		return nil, err
 	}
 
@@ -122,7 +126,7 @@ func (c *Cluster) create() error {
 		return err
 	}
 
-	c.arn = *output.Cluster.ClusterArn
+	c.arn = aws.StringValue(output.Cluster.ClusterArn)
 	log.Printf("Created Fargate cluster %s in region %s", c.name, c.region)
 
 	return nil
@@ -139,18 +143,17 @@ func (c *Cluster) describe() error {
 	log.Printf("Looking for Fargate cluster %s in region %s.", c.name, c.region)
 
 	output, err := api.DescribeClusters(input)
-	if err != nil || len(output.Clusters) > 1 {
+	if err != nil || len(output.Clusters) == 0 {
+		if len(output.Failures) > 0 {
+			err = fmt.Errorf("reason: %s", *output.Failures[0].Reason)
+		}
 		err = fmt.Errorf("failed to describe cluster: %v", err)
 		log.Println(err)
 		return err
 	}
 
-	if len(output.Clusters) == 0 {
-		log.Printf("Fargate cluster %s in region %s does not exist.", c.name, c.region)
-	} else {
-		log.Printf("Found Fargate cluster %s in region %s.", c.name, c.region)
-		c.arn = *output.Clusters[0].ClusterArn
-	}
+	log.Printf("Found Fargate cluster %s in region %s.", c.name, c.region)
+	c.arn = aws.StringValue(output.Clusters[0].ClusterArn)
 
 	return nil
 }
