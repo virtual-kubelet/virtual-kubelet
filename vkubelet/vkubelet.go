@@ -113,7 +113,7 @@ func New(nodeName, operatingSystem, namespace, kubeConfig, taint, provider, prov
 			return nil, err
 		}
 	case "mock":
-		p, err = mock.NewMockProvider(nodeName, operatingSystem, internalIP, daemonEndpointPort)
+		p, err = mock.NewMockProvider(providerConfig, nodeName, operatingSystem, internalIP, daemonEndpointPort)
 		if err != nil {
 			return nil, err
 		}
