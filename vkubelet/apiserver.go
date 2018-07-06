@@ -7,8 +7,11 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"strings"
+	"time"
 
 	"github.com/gorilla/mux"
+	"k8s.io/kubernetes/pkg/kubelet/server/remotecommand"
 )
 
 var p Provider
@@ -28,6 +31,7 @@ func ApiserverStart(provider Provider) {
 
 	r := mux.NewRouter()
 	r.HandleFunc("/containerLogs/{namespace}/{pod}/{container}", ApiServerHandler).Methods("GET")
+	r.HandleFunc("/exec/{namespace}/{pod}/{container}", ApiServerHandlerExec).Methods("POST")
 	r.NotFoundHandler = http.HandlerFunc(NotFound)
 
 	if err := http.ListenAndServeTLS(addr, certFilePath, keyFilePath, r); err != nil {
@@ -63,4 +67,37 @@ func ApiServerHandler(w http.ResponseWriter, req *http.Request) {
 	} else {
 		NotFound(w, req)
 	}
+}
+
+func ApiServerHandlerExec(w http.ResponseWriter, req *http.Request) {
+	vars := mux.Vars(req)
+
+	namespace := vars["namespace"]
+	pod := vars["pod"]
+	container := vars["container"]
+
+	supportedStreamProtocols := strings.Split(req.Header.Get("X-Stream-Protocol-Version"), ",")
+
+	q := req.URL.Query()
+	command := q.Get("command")
+
+	// streamOpts := &remotecommand.Options{
+	// 	Stdin:  (q.Get("input") == "1"),
+	// 	Stdout: (q.Get("output") == "1"),
+	// 	Stderr: (q.Get("error") == "1"),
+	// 	TTY:    (q.Get("tty") == "1"),
+	// }
+
+	// TODO: tty flag causes remotecommand.createStreams to wait for the wrong number of streams
+	streamOpts := &remotecommand.Options{
+		Stdin:  true,
+		Stdout: true,
+		Stderr: true,
+		TTY:    false,
+	}
+
+	idleTimeout := time.Second * 30
+	streamCreationTimeout := time.Second * 30
+
+	remotecommand.ServeExec(w, req, p, fmt.Sprintf("%s-%s", namespace, pod), "", container, []string{command}, streamOpts, idleTimeout, streamCreationTimeout, supportedStreamProtocols)
 }

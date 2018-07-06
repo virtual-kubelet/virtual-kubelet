@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"os"
 	"time"
@@ -18,6 +19,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/tools/remotecommand"
 )
 
 const (
@@ -276,6 +278,20 @@ func (p *CCIProvider) GetPod(namespace, name string) (*v1.Pod, error) {
 // GetContainerLogs retrieves the logs of a container by name from the huawei CCI provider.
 func (p *CCIProvider) GetContainerLogs(namespace, podName, containerName string, tail int) (string, error) {
 	return "", nil
+}
+
+// Get full pod name as defined in the provider context
+// TODO: Implementation
+func (p *CCIProvider) GetPodFullName(namespace string, pod string) string {
+	return ""
+}
+
+// ExecInContainer executes a command in a container in the pod, copying data
+// between in/out/err and the container's stdin/stdout/stderr.
+// TODO: Implementation
+func (p *CCIProvider) ExecInContainer(name string, uid types.UID, container string, cmd []string, in io.Reader, out, err io.WriteCloser, tty bool, resize <-chan remotecommand.TerminalSize, timeout time.Duration) error {
+	log.Printf("receive ExecInContainer %q\n", container)
+	return nil
 }
 
 // GetPodStatus retrieves the status of a pod by name from the huawei CCI provider.

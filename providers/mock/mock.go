@@ -3,6 +3,7 @@ package mock
 import (
 	"encoding/json"
 	"fmt"
+  "io"
 	"io/ioutil"
 	"log"
 	"time"
@@ -11,6 +12,8 @@ import (
 	"k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/tools/remotecommand"
 )
 
 const (
@@ -146,6 +149,19 @@ func (p *MockProvider) GetPod(namespace, name string) (pod *v1.Pod, err error) {
 func (p *MockProvider) GetContainerLogs(namespace, podName, containerName string, tail int) (string, error) {
 	log.Printf("receive GetContainerLogs %q\n", podName)
 	return "", nil
+}
+
+// Get full pod name as defined in the provider context
+// TODO: Implementation
+func (p *MockProvider) GetPodFullName(namespace string, pod string) string {
+	return ""
+}
+
+// ExecInContainer executes a command in a container in the pod, copying data
+// between in/out/err and the container's stdin/stdout/stderr.
+func (p *MockProvider) ExecInContainer(name string, uid types.UID, container string, cmd []string, in io.Reader, out, err io.WriteCloser, tty bool, resize <-chan remotecommand.TerminalSize, timeout time.Duration) error {
+	log.Printf("receive ExecInContainer %q\n", container)
+	return nil
 }
 
 // GetPodStatus returns the status of a pod by name that is "running".
