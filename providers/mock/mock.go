@@ -3,7 +3,7 @@ package mock
 import (
 	"encoding/json"
 	"fmt"
-  "io"
+	"io"
 	"io/ioutil"
 	"log"
 	"time"
@@ -60,11 +60,16 @@ func NewMockProvider(providerConfig, nodeName, operatingSystem string, internalI
 
 // loadConfig loads the given json configuration files.
 func loadConfig(providerConfig string) (config MockConfig, err error) {
-	data, err := ioutil.ReadFile(providerConfig)
-	if err != nil {
-		return config, err
+	if providerConfig != "" {
+		data, err := ioutil.ReadFile(providerConfig)
+		if err != nil {
+			return config, err
+		}
+		err = json.Unmarshal(data, &config)
+		if err != nil {
+			return config, err
+		}
 	}
-	err = json.Unmarshal(data, &config)
 	if config.CPU == "" {
 		config.CPU = defaultCPUCapacity
 	}
@@ -72,7 +77,7 @@ func loadConfig(providerConfig string) (config MockConfig, err error) {
 		config.Memory = defaultMemoryCapacity
 	}
 	if config.Pods == "" {
-		config.Memory = defaultPodCapacity
+		config.Pods = defaultPodCapacity
 	}
 
 	if _, err = resource.ParseQuantity(config.CPU); err != nil {
