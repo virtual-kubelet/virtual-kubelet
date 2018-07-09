@@ -8,7 +8,10 @@ import (
 	"github.com/virtual-kubelet/virtual-kubelet/providers/azure"
 	"github.com/virtual-kubelet/virtual-kubelet/providers/azurebatch"
 	"github.com/virtual-kubelet/virtual-kubelet/providers/cri"
+	"github.com/virtual-kubelet/virtual-kubelet/providers/huawei"
 	"github.com/virtual-kubelet/virtual-kubelet/providers/hypersh"
+	"github.com/virtual-kubelet/virtual-kubelet/providers/mock"
+	"github.com/virtual-kubelet/virtual-kubelet/providers/vic"
 	"github.com/virtual-kubelet/virtual-kubelet/providers/web"
 	"k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -19,7 +22,10 @@ import (
 var _ Provider = (*aws.FargateProvider)(nil)
 var _ Provider = (*azure.ACIProvider)(nil)
 var _ Provider = (*hypersh.HyperProvider)(nil)
+var _ Provider = (*vic.VicProvider)(nil)
 var _ Provider = (*web.BrokerProvider)(nil)
+var _ Provider = (*mock.MockProvider)(nil)
+var _ Provider = (*huawei.CCIProvider)(nil)
 var _ Provider = (*azurebatch.Provider)(nil)
 var _ Provider = (*cri.CRIProvider)(nil)
 
