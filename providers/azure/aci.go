@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"os"
@@ -13,6 +14,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/gorilla/websocket"
 	"github.com/virtual-kubelet/virtual-kubelet/manager"
 	client "github.com/virtual-kubelet/virtual-kubelet/providers/azure/client"
 	"github.com/virtual-kubelet/virtual-kubelet/providers/azure/client/aci"
@@ -21,6 +23,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/tools/remotecommand"
 )
 
 // The service account secret mount path.
@@ -188,7 +191,7 @@ func NewACIProvider(config string, rm *manager.ResourceManager, nodeName, operat
 	if podsQuota := os.Getenv("ACI_QUOTA_POD"); podsQuota != "" {
 		p.pods = podsQuota
 	}
-	
+
 	p.operatingSystem = operatingSystem
 	p.nodeName = nodeName
 	p.internalIP = internalIP
@@ -327,6 +330,88 @@ func (p *ACIProvider) GetContainerLogs(namespace, podName, containerName string,
 	}
 
 	return logContent, err
+}
+
+// Get full pod name as defined in the provider context
+func (p *ACIProvider) GetPodFullName(namespace string, pod string) string {
+	return fmt.Sprintf("%s-%s", namespace, pod)
+}
+
+// ExecInContainer executes a command in a container in the pod, copying data
+// between in/out/err and the container's stdin/stdout/stderr.
+func (p *ACIProvider) ExecInContainer(name string, uid types.UID, container string, cmd []string, in io.Reader, out, errstream io.WriteCloser, tty bool, resize <-chan remotecommand.TerminalSize, timeout time.Duration) error {
+	// Cleanup on exit
+	if out != nil {
+		defer out.Close()
+	}
+	if errstream != nil {
+		defer errstream.Close()
+	}
+
+	cg, err, _ := p.aciClient.GetContainerGroup(p.resourceGroup, name)
+	if err != nil {
+		return err
+	}
+
+	// Set default terminal size
+	terminalSize := remotecommand.TerminalSize{
+		Height: 60,
+		Width:  120,
+	}
+
+	if resize != nil {
+		terminalSize = <-resize // Receive terminal resize event if resize stream is present
+	}
+
+	xcrsp, err := p.aciClient.LaunchExec(p.resourceGroup, cg.Name, container, cmd[0], terminalSize)
+	if err != nil {
+		return err
+	}
+
+	wsUri := xcrsp.WebSocketUri
+	password := xcrsp.Password
+
+	c, _, _ := websocket.DefaultDialer.Dial(wsUri, nil)
+	c.WriteMessage(websocket.TextMessage, []byte(password)) // Websocket password needs to be sent before WS terminal is active
+
+	// Cleanup on exit
+	defer c.Close()
+	defer out.Close()
+
+	if in != nil {
+		// Inputstream
+		go func() {
+			for {
+				var msg = make([]byte, 512)
+				n, err := in.Read(msg)
+				if err == io.EOF {
+					// Handle EOF
+				}
+				if err != nil {
+					// Handle errors
+					return
+				}
+				if n > 0 { // Only call WriteMessage if there is data to send
+					c.WriteMessage(websocket.BinaryMessage, msg[:n])
+				}
+
+			}
+		}()
+	}
+
+	if out != nil {
+		//Outputstream
+		for {
+			_, cr, err := c.NextReader()
+			if err != nil {
+				// Handle errors
+				break
+			}
+			io.Copy(out, cr)
+		}
+	}
+
+	return nil
 }
 
 // GetPodStatus returns the status of a pod by name that is running inside ACI

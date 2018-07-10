@@ -5,12 +5,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/Azure/go-autorest/autorest"
-	"os"
-	"strings"
-
+	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
+	"os"
+	"strings"
+	"time"
 
 	"github.com/Azure/go-autorest/autorest/azure"
 
@@ -22,6 +23,8 @@ import (
 	"k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/tools/remotecommand"
 )
 
 const (
@@ -298,6 +301,20 @@ func (p *Provider) GetContainerLogs(namespace, podName, containerName string, ta
 	}
 
 	return result, nil
+}
+
+// Get full pod name as defined in the provider context
+// TODO: Implementation
+func (p *Provider) GetPodFullName(namespace string, pod string) string {
+	return ""
+}
+
+// ExecInContainer executes a command in a container in the pod, copying data
+// between in/out/err and the container's stdin/stdout/stderr.
+// TODO: Implementation
+func (p *Provider) ExecInContainer(name string, uid types.UID, container string, cmd []string, in io.Reader, out, err io.WriteCloser, tty bool, resize <-chan remotecommand.TerminalSize, timeout time.Duration) error {
+	log.Printf("receive ExecInContainer %q\n", container)
+	return nil
 }
 
 // GetPods retrieves a list of all pods scheduled to run.

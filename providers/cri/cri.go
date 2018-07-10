@@ -3,6 +3,7 @@ package cri
 import (
 	"bufio"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net"
 	"os"
@@ -21,6 +22,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/tools/remotecommand"
 	criapi "k8s.io/kubernetes/pkg/kubelet/apis/cri/runtime/v1alpha2"
 )
 
@@ -640,6 +642,20 @@ func (p *CRIProvider) GetContainerLogs(namespace, podName, containerName string,
 	}
 
 	return readLogFile(container.LogPath, tail)
+}
+
+// Get full pod name as defined in the provider context
+// TODO: Implementation
+func (p *CRIProvider) GetPodFullName(namespace string, pod string) string {
+	return ""
+}
+
+// ExecInContainer executes a command in a container in the pod, copying data
+// between in/out/err and the container's stdin/stdout/stderr.
+// TODO: Implementation
+func (p *CRIProvider) ExecInContainer(name string, uid types.UID, container string, cmd []string, in io.Reader, out, err io.WriteCloser, tty bool, resize <-chan remotecommand.TerminalSize, timeout time.Duration) error {
+	log.Printf("receive ExecInContainer %q\n", container)
+	return nil
 }
 
 // Find a pod by name and namespace. Pods are indexed by UID

@@ -1,14 +1,26 @@
 package mock
 
 import (
+	"encoding/json"
+	"fmt"
+	"io"
+	"io/ioutil"
 	"log"
 	"time"
 
-	"fmt"
 	"github.com/virtual-kubelet/virtual-kubelet/providers"
 	"k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/tools/remotecommand"
+)
+
+const (
+	// Provider configuration defaults.
+	defaultCPUCapacity    = "20"
+	defaultMemoryCapacity = "100Gi"
+	defaultPodCapacity    = "20"
 )
 
 // MockProvider implements the virtual-kubelet provider interface and stores pods in memory.
@@ -18,19 +30,66 @@ type MockProvider struct {
 	internalIP         string
 	daemonEndpointPort int32
 	pods               map[string]*v1.Pod
+	config             MockConfig
+}
+
+// MockConfig contains a mock virtual-kubelet's configurable parameters.
+type MockConfig struct {
+	CPU    string `json:"cpu,omitempty"`
+	Memory string `json:"memory,omitempty"`
+	Pods   string `json:"pods,omitempty"`
 }
 
 // NewMockProvider creates a new MockProvider
-func NewMockProvider(nodeName, operatingSystem string, internalIP string, daemonEndpointPort int32) (*MockProvider, error) {
+func NewMockProvider(providerConfig, nodeName, operatingSystem string, internalIP string, daemonEndpointPort int32) (*MockProvider, error) {
+	config, err := loadConfig(providerConfig)
+	if err != nil {
+		return nil, err
+	}
+
 	provider := MockProvider{
 		nodeName:           nodeName,
 		operatingSystem:    operatingSystem,
 		internalIP:         internalIP,
 		daemonEndpointPort: daemonEndpointPort,
 		pods:               make(map[string]*v1.Pod),
+		config:             config,
+	}
+	return &provider, nil
+}
+
+// loadConfig loads the given json configuration files.
+func loadConfig(providerConfig string) (config MockConfig, err error) {
+	if providerConfig != "" {
+		data, err := ioutil.ReadFile(providerConfig)
+		if err != nil {
+			return config, err
+		}
+		err = json.Unmarshal(data, &config)
+		if err != nil {
+			return config, err
+		}
+	}
+	if config.CPU == "" {
+		config.CPU = defaultCPUCapacity
+	}
+	if config.Memory == "" {
+		config.Memory = defaultMemoryCapacity
+	}
+	if config.Pods == "" {
+		config.Pods = defaultPodCapacity
 	}
 
-	return &provider, nil
+	if _, err = resource.ParseQuantity(config.CPU); err != nil {
+		return config, fmt.Errorf("Invalid CPU value %v", config.CPU)
+	}
+	if _, err = resource.ParseQuantity(config.Memory); err != nil {
+		return config, fmt.Errorf("Invalid memory value %v", config.Memory)
+	}
+	if _, err = resource.ParseQuantity(config.Pods); err != nil {
+		return config, fmt.Errorf("Invalid pods value %v", config.Pods)
+	}
+	return config, nil
 }
 
 // CreatePod accepts a Pod definition and stores it in memory.
@@ -95,6 +154,19 @@ func (p *MockProvider) GetPod(namespace, name string) (pod *v1.Pod, err error) {
 func (p *MockProvider) GetContainerLogs(namespace, podName, containerName string, tail int) (string, error) {
 	log.Printf("receive GetContainerLogs %q\n", podName)
 	return "", nil
+}
+
+// Get full pod name as defined in the provider context
+// TODO: Implementation
+func (p *MockProvider) GetPodFullName(namespace string, pod string) string {
+	return ""
+}
+
+// ExecInContainer executes a command in a container in the pod, copying data
+// between in/out/err and the container's stdin/stdout/stderr.
+func (p *MockProvider) ExecInContainer(name string, uid types.UID, container string, cmd []string, in io.Reader, out, err io.WriteCloser, tty bool, resize <-chan remotecommand.TerminalSize, timeout time.Duration) error {
+	log.Printf("receive ExecInContainer %q\n", container)
+	return nil
 }
 
 // GetPodStatus returns the status of a pod by name that is "running".
@@ -162,11 +234,10 @@ func (p *MockProvider) GetPods() ([]*v1.Pod, error) {
 
 // Capacity returns a resource list containing the capacity limits.
 func (p *MockProvider) Capacity() v1.ResourceList {
-	// TODO: These should be configurable
 	return v1.ResourceList{
-		"cpu":    resource.MustParse("20"),
-		"memory": resource.MustParse("100Gi"),
-		"pods":   resource.MustParse("20"),
+		"cpu":    resource.MustParse(p.config.CPU),
+		"memory": resource.MustParse(p.config.Memory),
+		"pods":   resource.MustParse(p.config.Pods),
 	}
 }
 
