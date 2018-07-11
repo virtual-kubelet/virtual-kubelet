@@ -279,9 +279,16 @@ func (s *Server) Stop() {
 func (s *Server) updateNode() {
 	opts := metav1.GetOptions{}
 	n, err := s.k8sClient.CoreV1().Nodes().Get(s.nodeName, opts)
-	if err != nil {
+	if err != nil && !errors.IsNotFound(err) {
 		log.Println("Failed to retrieve node:", err)
 		return
+	}
+
+	if errors.IsNotFound(err) {
+	        if err = s.registerNode(); err != nil {
+			log.Println("Failed to register node:", err)
+		        return
+	        }
 	}
 
 	n.ResourceVersion = "" // Blank out resource version to prevent object has been modified error
@@ -292,7 +299,7 @@ func (s *Server) updateNode() {
 	n.Status.Allocatable = capacity
 
 	n.Status.Addresses = s.provider.NodeAddresses()
-	
+
 	n, err = s.k8sClient.CoreV1().Nodes().UpdateStatus(n)
 	if err != nil {
 		log.Println("Failed to update node:", err)
