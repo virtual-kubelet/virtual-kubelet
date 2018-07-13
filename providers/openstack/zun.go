@@ -44,22 +44,19 @@ func NewZunProvider(config string, rm *manager.ResourceManager, nodeName, operat
 
 	AuthOptions, err := openstack.AuthOptionsFromEnv()
 	if err != nil{
-		fmt.Errorf("Unable to get the Auth options from environment variables: %s", err)
-		return nil, err
+		return nil, fmt.Errorf("Unable to get the Auth options from environment variables: %s", err)
 	}
 
 	Provider, err := openstack.AuthenticatedClient(AuthOptions)
 	if err != nil {
-		fmt.Errorf("Unable to get provider: %s", err)
-		return nil, err
+		return nil, fmt.Errorf("Unable to get provider: %s", err)
 	}
 
 	p.ZunClient, err = openstack.NewContainerV1(Provider, gophercloud.EndpointOpts{
 		Region: os.Getenv("OS_REGION_NAME"),
 	})
 	if err != nil {
-		fmt.Errorf("Unable to get zun client")
-		return nil, err
+		return nil, fmt.Errorf("Unable to get zun client")
 	}
 
 	// Set sane defaults for Capacity in case config is not supplied
