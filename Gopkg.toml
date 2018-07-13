@@ -79,6 +79,10 @@
   name = "k8s.io/client-go"
   version = "7.0.0"
 
+# These are required for Zun
+[[constraint]]
+  name = "github.com/gophercloud/gophercloud"
+  revision = "ea2f0eefdc4eeac2e4db99e1a37ede0314efbff4"
 
 # These are required for HyperHQ
 [[override]]
