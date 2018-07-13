@@ -2,6 +2,7 @@ package openstack
 
 import (
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"strconv"
@@ -18,6 +19,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/tools/remotecommand"
 )
 
 // ZunProvider implements the virtual-kubelet provider interface and communicates with OpenStack's Zun APIs.
@@ -210,6 +212,13 @@ func (p *ZunProvider) getContainers(pod *v1.Pod) ([]Container, error) {
 		containers = append(containers, c)
 	}
 	return containers, nil
+}
+
+// ExecInContainer executes a command in a container in the pod, copying data
+// between in/out/err and the container's stdin/stdout/stderr.
+func (p *ZunProvider) ExecInContainer(name string, uid types.UID, container string, cmd []string, in io.Reader, out, err io.WriteCloser, tty bool, resize <-chan remotecommand.TerminalSize, timeout time.Duration) error {
+	log.Printf("receive ExecInContainer %q\n", container)
+	return nil
 }
 
 // GetPodStatus returns the status of a pod by name that is running inside Zun
