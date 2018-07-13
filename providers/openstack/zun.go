@@ -162,7 +162,7 @@ func (p *ZunProvider) CreatePod(pod *v1.Pod) error {
 	createOpts := capsules.CreateOpts{
 		TemplateOpts:    template,
 	}
-	err = capsules.Create(p.ZunClient, createOpts).ExtractErr()
+	_, err = capsules.Create(p.ZunClient, createOpts).Extract()
 	if err != nil{
 		return err
 	}
@@ -315,7 +315,6 @@ func capsuleToPod(capsule *capsules.Capsule) (*v1.Pod, error) {
 	containerStatuses := make([]v1.ContainerStatus, 0, len(capsule.Containers))
 	// First container is sandbox
 	for _, c := range capsule.Containers[1:] {
-		containerCommand := []string{c.Command}
 		containerMemoryMB := 0
 		if c.Memory != ""{
 			containerMemory, err := strconv.Atoi(c.Memory)
@@ -327,7 +326,7 @@ func capsuleToPod(capsule *capsules.Capsule) (*v1.Pod, error) {
 		container := v1.Container{
 			Name:    c.Name,
 			Image:   c.Image,
-			Command: containerCommand,
+			Command: c.Command,
 			Resources: v1.ResourceRequirements{
 				Limits: v1.ResourceList{
 					v1.ResourceCPU:    resource.MustParse(fmt.Sprintf("%g", float64(c.CPU))),
@@ -349,7 +348,7 @@ func capsuleToPod(capsule *capsules.Capsule) (*v1.Pod, error) {
 			RestartCount:         int32(0),
 			Image:                c.Image,
 			ImageID:              "",
-			ContainerID:          c.ContainerID,
+			ContainerID:          c.UUID,
 		}
 
 		// Add to containerStatuses
