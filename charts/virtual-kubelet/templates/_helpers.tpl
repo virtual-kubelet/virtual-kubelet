@@ -14,3 +14,16 @@ We truncate at 24 chars because some Kubernetes name fields are limited to this 
 {{- $name := default .Chart.Name .Values.nameOverride -}}
 {{- printf "%s-%s" .Release.Name $name | trunc 63 | trimSuffix "-" -}}
 {{- end -}}
+
+{{/*
+Standard labels for helm resources
+*/}}
+{{- define "vk.labels" -}}
+labels:
+  heritage: "{{ .Release.Service }}"
+  release: "{{ .Release.Name }}"
+  revision: "{{ .Release.Revision }}"
+  chart: "{{ .Chart.Name }}"
+  chartVersion: "{{ .Chart.Version }}"
+  app: {{ template "vk.name" . }}
+{{- end -}}

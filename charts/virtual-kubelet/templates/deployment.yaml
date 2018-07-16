@@ -2,14 +2,16 @@ apiVersion: extensions/v1beta1
 kind: Deployment
 metadata:
   name: {{ template "vk.fullname" . }}
+{{ include "vk.labels" . | indent 2 }}
+    component: kubelet
   annotations:
     virtual-kubelet/provider: {{ required "provider is required" .Values.provider }}
 spec:
   replicas: 1
   template:
     metadata:
-      labels:
-        app: {{ template "vk.fullname" . }}
+{{ include "vk.labels" . | indent 6 }}
+        component: kubelet
       annotations:
         checksum/secret: {{ include (print $.Template.BasePath "/secret.yaml") . | sha256sum }}
     spec:
