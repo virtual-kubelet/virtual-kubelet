@@ -10,6 +10,8 @@ spec:
     metadata:
       labels:
         app: {{ template "vk.fullname" . }}
+      annotations:
+        checksum/secret: {{ include (print $.Template.BasePath "/secret.yaml") . | sha256sum }}
     spec:
       containers:
       - name: {{ template "vk.fullname" . }}
