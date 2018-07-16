@@ -186,21 +186,13 @@ resources on your account on behalf of Kubernetes.
 
 You will need to enable ACI in your subscription:
 
-    ```cli
-    az provider register -n Microsoft.ContainerInstance
-    ```
+```cli
+az provider register -n Microsoft.ContainerInstance
+```
 
 ## Deployment of the ACI provider in your cluster
 
 Run these commands to deploy the virtual kubelet which connects your Kubernetes cluster to Azure Container Instances.
-
-If your cluster is an AKS cluster:
-
-```cli
-export VK_RELEASE=virtual-kubelet-for-aks-0.1.3
-````
-
-For any other type of Kubernetes cluster:
 
 ```cli
 export VK_RELEASE=virtual-kubelet-0.1.1

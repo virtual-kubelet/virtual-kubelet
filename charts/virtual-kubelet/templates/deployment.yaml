@@ -1,48 +1,90 @@
 apiVersion: extensions/v1beta1
 kind: Deployment
 metadata:
-  name: {{ template "fullname" . }}
+  name: {{ template "vk.fullname" . }}
+  annotations:
+    virtual-kubelet/provider: {{ required "provider is required" .Values.provider }}
 spec:
   replicas: 1
   template:
     metadata:
       labels:
-        app: {{ template "fullname" . }}
+        app: {{ template "vk.fullname" . }}
     spec:
       containers:
-      - name: {{ template "fullname" . }}
+      - name: {{ template "vk.fullname" . }}
         image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
         imagePullPolicy: {{ .Values.image.pullPolicy }}
         env:
         - name: KUBELET_PORT
           value: "10250"
-        - name: AZURE_AUTH_LOCATION
-          value: /etc/virtual-kubelet/credentials.json
-        - name: ACI_RESOURCE_GROUP
-          value: {{ .Values.env.aciResourceGroup }}
-        - name: ACI_REGION
-          value: {{ default "westus" .Values.env.aciRegion }}
         - name: APISERVER_CERT_LOCATION
           value: /etc/virtual-kubelet/cert.pem
         - name: APISERVER_KEY_LOCATION
           value: /etc/virtual-kubelet/key.pem
-        {{ if .Values.loganalytics.enabled }}
-        - name: LOG_ANALYTICS_AUTH_LOCATION
-          value: /etc/virtual-kubelet/loganalytics.json
-        {{ end }}
         - name: VKUBELET_POD_IP
           valueFrom:
             fieldRef:
               fieldPath: status.podIP
+{{- if eq .Values.provider "azure" }}
+{{- with .Values.providers.azure }}
+        - name: ACI_RESOURCE_GROUP
+          value: {{ required "aciResourceGroup is required" .aciResourceGroup }}
+        - name: ACI_REGION
+          value: {{ required "aciRegion is required" .aciRegion }}
+{{- if .loganalytics.enabled }}
+        - name: LOG_ANALYTICS_AUTH_LOCATION
+          value: /etc/virtual-kubelet/loganalytics.json
+{{- end }}
+{{- if .targetAKS }}
+        - name: ACS_CREDENTIAL_LOCATION
+          value: /etc/acs/azure.json
+        - name: AZURE_TENANT_ID
+          value: {{ required "tenantId is required" .tenantId }}
+        - name: AZURE_SUBSCRIPTION_ID
+          value: {{ required "subscriptionId is required" .subscriptionId }}
+        - name: AZURE_CLIENT_ID
+          value: {{ required "clientId is required" .clientId }}
+        - name: AZURE_CLIENT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: {{ template "vk.fullname" $ }}
+              key: clientSecret
+{{- else }}
+        - name: AZURE_AUTH_LOCATION
+          value: /etc/virtual-kubelet/credentials.json
+{{- end }}
+{{- end }}
+{{- end }}
         volumeMounts:
         - name: credentials
           mountPath: "/etc/virtual-kubelet"
+{{- if eq .Values.provider "azure" }}
+{{- if .Values.providers.azure.targetAKS }}
+        - name: acs-credential
+          mountPath: "/etc/acs/azure.json"
+{{- end }}
+{{- end }}
         command: ["virtual-kubelet"]
-        args: ["--provider", "azure", "--namespace", {{ default "" .Values.env.monitoredNamespace | quote }}, "--nodename", {{ default "virtual-kubelet" .Values.env.nodeName | quote }} , "--os", {{ default "Linux" .Values.env.nodeOsType | quote }}, "--taint", {{ default "azure.com/aci" .Values.env.nodeTaint | quote }}]
+        args: [
+          "--provider", "{{ .Values.provider }}",
+          "--namespace", "{{ .Values.monitoredNamespace }}",
+          "--nodename", "{{ required "nodeName is required" .Values.nodeName }}",
+          "--os", "{{ .Values.nodeOsType }}",
+          "--taint", "{{ .Values.nodeTaint }}"
+        ]
       volumes:
       - name: credentials
         secret:
-          secretName: {{ template "fullname" . }}
-      serviceAccountName: {{ if .Values.rbac.install }} "{{ template "fullname" . }}-service-account" {{ end }}
+          secretName: {{ template "vk.fullname" . }}
+{{- if eq .Values.provider "azure" }}
+{{- if .Values.providers.azure.targetAKS }}
+      - name: acs-credential
+        hostPath:
+          path: /etc/kubernetes/azure.json
+          type: File
+{{- end }}
+{{- end }}
+      serviceAccountName: {{ if .Values.rbac.install }} "{{ template "vk.fullname" . }}" {{ end }}
       nodeSelector:
         beta.kubernetes.io/os: linux
