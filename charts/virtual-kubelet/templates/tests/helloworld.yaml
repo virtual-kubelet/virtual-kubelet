@@ -19,7 +19,8 @@ spec:
         memory: "0.1G"
         cpu: 10m
   dnsPolicy: ClusterFirst
-  nodeName: "{{ .Values.nodeName }}"
+  nodeSelector:
+    kubernetes.io/hostname: "{{ .Values.nodeName }}"
   restartPolicy: Never
   tolerations:
   - key: "{{ .Values.nodeTaint }}"
