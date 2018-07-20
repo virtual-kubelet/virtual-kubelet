@@ -195,9 +195,10 @@ az provider register -n Microsoft.ContainerInstance
 Run these commands to deploy the virtual kubelet which connects your Kubernetes cluster to Azure Container Instances.
 
 ```cli
-export VK_RELEASE=virtual-kubelet-0.1.1
+export VK_RELEASE=virtual-kubelet-0.2.0
 ```
 
+If your cluster is an AKS cluster:
 ```cli
 RELEASE_NAME=virtual-kubelet
 NODE_NAME=virtual-kubelet
@@ -208,7 +209,37 @@ chmod +x createCertAndKey.sh
 . ./createCertAndKey.sh
 
 helm install "$CHART_URL" --name "$RELEASE_NAME" \
-    --set env.azureClientId="$AZURE_CLIENT_ID",env.azureClientKey="$AZURE_CLIENT_SECRET",env.azureTenantId="$AZURE_TENANT_ID",env.azureSubscriptionId="$AZURE_SUBSCRIPTION_ID",env.aciRegion="$ACI_REGION",env.aciResourceGroup="$AZURE_RG",env.nodeName="$NODE_NAME",env.nodeOsType=<Linux|Windows>,env.apiserverCert=$cert,env.apiserverKey=$key,rbac.install=false
+  --set provider=azure \
+  --set providers.azure.targetAKS=true \
+  --set providers.azure.tenantId=$AZURE_TENANT_ID \
+  --set providers.azure.subscriptionId=$AZURE_SUBSCRIPTION_ID \
+  --set providers.azure.clientId=$AZURE_CLIENT_ID \
+  --set apiserverCert=$cert \
+  --set apiserverKey=$key
+```
+
+For any other type of Kubernetes cluster:
+```cli
+RELEASE_NAME=virtual-kubelet
+NODE_NAME=virtual-kubelet
+CHART_URL=https://github.com/virtual-kubelet/virtual-kubelet/raw/master/charts/$VK_RELEASE.tgz
+
+curl https://raw.githubusercontent.com/virtual-kubelet/virtual-kubelet/master/scripts/createCertAndKey.sh > createCertAndKey.sh
+chmod +x createCertAndKey.sh
+. ./createCertAndKey.sh
+
+helm install "$CHART_URL" --name "$RELEASE_NAME" \
+  --set provider=azure \
+  --set rbac.install=true \
+  --set providers.azure.targetAKS=false \
+  --set providers.azure.tenantId=$AZURE_TENANT_ID \
+  --set providers.azure.subscriptionId=$AZURE_SUBSCRIPTION_ID \
+  --set providers.azure.clientId=$AZURE_CLIENT_ID \
+  --set providers.azure.clientKey=$AZURE_CLIENT_SECRET \
+  --set providers.azure.aciResourceGroup=$AZURE_RG \
+  --set providers.azure.aciRegion=$ACI_REGION \
+  --set apiserverCert=$cert \
+  --set apiserverKey=$key
 ```
 
 If your cluster has RBAC enabled set ```rbac.install=true```
