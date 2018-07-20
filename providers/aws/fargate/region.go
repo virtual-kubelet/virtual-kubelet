@@ -11,11 +11,14 @@ type Regions []string
 var (
 	// FargateRegions are AWS regions where Fargate is available.
 	FargateRegions = Regions{
-		"ap-northeast-1",
-		"eu-west-1",
-		"us-east-1",
-		"us-east-2",
-		"us-west-2",
+		"ap-northeast-1", // Asia Pacific (Tokyo)
+		"ap-southeast-1", // Asia Pacific (Singapore)
+		"ap-southeast-2", // Asia Pacific (Sydney)
+		"eu-central-1",   // EU (Frankfurt)
+		"eu-west-1",      // EU (Ireland)
+		"us-east-1",      // US East (N. Virginia)
+		"us-east-2",      // US East (Ohio)
+		"us-west-2",      // US West (Oregon)
 	}
 )
 
