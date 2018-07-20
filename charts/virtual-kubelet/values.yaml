@@ -30,7 +30,7 @@ providers:
 
 ## Install Default RBAC roles and bindings
 rbac:
-  install: false
+  install: true
   serviceAccountName: virtual-kubelet
   ## RBAC api version
   apiVersion: v1beta1
