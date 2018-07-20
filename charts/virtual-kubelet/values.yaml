@@ -20,8 +20,9 @@ providers:
     clientKey: 
     tenantId: 
     subscriptionId: 
+    ## `aciResourceGroup` and `aciRegion` are required only for non-AKS deployments
     aciResourceGroup: 
-    aciRegion: "westus"
+    aciRegion: 
     loganalytics:
       enabled: false
       workspaceID: 
