@@ -1,6 +1,7 @@
 package aci
 
 import (
+	"fmt"
 	"log"
 	"os"
 	"strings"
@@ -13,13 +14,14 @@ import (
 
 var (
 	client         *Client
-	location       = "eastus"
+	location       = "eastus2euap"
 	resourceGroup  = "virtual-kubelet-tests"
 	containerGroup = "virtual-kubelet-test-container-group"
+	subscriptionID string
 )
 
 func init() {
-	// Create a resource group name with uuid.
+	//Create a resource group name with uuid.
 	uid := uuid.New()
 	resourceGroup += "-" + uid.String()[0:6]
 }
@@ -31,6 +33,8 @@ func TestMain(m *testing.M) {
 	if err != nil {
 		log.Fatalf("Failed to load Azure authentication file: %v", err)
 	}
+
+	subscriptionID = auth.SubscriptionID
 
 	// Check if the resource group exists and create it if not.
 	rgCli, err := resourcegroups.NewClient(auth)
@@ -192,6 +196,55 @@ func TestCreateContainerGroup(t *testing.T) {
 	}
 	if cg.Name != containerGroup {
 		t.Fatalf("resource group name is %s, expected %s", cg.Name, containerGroup)
+	}
+}
+
+func TestCreateContainerGroupWithBadVNetFails(t *testing.T) {
+	_, err := client.CreateContainerGroup(resourceGroup, containerGroup, ContainerGroup{
+		Location: location,
+		ContainerGroupProperties: ContainerGroupProperties{
+			OsType: Linux,
+			Containers: []Container{
+				{
+					Name: "nginx",
+					ContainerProperties: ContainerProperties{
+						Image:   "nginx",
+						Command: []string{"nginx", "-g", "daemon off;"},
+						Ports: []ContainerPort{
+							{
+								Protocol: ContainerNetworkProtocolTCP,
+								Port:     80,
+							},
+						},
+						Resources: ResourceRequirements{
+							Requests: &ResourceRequests{
+								CPU:        1,
+								MemoryInGB: 1,
+							},
+							Limits: &ResourceLimits{
+								CPU:        1,
+								MemoryInGB: 1,
+							},
+						},
+					},
+				},
+			},
+			NetworkProfile: &NetworkProfileDefinition{
+				ID: fmt.Sprintf(
+					"/subscriptions/%s/resourceGroups/%s/providers"+
+						"/Microsoft.Network/networkProfiles/%s",
+					subscriptionID,
+					resourceGroup,
+					"badNetworkProfile",
+				),
+			},
+		},
+	})
+	if err == nil {
+		t.Fatal("expected create container group to fail with  NetworkProfileNotFound, but returned nil")
+	}
+	if !strings.Contains(err.Error(), "NetworkProfileNotFound") {
+		t.Fatalf("expected NetworkProfileNotFound to be in the error message but got: %v", err)
 	}
 }
 
