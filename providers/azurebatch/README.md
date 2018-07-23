@@ -1,6 +1,6 @@
 # Kubernetes Virtual Kubelet with Azure Batch
 
-[Azure Batch](https://docs.microsoft.com/en-us/azure/batch/) provides a HPC Computing environment in Azure for distributed tasks. Azure Batch handles scheduling decrete jobs and tasks accross pools of VM's. It is commonly used for batch processing tasks such as rendering.
+[Azure Batch](https://docs.microsoft.com/en-us/azure/batch/) provides a HPC Computing environment in Azure for distributed tasks. Azure Batch handles scheduling of discrete jobs and tasks accross pools of VM's. It is commonly used for batch processing tasks such as rendering.
 
 The Virtual kubelet integration allows you to take advantage of this from within Kubernetes. The primary usecase for the provider is to make it easy to use GPU based workload from normal Kubernetes clusters. For example, creating Kubernetes Jobs which train or execute ML models using Nvidia GPU's or using FFMPEG.
 
