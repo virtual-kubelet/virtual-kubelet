@@ -79,7 +79,7 @@ func ApiServerHandlerExec(w http.ResponseWriter, req *http.Request) {
 	supportedStreamProtocols := strings.Split(req.Header.Get("X-Stream-Protocol-Version"), ",")
 
 	q := req.URL.Query()
-	command := q.Get("command")
+	command := q["command"]
 
 	// streamOpts := &remotecommand.Options{
 	// 	Stdin:  (q.Get("input") == "1"),
@@ -99,5 +99,5 @@ func ApiServerHandlerExec(w http.ResponseWriter, req *http.Request) {
 	idleTimeout := time.Second * 30
 	streamCreationTimeout := time.Second * 30
 
-	remotecommand.ServeExec(w, req, p, fmt.Sprintf("%s-%s", namespace, pod), "", container, []string{command}, streamOpts, idleTimeout, streamCreationTimeout, supportedStreamProtocols)
+	remotecommand.ServeExec(w, req, p, fmt.Sprintf("%s-%s", namespace, pod), "", container, command, streamOpts, idleTimeout, streamCreationTimeout, supportedStreamProtocols)
 }
