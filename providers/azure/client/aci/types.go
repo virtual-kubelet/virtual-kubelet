@@ -144,9 +144,9 @@ type ContainerState struct {
 
 // EnvironmentVariable is the environment variable to set within the container instance.
 type EnvironmentVariable struct {
-	Name   string `json:"name,omitempty"`
-	Value  string `json:"value,omitempty"`
-	Secure string `json:"secureValue,omitempty"`
+	Name        string `json:"name,omitempty"`
+	Value       string `json:"value,omitempty"`
+	SecureValue string `json:"secureValue,omitempty"`
 }
 
 // Event is a container group or container instance event.
