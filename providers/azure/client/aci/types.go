@@ -92,12 +92,19 @@ type ContainerGroupProperties struct {
 	Volumes                  []Volume                             `json:"volumes,omitempty"`
 	InstanceView             ContainerGroupPropertiesInstanceView `json:"instanceView,omitempty"`
 	Diagnostics              *ContainerGroupDiagnostics           `json:"diagnostics,omitempty"`
+	NetworkProfile           *NetworkProfileDefinition            `json:"networkProfile,omitempty"`
 }
 
 // ContainerGroupPropertiesInstanceView is the instance view of the container group. Only valid in response.
 type ContainerGroupPropertiesInstanceView struct {
 	Events []Event `json:"events,omitempty"`
 	State  string  `json:"state,omitempty"`
+}
+
+// NetworkProfileDefinition is the network profile definition. ID should be of the form
+// /subscriptions/{subscriptionId} or /providers/{resourceProviderNamespace}/
+type NetworkProfileDefinition struct {
+	ID string `json:"id,omitempty"`
 }
 
 // ContainerGroupListResult is the container group list response that contains the container group properties.
