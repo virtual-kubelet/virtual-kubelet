@@ -294,7 +294,9 @@ func TestCreateContainerGroupFailsWithLivenessProbeMissingPort(t *testing.T) {
 							},
 						},
 						LivenessProbe: &ContainerProbe{
-							HTTPGet: &ContainerHTTPGetProbe{},
+							HTTPGet: &ContainerHTTPGetProbe{
+								Path: "/",
+							},
 						},
 					},
 				},
@@ -304,6 +306,7 @@ func TestCreateContainerGroupFailsWithLivenessProbeMissingPort(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected failure")
 	}
+	t.Fatal(err)
 }
 
 func TestCreateContainerGroupWithReadinessProbe(t *testing.T) {
