@@ -306,7 +306,6 @@ func TestCreateContainerGroupFailsWithLivenessProbeMissingPort(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected failure")
 	}
-	t.Fatal(err)
 }
 
 func TestCreateContainerGroupWithReadinessProbe(t *testing.T) {
