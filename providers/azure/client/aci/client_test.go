@@ -217,6 +217,147 @@ func TestListContainerGroup(t *testing.T) {
 	}
 }
 
+func TestCreateContainerGroupWithLivenessProbe(t *testing.T) {
+	uid := uuid.New()
+	congainerGroupName := containerGroup + "-" + uid.String()[0:6]
+	cg, err := client.CreateContainerGroup(resourceGroup, congainerGroupName, ContainerGroup{
+		Location: location,
+		ContainerGroupProperties: ContainerGroupProperties{
+			OsType: Linux,
+			Containers: []Container{
+				{
+					Name: "nginx",
+					ContainerProperties: ContainerProperties{
+						Image:   "nginx",
+						Command: []string{"nginx", "-g", "daemon off;"},
+						Ports: []ContainerPort{
+							{
+								Protocol: ContainerNetworkProtocolTCP,
+								Port:     80,
+							},
+						},
+						Resources: ResourceRequirements{
+							Requests: &ResourceRequests{
+								CPU:        1,
+								MemoryInGB: 1,
+							},
+							Limits: &ResourceLimits{
+								CPU:        1,
+								MemoryInGB: 1,
+							},
+						},
+						LivenessProbe: &ContainerProbe{
+							HTTPGet: &ContainerHTTPGetProbe{
+								Port: 80,
+							},
+						},
+					},
+				},
+			},
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cg.Name != congainerGroupName {
+		t.Fatalf("resource group name is %s, expected %s", cg.Name, congainerGroupName)
+	}
+}
+
+func TestCreateContainerGroupFailsWithLivenessProbeMissingPort(t *testing.T) {
+	uid := uuid.New()
+	congainerGroupName := containerGroup + "-" + uid.String()[0:6]
+	_, err := client.CreateContainerGroup(resourceGroup, congainerGroupName, ContainerGroup{
+		Location: location,
+		ContainerGroupProperties: ContainerGroupProperties{
+			OsType: Linux,
+			Containers: []Container{
+				{
+					Name: "nginx",
+					ContainerProperties: ContainerProperties{
+						Image:   "nginx",
+						Command: []string{"nginx", "-g", "daemon off;"},
+						Ports: []ContainerPort{
+							{
+								Protocol: ContainerNetworkProtocolTCP,
+								Port:     80,
+							},
+						},
+						Resources: ResourceRequirements{
+							Requests: &ResourceRequests{
+								CPU:        1,
+								MemoryInGB: 1,
+							},
+							Limits: &ResourceLimits{
+								CPU:        1,
+								MemoryInGB: 1,
+							},
+						},
+						LivenessProbe: &ContainerProbe{
+							HTTPGet: &ContainerHTTPGetProbe{},
+						},
+					},
+				},
+			},
+		},
+	})
+	if err == nil {
+		t.Fatal("expected failure")
+	}
+}
+
+func TestCreateContainerGroupWithReadinessProbe(t *testing.T) {
+	uid := uuid.New()
+	congainerGroupName := containerGroup + "-" + uid.String()[0:6]
+	cg, err := client.CreateContainerGroup(resourceGroup, congainerGroupName, ContainerGroup{
+		Location: location,
+		ContainerGroupProperties: ContainerGroupProperties{
+			OsType: Linux,
+			Containers: []Container{
+				{
+					Name: "nginx",
+					ContainerProperties: ContainerProperties{
+						Image:   "nginx",
+						Command: []string{"nginx", "-g", "daemon off;"},
+						Ports: []ContainerPort{
+							{
+								Protocol: ContainerNetworkProtocolTCP,
+								Port:     80,
+							},
+						},
+						Resources: ResourceRequirements{
+							Requests: &ResourceRequests{
+								CPU:        1,
+								MemoryInGB: 1,
+							},
+							Limits: &ResourceLimits{
+								CPU:        1,
+								MemoryInGB: 1,
+							},
+						},
+						ReadinessProbe: &ContainerProbe{
+							HTTPGet: &ContainerHTTPGetProbe{
+								Port: 80,
+								Path: "/",
+							},
+							InitialDelaySeconds: 5,
+							SuccessThreshold:    3,
+							FailureThreshold:    5,
+							TimeoutSeconds:      120,
+						},
+					},
+				},
+			},
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cg.Name != congainerGroupName {
+		t.Fatalf("resource group name is %s, expected %s", cg.Name, congainerGroupName)
+	}
+}
+
 func TestDeleteContainerGroup(t *testing.T) {
 	err := client.DeleteContainerGroup(resourceGroup, containerGroup)
 	if err != nil {
