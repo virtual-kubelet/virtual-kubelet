@@ -3,7 +3,6 @@ package certs
 import (
 	"crypto/rand"
 	"crypto/rsa"
-	"crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/pem"
@@ -17,17 +16,6 @@ const (
 	validFor = 365 * 24 * time.Hour 
 	keySize  = 4096
 )
-
-func IsCertKeyPairValid(certFilePath, keyFilePath string) bool {
-	if certFilePath == "" || keyFilePath == "" {
-		return false
-	}
-	_, err := tls.LoadX509KeyPair(certFilePath, keyFilePath)
-	if err != nil {
-		return false
-	}
-	return true
-}
 
 // this is based on https://golang.org/src/crypto/tls/generate_cert.go and
 // the existing script createCertAndKey.sh
@@ -68,23 +56,23 @@ func GenerateCertKeyPair() (string, string, error) {
 		priv,
 	)
 	if err != nil {
-		log.Printf("Failed to create certificate: %s", err)
+		log.Printf("Failed to create certificate: %s\n", err)
 		return "", "", err
 	}
 	certOut, err := os.Create("cert.pem")
 	if err != nil {
-		log.Printf("failed to open cert.pem for writing: %s", err)
+		log.Printf("failed to open cert.pem for writing: %s\n", err)
 		return "", "", err
 	}
 	defer certOut.Close()
 	err = pem.Encode(certOut, &pem.Block{Type: "CERTIFICATE", Bytes: derBytes})
 	if err != nil {
-		log.Printf("failed to PEM encode certificate: %s", err)
+		log.Printf("failed to PEM encode certificate: %s\n", err)
 		return "", "", err
 	}
 	keyOut, err := os.OpenFile("key.pem", os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
 	if err != nil {
-		log.Print("failed to open key.pem for writing:", err)
+		log.Printf("failed to open key.pem for writing: %s\n", err)
 		return "", "", err
 	}
 	defer keyOut.Close()
@@ -94,7 +82,7 @@ func GenerateCertKeyPair() (string, string, error) {
 	}
 	err = pem.Encode(keyOut, p)
 	if err != nil {
-		log.Printf("failed to PEM encode key: %s", err)
+		log.Printf("failed to PEM encode key: %s\n", err)
 		return "", "", err
 	}
 	return certFileName, keyFileName, nil
