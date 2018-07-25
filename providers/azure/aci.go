@@ -156,7 +156,16 @@ func NewACIProvider(config string, rm *manager.ResourceManager, nodeName, operat
 		return nil, err
 	}
 
+	// If the log analytics file has been specified, load workspace credentials from the file
+	if logAnalyticsAuthFile := os.Getenv("LOG_ANALYTICS_AUTH_LOCATION"); logAnalyticsAuthFile != "" {
+		p.diagnostics, err = aci.NewContainerGroupDiagnosticsFromFile(logAnalyticsAuthFile)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	// If we have both the log analytics workspace id and key, add them to the provider
+	// Environment variables overwrite the values provided in the file
 	if logAnalyticsID := os.Getenv("LOG_ANALYTICS_ID"); logAnalyticsID != "" {
 		if logAnalyticsKey := os.Getenv("LOG_ANALYTICS_KEY"); logAnalyticsKey != "" {
 			p.diagnostics, err = aci.NewContainerGroupDiagnostics(logAnalyticsID, logAnalyticsKey)
