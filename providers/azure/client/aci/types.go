@@ -91,6 +91,7 @@ type ContainerGroupProperties struct {
 	OsType                   OperatingSystemTypes                 `json:"osType,omitempty"`
 	Volumes                  []Volume                             `json:"volumes,omitempty"`
 	InstanceView             ContainerGroupPropertiesInstanceView `json:"instanceView,omitempty"`
+	Diagnostics              *ContainerGroupDiagnostics           `json:"diagnostics,omitempty"`
 }
 
 // ContainerGroupPropertiesInstanceView is the instance view of the container group. Only valid in response.
@@ -319,4 +320,15 @@ type ContainerHTTPGetProbe struct {
 	Port   int    `json:"port"`
 	Path   string `json:"path,omitempty"`
 	Scheme string `json:"scheme,omitempty"`
+}
+
+// ContainerGroupDiagnostics contains an instance of LogAnalyticsWorkspace
+type ContainerGroupDiagnostics struct {
+	LogAnalytics *LogAnalyticsWorkspace `json:"loganalytics,omitempty"`
+}
+
+// LogAnalyticsWorkspace defines details for a Log Analytics workspace
+type LogAnalyticsWorkspace struct {
+	WorkspaceID  string `json:"workspaceID,omitempty"`
+	WorkspaceKey string `json:"workspaceKey,omitempty"`
 }
