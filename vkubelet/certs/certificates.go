@@ -14,7 +14,7 @@ import (
 )
 
 const (
-	validFor = 365 * 24 * time.Hour
+	validFor = 365 * 24 * time.Hour 
 	keySize  = 4096
 )
 
@@ -40,7 +40,7 @@ func GenerateCertKeyPair() (string, string, error) {
 	serialNumberLimit := new(big.Int).Lsh(big.NewInt(1), 128)
 	serialNumber, err := rand.Int(rand.Reader, serialNumberLimit)
 
-	notBefore := time.Now()
+	notBefore := time.Now().Add(-1 * 24 * time.Hour)
 	notAfter := notBefore.Add(validFor)
 
 	template := x509.Certificate{
@@ -76,18 +76,26 @@ func GenerateCertKeyPair() (string, string, error) {
 		log.Printf("failed to open cert.pem for writing: %s", err)
 		return "", "", err
 	}
-	pem.Encode(certOut, &pem.Block{Type: "CERTIFICATE", Bytes: derBytes})
-	certOut.Close()
+	defer certOut.Close()
+	err = pem.Encode(certOut, &pem.Block{Type: "CERTIFICATE", Bytes: derBytes})
+	if err != nil {
+		log.Printf("failed to PEM encode certificate: %s", err)
+		return "", "", err
+	}
 	keyOut, err := os.OpenFile("key.pem", os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
 	if err != nil {
 		log.Print("failed to open key.pem for writing:", err)
 		return "", "", err
 	}
+	defer keyOut.Close()
 	p := &pem.Block{
 		Type:  "RSA PRIVATE KEY",
 		Bytes: x509.MarshalPKCS1PrivateKey(priv),
 	}
-	pem.Encode(keyOut, p)
-	keyOut.Close()
+	err = pem.Encode(keyOut, p)
+	if err != nil {
+		log.Printf("failed to PEM encode key: %s", err)
+		return "", "", err
+	}
 	return certFileName, keyFileName, nil
 }
