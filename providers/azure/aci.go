@@ -44,6 +44,7 @@ type ACIProvider struct {
 	pods               string
 	internalIP         string
 	daemonEndpointPort int32
+	diagnostics        *aci.ContainerGroupDiagnostics
 }
 
 // AuthConfig is the secret returned from an ImageRegistryCredential
@@ -155,6 +156,16 @@ func NewACIProvider(config string, rm *manager.ResourceManager, nodeName, operat
 		return nil, err
 	}
 
+	// If we have both the log analytics workspace id and key, add them to the provider
+	if logAnalyticsID := os.Getenv("LOG_ANALYTICS_ID"); logAnalyticsID != "" {
+		if logAnalyticsKey := os.Getenv("LOG_ANALYTICS_KEY"); logAnalyticsKey != "" {
+			p.diagnostics, err = aci.NewContainerGroupDiagnostics(logAnalyticsID, logAnalyticsKey)
+			if err != nil {
+				return nil, err
+			}
+		}
+	}
+
 	if rg := os.Getenv("ACI_RESOURCE_GROUP"); rg != "" {
 		p.resourceGroup = rg
 	}
@@ -227,6 +238,7 @@ func (p *ACIProvider) CreatePod(pod *v1.Pod) error {
 	containerGroup.ContainerGroupProperties.Containers = containers
 	containerGroup.ContainerGroupProperties.Volumes = volumes
 	containerGroup.ContainerGroupProperties.ImageRegistryCredentials = creds
+	containerGroup.ContainerGroupProperties.Diagnostics = p.diagnostics
 
 	filterServiceAccountSecretVolume(p.operatingSystem, &containerGroup)
 

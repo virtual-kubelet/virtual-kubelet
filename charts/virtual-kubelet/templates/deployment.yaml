@@ -26,6 +26,10 @@ spec:
           value: /etc/virtual-kubelet/cert.pem
         - name: APISERVER_KEY_LOCATION
           value: /etc/virtual-kubelet/key.pem
+        - name: LOG_ANALYTICS_ID
+          value: {{ .Values.env.logAnalyticsID }}
+        - name: LOG_ANALYTICS_KEY
+          value: {{ .Values.env.logAnalyticsKey }}
         - name: VKUBELET_POD_IP
           valueFrom:
             fieldRef:
