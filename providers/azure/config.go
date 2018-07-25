@@ -3,6 +3,7 @@ package azure
 import (
 	"fmt"
 	"io"
+	"net"
 	"strings"
 
 	"github.com/BurntSushi/toml"
@@ -16,6 +17,8 @@ type providerConfig struct {
 	CPU             string
 	Memory          string
 	Pods            string
+	SubnetName      string
+	SubnetCIDR      string
 }
 
 func (p *ACIProvider) loadConfig(r io.Reader) error {
@@ -50,6 +53,19 @@ func (p *ACIProvider) loadConfig(r io.Reader) error {
 		ok, _ := providers.ValidOperatingSystems[config.OperatingSystem]
 		if !ok {
 			return fmt.Errorf("%q is not a valid operating system, try one of the following instead: %s", config.OperatingSystem, strings.Join(providers.ValidOperatingSystems.Names(), " | "))
+		}
+	}
+
+	// default subnet name
+	if config.SubnetName != "" {
+		p.subnetName = config.SubnetName
+	}
+	if config.SubnetCIDR != "" {
+		if config.SubnetName == "" {
+			return fmt.Errorf("subnet CIDR is set but no subnet name provided, must provide a subnet name in order to set a subnet CIDR")
+		}
+		if _, _, err := net.ParseCIDR(config.SubnetCIDR); err != nil {
+			return fmt.Errorf("error parsing provided subnet CIDR: %v", err)
 		}
 	}
 

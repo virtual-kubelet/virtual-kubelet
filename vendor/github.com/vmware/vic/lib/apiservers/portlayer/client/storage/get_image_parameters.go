@@ -60,6 +60,8 @@ for the get image operation typically these are written to a http.Request
 */
 type GetImageParams struct {
 
+	/*OpID*/
+	OpID *string
 	/*ID*/
 	ID string
 	/*StoreName*/
@@ -103,6 +105,17 @@ func (o *GetImageParams) SetHTTPClient(client *http.Client) {
 	o.HTTPClient = client
 }
 
+// WithOpID adds the opID to the get image params
+func (o *GetImageParams) WithOpID(opID *string) *GetImageParams {
+	o.SetOpID(opID)
+	return o
+}
+
+// SetOpID adds the opId to the get image params
+func (o *GetImageParams) SetOpID(opID *string) {
+	o.OpID = opID
+}
+
 // WithID adds the id to the get image params
 func (o *GetImageParams) WithID(id string) *GetImageParams {
 	o.SetID(id)
@@ -130,6 +143,15 @@ func (o *GetImageParams) WriteToRequest(r runtime.ClientRequest, reg strfmt.Regi
 
 	r.SetTimeout(o.timeout)
 	var res []error
+
+	if o.OpID != nil {
+
+		// header param Op-ID
+		if err := r.SetHeaderParam("Op-ID", *o.OpID); err != nil {
+			return err
+		}
+
+	}
 
 	// path param id
 	if err := r.SetPathParam("id", o.ID); err != nil {

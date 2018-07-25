@@ -60,6 +60,8 @@ for the stat path operation typically these are written to a http.Request
 */
 type StatPathParams struct {
 
+	/*OpID*/
+	OpID *string
 	/*DeviceID*/
 	DeviceID string
 	/*FilterSpec*/
@@ -105,6 +107,17 @@ func (o *StatPathParams) SetHTTPClient(client *http.Client) {
 	o.HTTPClient = client
 }
 
+// WithOpID adds the opID to the stat path params
+func (o *StatPathParams) WithOpID(opID *string) *StatPathParams {
+	o.SetOpID(opID)
+	return o
+}
+
+// SetOpID adds the opId to the stat path params
+func (o *StatPathParams) SetOpID(opID *string) {
+	o.OpID = opID
+}
+
 // WithDeviceID adds the deviceID to the stat path params
 func (o *StatPathParams) WithDeviceID(deviceID string) *StatPathParams {
 	o.SetDeviceID(deviceID)
@@ -143,6 +156,15 @@ func (o *StatPathParams) WriteToRequest(r runtime.ClientRequest, reg strfmt.Regi
 
 	r.SetTimeout(o.timeout)
 	var res []error
+
+	if o.OpID != nil {
+
+		// header param Op-ID
+		if err := r.SetHeaderParam("Op-ID", *o.OpID); err != nil {
+			return err
+		}
+
+	}
 
 	// query param deviceID
 	qrDeviceID := o.DeviceID

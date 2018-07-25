@@ -5,10 +5,11 @@
   name = "github.com/Azure/azure-sdk-for-go"
   packages = [
     "services/batch/2017-09-01.6.0/batch",
+    "services/network/mgmt/2018-05-01/network",
     "version"
   ]
-  revision = "51228ee60b238eaa5a9d53adc82ebd8b321bca4f"
-  version = "v15.1.1"
+  revision = "520918e6c8e8e1064154f51d13e02fad92b287b8"
+  version = "v19.0.0"
 
 [[projects]]
   branch = "master"
@@ -25,12 +26,14 @@
     "autorest",
     "autorest/adal",
     "autorest/azure",
+    "autorest/azure/auth",
     "autorest/date",
     "autorest/to",
-    "autorest/validation"
+    "autorest/validation",
+    "version"
   ]
-  revision = "eaa7994b2278094c904d31993d26f56324db3052"
-  version = "v10.8.1"
+  revision = "bca49d5b51a50dc5bb17bbf6204c711c6dbded06"
+  version = "v10.14.0"
 
 [[projects]]
   name = "github.com/BurntSushi/toml"
@@ -240,6 +243,15 @@
 
 [[projects]]
   branch = "master"
+  name = "github.com/docker/spdystream"
+  packages = [
+    ".",
+    "spdy"
+  ]
+  revision = "bc6354cbbc295e925e4c611ffe90c1f287ee54db"
+
+[[projects]]
+  branch = "master"
   name = "github.com/flynn/go-shlex"
   packages = ["."]
   revision = "3f9db97f856818214da2e1057f8ad84803971cff"
@@ -390,6 +402,12 @@
   packages = ["."]
   revision = "53c1911da2b537f792e7cafcb446b05ffe33b996"
   version = "v1.6.1"
+
+[[projects]]
+  name = "github.com/gorilla/websocket"
+  packages = ["."]
+  revision = "ea4d1f681babbce9545c9c5f3d5194a789c89f5b"
+  version = "v1.2.0"
 
 [[projects]]
   branch = "master"
@@ -578,6 +596,12 @@
   revision = "1c7c27d043c2a5e513a44084d2b10d77d1402b8c"
 
 [[projects]]
+  name = "github.com/pborman/uuid"
+  packages = ["."]
+  revision = "e790cca94e6cc75c7064b1332e63811d4aae1a53"
+  version = "v1.1"
+
+[[projects]]
   name = "github.com/pelletier/go-toml"
   packages = ["."]
   revision = "acdc4509485b587f5e675510c4f2c63e90ff68a8"
@@ -756,7 +780,7 @@
     "pkg/vsphere/session",
     "pkg/vsphere/sys"
   ]
-  revision = "24e7742b481d328dc0d5b68c992750b7aef4550d"
+  revision = "0fd01769dd5f4077763f3426a830709a9e986f1e"
 
 [[projects]]
   branch = "master"
@@ -792,6 +816,8 @@
   name = "golang.org/x/crypto"
   packages = [
     "nacl/secretbox",
+    "pkcs12",
+    "pkcs12/internal/rc2",
     "poly1305",
     "salsa20/salsa",
     "ssh/terminal"
@@ -811,7 +837,8 @@
     "internal/socks",
     "internal/timeseries",
     "proxy",
-    "trace"
+    "trace",
+    "websocket"
   ]
   revision = "f73e4c9ed3b7ebdd5f699a16a880c2b1994e50dd"
 
@@ -942,6 +969,7 @@
     "pkg/api/errors",
     "pkg/api/meta",
     "pkg/api/resource",
+    "pkg/apis/meta/internalversion",
     "pkg/apis/meta/v1",
     "pkg/apis/meta/v1/unstructured",
     "pkg/apis/meta/v1beta1",
@@ -962,21 +990,35 @@
     "pkg/util/clock",
     "pkg/util/errors",
     "pkg/util/framer",
+    "pkg/util/httpstream",
+    "pkg/util/httpstream/spdy",
     "pkg/util/intstr",
     "pkg/util/json",
     "pkg/util/net",
+    "pkg/util/remotecommand",
     "pkg/util/runtime",
     "pkg/util/sets",
+    "pkg/util/uuid",
     "pkg/util/validation",
     "pkg/util/validation/field",
     "pkg/util/wait",
     "pkg/util/yaml",
     "pkg/version",
     "pkg/watch",
+    "third_party/forked/golang/netutil",
     "third_party/forked/golang/reflect"
   ]
   revision = "302974c03f7e50f16561ba237db776ab93594ef6"
   version = "kubernetes-1.10.0"
+
+[[projects]]
+  branch = "master"
+  name = "k8s.io/apiserver"
+  packages = [
+    "pkg/server/httplog",
+    "pkg/util/wsstream"
+  ]
+  revision = "20058f0b9a7bd880ff58a17ba187c92a479018cd"
 
 [[projects]]
   name = "k8s.io/client-go"
@@ -1056,8 +1098,11 @@
     "tools/clientcmd/api/v1",
     "tools/metrics",
     "tools/reference",
+    "tools/remotecommand",
     "transport",
+    "transport/spdy",
     "util/cert",
+    "util/exec",
     "util/flowcontrol",
     "util/homedir",
     "util/integer"
@@ -1067,13 +1112,23 @@
 
 [[projects]]
   name = "k8s.io/kubernetes"
-  packages = ["pkg/kubelet/apis/cri/runtime/v1alpha2"]
+  packages = [
+    "pkg/apis/core",
+    "pkg/kubelet/apis/cri/runtime/v1alpha2",
+    "pkg/kubelet/server/remotecommand"
+  ]
   revision = "81753b10df112992bf51bbc2c2f85208aad78335"
   version = "v1.10.2"
+
+[[projects]]
+  branch = "master"
+  name = "k8s.io/utils"
+  packages = ["exec"]
+  revision = "73fcbfe1475a06d24a3e101012024bdf9e884cbb"
 
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "8f3ca80656c580339bc7105912693cf126c4952c476e7052cbd9de4ef73d9e75"
+  inputs-digest = "16ef9d1d9bb0efe9b75cd742c204e4f41bcb722706f450c1c14b4556dc8f4bd2"
   solver-name = "gps-cdcl"
   solver-version = 1
