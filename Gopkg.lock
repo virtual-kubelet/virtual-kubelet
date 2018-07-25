@@ -8,6 +8,7 @@
     "profiles/preview/preview/servicefabricmesh/mgmt/servicefabricmesh",
     "services/batch/2017-09-01.6.0/batch",
     "services/preview/servicefabricmesh/mgmt/2018-07-01-preview/servicefabricmesh",
+    "services/network/mgmt/2018-05-01/network",
     "version",
   ]
   pruneopts = "NUT"

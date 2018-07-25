@@ -18,6 +18,7 @@ type AcsCredential struct {
 	ClientSecret   string `json:"aadClientSecret"`
 	ResourceGroup  string `json:"resourceGroup"`
 	Region         string `json:"location"`
+	VNetName       string `json:"vnetName"`
 }
 
 // NewAcsCredential returns an AcsCredential struct from file path
