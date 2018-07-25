@@ -60,6 +60,8 @@ for the container get stderr operation typically these are written to a http.Req
 */
 type ContainerGetStderrParams struct {
 
+	/*OpID*/
+	OpID *string
 	/*Deadline*/
 	Deadline *strfmt.DateTime
 	/*ID*/
@@ -103,6 +105,17 @@ func (o *ContainerGetStderrParams) SetHTTPClient(client *http.Client) {
 	o.HTTPClient = client
 }
 
+// WithOpID adds the opID to the container get stderr params
+func (o *ContainerGetStderrParams) WithOpID(opID *string) *ContainerGetStderrParams {
+	o.SetOpID(opID)
+	return o
+}
+
+// SetOpID adds the opId to the container get stderr params
+func (o *ContainerGetStderrParams) SetOpID(opID *string) {
+	o.OpID = opID
+}
+
 // WithDeadline adds the deadline to the container get stderr params
 func (o *ContainerGetStderrParams) WithDeadline(deadline *strfmt.DateTime) *ContainerGetStderrParams {
 	o.SetDeadline(deadline)
@@ -130,6 +143,15 @@ func (o *ContainerGetStderrParams) WriteToRequest(r runtime.ClientRequest, reg s
 
 	r.SetTimeout(o.timeout)
 	var res []error
+
+	if o.OpID != nil {
+
+		// header param Op-ID
+		if err := r.SetHeaderParam("Op-ID", *o.OpID); err != nil {
+			return err
+		}
+
+	}
 
 	if o.Deadline != nil {
 

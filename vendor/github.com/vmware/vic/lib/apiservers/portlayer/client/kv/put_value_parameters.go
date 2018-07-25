@@ -62,6 +62,8 @@ for the put value operation typically these are written to a http.Request
 */
 type PutValueParams struct {
 
+	/*OpID*/
+	OpID *string
 	/*Key*/
 	Key string
 	/*KeyValue*/
@@ -105,6 +107,17 @@ func (o *PutValueParams) SetHTTPClient(client *http.Client) {
 	o.HTTPClient = client
 }
 
+// WithOpID adds the opID to the put value params
+func (o *PutValueParams) WithOpID(opID *string) *PutValueParams {
+	o.SetOpID(opID)
+	return o
+}
+
+// SetOpID adds the opId to the put value params
+func (o *PutValueParams) SetOpID(opID *string) {
+	o.OpID = opID
+}
+
 // WithKey adds the key to the put value params
 func (o *PutValueParams) WithKey(key string) *PutValueParams {
 	o.SetKey(key)
@@ -132,6 +145,15 @@ func (o *PutValueParams) WriteToRequest(r runtime.ClientRequest, reg strfmt.Regi
 
 	r.SetTimeout(o.timeout)
 	var res []error
+
+	if o.OpID != nil {
+
+		// header param Op-ID
+		if err := r.SetHeaderParam("Op-ID", *o.OpID); err != nil {
+			return err
+		}
+
+	}
 
 	// path param key
 	if err := r.SetPathParam("key", o.Key); err != nil {

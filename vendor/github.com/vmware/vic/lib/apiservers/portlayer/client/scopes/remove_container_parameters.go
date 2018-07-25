@@ -60,6 +60,8 @@ for the remove container operation typically these are written to a http.Request
 */
 type RemoveContainerParams struct {
 
+	/*OpID*/
+	OpID *string
 	/*Handle*/
 	Handle string
 	/*Scope*/
@@ -103,6 +105,17 @@ func (o *RemoveContainerParams) SetHTTPClient(client *http.Client) {
 	o.HTTPClient = client
 }
 
+// WithOpID adds the opID to the remove container params
+func (o *RemoveContainerParams) WithOpID(opID *string) *RemoveContainerParams {
+	o.SetOpID(opID)
+	return o
+}
+
+// SetOpID adds the opId to the remove container params
+func (o *RemoveContainerParams) SetOpID(opID *string) {
+	o.OpID = opID
+}
+
 // WithHandle adds the handle to the remove container params
 func (o *RemoveContainerParams) WithHandle(handle string) *RemoveContainerParams {
 	o.SetHandle(handle)
@@ -130,6 +143,15 @@ func (o *RemoveContainerParams) WriteToRequest(r runtime.ClientRequest, reg strf
 
 	r.SetTimeout(o.timeout)
 	var res []error
+
+	if o.OpID != nil {
+
+		// header param Op-ID
+		if err := r.SetHeaderParam("Op-ID", *o.OpID); err != nil {
+			return err
+		}
+
+	}
 
 	// path param handle
 	if err := r.SetPathParam("handle", o.Handle); err != nil {

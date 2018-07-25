@@ -61,6 +61,8 @@ for the commit operation typically these are written to a http.Request
 */
 type CommitParams struct {
 
+	/*OpID*/
+	OpID *string
 	/*Handle*/
 	Handle string
 	/*WaitTime*/
@@ -104,6 +106,17 @@ func (o *CommitParams) SetHTTPClient(client *http.Client) {
 	o.HTTPClient = client
 }
 
+// WithOpID adds the opID to the commit params
+func (o *CommitParams) WithOpID(opID *string) *CommitParams {
+	o.SetOpID(opID)
+	return o
+}
+
+// SetOpID adds the opId to the commit params
+func (o *CommitParams) SetOpID(opID *string) {
+	o.OpID = opID
+}
+
 // WithHandle adds the handle to the commit params
 func (o *CommitParams) WithHandle(handle string) *CommitParams {
 	o.SetHandle(handle)
@@ -131,6 +144,15 @@ func (o *CommitParams) WriteToRequest(r runtime.ClientRequest, reg strfmt.Regist
 
 	r.SetTimeout(o.timeout)
 	var res []error
+
+	if o.OpID != nil {
+
+		// header param Op-ID
+		if err := r.SetHeaderParam("Op-ID", *o.OpID); err != nil {
+			return err
+		}
+
+	}
 
 	// path param handle
 	if err := r.SetPathParam("handle", o.Handle); err != nil {

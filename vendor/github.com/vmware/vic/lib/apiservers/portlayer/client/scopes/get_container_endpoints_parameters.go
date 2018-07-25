@@ -60,6 +60,8 @@ for the get container endpoints operation typically these are written to a http.
 */
 type GetContainerEndpointsParams struct {
 
+	/*OpID*/
+	OpID *string
 	/*HandleOrID*/
 	HandleOrID string
 
@@ -101,6 +103,17 @@ func (o *GetContainerEndpointsParams) SetHTTPClient(client *http.Client) {
 	o.HTTPClient = client
 }
 
+// WithOpID adds the opID to the get container endpoints params
+func (o *GetContainerEndpointsParams) WithOpID(opID *string) *GetContainerEndpointsParams {
+	o.SetOpID(opID)
+	return o
+}
+
+// SetOpID adds the opId to the get container endpoints params
+func (o *GetContainerEndpointsParams) SetOpID(opID *string) {
+	o.OpID = opID
+}
+
 // WithHandleOrID adds the handleOrID to the get container endpoints params
 func (o *GetContainerEndpointsParams) WithHandleOrID(handleOrID string) *GetContainerEndpointsParams {
 	o.SetHandleOrID(handleOrID)
@@ -117,6 +130,15 @@ func (o *GetContainerEndpointsParams) WriteToRequest(r runtime.ClientRequest, re
 
 	r.SetTimeout(o.timeout)
 	var res []error
+
+	if o.OpID != nil {
+
+		// header param Op-ID
+		if err := r.SetHeaderParam("Op-ID", *o.OpID); err != nil {
+			return err
+		}
+
+	}
 
 	// path param handleOrId
 	if err := r.SetPathParam("handleOrId", o.HandleOrID); err != nil {

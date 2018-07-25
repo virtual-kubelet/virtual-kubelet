@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"net"
 	"net/http"
 	"os"
 	"reflect"
@@ -18,6 +19,7 @@ import (
 	"github.com/virtual-kubelet/virtual-kubelet/manager"
 	client "github.com/virtual-kubelet/virtual-kubelet/providers/azure/client"
 	"github.com/virtual-kubelet/virtual-kubelet/providers/azure/client/aci"
+	"github.com/virtual-kubelet/virtual-kubelet/providers/azure/client/network"
 	"k8s.io/api/core/v1"
 	k8serr "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -26,10 +28,16 @@ import (
 	"k8s.io/client-go/tools/remotecommand"
 )
 
-// The service account secret mount path.
-const serviceAccountSecretMountPath = "/var/run/secrets/kubernetes.io/serviceaccount"
+const (
+	// The service account secret mount path.
+	serviceAccountSecretMountPath = "/var/run/secrets/kubernetes.io/serviceaccount"
 
-const virtualKubeletDNSNameLabel = "virtualkubelet.io/dnsnamelabel"
+	virtualKubeletDNSNameLabel = "virtualkubelet.io/dnsnamelabel"
+
+	subnetsAction           = "Microsoft.Network/virtualNetworks/subnets/action"
+	subnetDelegationService = "Microsoft.ContainerInstance/containerGroups"
+	networkProfileType      = "Microsoft.Network/networkProfiles"
+)
 
 // ACIProvider implements the virtual-kubelet provider interface and communicates with Azure's ACI APIs.
 type ACIProvider struct {
@@ -44,6 +52,10 @@ type ACIProvider struct {
 	pods               string
 	internalIP         string
 	daemonEndpointPort int32
+	subnetName         string
+	subnetCIDR         string
+	vnetName           string
+	networkProfile     string
 }
 
 // AuthConfig is the secret returned from an ImageRegistryCredential
@@ -132,6 +144,8 @@ func NewACIProvider(config string, rm *manager.ResourceManager, nodeName, operat
 			p.resourceGroup = acsCredential.ResourceGroup
 			p.region = acsCredential.Region
 		}
+
+		p.vnetName = acsCredential.VNetName
 	}
 
 	if clientID := os.Getenv("AZURE_CLIENT_ID"); clientID != "" {
@@ -192,12 +206,128 @@ func NewACIProvider(config string, rm *manager.ResourceManager, nodeName, operat
 		p.pods = podsQuota
 	}
 
+	if subnetName := os.Getenv("ACI_SUBNET_NAME"); subnetName != "" {
+		p.subnetName = subnetName
+	}
+	if subnetCIDR := os.Getenv("ACI_SUBNET_CIDR"); subnetCIDR != "" {
+		if p.subnetName == "" {
+			return nil, fmt.Errorf("subnet CIDR defined but no subnet name, subnet name is required to set a subnet CIDR")
+		}
+		if _, _, err := net.ParseCIDR(subnetCIDR); err != nil {
+			return nil, fmt.Errorf("error parsing provided subnet range: %v", err)
+		}
+		p.subnetCIDR = subnetCIDR
+	}
+
+	if p.subnetName != "" {
+		if err := p.setupNetworkProfile(azAuth); err != nil {
+			return nil, fmt.Errorf("error setting up network profile: %v", err)
+		}
+	}
+
 	p.operatingSystem = operatingSystem
 	p.nodeName = nodeName
 	p.internalIP = internalIP
 	p.daemonEndpointPort = daemonEndpointPort
 
 	return &p, err
+}
+
+func (p *ACIProvider) setupNetworkProfile(auth *client.Authentication) error {
+	c, err := network.NewClient(auth)
+	if err != nil {
+		return fmt.Errorf("error creating azure networking client: %v", err)
+	}
+
+	createSubnet := true
+	subnet, err := c.GetSubnet(p.resourceGroup, p.vnetName, p.subnetName)
+	if err != nil && !network.IsNotFound(err) {
+		return fmt.Errorf("error while looking up subnet: %v", err)
+	}
+	if err == nil {
+		if p.subnetCIDR != subnet.Properties.AddressPrefix {
+			return fmt.Errorf("found existing subnet with different CIDR")
+		}
+		for _, d := range subnet.Properties.Delegations {
+			if d.Properties.ServiceName == subnetDelegationService {
+				createSubnet = false
+				break
+			}
+		}
+	}
+
+	if createSubnet {
+		if subnet == nil {
+			subnet = &network.Subnet{Name: p.subnetName}
+		}
+		populateSubnet(subnet, p.subnetCIDR)
+		if err = c.CreateOrUpdateSubnet(p.resourceGroup, p.vnetName, subnet); err != nil {
+			return fmt.Errorf("error creating subnet: %v", err)
+		}
+	}
+
+	profile, err := c.GetProfile(p.resourceGroup, p.nodeName)
+	if err != nil && !network.IsNotFound(err) {
+		return fmt.Errorf("error while looking up network profile: %v", err)
+	}
+	if err == nil {
+		for _, config := range profile.Properties.ContainerNetworkInterfaceConfigurations {
+			for _, ipConfig := range config.Properties.IPConfigurations {
+				if ipConfig.Properties.Subnet.ID == subnet.ID {
+					return nil
+				}
+			}
+		}
+		return fmt.Errorf("found existing network profile but the profile is not linked to the subnet")
+	}
+
+	// at this point, profile should be nil
+	profile = &network.Profile{
+		Name: p.nodeName,
+		Type: networkProfileType,
+	}
+
+	populateNetworkProfile(profile, subnet)
+	if err := c.CreateOrUpdateProfile(p.resourceGroup, profile); err != nil {
+		return err
+	}
+	p.networkProfile = profile.ID
+
+	return nil
+}
+
+func populateSubnet(s *network.Subnet, cidr string) {
+	if s.Properties == nil {
+		s.Properties = &network.SubnetProperties{
+			AddressPrefix: cidr,
+		}
+	}
+
+	s.Properties.Delegations = append(s.Properties.Delegations, network.Delegation{
+		Name: "aciDelegation",
+		Properties: network.DelegationProperties{
+			ServiceName: subnetDelegationService,
+			Actions:     []string{subnetsAction},
+		},
+	})
+}
+
+func populateNetworkProfile(p *network.Profile, subnet *network.Subnet) {
+	p.Properties.ContainerNetworkInterfaceConfigurations = append(p.Properties.ContainerNetworkInterfaceConfigurations, network.InterfaceConfiguration{
+		Name: "eth0",
+		Properties: network.InterfaceConfigurationProperties{
+			IPConfigurations: []network.IPConfiguration{
+				{
+					Name: "ipconfigprofile1",
+					Properties: network.IPConfigurationProperties{
+						Subnet: network.ID{
+							ID: subnet.ID,
+						},
+					},
+				},
+			},
+		},
+	})
 }
 
 // CreatePod accepts a Pod definition and creates
@@ -207,6 +337,7 @@ func (p *ACIProvider) CreatePod(pod *v1.Pod) error {
 	containerGroup.Location = p.region
 	containerGroup.RestartPolicy = aci.ContainerGroupRestartPolicy(pod.Spec.RestartPolicy)
 	containerGroup.ContainerGroupProperties.OsType = aci.OperatingSystemTypes(p.OperatingSystem())
+	containerGroup.NetworkProfile = &aci.NetworkProfileDefinition{ID: p.networkProfile}
 
 	// get containers
 	containers, err := p.getContainers(pod)

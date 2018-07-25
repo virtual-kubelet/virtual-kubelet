@@ -108,7 +108,7 @@ func newTrace(msg string, skip int, opID string) *Message {
 // Begin starts the trace.  Msg is the msg to log.
 // context provided to allow tracing of operationID
 // context added as optional to avoid breaking current usage
-func Begin(msg string, ctx ...context.Context) *Message {
+func begin(msg string, ctx ...context.Context) *Message {
 	if tracingEnabled && Logger.Level >= logrus.DebugLevel {
 		var opID string
 		// populate operationID if provided
@@ -117,7 +117,7 @@ func Begin(msg string, ctx ...context.Context) *Message {
 				opID = id
 			}
 		}
-		if t := newTrace(msg, 2, opID); t != nil {
+		if t := newTrace(msg, 3, opID); t != nil {
 			if msg == "" {
 				Logger.Debugf("[BEGIN] %s [%s:%d]", t.operationID, t.funcName, t.lineNo)
 			} else {
@@ -128,6 +128,19 @@ func Begin(msg string, ctx ...context.Context) *Message {
 		}
 	}
 	return nil
+}
+
+func Begin(msg string, ctx ...context.Context) *Message {
+	return begin(msg, ctx...)
+}
+
+// Audit is a wrapper around Begin which logs an Audit message after
+func Audit(msg string, op Operation) *Message {
+	m := begin(msg, op)
+	if len(op.t) > 0 { // We expect an operation to always have at least one frame, but check for safety
+		op.Auditf(op.t[0].msg)
+	}
+	return m
 }
 
 // End ends the trace.

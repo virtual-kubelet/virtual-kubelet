@@ -62,6 +62,8 @@ for the logging join operation typically these are written to a http.Request
 */
 type LoggingJoinParams struct {
 
+	/*OpID*/
+	OpID *string
 	/*Config*/
 	Config *models.LoggingJoinConfig
 
@@ -103,6 +105,17 @@ func (o *LoggingJoinParams) SetHTTPClient(client *http.Client) {
 	o.HTTPClient = client
 }
 
+// WithOpID adds the opID to the logging join params
+func (o *LoggingJoinParams) WithOpID(opID *string) *LoggingJoinParams {
+	o.SetOpID(opID)
+	return o
+}
+
+// SetOpID adds the opId to the logging join params
+func (o *LoggingJoinParams) SetOpID(opID *string) {
+	o.OpID = opID
+}
+
 // WithConfig adds the config to the logging join params
 func (o *LoggingJoinParams) WithConfig(config *models.LoggingJoinConfig) *LoggingJoinParams {
 	o.SetConfig(config)
@@ -119,6 +132,15 @@ func (o *LoggingJoinParams) WriteToRequest(r runtime.ClientRequest, reg strfmt.R
 
 	r.SetTimeout(o.timeout)
 	var res []error
+
+	if o.OpID != nil {
+
+		// header param Op-ID
+		if err := r.SetHeaderParam("Op-ID", *o.OpID); err != nil {
+			return err
+		}
+
+	}
 
 	if o.Config == nil {
 		o.Config = new(models.LoggingJoinConfig)

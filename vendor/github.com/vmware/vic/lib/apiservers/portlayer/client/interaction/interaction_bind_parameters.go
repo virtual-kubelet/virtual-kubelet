@@ -62,6 +62,8 @@ for the interaction bind operation typically these are written to a http.Request
 */
 type InteractionBindParams struct {
 
+	/*OpID*/
+	OpID *string
 	/*Config*/
 	Config *models.InteractionBindConfig
 
@@ -103,6 +105,17 @@ func (o *InteractionBindParams) SetHTTPClient(client *http.Client) {
 	o.HTTPClient = client
 }
 
+// WithOpID adds the opID to the interaction bind params
+func (o *InteractionBindParams) WithOpID(opID *string) *InteractionBindParams {
+	o.SetOpID(opID)
+	return o
+}
+
+// SetOpID adds the opId to the interaction bind params
+func (o *InteractionBindParams) SetOpID(opID *string) {
+	o.OpID = opID
+}
+
 // WithConfig adds the config to the interaction bind params
 func (o *InteractionBindParams) WithConfig(config *models.InteractionBindConfig) *InteractionBindParams {
 	o.SetConfig(config)
@@ -119,6 +132,15 @@ func (o *InteractionBindParams) WriteToRequest(r runtime.ClientRequest, reg strf
 
 	r.SetTimeout(o.timeout)
 	var res []error
+
+	if o.OpID != nil {
+
+		// header param Op-ID
+		if err := r.SetHeaderParam("Op-ID", *o.OpID); err != nil {
+			return err
+		}
+
+	}
 
 	if o.Config == nil {
 		o.Config = new(models.InteractionBindConfig)

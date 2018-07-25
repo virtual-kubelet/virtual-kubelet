@@ -60,7 +60,7 @@ func init() {
 // decode is the generic switcher that decides which decoder to use for a field
 func decode(src DataSource, dest reflect.Value, prefix string, depth recursion) (reflect.Value, error) {
 	// if depth has reached zero, we skip decoding entirely
-	if depth.depth == 0 {
+	if depth.depth == 0 || depth.skipDecode {
 		return dest, nil
 	}
 	depth.depth--
@@ -445,7 +445,7 @@ func Decode(src DataSource, dest interface{}) interface{} {
 	}
 
 	// #nosec: Errors unhandled.
-	value, _ := decode(src, reflect.ValueOf(dest), DefaultPrefix, Unbounded)
+	value, _ := decode(src, reflect.ValueOf(dest), "", Unbounded)
 
 	return value.Interface()
 }

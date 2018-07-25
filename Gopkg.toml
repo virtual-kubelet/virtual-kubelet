@@ -57,7 +57,7 @@
 
 [[constraint]]
   name = "github.com/Azure/azure-sdk-for-go"
-  version = "15.1.1"
+  version = "19.0.0"
 
 [[constraint]]
   name = "github.com/lawrencegripper/pod2docker"
@@ -132,3 +132,7 @@
 [[override]]
   name = "github.com/go-openapi/validate"
   revision = "035dcd74f1f61e83debe1c22950dc53556e7e4b2"
+
+[[constraint]]
+  name = "github.com/Azure/go-autorest"
+  version = "10.8.1"

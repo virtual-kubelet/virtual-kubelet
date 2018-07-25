@@ -60,6 +60,8 @@ for the container get stdout operation typically these are written to a http.Req
 */
 type ContainerGetStdoutParams struct {
 
+	/*OpID*/
+	OpID *string
 	/*Deadline*/
 	Deadline *strfmt.DateTime
 	/*ID*/
@@ -103,6 +105,17 @@ func (o *ContainerGetStdoutParams) SetHTTPClient(client *http.Client) {
 	o.HTTPClient = client
 }
 
+// WithOpID adds the opID to the container get stdout params
+func (o *ContainerGetStdoutParams) WithOpID(opID *string) *ContainerGetStdoutParams {
+	o.SetOpID(opID)
+	return o
+}
+
+// SetOpID adds the opId to the container get stdout params
+func (o *ContainerGetStdoutParams) SetOpID(opID *string) {
+	o.OpID = opID
+}
+
 // WithDeadline adds the deadline to the container get stdout params
 func (o *ContainerGetStdoutParams) WithDeadline(deadline *strfmt.DateTime) *ContainerGetStdoutParams {
 	o.SetDeadline(deadline)
@@ -130,6 +143,15 @@ func (o *ContainerGetStdoutParams) WriteToRequest(r runtime.ClientRequest, reg s
 
 	r.SetTimeout(o.timeout)
 	var res []error
+
+	if o.OpID != nil {
+
+		// header param Op-ID
+		if err := r.SetHeaderParam("Op-ID", *o.OpID); err != nil {
+			return err
+		}
+
+	}
 
 	if o.Deadline != nil {
 

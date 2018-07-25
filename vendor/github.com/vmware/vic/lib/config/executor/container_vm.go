@@ -234,7 +234,6 @@ type Cmd struct {
 type SessionConfig struct {
 	// The primary session may have the same ID as the executor owning it
 	Common `vic:"0.1" scope:"read-only" key:"common"`
-	Detail `vic:"0.1" scope:"read-write" key:"detail"`
 
 	// The primary process for the session
 	Cmd Cmd `vic:"0.1" scope:"read-only" key:"cmd"`
@@ -278,6 +277,10 @@ type SessionConfig struct {
 	// Need to go here since UID/GID resolution must be done on appliance
 	User  string `vic:"0.1" scope:"read-only" key:"User"`
 	Group string `vic:"0.1" scope:"read-only" key:"Group"`
+
+	// Detail contains create/started/stopped timestamps. It is placed last in the structure so that all
+	// other state serialization is complete by the time this is updated when iterating in order.
+	Detail `vic:"0.1" scope:"read-write" key:"detail"`
 }
 
 type Detail struct {

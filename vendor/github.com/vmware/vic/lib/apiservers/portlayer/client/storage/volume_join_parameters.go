@@ -64,6 +64,8 @@ type VolumeJoinParams struct {
 
 	/*JoinArgs*/
 	JoinArgs *models.VolumeJoinConfig
+	/*OpID*/
+	OpID *string
 	/*Name*/
 	Name string
 
@@ -116,6 +118,17 @@ func (o *VolumeJoinParams) SetJoinArgs(joinArgs *models.VolumeJoinConfig) {
 	o.JoinArgs = joinArgs
 }
 
+// WithOpID adds the opID to the volume join params
+func (o *VolumeJoinParams) WithOpID(opID *string) *VolumeJoinParams {
+	o.SetOpID(opID)
+	return o
+}
+
+// SetOpID adds the opId to the volume join params
+func (o *VolumeJoinParams) SetOpID(opID *string) {
+	o.OpID = opID
+}
+
 // WithName adds the name to the volume join params
 func (o *VolumeJoinParams) WithName(name string) *VolumeJoinParams {
 	o.SetName(name)
@@ -139,6 +152,15 @@ func (o *VolumeJoinParams) WriteToRequest(r runtime.ClientRequest, reg strfmt.Re
 
 	if err := r.SetBodyParam(o.JoinArgs); err != nil {
 		return err
+	}
+
+	if o.OpID != nil {
+
+		// header param Op-ID
+		if err := r.SetHeaderParam("Op-ID", *o.OpID); err != nil {
+			return err
+		}
+
 	}
 
 	// path param name

@@ -33,7 +33,7 @@ import (
 	"github.com/docker/docker/api/types"
 )
 
-type VicArchiveProxy interface {
+type ArchiveProxy interface {
 	ArchiveExportReader(op trace.Operation, store, ancestorStore, deviceID, ancestor string, data bool, filterSpec archive.FilterSpec) (io.ReadCloser, error)
 	ArchiveImportWriter(op trace.Operation, store, deviceID string, filterSpec archive.FilterSpec, wg *sync.WaitGroup, errchan chan error) (io.WriteCloser, error)
 	StatPath(op trace.Operation, store, deviceID string, filterSpec archive.FilterSpec) (*types.ContainerPathStat, error)
@@ -43,23 +43,23 @@ type VicArchiveProxy interface {
 // ArchiveProxy
 //------------------------------------
 
-type ArchiveProxy struct {
+type VicArchiveProxy struct {
 	client *client.PortLayer
 }
 
-var archiveProxy *ArchiveProxy
+var archiveProxy *VicArchiveProxy
 
-func NewArchiveProxy(client *client.PortLayer) VicArchiveProxy {
-	return &ArchiveProxy{client: client}
+func NewArchiveProxy(client *client.PortLayer) *VicArchiveProxy {
+	return &VicArchiveProxy{client: client}
 }
 
-func GetArchiveProxy() VicArchiveProxy {
+func GetArchiveProxy() ArchiveProxy {
 	return archiveProxy
 }
 
 // ArchiveExportReader streams a tar archive from the portlayer.  Once the stream is complete,
 // an io.Reader is returned and the caller can use that reader to parse the data.
-func (a *ArchiveProxy) ArchiveExportReader(op trace.Operation, store, ancestorStore, deviceID, ancestor string, data bool, filterSpec archive.FilterSpec) (io.ReadCloser, error) {
+func (a *VicArchiveProxy) ArchiveExportReader(op trace.Operation, store, ancestorStore, deviceID, ancestor string, data bool, filterSpec archive.FilterSpec) (io.ReadCloser, error) {
 	defer trace.End(trace.Begin(deviceID))
 
 	if a.client == nil {
@@ -141,7 +141,7 @@ func (a *ArchiveProxy) ArchiveExportReader(op trace.Operation, store, ancestorSt
 
 // ArchiveImportWriter initializes a write stream for a path.  This is usually called
 // for getting a writer during docker cp TO container.
-func (a *ArchiveProxy) ArchiveImportWriter(op trace.Operation, store, deviceID string, filterSpec archive.FilterSpec, wg *sync.WaitGroup, errchan chan error) (io.WriteCloser, error) {
+func (a *VicArchiveProxy) ArchiveImportWriter(op trace.Operation, store, deviceID string, filterSpec archive.FilterSpec, wg *sync.WaitGroup, errchan chan error) (io.WriteCloser, error) {
 	defer trace.End(trace.Begin(deviceID))
 
 	if a.client == nil {
@@ -232,7 +232,7 @@ func (a *ArchiveProxy) ArchiveImportWriter(op trace.Operation, store, deviceID s
 
 // StatPath requests the portlayer to stat the filesystem resource at the
 // specified path in the container vc.
-func (a *ArchiveProxy) StatPath(op trace.Operation, store, deviceID string, filterSpec archive.FilterSpec) (*types.ContainerPathStat, error) {
+func (a *VicArchiveProxy) StatPath(op trace.Operation, store, deviceID string, filterSpec archive.FilterSpec) (*types.ContainerPathStat, error) {
 	defer trace.End(trace.Begin(deviceID))
 
 	if a.client == nil {
