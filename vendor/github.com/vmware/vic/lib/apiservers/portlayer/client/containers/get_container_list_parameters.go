@@ -61,6 +61,8 @@ for the get container list operation typically these are written to a http.Reque
 */
 type GetContainerListParams struct {
 
+	/*OpID*/
+	OpID *string
 	/*All*/
 	All *bool
 
@@ -102,6 +104,17 @@ func (o *GetContainerListParams) SetHTTPClient(client *http.Client) {
 	o.HTTPClient = client
 }
 
+// WithOpID adds the opID to the get container list params
+func (o *GetContainerListParams) WithOpID(opID *string) *GetContainerListParams {
+	o.SetOpID(opID)
+	return o
+}
+
+// SetOpID adds the opId to the get container list params
+func (o *GetContainerListParams) SetOpID(opID *string) {
+	o.OpID = opID
+}
+
 // WithAll adds the all to the get container list params
 func (o *GetContainerListParams) WithAll(all *bool) *GetContainerListParams {
 	o.SetAll(all)
@@ -118,6 +131,15 @@ func (o *GetContainerListParams) WriteToRequest(r runtime.ClientRequest, reg str
 
 	r.SetTimeout(o.timeout)
 	var res []error
+
+	if o.OpID != nil {
+
+		// header param Op-ID
+		if err := r.SetHeaderParam("Op-ID", *o.OpID); err != nil {
+			return err
+		}
+
+	}
 
 	if o.All != nil {
 

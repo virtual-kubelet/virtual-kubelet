@@ -37,8 +37,8 @@ type TaskInspectResponse struct {
 	// process config
 	ProcessConfig *ProcessConfig `json:"processConfig,omitempty"`
 
-	// running
-	Running bool `json:"running,omitempty"`
+	// state
+	State string `json:"state,omitempty"`
 
 	// tty
 	Tty bool `json:"tty,omitempty"`

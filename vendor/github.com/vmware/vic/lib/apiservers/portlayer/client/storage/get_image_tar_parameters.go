@@ -60,6 +60,8 @@ for the get image tar operation typically these are written to a http.Request
 */
 type GetImageTarParams struct {
 
+	/*OpID*/
+	OpID *string
 	/*ID*/
 	ID string
 	/*StoreName*/
@@ -103,6 +105,17 @@ func (o *GetImageTarParams) SetHTTPClient(client *http.Client) {
 	o.HTTPClient = client
 }
 
+// WithOpID adds the opID to the get image tar params
+func (o *GetImageTarParams) WithOpID(opID *string) *GetImageTarParams {
+	o.SetOpID(opID)
+	return o
+}
+
+// SetOpID adds the opId to the get image tar params
+func (o *GetImageTarParams) SetOpID(opID *string) {
+	o.OpID = opID
+}
+
 // WithID adds the id to the get image tar params
 func (o *GetImageTarParams) WithID(id string) *GetImageTarParams {
 	o.SetID(id)
@@ -130,6 +143,15 @@ func (o *GetImageTarParams) WriteToRequest(r runtime.ClientRequest, reg strfmt.R
 
 	r.SetTimeout(o.timeout)
 	var res []error
+
+	if o.OpID != nil {
+
+		// header param Op-ID
+		if err := r.SetHeaderParam("Op-ID", *o.OpID); err != nil {
+			return err
+		}
+
+	}
 
 	// path param id
 	if err := r.SetPathParam("id", o.ID); err != nil {

@@ -62,6 +62,8 @@ for the wait operation typically these are written to a http.Request
 */
 type WaitParams struct {
 
+	/*OpID*/
+	OpID *string
 	/*Config*/
 	Config *models.TaskWaitConfig
 
@@ -103,6 +105,17 @@ func (o *WaitParams) SetHTTPClient(client *http.Client) {
 	o.HTTPClient = client
 }
 
+// WithOpID adds the opID to the wait params
+func (o *WaitParams) WithOpID(opID *string) *WaitParams {
+	o.SetOpID(opID)
+	return o
+}
+
+// SetOpID adds the opId to the wait params
+func (o *WaitParams) SetOpID(opID *string) {
+	o.OpID = opID
+}
+
 // WithConfig adds the config to the wait params
 func (o *WaitParams) WithConfig(config *models.TaskWaitConfig) *WaitParams {
 	o.SetConfig(config)
@@ -119,6 +132,15 @@ func (o *WaitParams) WriteToRequest(r runtime.ClientRequest, reg strfmt.Registry
 
 	r.SetTimeout(o.timeout)
 	var res []error
+
+	if o.OpID != nil {
+
+		// header param Op-ID
+		if err := r.SetHeaderParam("Op-ID", *o.OpID); err != nil {
+			return err
+		}
+
+	}
 
 	if o.Config == nil {
 		o.Config = new(models.TaskWaitConfig)

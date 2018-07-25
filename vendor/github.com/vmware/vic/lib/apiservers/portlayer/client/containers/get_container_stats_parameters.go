@@ -61,6 +61,8 @@ for the get container stats operation typically these are written to a http.Requ
 */
 type GetContainerStatsParams struct {
 
+	/*OpID*/
+	OpID *string
 	/*ID*/
 	ID string
 	/*Stream*/
@@ -104,6 +106,17 @@ func (o *GetContainerStatsParams) SetHTTPClient(client *http.Client) {
 	o.HTTPClient = client
 }
 
+// WithOpID adds the opID to the get container stats params
+func (o *GetContainerStatsParams) WithOpID(opID *string) *GetContainerStatsParams {
+	o.SetOpID(opID)
+	return o
+}
+
+// SetOpID adds the opId to the get container stats params
+func (o *GetContainerStatsParams) SetOpID(opID *string) {
+	o.OpID = opID
+}
+
 // WithID adds the id to the get container stats params
 func (o *GetContainerStatsParams) WithID(id string) *GetContainerStatsParams {
 	o.SetID(id)
@@ -131,6 +144,15 @@ func (o *GetContainerStatsParams) WriteToRequest(r runtime.ClientRequest, reg st
 
 	r.SetTimeout(o.timeout)
 	var res []error
+
+	if o.OpID != nil {
+
+		// header param Op-ID
+		if err := r.SetHeaderParam("Op-ID", *o.OpID); err != nil {
+			return err
+		}
+
+	}
 
 	// path param id
 	if err := r.SetPathParam("id", o.ID); err != nil {

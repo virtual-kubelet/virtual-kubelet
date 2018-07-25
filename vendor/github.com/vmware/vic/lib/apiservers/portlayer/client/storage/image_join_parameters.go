@@ -62,6 +62,8 @@ for the image join operation typically these are written to a http.Request
 */
 type ImageJoinParams struct {
 
+	/*OpID*/
+	OpID *string
 	/*Config*/
 	Config *models.ImageJoinConfig
 	/*ID*/
@@ -107,6 +109,17 @@ func (o *ImageJoinParams) SetHTTPClient(client *http.Client) {
 	o.HTTPClient = client
 }
 
+// WithOpID adds the opID to the image join params
+func (o *ImageJoinParams) WithOpID(opID *string) *ImageJoinParams {
+	o.SetOpID(opID)
+	return o
+}
+
+// SetOpID adds the opId to the image join params
+func (o *ImageJoinParams) SetOpID(opID *string) {
+	o.OpID = opID
+}
+
 // WithConfig adds the config to the image join params
 func (o *ImageJoinParams) WithConfig(config *models.ImageJoinConfig) *ImageJoinParams {
 	o.SetConfig(config)
@@ -145,6 +158,15 @@ func (o *ImageJoinParams) WriteToRequest(r runtime.ClientRequest, reg strfmt.Reg
 
 	r.SetTimeout(o.timeout)
 	var res []error
+
+	if o.OpID != nil {
+
+		// header param Op-ID
+		if err := r.SetHeaderParam("Op-ID", *o.OpID); err != nil {
+			return err
+		}
+
+	}
 
 	if o.Config == nil {
 		o.Config = new(models.ImageJoinConfig)
