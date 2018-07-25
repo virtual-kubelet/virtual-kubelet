@@ -1,6 +1,9 @@
 package aci
 
 import (
+	"encoding/json"
+	"fmt"
+	"io/ioutil"
 	"log"
 	"os"
 	"strings"
@@ -214,6 +217,254 @@ func TestListContainerGroup(t *testing.T) {
 		if cg.Name != containerGroup {
 			t.Fatalf("resource group name is %s, expected %s", cg.Name, containerGroup)
 		}
+	}
+}
+
+func TestCreateContainerGroupWithLivenessProbe(t *testing.T) {
+	uid := uuid.New()
+	congainerGroupName := containerGroup + "-" + uid.String()[0:6]
+	cg, err := client.CreateContainerGroup(resourceGroup, congainerGroupName, ContainerGroup{
+		Location: location,
+		ContainerGroupProperties: ContainerGroupProperties{
+			OsType: Linux,
+			Containers: []Container{
+				{
+					Name: "nginx",
+					ContainerProperties: ContainerProperties{
+						Image:   "nginx",
+						Command: []string{"nginx", "-g", "daemon off;"},
+						Ports: []ContainerPort{
+							{
+								Protocol: ContainerNetworkProtocolTCP,
+								Port:     80,
+							},
+						},
+						Resources: ResourceRequirements{
+							Requests: &ResourceRequests{
+								CPU:        1,
+								MemoryInGB: 1,
+							},
+							Limits: &ResourceLimits{
+								CPU:        1,
+								MemoryInGB: 1,
+							},
+						},
+						LivenessProbe: &ContainerProbe{
+							HTTPGet: &ContainerHTTPGetProbe{
+								Port: 80,
+							},
+						},
+					},
+				},
+			},
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cg.Name != congainerGroupName {
+		t.Fatalf("resource group name is %s, expected %s", cg.Name, congainerGroupName)
+	}
+}
+
+func TestCreateContainerGroupFailsWithLivenessProbeMissingPort(t *testing.T) {
+	uid := uuid.New()
+	congainerGroupName := containerGroup + "-" + uid.String()[0:6]
+	_, err := client.CreateContainerGroup(resourceGroup, congainerGroupName, ContainerGroup{
+		Location: location,
+		ContainerGroupProperties: ContainerGroupProperties{
+			OsType: Linux,
+			Containers: []Container{
+				{
+					Name: "nginx",
+					ContainerProperties: ContainerProperties{
+						Image:   "nginx",
+						Command: []string{"nginx", "-g", "daemon off;"},
+						Ports: []ContainerPort{
+							{
+								Protocol: ContainerNetworkProtocolTCP,
+								Port:     80,
+							},
+						},
+						Resources: ResourceRequirements{
+							Requests: &ResourceRequests{
+								CPU:        1,
+								MemoryInGB: 1,
+							},
+							Limits: &ResourceLimits{
+								CPU:        1,
+								MemoryInGB: 1,
+							},
+						},
+						LivenessProbe: &ContainerProbe{
+							HTTPGet: &ContainerHTTPGetProbe{
+								Path: "/",
+							},
+						},
+					},
+				},
+			},
+		},
+	})
+	if err == nil {
+		t.Fatal("expected failure")
+	}
+}
+
+func TestCreateContainerGroupWithReadinessProbe(t *testing.T) {
+	uid := uuid.New()
+	congainerGroupName := containerGroup + "-" + uid.String()[0:6]
+	cg, err := client.CreateContainerGroup(resourceGroup, congainerGroupName, ContainerGroup{
+		Location: location,
+		ContainerGroupProperties: ContainerGroupProperties{
+			OsType: Linux,
+			Containers: []Container{
+				{
+					Name: "nginx",
+					ContainerProperties: ContainerProperties{
+						Image:   "nginx",
+						Command: []string{"nginx", "-g", "daemon off;"},
+						Ports: []ContainerPort{
+							{
+								Protocol: ContainerNetworkProtocolTCP,
+								Port:     80,
+							},
+						},
+						Resources: ResourceRequirements{
+							Requests: &ResourceRequests{
+								CPU:        1,
+								MemoryInGB: 1,
+							},
+							Limits: &ResourceLimits{
+								CPU:        1,
+								MemoryInGB: 1,
+							},
+						},
+						ReadinessProbe: &ContainerProbe{
+							HTTPGet: &ContainerHTTPGetProbe{
+								Port: 80,
+								Path: "/",
+							},
+							InitialDelaySeconds: 5,
+							SuccessThreshold:    3,
+							FailureThreshold:    5,
+							TimeoutSeconds:      120,
+						},
+					},
+				},
+			},
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cg.Name != congainerGroupName {
+		t.Fatalf("resource group name is %s, expected %s", cg.Name, congainerGroupName)
+	}
+}
+
+func logAnalyticsWorkspaceFromFile(filepath string) (*LogAnalyticsWorkspace, error) {
+	analyticsdata, err := ioutil.ReadFile(filepath)
+	if err != nil {
+		return nil, fmt.Errorf("Reading LogAnalyticsWorkspace file %q failed: %v", filepath, err)
+	}
+	// Unmarshal the log analytics file.
+	var law LogAnalyticsWorkspace
+	if err := json.Unmarshal(analyticsdata, &law); err != nil {
+		return nil, err
+	}
+	return &law, nil
+}
+
+func TestCreateContainerGroupWithLogAnalytics(t *testing.T) {
+	law, err := logAnalyticsWorkspaceFromFile("../../../../loganalytics.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	cgname := "cgla"
+	cg, err := client.CreateContainerGroup(resourceGroup, cgname, ContainerGroup{
+		Location: location,
+		ContainerGroupProperties: ContainerGroupProperties{
+			OsType: Linux,
+			Containers: []Container{
+				{
+					Name: "nginx",
+					ContainerProperties: ContainerProperties{
+						Image:   "nginx",
+						Command: []string{"nginx", "-g", "daemon off;"},
+						Ports: []ContainerPort{
+							{
+								Protocol: ContainerNetworkProtocolTCP,
+								Port:     80,
+							},
+						},
+						Resources: ResourceRequirements{
+							Requests: &ResourceRequests{
+								CPU:        1,
+								MemoryInGB: 1,
+							},
+							Limits: &ResourceLimits{
+								CPU:        1,
+								MemoryInGB: 1,
+							},
+						},
+					},
+				},
+			},
+			Diagnostics: &ContainerGroupDiagnostics{
+				LogAnalytics: law,
+			},
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cg.Name != cgname {
+		t.Fatalf("resource group name is %s, expected %s", cg.Name, cgname)
+	}
+	if err := client.DeleteContainerGroup(resourceGroup, cgname); err != nil {
+		t.Fatalf("Delete Container Group failed: %s", err.Error())
+	}
+}
+
+func TestCreateContainerGroupWithInvalidLogAnalytics(t *testing.T) {
+	law := &LogAnalyticsWorkspace{}
+	_, err := client.CreateContainerGroup(resourceGroup, containerGroup, ContainerGroup{
+		Location: location,
+		ContainerGroupProperties: ContainerGroupProperties{
+			OsType: Linux,
+			Containers: []Container{
+				{
+					Name: "nginx",
+					ContainerProperties: ContainerProperties{
+						Image:   "nginx",
+						Command: []string{"nginx", "-g", "daemon off;"},
+						Ports: []ContainerPort{
+							{
+								Protocol: ContainerNetworkProtocolTCP,
+								Port:     80,
+							},
+						},
+						Resources: ResourceRequirements{
+							Requests: &ResourceRequests{
+								CPU:        1,
+								MemoryInGB: 1,
+							},
+							Limits: &ResourceLimits{
+								CPU:        1,
+								MemoryInGB: 1,
+							},
+						},
+					},
+				},
+			},
+			Diagnostics: &ContainerGroupDiagnostics{
+				LogAnalytics: law,
+			},
+		},
+	})
+	if err == nil {
+		t.Fatal("TestCreateContainerGroupWithInvalidLogAnalytics should fail but encountered no errors")
 	}
 }
 

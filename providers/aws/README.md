@@ -24,6 +24,8 @@ AWS Fargate virtual-kubelet provider connects your Kubernetes cluster to a Farga
 The Fargate cluster is exposed as a virtual node with the CPU and memory capacity that you choose.
 Pods scheduled on the virtual node run on Fargate like they would run on a standard Kubernetes node.
 
+See our [AWS Open Source Blog post](https://aws.amazon.com/blogs/opensource/aws-fargate-virtual-kubelet/) for detailed step-by-step instructions on how to run virtual-kubelet with AWS Fargate. If you are already familiar with virtual-kubelet, the rest of this README contains an overview of how to setup AWS Fargate.
+
 ## Prerequisites
 
 If you have never used Fargate before, the easiest way to get started is to run Fargate's
