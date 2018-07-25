@@ -14,9 +14,11 @@ env:
   nodeOsType: 
   apiserverCert: 
   apiserverKey: 
-  monitoredNamespace: 
-  logAnalyticsID:
-  logAnalyticsKey:
+  monitoredNamespace:
+loganalytics:
+  enabled: false
+  workspaceID:
+  workspaceKey:
 
 # Install Default RBAC roles and bindings
 rbac:
