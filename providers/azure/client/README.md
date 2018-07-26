@@ -38,3 +38,29 @@ The file looks like this, in case you want to create it yourself:
     "managementEndpointUrl": "https://management.core.windows.net/"
 }
 ```
+
+
+## Log Analytics support
+
+Log Analytics is supported through environment variables:
+- `LOG_ANALYTICS_KEY`
+- `LOG_ANALYTICS_ID`
+
+You can also specify a file with these values and specify the path to it in the `LOG_ANALYTICS_AUTH_LOCATION`:
+
+``` bash
+export LOG_ANALYTICS_AUTH_LOCATION=/secure/location/loganalytics.json
+```
+
+``` powershell
+$env:LOG_ANALYTICS_AUTH_LOCATION= "/secure/location/loganalytics.json"
+```
+
+The file should look like this:
+
+``` json
+{
+    "workspaceID": "<YOUR_LOG_ANALYTICS_WORKSPACE_ID>",
+    "workspaceKey": "<YOUR_LOG_ANALYTICS_WORKSPACE_KEY>"
+}
+```
