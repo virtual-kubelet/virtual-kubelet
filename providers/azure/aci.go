@@ -722,9 +722,65 @@ func (p *ACIProvider) getContainers(pod *v1.Pod) ([]aci.Container, error) {
 			}
 		}
 
+		if container.LivenessProbe != nil {
+			probe, err := getProbe(container.LivenessProbe)
+			if err != nil {
+				return nil, err
+			}
+			c.LivenessProbe = probe
+		}
+
+		if container.ReadinessProbe != nil {
+			probe, err := getProbe(container.ReadinessProbe)
+			if err != nil {
+				return nil, err
+			}
+			c.ReadinessProbe = probe
+		}
+
 		containers = append(containers, c)
 	}
 	return containers, nil
+}
+
+func getProbe(probe *v1.Probe) (*aci.ContainerProbe, error) {
+
+	if probe.Handler.Exec != nil && probe.Handler.HTTPGet != nil {
+		return nil, fmt.Errorf("probe may not specify more than one of \"exec\" and \"httpGet\"")
+	}
+
+	if probe.Handler.Exec == nil && probe.Handler.HTTPGet == nil {
+		return nil, fmt.Errorf("probe must specify one of \"exec\" and \"httpGet\"")
+	}
+
+	// Probes have can have a Exec or HTTP Get Handler.
+	// Create those if they exist, then add to the
+	// ContainerProbe struct
+	var exec *aci.ContainerExecProbe
+	if probe.Handler.Exec != nil {
+		exec = &aci.ContainerExecProbe{
+			Command: probe.Handler.Exec.Command,
+		}
+	}
+
+	var httpGET *aci.ContainerHTTPGetProbe
+	if probe.Handler.HTTPGet != nil {
+		httpGET = &aci.ContainerHTTPGetProbe{
+			Port:   probe.Handler.HTTPGet.Port.IntValue(),
+			Path:   probe.Handler.HTTPGet.Path,
+			Scheme: string(probe.Handler.HTTPGet.Scheme),
+		}
+	}
+
+	return &aci.ContainerProbe{
+		Exec:                exec,
+		HTTPGet:             httpGET,
+		InitialDelaySeconds: probe.InitialDelaySeconds,
+		Period:              probe.PeriodSeconds,
+		FailureThreshold:    probe.FailureThreshold,
+		SuccessThreshold:    probe.SuccessThreshold,
+		TimeoutSeconds:      probe.TimeoutSeconds,
+	}, nil
 }
 
 func (p *ACIProvider) getVolumes(pod *v1.Pod) ([]aci.Volume, error) {
