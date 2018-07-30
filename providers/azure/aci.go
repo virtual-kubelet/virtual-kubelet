@@ -723,11 +723,19 @@ func (p *ACIProvider) getContainers(pod *v1.Pod) ([]aci.Container, error) {
 		}
 
 		if container.LivenessProbe != nil {
-			c.LivenessProbe = getProbe(container.LivenessProbe)
+			probe, err := getProbe(container.LivenessProbe)
+			if err != nil {
+				return nil, err
+			}
+			c.LivenessProbe = probe
 		}
 
 		if container.ReadinessProbe != nil {
-			c.ReadinessProbe = getProbe(container.ReadinessProbe)
+			probe, err := getProbe(container.ReadinessProbe)
+			if err != nil {
+				return nil, err
+			}
+			c.ReadinessProbe = probe
 		}
 
 		containers = append(containers, c)
@@ -735,7 +743,16 @@ func (p *ACIProvider) getContainers(pod *v1.Pod) ([]aci.Container, error) {
 	return containers, nil
 }
 
-func getProbe(probe *v1.Probe) *aci.ContainerProbe {
+func getProbe(probe *v1.Probe) (*aci.ContainerProbe, error) {
+
+	if probe.Handler.Exec != nil && probe.Handler.HTTPGet != nil {
+		return nil, fmt.Errorf("probe may not specify more than one of \"exec\" and \"httpGet\"")
+	}
+
+	if probe.Handler.Exec == nil && probe.Handler.HTTPGet == nil {
+		return nil, fmt.Errorf("probe must specify one of \"exec\" and \"httpGet\"")
+	}
+
 	// Probes have can have a Exec or HTTP Get Handler.
 	// Create those if they exist, then add to the
 	// ContainerProbe struct
@@ -763,7 +780,7 @@ func getProbe(probe *v1.Probe) *aci.ContainerProbe {
 		FailureThreshold:    probe.FailureThreshold,
 		SuccessThreshold:    probe.SuccessThreshold,
 		TimeoutSeconds:      probe.TimeoutSeconds,
-	}
+	}, nil
 }
 
 func (p *ACIProvider) getVolumes(pod *v1.Pod) ([]aci.Volume, error) {
