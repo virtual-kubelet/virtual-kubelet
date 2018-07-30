@@ -724,9 +724,48 @@ func (p *ACIProvider) getContainers(pod *v1.Pod) ([]aci.Container, error) {
 			}
 		}
 
+		if container.LivenessProbe != nil {
+			c.LivenessProbe = getProbe(container.LivenessProbe)
+		}
+
+		if container.ReadinessProbe != nil {
+			c.ReadinessProbe = getProbe(container.ReadinessProbe)
+		}
+
 		containers = append(containers, c)
 	}
 	return containers, nil
+}
+
+func getProbe(probe *v1.Probe) *aci.ContainerProbe {
+	// Probes have can have a Exec or HTTP Get Handler.
+	// Create those if they exist, then add to the
+	// ContainerProbe struct
+	var exec *aci.ContainerExecProbe
+	if probe.Handler.Exec != nil {
+		exec = &aci.ContainerExecProbe{
+			Command: probe.Handler.Exec.Command,
+		}
+	}
+
+	var httpGET *aci.ContainerHTTPGetProbe
+	if probe.Handler.HTTPGet != nil {
+		httpGET = &aci.ContainerHTTPGetProbe{
+			Port:   probe.Handler.HTTPGet.Port.IntValue(),
+			Path:   probe.Handler.HTTPGet.Path,
+			Scheme: string(probe.Handler.HTTPGet.Scheme),
+		}
+	}
+
+	return &aci.ContainerProbe{
+		Exec:                exec,
+		HTTPGet:             httpGET,
+		InitialDelaySeconds: probe.InitialDelaySeconds,
+		Period:              probe.PeriodSeconds,
+		FailureThreshold:    probe.FailureThreshold,
+		SuccessThreshold:    probe.SuccessThreshold,
+		TimeoutSeconds:      probe.TimeoutSeconds,
+	}
 }
 
 func (p *ACIProvider) getVolumes(pod *v1.Pod) ([]aci.Volume, error) {
