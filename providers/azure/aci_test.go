@@ -363,6 +363,58 @@ func TestGetPodWithoutResourceRequestsLimits(t *testing.T) {
 		"Containers[0].Resources.Requests.Memory doesn't match")
 }
 
+func TestPodToACISecretEnvVar(t *testing.T) {
+
+	testKey := "testVar"
+	testVal := "testVal"
+
+	e := v1.EnvVar{
+		Name:  testKey,
+		Value: testVal,
+		ValueFrom: &v1.EnvVarSource{
+			SecretKeyRef: &v1.SecretKeySelector{},
+		},
+	}
+	aciEnvVar := getACIEnvVar(e)
+
+	if aciEnvVar.Value != "" {
+		t.Fatalf("ACI Env Variable Value should be empty for a secret")
+	}
+
+	if aciEnvVar.Name != testKey {
+		t.Fatalf("ACI Env Variable Name does not match expected Name")
+	}
+
+	if aciEnvVar.SecureValue != testVal {
+		t.Fatalf("ACI Env Variable Secure Value does not match expected value")
+	}
+}
+
+func TestPodToACIEnvVar(t *testing.T) {
+
+	testKey := "testVar"
+	testVal := "testVal"
+
+	e := v1.EnvVar{
+		Name:      testKey,
+		Value:     testVal,
+		ValueFrom: &v1.EnvVarSource{},
+	}
+	aciEnvVar := getACIEnvVar(e)
+
+	if aciEnvVar.SecureValue != "" {
+		t.Fatalf("ACI Env Variable Secure Value should be empty for non-secret variables")
+	}
+
+	if aciEnvVar.Name != testKey {
+		t.Fatalf("ACI Env Variable Name does not match expected Name")
+	}
+
+	if aciEnvVar.Value != testVal {
+		t.Fatalf("ACI Env Variable Value does not match expected value")
+	}
+}
+
 func prepareMocks() (*AADMock, *ACIMock, *ACIProvider, error) {
 	aadServerMocker := NewAADMock()
 	aciServerMocker := NewACIMock()
