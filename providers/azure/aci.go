@@ -676,19 +676,7 @@ func (p *ACIProvider) getContainers(pod *v1.Pod) ([]aci.Container, error) {
 
 		c.EnvironmentVariables = make([]aci.EnvironmentVariable, 0, len(container.Env))
 		for _, e := range container.Env {
-			var envVar aci.EnvironmentVariable
-			// If the variable is a secret, use SecureValue
-			if e.ValueFrom.SecretKeyRef != nil {
-				envVar = aci.EnvironmentVariable{
-					Name:        e.Name,
-					SecureValue: e.Value,
-				}
-			} else {
-				envVar = aci.EnvironmentVariable{
-					Name:  e.Name,
-					Value: e.Value,
-				}
-			}
+			envVar := getACIEnvVar(e)
 			c.EnvironmentVariables = append(c.EnvironmentVariables, envVar)
 		}
 
@@ -1067,4 +1055,21 @@ func filterServiceAccountSecretVolume(osType string, containerGroup *aci.Contain
 
 		containerGroup.ContainerGroupProperties.Volumes = volumes
 	}
+}
+
+func getACIEnvVar(e v1.EnvVar) aci.EnvironmentVariable {
+	var envVar aci.EnvironmentVariable
+	// If the variable is a secret, use SecureValue
+	if e.ValueFrom.SecretKeyRef != nil {
+		envVar = aci.EnvironmentVariable{
+			Name:        e.Name,
+			SecureValue: e.Value,
+		}
+	} else {
+		envVar = aci.EnvironmentVariable{
+			Name:  e.Name,
+			Value: e.Value,
+		}
+	}
+	return envVar
 }
