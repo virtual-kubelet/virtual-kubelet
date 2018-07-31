@@ -390,23 +390,25 @@ func (s *Server) createPod(pod *corev1.Pod) error {
 
 func (s *Server) deletePod(pod *corev1.Pod) error {
 	var delErr error
-	if delErr = s.provider.DeletePod(pod); delErr != nil {
+	if delErr = s.provider.DeletePod(pod); delErr != nil && errors.IsNotFound(delErr) {
 		return delErr
 	}
 
-	var grace int64
-	if err := s.k8sClient.CoreV1().Pods(pod.Namespace).Delete(pod.Name, &metav1.DeleteOptions{GracePeriodSeconds: &grace}); err != nil && errors.IsNotFound(err) {
-		if errors.IsNotFound(err) {
-			log.Printf("Pod '%s' doesn't exist.\n", pod.Name)
-			return nil
+	if !errors.IsNotFound(delErr) {
+		var grace int64
+		if err := s.k8sClient.CoreV1().Pods(pod.Namespace).Delete(pod.Name, &metav1.DeleteOptions{GracePeriodSeconds: &grace}); err != nil && errors.IsNotFound(err) {
+			if errors.IsNotFound(err) {
+				log.Printf("Pod '%s' doesn't exist.\n", pod.Name)
+				return nil
+			}
+
+			return fmt.Errorf("Failed to delete kubernetes pod: %s", err)
 		}
 
-		return fmt.Errorf("Failed to delete kubernetes pod: %s", err)
+		s.resourceManager.DeletePod(pod)
+
+		log.Printf("Pod '%s' deleted.\n", pod.Name)
 	}
-
-	s.resourceManager.DeletePod(pod)
-
-	log.Printf("Pod '%s' deleted.\n", pod.Name)
 
 	return nil
 }
@@ -416,7 +418,7 @@ func (s *Server) updatePodStatuses() {
 	// Update all the pods with the provider status.
 	pods := s.resourceManager.GetPods()
 	for _, pod := range pods {
-		if pod.Status.Phase == corev1.PodSucceeded || pod.Status.Phase == corev1.PodFailed {
+		if pod.Status.Phase == corev1.PodSucceeded || (pod.Status.Phase == corev1.PodFailed && pod.Status.Reason == PodStatusReason_ProviderFailed) {
 			continue
 		}
 
