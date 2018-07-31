@@ -15,3 +15,11 @@ env:
   apiserverCert: 
   apiserverKey: 
   monitoredNamespace:
+
+# Install Default RBAC roles and bindings
+rbac:
+  install: true
+  ## RBAC api version
+  apiVersion: v1beta1
+  # Cluster role reference
+  roleRef: cluster-admin
