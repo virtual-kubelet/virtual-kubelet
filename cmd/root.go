@@ -67,6 +67,11 @@ func Execute() {
 func init() {
 	cobra.OnInitialize(initConfig)
 
+	// read default node name from environment variable.
+	// it can be overwritten by cli flags if specified.
+	if os.Getenv("DEFAULT_NODE_NAME") != "" {
+		nodeName = os.Getenv("DEFAULT_NODE_NAME")
+	}
 	// Here you will define your flags and configuration settings.
 	// Cobra supports persistent flags, which, if defined here,
 	// will be global for your application.
