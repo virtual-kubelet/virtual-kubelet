@@ -46,10 +46,5 @@ func (c *Client) DeleteContainerGroup(resourceGroup, containerGroupName string) 
 		return err
 	}
 
-	// 204 No Content means the specified container group was not found.
-	if resp.StatusCode == http.StatusNoContent {
-		return fmt.Errorf("Container group with name %q was not found", containerGroupName)
-	}
-
 	return nil
 }
