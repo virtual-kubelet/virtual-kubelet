@@ -112,7 +112,11 @@ func (rm *ResourceManager) UpdatePod(p *v1.Pod) bool {
 		return false
 	}
 
-	if _, ok := rm.pods[podKey]; ok {
+	if old, ok := rm.pods[podKey]; ok {
+		rm.decrementRefCounters(old)
+		rm.pods[podKey] = p
+		rm.incrementRefCounters(p)
+
 		// NOTE(junjiez): no reconcile as we don't support update pod.
 		return false
 	}

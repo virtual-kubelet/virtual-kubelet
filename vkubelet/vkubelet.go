@@ -422,7 +422,7 @@ func (s *Server) updatePodStatuses() {
 
 		status, err := s.provider.GetPodStatus(pod.Namespace, pod.Name)
 		if err != nil {
-			log.Printf("Error retrieving pod '%s' status from provider: %s\n", pod.Name, err)
+			log.Printf("Error retrieving pod '%s' in namespace '%s' status from provider: %s\n", pod.Name, pod.Namespace, err)
 			return
 		}
 

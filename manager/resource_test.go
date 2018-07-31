@@ -23,7 +23,7 @@ func TestResourceManager(t *testing.T) {
 	pod1Name := "Pod1"
 	pod1Namespace := "Pod1Namespace"
 	pod1 := makePod(pod1Namespace, pod1Name)
-	pm.AddPod(pod1)
+	pm.UpdatePod(pod1)
 
 	pods := pm.GetPods()
 	if len(pods) != 1 {
@@ -40,7 +40,7 @@ func TestResourceManagerDeletePod(t *testing.T) {
 	pod1Name := "Pod1"
 	pod1Namespace := "Pod1Namespace"
 	pod1 := makePod(pod1Namespace, pod1Name)
-	pm.AddPod(pod1)
+	pm.UpdatePod(pod1)
 	pods := pm.GetPods()
 	if len(pods) != 1 {
 		t.Errorf("Got %d, expected 1 pod", len(pods))
@@ -65,7 +65,7 @@ func TestResourceManagerUpdatePod(t *testing.T) {
 	pod1Name := "Pod1"
 	pod1Namespace := "Pod1Namespace"
 	pod1 := makePod(pod1Namespace, pod1Name)
-	pm.AddPod(pod1)
+	pm.UpdatePod(pod1)
 
 	pods := pm.GetPods()
 	if len(pods) != 1 {
