@@ -91,6 +91,7 @@ type ContainerGroupProperties struct {
 	OsType                   OperatingSystemTypes                 `json:"osType,omitempty"`
 	Volumes                  []Volume                             `json:"volumes,omitempty"`
 	InstanceView             ContainerGroupPropertiesInstanceView `json:"instanceView,omitempty"`
+	Diagnostics              *ContainerGroupDiagnostics           `json:"diagnostics,omitempty"`
 	NetworkProfile           *NetworkProfileDefinition            `json:"networkProfile,omitempty"`
 }
 
@@ -128,6 +129,8 @@ type ContainerProperties struct {
 	InstanceView         ContainerPropertiesInstanceView `json:"instanceView,omitempty"`
 	Resources            ResourceRequirements            `json:"resources,omitempty"`
 	VolumeMounts         []VolumeMount                   `json:"volumeMounts,omitempty"`
+	LivenessProbe        *ContainerProbe                 `json:"livenessProbe,omitempty"`
+	ReadinessProbe       *ContainerProbe                 `json:"readinessProbe,omitempty"`
 }
 
 // ContainerPropertiesInstanceView is the instance view of the container instance. Only valid in response.
@@ -149,8 +152,9 @@ type ContainerState struct {
 
 // EnvironmentVariable is the environment variable to set within the container instance.
 type EnvironmentVariable struct {
-	Name  string `json:"name,omitempty"`
-	Value string `json:"value,omitempty"`
+	Name        string `json:"name,omitempty"`
+	Value       string `json:"value,omitempty"`
+	SecureValue string `json:"secureValue,omitempty"`
 }
 
 // Event is a container group or container instance event.
@@ -299,4 +303,39 @@ type ExecRequest struct {
 type ExecResponse struct {
 	WebSocketUri string `json:"webSocketUri,omitempty"`
 	Password     string `json:"password,omitempty"`
+}
+
+// ContainerProbe is a probe definition that can be used for Liveness
+// or Readiness checks.
+type ContainerProbe struct {
+	Exec                *ContainerExecProbe    `json:"exec,omitempty"`
+	HTTPGet             *ContainerHTTPGetProbe `json:"httpGet,omitempty"`
+	InitialDelaySeconds int32                  `json:"initialDelaySeconds,omitempty"`
+	Period              int32                  `json:"periodSeconds,omitempty"`
+	FailureThreshold    int32                  `json:"failureThreshold,omitempty"`
+	SuccessThreshold    int32                  `json:"successThreshold,omitempty"`
+	TimeoutSeconds      int32                  `json:"timeoutSeconds,omitempty"`
+}
+
+// ContainerExecProbe defines a command based probe
+type ContainerExecProbe struct {
+	Command []string `json:"command,omitempty"`
+}
+
+// ContainerHTTPGetProbe defines an HTTP probe
+type ContainerHTTPGetProbe struct {
+	Port   int    `json:"port"`
+	Path   string `json:"path,omitempty"`
+	Scheme string `json:"scheme,omitempty"`
+}
+
+// ContainerGroupDiagnostics contains an instance of LogAnalyticsWorkspace
+type ContainerGroupDiagnostics struct {
+	LogAnalytics *LogAnalyticsWorkspace `json:"loganalytics,omitempty"`
+}
+
+// LogAnalyticsWorkspace defines details for a Log Analytics workspace
+type LogAnalyticsWorkspace struct {
+	WorkspaceID  string `json:"workspaceID,omitempty"`
+	WorkspaceKey string `json:"workspaceKey,omitempty"`
 }

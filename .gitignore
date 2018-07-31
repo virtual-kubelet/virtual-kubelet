@@ -26,6 +26,9 @@ bin/
 # Test credentials file
 credentials.json
 
+# Test loganalytics file
+loganalytics.json
+
 # VS Code files
 .vscode/
 
