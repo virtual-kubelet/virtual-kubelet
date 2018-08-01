@@ -43,6 +43,7 @@ type SFMeshProvider struct {
 	serviceClient      *servicefabricmesh.ServiceClient
 	region             string
 	resourceGroup      string
+	subscriptionID     string
 	resourceManager    *manager.ResourceManager
 }
 
@@ -111,6 +112,7 @@ func NewSFMeshProvider(rm *manager.ResourceManager, nodeName, operatingSystem st
 		region:             region,
 		resourceGroup:      resourceGroup,
 		resourceManager:    rm,
+		subscriptionID:     azureSubscriptionID,
 	}
 	return &provider, nil
 }
@@ -417,7 +419,7 @@ func (p *SFMeshProvider) CreatePod(pod *v1.Pod) error {
 	}
 
 	networkName := *meshNetwork.Name
-	resourceID := "/subscriptions/" + os.Getenv("AZURE_SUBSCRIPTION_ID") + "/resourceGroups/" + p.resourceGroup + "/providers/Microsoft.ServiceFabricMesh/networks/" + networkName
+	resourceID := "/subscriptions/" + p.subscriptionID + "/resourceGroups/" + p.resourceGroup + "/providers/Microsoft.ServiceFabricMesh/networks/" + networkName
 
 	service := (*meshApp.Services)[0]
 
