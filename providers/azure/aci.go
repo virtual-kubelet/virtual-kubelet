@@ -37,6 +37,13 @@ const (
 	subnetsAction           = "Microsoft.Network/virtualNetworks/subnets/action"
 	subnetDelegationService = "Microsoft.ContainerInstance/containerGroups"
 	networkProfileType      = "Microsoft.Network/networkProfiles"
+
+	// KubeProxy SideCar Container
+	kubeProxyContainerName  = "vk-side-car-kube-proxy"
+	kubeProxyImageName		= "k8s-gcrio.azureedge.net/hyperkube-amd64:v1.8.2"
+	kubeConfigDir	        = "/etc/kube-proxy"
+	kubeConfigFile          = "kubeconfig"
+	kubeConfigSecretVolume  = "vk-side-car-kubeconfig-secret-volume"
 )
 
 // ACIProvider implements the virtual-kubelet provider interface and communicates with Azure's ACI APIs.
@@ -57,6 +64,8 @@ type ACIProvider struct {
 	subnetCIDR         string
 	vnetName           string
 	networkProfile     string
+	masterURI          string
+	clusterCIDR        string
 }
 
 // AuthConfig is the secret returned from an ImageRegistryCredential
@@ -252,6 +261,16 @@ func NewACIProvider(config string, rm *manager.ResourceManager, nodeName, operat
 	p.internalIP = internalIP
 	p.daemonEndpointPort = daemonEndpointPort
 
+	p.masterURI = "10.0.0.1"
+	if masterURI := os.Getenv("MASTER_URI"); masterURI != "" {
+		p.masterURI = masterURI
+	}
+
+	p.clusterCIDR = "10.240.0.0/16"
+	if clusterCIDR := os.Getenv("CLUSTER_CIDR"); clusterCIDR != "" {
+		p.clusterCIDR = clusterCIDR
+	}
+
 	return &p, err
 }
 
@@ -359,7 +378,6 @@ func (p *ACIProvider) CreatePod(pod *v1.Pod) error {
 	containerGroup.Location = p.region
 	containerGroup.RestartPolicy = aci.ContainerGroupRestartPolicy(pod.Spec.RestartPolicy)
 	containerGroup.ContainerGroupProperties.OsType = aci.OperatingSystemTypes(p.OperatingSystem())
-	containerGroup.NetworkProfile = &aci.NetworkProfileDefinition{ID: p.networkProfile}
 
 	// get containers
 	containers, err := p.getContainers(pod)
@@ -421,7 +439,8 @@ func (p *ACIProvider) CreatePod(pod *v1.Pod) error {
 		"CreationTimestamp": podCreationTimestamp,
 	}
 
-	// TODO(BJK) containergrouprestartpolicy??
+	p.amendVnetResources(&containerGroup)
+
 	_, err = p.aciClient.CreateContainerGroup(
 		p.resourceGroup,
 		fmt.Sprintf("%s-%s", pod.Namespace, pod.Name),
@@ -429,6 +448,61 @@ func (p *ACIProvider) CreatePod(pod *v1.Pod) error {
 	)
 
 	return err
+}
+
+func (p *ACIProvider) amendVnetResources(containerGroup *aci.ContainerGroup) {
+	if p.networkProfile == "" || containerGroup == nil {
+		return
+	}
+
+	containerGroup.NetworkProfile = &aci.NetworkProfileDefinition{ID: p.networkProfile}
+
+	containerGroup.ContainerGroupProperties.Containers = append(containerGroup.ContainerGroupProperties.Containers, *(getKubeProxyContainerSpec(p.clusterCIDR)))
+	containerGroup.ContainerGroupProperties.Volumes = append(containerGroup.ContainerGroupProperties.Volumes, *(getKubeProxyVolumeSpec(p.masterURI)))
+}
+
+func getKubeProxyContainerSpec(clusterCIDR string) *aci.Container {
+	container := aci.Container{
+		Name: kubeProxyContainerName,
+		ContainerProperties: aci.ContainerProperties{
+			Image:   kubeProxyImageName,
+			Command: []string{
+				"/hyperkube",
+				"proxy",
+				"--kubeconfig="+kubeConfigDir+"/"+kubeConfigFile,
+				"--cluster-cidr="+clusterCIDR,
+			},
+		},
+	}
+
+	container.VolumeMounts = []aci.VolumeMount{
+		aci.VolumeMount{
+			Name:      kubeConfigSecretVolume,
+			MountPath: kubeConfigDir,
+			ReadOnly:  true,
+		},
+	}
+
+	container.Resources = aci.ResourceRequirements{
+		Requests: &aci.ResourceRequests{
+			CPU:        0.1,
+			MemoryInGB: 0.10,
+		},
+	}
+
+	return &container
+}
+
+func getKubeProxyVolumeSpec(masterURI string) *aci.Volume {
+	paths := make(map[string]string)
+
+
+	volume := aci.Volume{
+		Name:   kubeConfigSecretVolume,
+		Secret: paths,
+	}
+
+	return &volume
 }
 
 // UpdatePod is a noop, ACI currently does not support live updates of a pod.
