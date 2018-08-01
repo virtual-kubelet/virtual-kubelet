@@ -268,7 +268,6 @@ func (p *SFMeshProvider) getMeshApplication(pod *v1.Pod) (servicefabricmesh.Appl
 					containerMemoryRequest = 0.10
 				}
 
-				containerMemoryRequest = 1
 				memoryRequest = containerMemoryRequest
 			}
 		}
