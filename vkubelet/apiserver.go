@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/gorilla/mux"
+	"github.com/virtual-kubelet/virtual-kubelet/vkubelet/certs"
 	"k8s.io/kubernetes/pkg/kubelet/server/remotecommand"
 )
 
@@ -26,6 +27,25 @@ func ApiserverStart(provider Provider) {
 	p = provider
 	certFilePath := os.Getenv("APISERVER_CERT_LOCATION")
 	keyFilePath := os.Getenv("APISERVER_KEY_LOCATION")
+
+	var err error
+	
+	log.Println(certFilePath)
+	log.Println(keyFilePath)
+	
+	// check to see if both the cert and key are empty
+	// if not, pass on to http.ListenandServeTLS and rely 
+	// on that failure.
+	// if both are empty, generate self signed certs.
+	if certFilePath == "" && keyFilePath == "" {
+		log.Println("TLS key pair not provided for HTTP listener, generating one for you.")
+		log.Println("WARNING: generated key pair is not suitable for production use.")
+		certFilePath, keyFilePath, err = certs.GenerateCertKeyPair()
+		if err != nil {
+			log.Fatalf("error generating certificate pair for HTTP listener: %s\n", err)
+		}
+	}
+
 	port := os.Getenv("KUBELET_PORT")
 	addr := fmt.Sprintf(":%s", port)
 
@@ -35,7 +55,7 @@ func ApiserverStart(provider Provider) {
 	r.NotFoundHandler = http.HandlerFunc(NotFound)
 
 	if err := http.ListenAndServeTLS(addr, certFilePath, keyFilePath, r); err != nil {
-		log.Println(err)
+		log.Printf("error starting http listener: %s\n", err)
 	}
 }
 
