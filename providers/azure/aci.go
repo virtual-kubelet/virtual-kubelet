@@ -457,8 +457,8 @@ func (p *ACIProvider) amendVnetResources(containerGroup *aci.ContainerGroup) {
 
 	containerGroup.NetworkProfile = &aci.NetworkProfileDefinition{ID: p.networkProfile}
 
-	containerGroup.ContainerGroupProperties.Containers = append(containerGroup.ContainerGroupProperties.Containers, *(getKubeProxyContainerSpec(p.clusterCIDR)))
-	containerGroup.ContainerGroupProperties.Volumes = append(containerGroup.ContainerGroupProperties.Volumes, *(getKubeProxyVolumeSpec(p.masterURI)))
+	//containerGroup.ContainerGroupProperties.Containers = append(containerGroup.ContainerGroupProperties.Containers, *(getKubeProxyContainerSpec(p.clusterCIDR)))
+	//containerGroup.ContainerGroupProperties.Volumes = append(containerGroup.ContainerGroupProperties.Volumes, *(getKubeProxyVolumeSpec(p.masterURI)))
 }
 
 func getKubeProxyContainerSpec(clusterCIDR string) *aci.Container {
