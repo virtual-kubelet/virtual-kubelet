@@ -23,7 +23,7 @@ The best description is "Kubernetes API on top, programmable back."
 	+ [Azure Batch GPU Provider](./providers/azurebatch/README.md)
     + [AWS Fargate Provider](#aws-fargate-provider)
     + [Hyper.sh Provider](#hypersh-provider)
-	+ [Service Fabric Mesh Provider](#service-fabric-mesh-provider)
+    + [Service Fabric Mesh Provider](#service-fabric-mesh-provider)
     + [Adding a New Provider via the Provider Interface](#adding-a-new-provider-via-the-provider-interface)
 * [Testing](#testing)
     + [Testing the Azure Provider Client](#testing-the-azure-provider-client)
