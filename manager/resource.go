@@ -18,6 +18,7 @@ type ResourceManager struct {
 	k8sClient kubernetes.Interface
 
 	pods         map[string]*v1.Pod
+	deletingPods map[string]*v1.Pod
 	configMapRef map[string]int64
 	configMaps   map[string]*v1.ConfigMap
 	secretRef    map[string]int64
@@ -28,6 +29,7 @@ type ResourceManager struct {
 func NewResourceManager(k8sClient kubernetes.Interface) *ResourceManager {
 	rm := ResourceManager{
 		pods:         make(map[string]*v1.Pod, 0),
+		deletingPods: make(map[string]*v1.Pod, 0),
 		configMapRef: make(map[string]int64, 0),
 		secretRef:    make(map[string]int64, 0),
 		configMaps:   make(map[string]*v1.ConfigMap, 0),
@@ -81,53 +83,52 @@ func (rm *ResourceManager) SetPods(pods *v1.PodList) {
 	rm.secrets = make(map[string]*v1.Secret, len(pods.Items))
 
 	for k, p := range pods.Items {
-		if p.Status.Phase == v1.PodSucceeded {
-			continue
-		}
 		rm.pods[rm.getStoreKey(p.Namespace, p.Name)] = &pods.Items[k]
 
 		rm.incrementRefCounters(&p)
 	}
 }
 
-// AddPod adds a pod to the internal cache.
-func (rm *ResourceManager) AddPod(p *v1.Pod) {
-	rm.Lock()
-	defer rm.Unlock()
-	if p.Status.Phase == v1.PodSucceeded {
-		return
-	}
-
-	podKey := rm.getStoreKey(p.Namespace, p.Name)
-	if _, ok := rm.pods[podKey]; ok {
-		rm.UpdatePod(p)
-		return
-	}
-
-	rm.pods[podKey] = p
-	rm.incrementRefCounters(p)
-}
-
 // UpdatePod updates the supplied pod in the cache.
-func (rm *ResourceManager) UpdatePod(p *v1.Pod) {
+func (rm *ResourceManager) UpdatePod(p *v1.Pod) bool {
 	rm.Lock()
 	defer rm.Unlock()
 
 	podKey := rm.getStoreKey(p.Namespace, p.Name)
-	if p.Status.Phase == v1.PodSucceeded {
-		delete(rm.pods, podKey)
+	if p.DeletionTimestamp != nil {
+		if old, ok := rm.pods[podKey]; ok {
+			rm.deletingPods[podKey] = p
+
+			rm.decrementRefCounters(old)
+			delete(rm.pods, podKey)
+
+			return true
+		}
+
+		if _, ok := rm.deletingPods[podKey]; ok {
+			return false
+		}
+
+		return false
 	}
 
 	if old, ok := rm.pods[podKey]; ok {
 		rm.decrementRefCounters(old)
+		rm.pods[podKey] = p
+		rm.incrementRefCounters(p)
+
+		// NOTE(junjiez): no reconcile as we don't support update pod.
+		return false
 	}
-	rm.incrementRefCounters(p)
 
 	rm.pods[podKey] = p
+	rm.incrementRefCounters(p)
+
+	return true
 }
 
 // DeletePod removes the pod from the cache.
-func (rm *ResourceManager) DeletePod(p *v1.Pod) {
+func (rm *ResourceManager) DeletePod(p *v1.Pod) bool {
 	rm.Lock()
 	defer rm.Unlock()
 
@@ -135,7 +136,14 @@ func (rm *ResourceManager) DeletePod(p *v1.Pod) {
 	if old, ok := rm.pods[podKey]; ok {
 		rm.decrementRefCounters(old)
 		delete(rm.pods, podKey)
+		return true
 	}
+
+	if _, ok := rm.deletingPods[podKey]; ok {
+		delete(rm.deletingPods, podKey)
+	}
+
+	return false
 }
 
 // GetPod retrieves the specified pod from the cache. It returns nil if a pod is not found.
