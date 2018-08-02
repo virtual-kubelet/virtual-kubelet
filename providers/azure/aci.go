@@ -466,8 +466,8 @@ func (p *ACIProvider) amendVnetResources(containerGroup *aci.ContainerGroup) {
 
 	containerGroup.NetworkProfile = &aci.NetworkProfileDefinition{ID: p.networkProfile}
 
-	//containerGroup.ContainerGroupProperties.Containers = append(containerGroup.ContainerGroupProperties.Containers, *(getKubeProxyContainerSpec(p.clusterCIDR)))
-	//containerGroup.ContainerGroupProperties.Volumes = append(containerGroup.ContainerGroupProperties.Volumes, *(getKubeProxyVolumeSpec(p.masterURI)))
+	containerGroup.ContainerGroupProperties.Containers = append(containerGroup.ContainerGroupProperties.Containers, *(getKubeProxyContainerSpec(p.clusterCIDR)))
+	containerGroup.ContainerGroupProperties.Volumes = append(containerGroup.ContainerGroupProperties.Volumes, *(getKubeProxyVolumeSpec(p.masterURI)))
 }
 
 func getKubeProxyContainerSpec(clusterCIDR string) *aci.Container {
@@ -480,6 +480,7 @@ func getKubeProxyContainerSpec(clusterCIDR string) *aci.Container {
 				"proxy",
 				"--kubeconfig="+kubeConfigDir+"/"+kubeConfigFile,
 				"--cluster-cidr="+clusterCIDR,
+				"--feature-gates=ExperimentalCriticalPodAnnotation=true",
 			},
 		},
 	}
@@ -504,7 +505,7 @@ func getKubeProxyContainerSpec(clusterCIDR string) *aci.Container {
 
 func getKubeProxyVolumeSpec(masterURI string) *aci.Volume {
 	paths := make(map[string]string)
-
+	paths["kubeConfigFile"] = 
 
 	volume := aci.Volume{
 		Name:   kubeConfigSecretVolume,
@@ -512,6 +513,9 @@ func getKubeProxyVolumeSpec(masterURI string) *aci.Volume {
 	}
 
 	return &volume
+}
+
+func getVirtualKubeletKubeConfig() *v1.Config {
 }
 
 // UpdatePod is a noop, ACI currently does not support live updates of a pod.
