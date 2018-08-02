@@ -6,7 +6,7 @@ The Virtual kubelet integration allows you to use the Kubernetes API to burst ou
 
 ## Status: Experimental
 
-This provider is currently in the exterimental stages. Contributions welcome!
+This provider is currently in the experimental stages. Contributions are welcome!
 
 ## Setup
 
