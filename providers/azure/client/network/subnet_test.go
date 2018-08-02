@@ -19,24 +19,32 @@ func TestCreateGetSubnet(t *testing.T) {
 	}
 	ensureVnet(t, t.Name())
 
-	if err := c.CreateOrUpdateSubnet(resourceGroup, t.Name(), subnet); err != nil {
-		t.Fatal(err)
-	}
-
-	s, err := c.GetSubnet(resourceGroup, t.Name(), subnet.Name)
+	s1, err := c.CreateOrUpdateSubnet(resourceGroup, t.Name(), subnet)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if s.Name != subnet.Name {
+	if s1 == nil {
+		t.Fatal("create subnet should return subnet")
+	}
+	if s1.ID == "" {
+		t.Fatal("create subnet should return subnet.ID")
+	}
+
+	var s2 *Subnet
+	s2, err = c.GetSubnet(resourceGroup, t.Name(), subnet.Name)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if s2.Name != subnet.Name {
 		t.Fatal("got unexpected subnet")
 	}
-	if s.Properties.AddressPrefix != subnet.Properties.AddressPrefix {
-		t.Fatalf("got unexpected address prefix: %s", s.Properties.AddressPrefix)
+	if s2.Properties.AddressPrefix != subnet.Properties.AddressPrefix {
+		t.Fatalf("got unexpected address prefix: %s", s2.Properties.AddressPrefix)
 	}
-	if len(s.Properties.Delegations) != 1 {
-		t.Fatalf("got unexpected delgations: %v", s.Properties.Delegations)
+	if len(s2.Properties.Delegations) != 1 {
+		t.Fatalf("got unexpected delgations: %v", s2.Properties.Delegations)
 	}
-	if s.Properties.Delegations[0].Name != subnet.Properties.Delegations[0].Name {
-		t.Fatalf("got unexpected delegation: %v", s.Properties.Delegations[0])
+	if s2.Properties.Delegations[0].Name != subnet.Properties.Delegations[0].Name {
+		t.Fatalf("got unexpected delegation: %v", s2.Properties.Delegations[0])
 	}
 }

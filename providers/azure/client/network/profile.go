@@ -105,7 +105,7 @@ func (c *Client) GetProfile(resourceGroup, name string) (*Profile, error) {
 }
 
 // CreateOrUpdateProfile creates or updates an Azure network profile
-func (c *Client) CreateOrUpdateProfile(resourceGroup string, p *Profile) error {
+func (c *Client) CreateOrUpdateProfile(resourceGroup string, p *Profile) (*Profile, error) {
 	urlParams := url.Values{
 		"api-version": []string{apiVersion},
 	}
@@ -117,12 +117,12 @@ func (c *Client) CreateOrUpdateProfile(resourceGroup string, p *Profile) error {
 	// Create the request.
 	b, err := json.Marshal(p)
 	if err != nil {
-		return errors.Wrap(err, "marshalling networking profile failed")
+		return nil, errors.Wrap(err, "marshalling networking profile failed")
 	}
 
 	req, err := http.NewRequest("PUT", uri, bytes.NewReader(b))
 	if err != nil {
-		return errors.Wrap(err, "creating network profile create uri request failed")
+		return nil, errors.Wrap(err, "creating network profile create uri request failed")
 	}
 
 	// Add the parameters to the url.
@@ -131,19 +131,30 @@ func (c *Client) CreateOrUpdateProfile(resourceGroup string, p *Profile) error {
 		"resourceGroupName": resourceGroup,
 		"profileName":       p.Name,
 	}); err != nil {
-		return errors.Wrap(err, "expanding URL with parameters failed")
+		return nil, errors.Wrap(err, "expanding URL with parameters failed")
 	}
 
 	// Send the request.
 	resp, err := c.hc.Do(req)
 	if err != nil {
-		return errors.Wrap(err, "sending get network profile request failed")
+		return nil, errors.Wrap(err, "sending get network profile request failed")
 	}
 	defer resp.Body.Close()
 
-	// 200 (OK) is a success response.
-	if err := api.CheckResponse(resp); err != nil {
-		return err
-	}
-	return errors.Wrap(json.NewDecoder(resp.Body).Decode(p), "error decoding network profile create response")
+        // 200 (OK) is a success response.
+        if err := api.CheckResponse(resp); err != nil {
+                return nil, err
+        }
+
+        // Decode the body from the response.
+        if resp.Body == nil {
+                return nil, errors.New("create network profile returned an empty body in the response")
+        }
+
+        var profile Profile
+        if err := json.NewDecoder(resp.Body).Decode(&profile); err != nil {
+                return nil, errors.Wrap(err, "decoding create network profile response body failed")
+        }
+
+	return &profile, nil
 }

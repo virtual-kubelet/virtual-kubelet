@@ -5,6 +5,20 @@ import (
 	"testing"
 )
 
+func TestGetProfileNotFound(t *testing.T) {
+	c := newTestClient(t)
+	p, err := c.GetProfile(resourceGroup, "someprofile")
+	if err == nil {
+		t.Fatalf("expect error when getting the non-exist profile: %v", p)
+	}
+	if !IsNotFound(err) {
+		t.Fatal("expect NotFound error")
+	}
+	if p != nil {
+		t.Fatal("unexpected profile")
+	}
+}
+
 func TestCreateGetProfile(t *testing.T) {
 	c := newTestClient(t)
 	ensureVnet(t, t.Name())
@@ -15,9 +29,12 @@ func TestCreateGetProfile(t *testing.T) {
 			AddressPrefix: "10.0.0.0/24",
 		},
 	}
-	if err := c.CreateOrUpdateSubnet(resourceGroup, t.Name(), subnet); err != nil {
+
+	subnet, err := c.CreateOrUpdateSubnet(resourceGroup, t.Name(), subnet)
+	if err != nil {
 		t.Fatal(err)
 	}
+
 	p := &Profile{
 		Name:     t.Name(),
 		Type:     "Microsoft.Network/networkProfiles",
@@ -43,11 +60,19 @@ func TestCreateGetProfile(t *testing.T) {
 		},
 	}
 
-	if err := c.CreateOrUpdateProfile(resourceGroup, p); err != nil {
+	p1, err := c.CreateOrUpdateProfile(resourceGroup, p)
+	if err != nil {
 		t.Fatal(err)
 	}
+	if p1 == nil {
+		t.Fatal("create profile should return profile")
+	}
+	if p1.ID == "" {
+		t.Fatal("create profile should return profile.ID")
+	}
 
-	p2, err := c.GetProfile(resourceGroup, p.Name)
+	var p2 *Profile
+	p2, err = c.GetProfile(resourceGroup, p.Name)
 	if err != nil {
 		t.Fatal(err)
 	}
