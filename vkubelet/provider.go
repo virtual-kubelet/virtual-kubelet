@@ -11,6 +11,7 @@ import (
 	"github.com/virtual-kubelet/virtual-kubelet/providers/huawei"
 	"github.com/virtual-kubelet/virtual-kubelet/providers/hypersh"
 	"github.com/virtual-kubelet/virtual-kubelet/providers/mock"
+	"github.com/virtual-kubelet/virtual-kubelet/providers/sfmesh"
 	"github.com/virtual-kubelet/virtual-kubelet/providers/vic"
 	"github.com/virtual-kubelet/virtual-kubelet/providers/web"
 	"k8s.io/api/core/v1"
@@ -28,6 +29,7 @@ var _ Provider = (*mock.MockProvider)(nil)
 var _ Provider = (*huawei.CCIProvider)(nil)
 var _ Provider = (*azurebatch.Provider)(nil)
 var _ Provider = (*cri.CRIProvider)(nil)
+var _ Provider = (*sfmesh.SFMeshProvider)(nil)
 
 // Provider contains the methods required to implement a virtual-kubelet provider.
 type Provider interface {

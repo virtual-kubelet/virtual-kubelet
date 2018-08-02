@@ -18,6 +18,7 @@ import (
 	"github.com/virtual-kubelet/virtual-kubelet/providers/huawei"
 	"github.com/virtual-kubelet/virtual-kubelet/providers/hypersh"
 	"github.com/virtual-kubelet/virtual-kubelet/providers/mock"
+	"github.com/virtual-kubelet/virtual-kubelet/providers/sfmesh"
 	"github.com/virtual-kubelet/virtual-kubelet/providers/vic"
 	"github.com/virtual-kubelet/virtual-kubelet/providers/web"
 	corev1 "k8s.io/api/core/v1"
@@ -31,7 +32,7 @@ import (
 )
 
 const (
-        PodStatusReason_ProviderFailed = "ProviderFailed"
+	PodStatusReason_ProviderFailed = "ProviderFailed"
 )
 
 // Server masquarades itself as a kubelet and allows for the virtual node to be backed by non-vm/node providers.
@@ -124,6 +125,11 @@ func New(nodeName, operatingSystem, namespace, kubeConfig, taint, provider, prov
 		}
 	case "huawei":
 		p, err = huawei.NewCCIProvider(providerConfig, rm, nodeName, operatingSystem, internalIP, daemonEndpointPort)
+		if err != nil {
+			return nil, err
+		}
+	case "sfmesh":
+		p, err = sfmesh.NewSFMeshProvider(rm, nodeName, operatingSystem, internalIP, daemonEndpointPort)
 		if err != nil {
 			return nil, err
 		}
@@ -236,7 +242,7 @@ func (s *Server) Run() error {
 			log.Fatal("Failed to watch pods", err)
 		}
 
-		loop:
+	loop:
 		for {
 			select {
 			case ev, ok := <-s.podWatcher.ResultChan():
@@ -289,10 +295,10 @@ func (s *Server) updateNode() {
 	}
 
 	if errors.IsNotFound(err) {
-	        if err = s.registerNode(); err != nil {
+		if err = s.registerNode(); err != nil {
 			log.Println("Failed to register node:", err)
-		        return
-	        }
+			return
+		}
 	}
 
 	n.ResourceVersion = "" // Blank out resource version to prevent object has been modified error
@@ -339,7 +345,7 @@ func (s *Server) reconcile() {
 		for _, p := range providerPods {
 			if p.Namespace == pod.Namespace && p.Name == pod.Name {
 				providerPod = p
-				break;
+				break
 			}
 		}
 
