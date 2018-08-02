@@ -44,6 +44,13 @@ const (
 	subnetsAction           = "Microsoft.Network/virtualNetworks/subnets/action"
 	subnetDelegationService = "Microsoft.ContainerInstance/containerGroups"
 	networkProfileType      = "Microsoft.Network/networkProfiles"
+
+	// KubeProxy SideCar Container
+	kubeProxyContainerName  = "vk-side-car-kube-proxy"
+	kubeProxyImageName      = "k8s-gcrio.azureedge.net/hyperkube-amd64:v1.8.2"
+	kubeConfigDir	        = "/etc/kube-proxy"
+	kubeConfigFile          = "kubeconfig"
+	kubeConfigSecretVolume  = "vk-side-car-kubeconfig-secret-volume"
 )
 
 // ACIProvider implements the virtual-kubelet provider interface and communicates with Azure's ACI APIs.
@@ -63,8 +70,11 @@ type ACIProvider struct {
 	subnetName         string
 	subnetCIDR         string
 	vnetName           string
+	vnetResourceGroup  string
 	networkProfile     string
-
+	masterURI          string
+	clusterCIDR        string
+	
 	metricsSync     sync.Mutex
 	metricsSyncTime time.Time
 	lastMetric      *stats.Summary
@@ -92,6 +102,8 @@ var validAciRegions = []string{
 	"westeurope",
 	"southeastasia",
 	"australiaeast",
+	"eastus2euap",
+	"westcentralus",
 }
 
 // isValidACIRegion checks to make sure we're using a valid ACI region
@@ -158,9 +170,13 @@ func NewACIProvider(config string, rm *manager.ResourceManager, nodeName, operat
 
 			p.resourceGroup = acsCredential.ResourceGroup
 			p.region = acsCredential.Region
-		}
 
-		p.vnetName = acsCredential.VNetName
+			p.vnetName = acsCredential.VNetName
+			p.vnetResourceGroup = acsCredential.VNetResourceGroup
+			if p.vnetResourceGroup == "" {
+				p.vnetResourceGroup = p.resourceGroup
+			}
+		}
 	}
 
 	if clientID := os.Getenv("AZURE_CLIENT_ID"); clientID != "" {
@@ -240,7 +256,12 @@ func NewACIProvider(config string, rm *manager.ResourceManager, nodeName, operat
 		p.pods = podsQuota
 	}
 
-	if subnetName := os.Getenv("ACI_SUBNET_NAME"); subnetName != "" {
+	p.operatingSystem = operatingSystem
+	p.nodeName = nodeName
+	p.internalIP = internalIP
+	p.daemonEndpointPort = daemonEndpointPort
+
+	if subnetName := os.Getenv("ACI_SUBNET_NAME"); p.vnetName != "" && subnetName != "" {
 		p.subnetName = subnetName
 	}
 	if subnetCIDR := os.Getenv("ACI_SUBNET_CIDR"); subnetCIDR != "" {
@@ -259,10 +280,15 @@ func NewACIProvider(config string, rm *manager.ResourceManager, nodeName, operat
 		}
 	}
 
-	p.operatingSystem = operatingSystem
-	p.nodeName = nodeName
-	p.internalIP = internalIP
-	p.daemonEndpointPort = daemonEndpointPort
+	p.masterURI = "10.0.0.1"
+	if masterURI := os.Getenv("MASTER_URI"); masterURI != "" {
+		p.masterURI = masterURI
+	}
+
+	p.clusterCIDR = "10.240.0.0/16"
+	if clusterCIDR := os.Getenv("CLUSTER_CIDR"); clusterCIDR != "" {
+		p.clusterCIDR = clusterCIDR
+	}
 
 	return &p, err
 }
@@ -274,7 +300,7 @@ func (p *ACIProvider) setupNetworkProfile(auth *client.Authentication) error {
 	}
 
 	createSubnet := true
-	subnet, err := c.GetSubnet(p.resourceGroup, p.vnetName, p.subnetName)
+	subnet, err := c.GetSubnet(p.vnetResourceGroup, p.vnetName, p.subnetName)
 	if err != nil && !network.IsNotFound(err) {
 		return fmt.Errorf("error while looking up subnet: %v", err)
 	}
@@ -295,7 +321,8 @@ func (p *ACIProvider) setupNetworkProfile(auth *client.Authentication) error {
 			subnet = &network.Subnet{Name: p.subnetName}
 		}
 		populateSubnet(subnet, p.subnetCIDR)
-		if err = c.CreateOrUpdateSubnet(p.resourceGroup, p.vnetName, subnet); err != nil {
+		subnet, err = c.CreateOrUpdateSubnet(p.resourceGroup, p.vnetName, subnet)
+		if err != nil {
 			return fmt.Errorf("error creating subnet: %v", err)
 		}
 	}
@@ -308,25 +335,28 @@ func (p *ACIProvider) setupNetworkProfile(auth *client.Authentication) error {
 		for _, config := range profile.Properties.ContainerNetworkInterfaceConfigurations {
 			for _, ipConfig := range config.Properties.IPConfigurations {
 				if ipConfig.Properties.Subnet.ID == subnet.ID {
+					p.networkProfile = profile.ID
 					return nil
 				}
 			}
 		}
-		return fmt.Errorf("found existing network profile but the profile is not linked to the subnet")
+		return fmt.Errorf("found existing network profile but the profile is not linked to the subnet: %v, %v", profile, err)
 	}
 
 	// at this point, profile should be nil
 	profile = &network.Profile{
 		Name: p.nodeName,
+		Location: p.region,
 		Type: networkProfileType,
 	}
 
 	populateNetworkProfile(profile, subnet)
-	if err := c.CreateOrUpdateProfile(p.resourceGroup, profile); err != nil {
+	profile, err = c.CreateOrUpdateProfile(p.resourceGroup, profile)
+	if err != nil {
 		return err
 	}
-	p.networkProfile = profile.ID
 
+	p.networkProfile = profile.ID
 	return nil
 }
 
@@ -371,7 +401,6 @@ func (p *ACIProvider) CreatePod(pod *v1.Pod) error {
 	containerGroup.Location = p.region
 	containerGroup.RestartPolicy = aci.ContainerGroupRestartPolicy(pod.Spec.RestartPolicy)
 	containerGroup.ContainerGroupProperties.OsType = aci.OperatingSystemTypes(p.OperatingSystem())
-	containerGroup.NetworkProfile = &aci.NetworkProfileDefinition{ID: p.networkProfile}
 
 	// get containers
 	containers, err := p.getContainers(pod)
@@ -411,7 +440,7 @@ func (p *ACIProvider) CreatePod(pod *v1.Pod) error {
 			})
 		}
 	}
-	if len(ports) > 0 {
+	if len(ports) > 0 && p.subnetName == "" {
 		containerGroup.ContainerGroupProperties.IPAddress = &aci.IPAddress{
 			Ports: ports,
 			Type:  "Public",
@@ -433,7 +462,8 @@ func (p *ACIProvider) CreatePod(pod *v1.Pod) error {
 		"CreationTimestamp": podCreationTimestamp,
 	}
 
-	// TODO(BJK) containergrouprestartpolicy??
+	p.amendVnetResources(&containerGroup)
+
 	_, err = p.aciClient.CreateContainerGroup(
 		p.resourceGroup,
 		containerGroupName(pod),
@@ -445,6 +475,61 @@ func (p *ACIProvider) CreatePod(pod *v1.Pod) error {
 
 func containerGroupName(pod *v1.Pod) string {
 	return fmt.Sprintf("%s-%s", pod.Namespace, pod.Name)
+}
+
+func (p *ACIProvider) amendVnetResources(containerGroup *aci.ContainerGroup) {
+	if p.networkProfile == "" {
+		return
+	}
+
+	containerGroup.NetworkProfile = &aci.NetworkProfileDefinition{ID: p.networkProfile}
+
+	//containerGroup.ContainerGroupProperties.Containers = append(containerGroup.ContainerGroupProperties.Containers, *(getKubeProxyContainerSpec(p.clusterCIDR)))
+	//containerGroup.ContainerGroupProperties.Volumes = append(containerGroup.ContainerGroupProperties.Volumes, *(getKubeProxyVolumeSpec(p.masterURI)))
+}
+
+func getKubeProxyContainerSpec(clusterCIDR string) *aci.Container {
+	container := aci.Container{
+		Name: kubeProxyContainerName,
+		ContainerProperties: aci.ContainerProperties{
+			Image:   kubeProxyImageName,
+			Command: []string{
+				"/hyperkube",
+				"proxy",
+				"--kubeconfig="+kubeConfigDir+"/"+kubeConfigFile,
+				"--cluster-cidr="+clusterCIDR,
+			},
+		},
+	}
+
+	container.VolumeMounts = []aci.VolumeMount{
+		aci.VolumeMount{
+			Name:      kubeConfigSecretVolume,
+			MountPath: kubeConfigDir,
+			ReadOnly:  true,
+		},
+	}
+
+	container.Resources = aci.ResourceRequirements{
+		Requests: &aci.ResourceRequests{
+			CPU:        0.1,
+			MemoryInGB: 0.10,
+		},
+	}
+
+	return &container
+}
+
+func getKubeProxyVolumeSpec(masterURI string) *aci.Volume {
+	paths := make(map[string]string)
+
+
+	volume := aci.Volume{
+		Name:   kubeConfigSecretVolume,
+		Secret: paths,
+	}
+
+	return &volume
 }
 
 // UpdatePod is a noop, ACI currently does not support live updates of a pod.
