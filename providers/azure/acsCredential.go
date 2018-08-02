@@ -9,14 +9,15 @@ import (
 
 // AcsCredential represents the credential file for ACS
 type AcsCredential struct {
-	Cloud          string `json:"cloud"`
-	TenantID       string `json:"tenantId"`
-	SubscriptionID string `json:"subscriptionId"`
-	ClientID       string `json:"aadClientId"`
-	ClientSecret   string `json:"aadClientSecret"`
-	ResourceGroup  string `json:"resourceGroup"`
-	Region         string `json:"location"`
-	VNetName       string `json:"vnetName"`
+	Cloud             string `json:"cloud"`
+	TenantID          string `json:"tenantId"`
+	SubscriptionID    string `json:"subscriptionId"`
+	ClientID          string `json:"aadClientId"`
+	ClientSecret      string `json:"aadClientSecret"`
+	ResourceGroup     string `json:"resourceGroup"`
+	Region            string `json:"location"`
+	VNetName          string `json:"vnetName"`
+	VNetResourceGroup string `json:"vnetResourceGroup"`
 }
 
 // NewAcsCredential returns an AcsCredential struct from file path

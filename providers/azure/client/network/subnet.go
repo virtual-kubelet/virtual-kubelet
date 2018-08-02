@@ -108,7 +108,7 @@ func (c *Client) GetSubnet(resourceGroup, vnet, name string) (*Subnet, error) {
 }
 
 // CreateOrUpdateSubnet creates a new or updates an existing subnet in the defined resourcegroup/vnet
-func (c *Client) CreateOrUpdateSubnet(resourceGroup, vnet string, subnet *Subnet) error {
+func (c *Client) CreateOrUpdateSubnet(resourceGroup, vnet string, s *Subnet) (*Subnet, error) {
 	urlParams := url.Values{
 		"api-version": []string{apiVersion},
 	}
@@ -118,37 +118,41 @@ func (c *Client) CreateOrUpdateSubnet(resourceGroup, vnet string, subnet *Subnet
 	uri += "?" + url.Values(urlParams).Encode()
 
 	// Create the request.
-	b, err := json.Marshal(subnet)
+	b, err := json.Marshal(s)
 	if err != nil {
-		return errors.Wrap(err, "marshallig networking profile failed")
+		return nil, errors.Wrap(err, "marshallig networking profile failed")
 	}
 
 	req, err := http.NewRequest("PUT", uri, bytes.NewReader(b))
 	if err != nil {
-		return errors.New("creating subnet create uri request failed")
+		return nil, errors.New("creating subnet create uri request failed")
 	}
 
 	// Add the parameters to the url.
 	if err := api.ExpandURL(req.URL, map[string]string{
 		"subscriptionId":    c.auth.SubscriptionID,
 		"resourceGroupName": resourceGroup,
-		"subnetName":        subnet.Name,
+		"subnetName":        s.Name,
 		"vnetName":          vnet,
 	}); err != nil {
-		return errors.Wrap(err, "expanding URL with parameters failed")
+		return nil, errors.Wrap(err, "expanding URL with parameters failed")
 	}
 
 	// Send the request.
 	resp, err := c.hc.Do(req)
 	if err != nil {
-		return errors.Wrap(err, "sending create subnet request failed")
+		return nil, errors.Wrap(err, "sending create subnet request failed")
 	}
 	defer resp.Body.Close()
 
 	// 200 (OK) is a success response.
 	if err := api.CheckResponse(resp); err != nil {
-		return err
+		return nil, err
 	}
 
-	return errors.Wrap(json.NewDecoder(resp.Body).Decode(subnet), "error decoding create subnet response")
+	var subnet Subnet
+	if err := json.NewDecoder(resp.Body).Decode(&subnet); err != nil {
+		return nil, err
+	}
+	return &subnet, nil
 }
