@@ -197,13 +197,13 @@ Run these commands to deploy the virtual kubelet which connects your Kubernetes 
 If your cluster is an AKS cluster:
 
 ```cli
-export VK_RELEASE=virtual-kubelet-for-aks-0.1.3
+export VK_RELEASE=virtual-kubelet-for-aks-0.1.6
 ````
 
 For any other type of Kubernetes cluster:
 
 ```cli
-export VK_RELEASE=virtual-kubelet-0.1.1
+export VK_RELEASE=virtual-kubelet-0.1.3
 ```
 
 ```cli
@@ -211,21 +211,17 @@ RELEASE_NAME=virtual-kubelet
 NODE_NAME=virtual-kubelet
 CHART_URL=https://github.com/virtual-kubelet/virtual-kubelet/raw/master/charts/$VK_RELEASE.tgz
 
-curl https://raw.githubusercontent.com/virtual-kubelet/virtual-kubelet/master/scripts/createCertAndKey.sh > createCertAndKey.sh
-chmod +x createCertAndKey.sh
-. ./createCertAndKey.sh
-
 helm install "$CHART_URL" --name "$RELEASE_NAME" \
-    --set env.azureClientId="$AZURE_CLIENT_ID",env.azureClientKey="$AZURE_CLIENT_SECRET",env.azureTenantId="$AZURE_TENANT_ID",env.azureSubscriptionId="$AZURE_SUBSCRIPTION_ID",env.aciRegion="$ACI_REGION",env.aciResourceGroup="$AZURE_RG",env.nodeName="$NODE_NAME",env.nodeOsType=<Linux|Windows>,env.apiserverCert=$cert,env.apiserverKey=$key,rbac.install=false
+    --set env.azureClientId="$AZURE_CLIENT_ID",env.azureClientKey="$AZURE_CLIENT_SECRET",env.azureTenantId="$AZURE_TENANT_ID",env.azureSubscriptionId="$AZURE_SUBSCRIPTION_ID",env.aciRegion="$ACI_REGION",env.aciResourceGroup="$AZURE_RG",env.nodeName="$NODE_NAME",env.nodeOsType=<Linux|Windows>,env.apiserverCert=$cert,env.apiserverKey=$key
 ```
 
-If your cluster has RBAC enabled set ```rbac.install=true```
+If your cluster does not have RBAC enabled set ```rbac.install=false```
 
 Output:
 
 ```console
 NAME:   virtual-kubelet
-LAST DEPLOYED: Thu Feb 15 13:17:01 2018
+LAST DEPLOYED: Thu Aug  2 09:58:36 2018
 NAMESPACE: default
 STATUS: DEPLOYED
 
@@ -233,6 +229,14 @@ RESOURCES:
 ==> v1/Secret
 NAME                             TYPE    DATA  AGE
 virtual-kubelet-virtual-kubelet  Opaque  3     1s
+
+==> v1/ServiceAccount
+NAME                                     SECRETS  AGE
+virtual-kubelet-virtual-kubelet-for-aks  1        1s
+
+==> v1beta1/ClusterRoleBinding
+NAME                                     AGE
+virtual-kubelet-virtual-kubelet-for-aks  1s
 
 ==> v1beta1/Deployment
 NAME                             DESIRED  CURRENT  UP-TO-DATE  AVAILABLE  AGE
@@ -245,6 +249,10 @@ virtual-kubelet-virtual-kubelet-7bcf5dc749-6mvgp  0/1    ContainerCreating  0   
 
 NOTES:
 The virtual kubelet is getting deployed on your cluster.
+
+Note:
+TLS key pair not provided for VK HTTP listener. A key pair was generated for you. This generated key pair is not suitable for production use.
+```
 
 To verify that virtual kubelet has started, run:
 
