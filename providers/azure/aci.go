@@ -40,7 +40,7 @@ const (
 
 	// KubeProxy SideCar Container
 	kubeProxyContainerName  = "vk-side-car-kube-proxy"
-	kubeProxyImageName		= "k8s-gcrio.azureedge.net/hyperkube-amd64:v1.8.2"
+	kubeProxyImageName      = "k8s-gcrio.azureedge.net/hyperkube-amd64:v1.8.2"
 	kubeConfigDir	        = "/etc/kube-proxy"
 	kubeConfigFile          = "kubeconfig"
 	kubeConfigSecretVolume  = "vk-side-car-kubeconfig-secret-volume"
