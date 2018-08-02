@@ -19,3 +19,10 @@ To update, run:
     --set env.azureClientId=<YOUR-AZURECLIENTID-HERE>,env.azureClientKey=<YOUR-AZURECLIENTKEY-HERE>,env.azureTenantId=<YOUR-AZURETENANTID-HERE>,env.azureSubscriptionId=<YOUR-AZURESUBSCRIPTIONID-HERE>,env.aciResourceGroup=<YOUR-ACIRESOURCEGROUP-HERE>,ev.aciOsType=<Linux|Windows>,rbac.install=<false|true>
 
 {{- end }}
+
+{{- if (not .Values.env.apiserverCert) and (not .Values.env.apiserverKey) }}
+
+Note: 
+TLS key pair not provided for VK HTTP listener. A key pair was generated for you. This generated key pair is not suitable for production use.
+
+{{- end }}
