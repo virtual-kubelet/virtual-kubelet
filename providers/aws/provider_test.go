@@ -237,7 +237,13 @@ func TestAWSFargateProviderPodLifecycle(t *testing.T) {
 						"/bin/sh",
 					},
 					Args: []string{
-						"-c", "echo \"Started\"; while true; do sleep 1; done",
+						"-c",
+						"echo \"Started\";" +
+							"echo \"TEST_ENV=$TEST_ENV\";" +
+							"while true; do sleep 1; done",
+					},
+					Env: []v1.EnvVar{
+						{Name: "TEST_ENV", Value: "AnyValue"},
 					},
 					Resources: v1.ResourceRequirements{
 						Limits: v1.ResourceList{
@@ -281,8 +287,18 @@ func TestAWSFargateProviderPodLifecycle(t *testing.T) {
 			t.Error(err)
 		}
 
-		if logs != "Started\n" {
-			t.Errorf("Expected logs to be \"Started\\n\", but received \"%v\"", logs)
+		// Test log output.
+		receivedLogs := strings.Split(logs, "\n")
+		expectedLogs := []string{
+			"Started",
+			pod.Spec.Containers[0].Env[0].Name + "=" + pod.Spec.Containers[0].Env[0].Value,
+		}
+
+		for i, line := range receivedLogs {
+			fmt.Printf("Log[#%d]: %v\n", i, line)
+			if len(expectedLogs) > i && receivedLogs[i] != expectedLogs[i] {
+				t.Errorf("Expected log line %d to be %q, but received %q", i, line, receivedLogs[i])
+			}
 		}
 
 		// Delete the pod.
