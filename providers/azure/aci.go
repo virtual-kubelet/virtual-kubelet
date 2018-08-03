@@ -278,7 +278,7 @@ func NewACIProvider(config string, rm *manager.ResourceManager, nodeName, operat
 		}
 
 		clusterCIDR := os.Getenv("CLUSTER_CIDR")
-		if clusterCIDR != "" {
+		if clusterCIDR == "" {
 			clusterCIDR = "10.240.0.0/16"
 		}
 
@@ -475,7 +475,7 @@ func getKubeProxyVolume(secretPath, masterURI string) (*aci.Volume, error) {
 	}
 
 	paths := make(map[string]string)
-	paths[kubeConfigFile] = b.String()
+	paths[kubeConfigFile] = base64.StdEncoding.EncodeToString(b.Bytes())
 
 	volume := aci.Volume{
 		Name:   kubeConfigSecretVolume,
@@ -1202,6 +1202,10 @@ func containerGroupToPod(cg *aci.ContainerGroup) (*v1.Pod, error) {
 	containers := make([]v1.Container, 0, len(cg.Containers))
 	containerStatuses := make([]v1.ContainerStatus, 0, len(cg.Containers))
 	for _, c := range cg.Containers {
+		if strings.EqualFold(c.Name, kubeProxyContainerName) {
+			continue;
+		}
+
 		container := v1.Container{
 			Name:    c.Name,
 			Image:   c.Image,
