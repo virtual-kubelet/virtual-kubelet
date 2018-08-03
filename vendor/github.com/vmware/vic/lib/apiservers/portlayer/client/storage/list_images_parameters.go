@@ -61,6 +61,8 @@ for the list images operation typically these are written to a http.Request
 */
 type ListImagesParams struct {
 
+	/*OpID*/
+	OpID *string
 	/*Ids*/
 	Ids []string
 	/*StoreName*/
@@ -104,6 +106,17 @@ func (o *ListImagesParams) SetHTTPClient(client *http.Client) {
 	o.HTTPClient = client
 }
 
+// WithOpID adds the opID to the list images params
+func (o *ListImagesParams) WithOpID(opID *string) *ListImagesParams {
+	o.SetOpID(opID)
+	return o
+}
+
+// SetOpID adds the opId to the list images params
+func (o *ListImagesParams) SetOpID(opID *string) {
+	o.OpID = opID
+}
+
 // WithIds adds the ids to the list images params
 func (o *ListImagesParams) WithIds(ids []string) *ListImagesParams {
 	o.SetIds(ids)
@@ -131,6 +144,15 @@ func (o *ListImagesParams) WriteToRequest(r runtime.ClientRequest, reg strfmt.Re
 
 	r.SetTimeout(o.timeout)
 	var res []error
+
+	if o.OpID != nil {
+
+		// header param Op-ID
+		if err := r.SetHeaderParam("Op-ID", *o.OpID); err != nil {
+			return err
+		}
+
+	}
 
 	valuesIds := o.Ids
 

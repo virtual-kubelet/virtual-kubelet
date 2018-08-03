@@ -61,6 +61,8 @@ for the container resize operation typically these are written to a http.Request
 */
 type ContainerResizeParams struct {
 
+	/*OpID*/
+	OpID *string
 	/*Height*/
 	Height int32
 	/*ID*/
@@ -106,6 +108,17 @@ func (o *ContainerResizeParams) SetHTTPClient(client *http.Client) {
 	o.HTTPClient = client
 }
 
+// WithOpID adds the opID to the container resize params
+func (o *ContainerResizeParams) WithOpID(opID *string) *ContainerResizeParams {
+	o.SetOpID(opID)
+	return o
+}
+
+// SetOpID adds the opId to the container resize params
+func (o *ContainerResizeParams) SetOpID(opID *string) {
+	o.OpID = opID
+}
+
 // WithHeight adds the height to the container resize params
 func (o *ContainerResizeParams) WithHeight(height int32) *ContainerResizeParams {
 	o.SetHeight(height)
@@ -144,6 +157,15 @@ func (o *ContainerResizeParams) WriteToRequest(r runtime.ClientRequest, reg strf
 
 	r.SetTimeout(o.timeout)
 	var res []error
+
+	if o.OpID != nil {
+
+		// header param Op-ID
+		if err := r.SetHeaderParam("Op-ID", *o.OpID); err != nil {
+			return err
+		}
+
+	}
 
 	// query param height
 	qrHeight := o.Height

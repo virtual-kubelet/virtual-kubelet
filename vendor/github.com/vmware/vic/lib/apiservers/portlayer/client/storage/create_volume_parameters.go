@@ -62,6 +62,8 @@ for the create volume operation typically these are written to a http.Request
 */
 type CreateVolumeParams struct {
 
+	/*OpID*/
+	OpID *string
 	/*VolumeRequest*/
 	VolumeRequest *models.VolumeRequest
 
@@ -103,6 +105,17 @@ func (o *CreateVolumeParams) SetHTTPClient(client *http.Client) {
 	o.HTTPClient = client
 }
 
+// WithOpID adds the opID to the create volume params
+func (o *CreateVolumeParams) WithOpID(opID *string) *CreateVolumeParams {
+	o.SetOpID(opID)
+	return o
+}
+
+// SetOpID adds the opId to the create volume params
+func (o *CreateVolumeParams) SetOpID(opID *string) {
+	o.OpID = opID
+}
+
 // WithVolumeRequest adds the volumeRequest to the create volume params
 func (o *CreateVolumeParams) WithVolumeRequest(volumeRequest *models.VolumeRequest) *CreateVolumeParams {
 	o.SetVolumeRequest(volumeRequest)
@@ -119,6 +132,15 @@ func (o *CreateVolumeParams) WriteToRequest(r runtime.ClientRequest, reg strfmt.
 
 	r.SetTimeout(o.timeout)
 	var res []error
+
+	if o.OpID != nil {
+
+		// header param Op-ID
+		if err := r.SetHeaderParam("Op-ID", *o.OpID); err != nil {
+			return err
+		}
+
+	}
 
 	if o.VolumeRequest == nil {
 		o.VolumeRequest = new(models.VolumeRequest)

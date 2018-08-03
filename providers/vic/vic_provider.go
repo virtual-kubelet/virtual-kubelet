@@ -49,7 +49,7 @@ type VicProvider struct {
 	client         *client.PortLayer
 	imageStore     proxy.ImageStore
 	isolationProxy proxy.IsolationProxy
-	systemProxy    vicproxy.VicSystemProxy
+	systemProxy    *vicproxy.VicSystemProxy
 }
 
 const (

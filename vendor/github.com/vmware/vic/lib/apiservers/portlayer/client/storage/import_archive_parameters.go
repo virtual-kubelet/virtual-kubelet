@@ -63,6 +63,8 @@ type ImportArchiveParams struct {
 
 	/*Archive*/
 	Archive io.ReadCloser
+	/*OpID*/
+	OpID *string
 	/*DeviceID*/
 	DeviceID string
 	/*FilterSpec*/
@@ -119,6 +121,17 @@ func (o *ImportArchiveParams) SetArchive(archive io.ReadCloser) {
 	o.Archive = archive
 }
 
+// WithOpID adds the opID to the import archive params
+func (o *ImportArchiveParams) WithOpID(opID *string) *ImportArchiveParams {
+	o.SetOpID(opID)
+	return o
+}
+
+// SetOpID adds the opId to the import archive params
+func (o *ImportArchiveParams) SetOpID(opID *string) {
+	o.OpID = opID
+}
+
 // WithDeviceID adds the deviceID to the import archive params
 func (o *ImportArchiveParams) WithDeviceID(deviceID string) *ImportArchiveParams {
 	o.SetDeviceID(deviceID)
@@ -160,6 +173,15 @@ func (o *ImportArchiveParams) WriteToRequest(r runtime.ClientRequest, reg strfmt
 
 	if err := r.SetBodyParam(o.Archive); err != nil {
 		return err
+	}
+
+	if o.OpID != nil {
+
+		// header param Op-ID
+		if err := r.SetHeaderParam("Op-ID", *o.OpID); err != nil {
+			return err
+		}
+
 	}
 
 	// query param deviceID

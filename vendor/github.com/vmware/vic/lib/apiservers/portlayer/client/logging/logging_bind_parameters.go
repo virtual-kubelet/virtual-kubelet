@@ -62,6 +62,8 @@ for the logging bind operation typically these are written to a http.Request
 */
 type LoggingBindParams struct {
 
+	/*OpID*/
+	OpID *string
 	/*Config*/
 	Config *models.LoggingBindConfig
 
@@ -103,6 +105,17 @@ func (o *LoggingBindParams) SetHTTPClient(client *http.Client) {
 	o.HTTPClient = client
 }
 
+// WithOpID adds the opID to the logging bind params
+func (o *LoggingBindParams) WithOpID(opID *string) *LoggingBindParams {
+	o.SetOpID(opID)
+	return o
+}
+
+// SetOpID adds the opId to the logging bind params
+func (o *LoggingBindParams) SetOpID(opID *string) {
+	o.OpID = opID
+}
+
 // WithConfig adds the config to the logging bind params
 func (o *LoggingBindParams) WithConfig(config *models.LoggingBindConfig) *LoggingBindParams {
 	o.SetConfig(config)
@@ -119,6 +132,15 @@ func (o *LoggingBindParams) WriteToRequest(r runtime.ClientRequest, reg strfmt.R
 
 	r.SetTimeout(o.timeout)
 	var res []error
+
+	if o.OpID != nil {
+
+		// header param Op-ID
+		if err := r.SetHeaderParam("Op-ID", *o.OpID); err != nil {
+			return err
+		}
+
+	}
 
 	if o.Config == nil {
 		o.Config = new(models.LoggingBindConfig)

@@ -60,6 +60,8 @@ for the list volumes operation typically these are written to a http.Request
 */
 type ListVolumesParams struct {
 
+	/*OpID*/
+	OpID *string
 	/*FilterString*/
 	FilterString *string
 
@@ -101,6 +103,17 @@ func (o *ListVolumesParams) SetHTTPClient(client *http.Client) {
 	o.HTTPClient = client
 }
 
+// WithOpID adds the opID to the list volumes params
+func (o *ListVolumesParams) WithOpID(opID *string) *ListVolumesParams {
+	o.SetOpID(opID)
+	return o
+}
+
+// SetOpID adds the opId to the list volumes params
+func (o *ListVolumesParams) SetOpID(opID *string) {
+	o.OpID = opID
+}
+
 // WithFilterString adds the filterString to the list volumes params
 func (o *ListVolumesParams) WithFilterString(filterString *string) *ListVolumesParams {
 	o.SetFilterString(filterString)
@@ -117,6 +130,15 @@ func (o *ListVolumesParams) WriteToRequest(r runtime.ClientRequest, reg strfmt.R
 
 	r.SetTimeout(o.timeout)
 	var res []error
+
+	if o.OpID != nil {
+
+		// header param Op-ID
+		if err := r.SetHeaderParam("Op-ID", *o.OpID); err != nil {
+			return err
+		}
+
+	}
 
 	if o.FilterString != nil {
 

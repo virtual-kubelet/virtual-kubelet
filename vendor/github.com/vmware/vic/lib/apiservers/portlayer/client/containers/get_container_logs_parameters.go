@@ -81,6 +81,8 @@ for the get container logs operation typically these are written to a http.Reque
 */
 type GetContainerLogsParams struct {
 
+	/*OpID*/
+	OpID *string
 	/*Deadline*/
 	Deadline *int64
 	/*Follow*/
@@ -130,6 +132,17 @@ func (o *GetContainerLogsParams) WithHTTPClient(client *http.Client) *GetContain
 // SetHTTPClient adds the HTTPClient to the get container logs params
 func (o *GetContainerLogsParams) SetHTTPClient(client *http.Client) {
 	o.HTTPClient = client
+}
+
+// WithOpID adds the opID to the get container logs params
+func (o *GetContainerLogsParams) WithOpID(opID *string) *GetContainerLogsParams {
+	o.SetOpID(opID)
+	return o
+}
+
+// SetOpID adds the opId to the get container logs params
+func (o *GetContainerLogsParams) SetOpID(opID *string) {
+	o.OpID = opID
 }
 
 // WithDeadline adds the deadline to the get container logs params
@@ -203,6 +216,15 @@ func (o *GetContainerLogsParams) WriteToRequest(r runtime.ClientRequest, reg str
 
 	r.SetTimeout(o.timeout)
 	var res []error
+
+	if o.OpID != nil {
+
+		// header param Op-ID
+		if err := r.SetHeaderParam("Op-ID", *o.OpID); err != nil {
+			return err
+		}
+
+	}
 
 	if o.Deadline != nil {
 
