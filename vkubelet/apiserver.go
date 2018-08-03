@@ -2,6 +2,7 @@ package vkubelet
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -12,6 +13,7 @@ import (
 
 	"github.com/Sirupsen/logrus"
 	"github.com/gorilla/mux"
+	"github.com/pkg/errors"
 	"github.com/virtual-kubelet/virtual-kubelet/log"
 	"k8s.io/kubernetes/pkg/kubelet/server/remotecommand"
 )
@@ -34,7 +36,7 @@ func NotFound(w http.ResponseWriter, r *http.Request) {
 	http.Error(w, "404 request not found", http.StatusNotFound)
 }
 
-func ApiserverStart(provider Provider) {
+func ApiserverStart(provider Provider, metricsAddr string) {
 	p = provider
 	certFilePath := os.Getenv("APISERVER_CERT_LOCATION")
 	keyFilePath := os.Getenv("APISERVER_KEY_LOCATION")
@@ -46,8 +48,59 @@ func ApiserverStart(provider Provider) {
 	r.HandleFunc("/exec/{namespace}/{pod}/{container}", ApiServerHandlerExec).Methods("POST")
 	r.NotFoundHandler = http.HandlerFunc(NotFound)
 
+	if metricsAddr != "" {
+		go MetricsServerStart(metricsAddr)
+	} else {
+		log.G(context.TODO()).Info("Skipping metrics server startup since no address was provided")
+	}
+
 	if err := http.ListenAndServeTLS(addr, certFilePath, keyFilePath, r); err != nil {
 		log.G(context.TODO()).WithError(err).Error("error setting up http server")
+	}
+}
+
+// MetricsServerStart starts an HTTP server on the provided addr for serving the kubelset summary stats API.
+// TLS is never enabled on this endpoint.
+func MetricsServerStart(addr string) {
+	r := mux.NewRouter()
+	r.HandleFunc("/stats/summary", MetricsSummaryHandler).Methods("GET")
+	r.HandleFunc("/stats/summary/", MetricsSummaryHandler).Methods("GET")
+	r.NotFoundHandler = http.HandlerFunc(NotFound)
+	if err := http.ListenAndServe(addr, r); err != nil {
+		log.G(context.TODO()).WithError(err).Error("Error starting http server")
+	}
+}
+
+// MetricsSummaryHandler is an HTTP handler for implementing the kubelet summary stats endpoint
+func MetricsSummaryHandler(w http.ResponseWriter, req *http.Request) {
+	ctx := loggingContext(req)
+
+	mp, ok := p.(MetricsProvider)
+	if !ok {
+		log.G(ctx).Debug("stats not implemented for provider")
+		http.Error(w, "not implememnted", http.StatusNotImplemented)
+		return
+	}
+
+	stats, err := mp.GetStatsSummary(req.Context())
+	if err != nil {
+		if errors.Cause(err) == context.Canceled {
+			return
+		}
+		log.G(ctx).Error("Error getting stats from provider:", err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	b, err := json.Marshal(stats)
+	if err != nil {
+		log.G(ctx).WithError(err).Error("Could not marshal stats")
+		http.Error(w, "could not marshal stats: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	if _, err := w.Write(b); err != nil {
+		log.G(ctx).WithError(err).Debug("Could not write to client")
 	}
 }
 

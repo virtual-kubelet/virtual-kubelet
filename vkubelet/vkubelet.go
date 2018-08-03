@@ -48,7 +48,7 @@ func getEnv(key, defaultValue string) string {
 }
 
 // New creates a new virtual-kubelet server.
-func New(nodeName, operatingSystem, namespace, kubeConfig, provider, providerConfig, taintKey string, disableTaint bool) (*Server, error) {
+func New(nodeName, operatingSystem, namespace, kubeConfig, provider, providerConfig, taintKey string, disableTaint bool, metricsAddr string) (*Server, error) {
 	var config *rest.Config
 
 	// Check if the kubeConfig file exists.
@@ -137,7 +137,7 @@ func New(nodeName, operatingSystem, namespace, kubeConfig, provider, providerCon
 		return s, err
 	}
 
-	go ApiserverStart(p)
+	go ApiserverStart(p, metricsAddr)
 
 	tick := time.Tick(5 * time.Second)
 

@@ -1390,6 +1390,7 @@
     "github.com/kr/pretty",
     "github.com/lawrencegripper/pod2docker",
     "github.com/mitchellh/go-homedir",
+    "github.com/pkg/errors",
     "github.com/spf13/cobra",
     "github.com/spf13/viper",
     "github.com/stretchr/testify/assert",
