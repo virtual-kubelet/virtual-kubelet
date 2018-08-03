@@ -1,6 +1,6 @@
 # Kubernetes Virtual Kubelet with Service Fabric Mesh
 
-[Service Fabric Mesh](https://docs.microsoft.com/en-us/azure/service-fabric-mesh/service-fabric-mesh-overview) is a fully managed service that enables developers to deploy microservices applications without managing virtual machines, storage, or networking. Applications hosted on Service Fabric Mesh run and scale without you worrying about the infrastructure powering it.
+[Service Fabric Mesh](https://docs.microsoft.com/en-us/azure/service-fabric-mesh/service-fabric-mesh-overview) is a fully managed service that enables developers to deploy microservices applications without managing virtual machines, storage, or networking. Applications hosted on Service Fabric Mesh run and scale without you worrying about the infrastructure powering them.
 
 The Virtual kubelet integration allows you to use the Kubernetes API to burst out compute to a Service Fabric Mesh cluster and schedule pods as Mesh Applications.
 
