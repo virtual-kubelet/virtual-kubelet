@@ -10,6 +10,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/google/uuid"
@@ -584,4 +585,57 @@ func TestCreatePodWithReadinessProbe(t *testing.T) {
 
 		return http.StatusOK, cg
 	}
+}
+
+func TestGetKubeProxyContainer(t *testing.T) {
+	clusterCIDR := "cidr-" + uuid.New().String()
+	commands := []string{
+		"/hyperkube",
+		"proxy",
+		"--kubeconfig="+kubeConfigDir+"/"+kubeConfigFile,
+		"--cluster-cidr="+clusterCIDR,
+		"--feature-gates=ExperimentalCriticalPodAnnotation=true",
+	}
+
+	c := getKubeProxyContainer(clusterCIDR)
+	assert.NotNil(t, c, "container should not be nil")
+	assert.Equal(t, c.Name, kubeProxyContainerName, "Container name is not expected")
+	assert.Equal(t, c.ContainerProperties.Command, commands, "Command doesn't match")
+	assert.Equal(t, len(c.ContainerProperties.VolumeMounts), 1, "VolumeMounts number should be 1")
+	assert.Equal(t, c.ContainerProperties.VolumeMounts[0].Name, kubeConfigSecretVolume, "Volume name is not expected")
+	assert.Equal(t, c.ContainerProperties.VolumeMounts[0].MountPath, kubeConfigDir, "Volume mount path is not expected")
+	assert.NotNil(t, c.ContainerProperties.Resources.Requests, "Resource request should be specified")
+	assert.Equal(t, c.ContainerProperties.Resources.Requests.CPU, 0.1, "CPU request should be 0.1")
+	assert.Equal(t, c.ContainerProperties.Resources.Requests.MemoryInGB, 0.10, "CPU request should be 0.10")
+}
+
+func TestGetKubeProxyVolume(t *testing.T) {
+	ca := "this is a fake ca"
+	token := "this is a fake token"
+	masterURI := "this is a fake master URI"
+
+	dir, err := ioutil.TempDir("", "serviceaccount")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	defer os.RemoveAll(dir)
+
+	if err := ioutil.WriteFile(filepath.Join(dir, "ca.crt"), []byte(ca), 0666); err != nil {
+		t.Fatal(err)
+	}
+	if err := ioutil.WriteFile(filepath.Join(dir, "token"), []byte(token), 0666); err != nil {
+		t.Fatal(err)
+	}
+
+	var v *aci.Volume
+	v, err = getKubeProxyVolume(dir, masterURI)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	assert.NotNil(t, v, "volume should not be nil")
+	assert.Equal(t, v.Name, kubeConfigSecretVolume, "Volume name is not expected")
+	assert.NotNil(t, v.Secret, "Secret should not be nil")
+	assert.NotNil(t, v.Secret[kubeConfigFile], "kubeconfig should not be nil")
 }

@@ -272,7 +272,7 @@ func NewACIProvider(config string, rm *manager.ResourceManager, nodeName, operat
 			masterURI = "10.0.0.1"
 		}
 
-		p.kubeProxyVolume, err = getKubeProxyVolume(masterURI)
+		p.kubeProxyVolume, err = getKubeProxyVolume(serviceAccountSecretMountPath, masterURI)
 		if err != nil {
 			return nil, fmt.Errorf("error creating kube proxy volume spec: %v", err)
 		}
@@ -281,7 +281,7 @@ func NewACIProvider(config string, rm *manager.ResourceManager, nodeName, operat
 		if clusterCIDR != "" {
 			clusterCIDR = "10.240.0.0/16"
 		}
-	
+
 		p.kubeProxyContainer = getKubeProxyContainer(clusterCIDR)
 	}
 
@@ -423,14 +423,14 @@ func getKubeProxyContainer(clusterCIDR string) *aci.Container {
 	return &container
 }
 
-func getKubeProxyVolume(masterURI string) (*aci.Volume, error) {
-	ca, err := ioutil.ReadFile(serviceAccountSecretMountPath + "/ca.crt")
+func getKubeProxyVolume(secretPath, masterURI string) (*aci.Volume, error) {
+	ca, err := ioutil.ReadFile(secretPath + "/ca.crt")
 	if err != nil {
 		return nil, fmt.Errorf("failed to read ca.crt file: %v", err)
 	}
-	
+
 	var token []byte
-	token, err = ioutil.ReadFile(serviceAccountSecretMountPath + "/token")
+	token, err = ioutil.ReadFile(secretPath + "/token")
 	if err != nil {
 		return nil, fmt.Errorf("failed to read token file: %v", err)
 	}
@@ -571,8 +571,8 @@ func (p *ACIProvider) amendVnetResources(containerGroup *aci.ContainerGroup) {
 
 	containerGroup.NetworkProfile = &aci.NetworkProfileDefinition{ID: p.networkProfile}
 
-	containerGroup.ContainerGroupProperties.Containers = append(containerGroup.ContainerGroupProperties.Containers, p.kubeProxyContainer)
-	containerGroup.ContainerGroupProperties.Volumes = append(containerGroup.ContainerGroupProperties.Volumes, p.kubeProxyVolume)
+	containerGroup.ContainerGroupProperties.Containers = append(containerGroup.ContainerGroupProperties.Containers, *(p.kubeProxyContainer))
+	containerGroup.ContainerGroupProperties.Volumes = append(containerGroup.ContainerGroupProperties.Volumes, *(p.kubeProxyVolume))
 }
 
 // UpdatePod is a noop, ACI currently does not support live updates of a pod.
