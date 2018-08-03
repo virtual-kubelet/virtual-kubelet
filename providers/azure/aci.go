@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"log"
 	"net"
 	"net/http"
@@ -25,6 +26,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	clientcmdv1 "k8s.io/client-go/tools/clientcmd/api/v1"
 	"k8s.io/client-go/tools/remotecommand"
 )
 
@@ -65,8 +67,8 @@ type ACIProvider struct {
 	vnetName           string
 	vnetResourceGroup  string
 	networkProfile     string
-	masterURI          string
-	clusterCIDR        string
+	kubeProxyContainer *aci.Container
+	kubeProxyVolume    *aci.Volume
 }
 
 // AuthConfig is the secret returned from an ImageRegistryCredential
@@ -264,16 +266,23 @@ func NewACIProvider(config string, rm *manager.ResourceManager, nodeName, operat
 		if err := p.setupNetworkProfile(azAuth); err != nil {
 			return nil, fmt.Errorf("error setting up network profile: %v", err)
 		}
-	}
 
-	p.masterURI = "10.0.0.1"
-	if masterURI := os.Getenv("MASTER_URI"); masterURI != "" {
-		p.masterURI = masterURI
-	}
+		masterURI := os.Getenv("MASTER_URI")
+		if masterURI == "" {
+			masterURI = "10.0.0.1"
+		}
 
-	p.clusterCIDR = "10.240.0.0/16"
-	if clusterCIDR := os.Getenv("CLUSTER_CIDR"); clusterCIDR != "" {
-		p.clusterCIDR = clusterCIDR
+		p.kubeProxyVolume, err = getKubeProxyVolume(serviceAccountSecretMountPath, masterURI)
+		if err != nil {
+			return nil, fmt.Errorf("error creating kube proxy volume spec: %v", err)
+		}
+
+		clusterCIDR := os.Getenv("CLUSTER_CIDR")
+		if clusterCIDR == "" {
+			clusterCIDR = "10.240.0.0/16"
+		}
+
+		p.kubeProxyContainer = getKubeProxyContainer(clusterCIDR)
 	}
 
 	return &p, err
@@ -380,6 +389,102 @@ func populateNetworkProfile(p *network.Profile, subnet *network.Subnet) {
 	})
 }
 
+
+func getKubeProxyContainer(clusterCIDR string) *aci.Container {
+	container := aci.Container{
+		Name: kubeProxyContainerName,
+		ContainerProperties: aci.ContainerProperties{
+			Image:   kubeProxyImageName,
+			Command: []string{
+				"/hyperkube",
+				"proxy",
+				"--kubeconfig="+kubeConfigDir+"/"+kubeConfigFile,
+				"--cluster-cidr="+clusterCIDR,
+				"--feature-gates=ExperimentalCriticalPodAnnotation=true",
+			},
+		},
+	}
+
+	container.VolumeMounts = []aci.VolumeMount{
+		aci.VolumeMount{
+			Name:      kubeConfigSecretVolume,
+			MountPath: kubeConfigDir,
+			ReadOnly:  true,
+		},
+	}
+
+	container.Resources = aci.ResourceRequirements{
+		Requests: &aci.ResourceRequests{
+			CPU:        0.1,
+			MemoryInGB: 0.10,
+		},
+	}
+
+	return &container
+}
+
+func getKubeProxyVolume(secretPath, masterURI string) (*aci.Volume, error) {
+	ca, err := ioutil.ReadFile(secretPath + "/ca.crt")
+	if err != nil {
+		return nil, fmt.Errorf("failed to read ca.crt file: %v", err)
+	}
+
+	var token []byte
+	token, err = ioutil.ReadFile(secretPath + "/token")
+	if err != nil {
+		return nil, fmt.Errorf("failed to read token file: %v", err)
+	}
+
+	name := "virtual-kubelet"
+
+	config := clientcmdv1.Config{
+		APIVersion: "v1",
+		Kind:       "Config",
+		Clusters:   []clientcmdv1.NamedCluster{
+			clientcmdv1.NamedCluster{
+				Name:    name,
+				Cluster: clientcmdv1.Cluster{
+					Server:                   masterURI,
+					CertificateAuthorityData: ca,
+				},
+			},
+		},
+		AuthInfos:  []clientcmdv1.NamedAuthInfo{
+			clientcmdv1.NamedAuthInfo{
+				Name:     name,
+				AuthInfo: clientcmdv1.AuthInfo{
+					Token: string(token),
+				},
+			},
+		},
+		Contexts:   []clientcmdv1.NamedContext{
+			clientcmdv1.NamedContext{
+				Name: name,
+				Context: clientcmdv1.Context{
+					Cluster:  name,
+					AuthInfo: name,
+				},
+			},
+		},
+		CurrentContext: name,
+	}
+
+	b := new(bytes.Buffer)
+	if err := json.NewEncoder(b).Encode(config); err != nil {
+		return nil, fmt.Errorf("failed to encode the kubeconfig: %v", err)
+	}
+
+	paths := make(map[string]string)
+	paths[kubeConfigFile] = base64.StdEncoding.EncodeToString(b.Bytes())
+
+	volume := aci.Volume{
+		Name:   kubeConfigSecretVolume,
+		Secret: paths,
+	}
+
+	return &volume, nil
+}
+
 // CreatePod accepts a Pod definition and creates
 // an ACI deployment
 func (p *ACIProvider) CreatePod(pod *v1.Pod) error {
@@ -466,52 +571,8 @@ func (p *ACIProvider) amendVnetResources(containerGroup *aci.ContainerGroup) {
 
 	containerGroup.NetworkProfile = &aci.NetworkProfileDefinition{ID: p.networkProfile}
 
-	//containerGroup.ContainerGroupProperties.Containers = append(containerGroup.ContainerGroupProperties.Containers, *(getKubeProxyContainerSpec(p.clusterCIDR)))
-	//containerGroup.ContainerGroupProperties.Volumes = append(containerGroup.ContainerGroupProperties.Volumes, *(getKubeProxyVolumeSpec(p.masterURI)))
-}
-
-func getKubeProxyContainerSpec(clusterCIDR string) *aci.Container {
-	container := aci.Container{
-		Name: kubeProxyContainerName,
-		ContainerProperties: aci.ContainerProperties{
-			Image:   kubeProxyImageName,
-			Command: []string{
-				"/hyperkube",
-				"proxy",
-				"--kubeconfig="+kubeConfigDir+"/"+kubeConfigFile,
-				"--cluster-cidr="+clusterCIDR,
-			},
-		},
-	}
-
-	container.VolumeMounts = []aci.VolumeMount{
-		aci.VolumeMount{
-			Name:      kubeConfigSecretVolume,
-			MountPath: kubeConfigDir,
-			ReadOnly:  true,
-		},
-	}
-
-	container.Resources = aci.ResourceRequirements{
-		Requests: &aci.ResourceRequests{
-			CPU:        0.1,
-			MemoryInGB: 0.10,
-		},
-	}
-
-	return &container
-}
-
-func getKubeProxyVolumeSpec(masterURI string) *aci.Volume {
-	paths := make(map[string]string)
-
-
-	volume := aci.Volume{
-		Name:   kubeConfigSecretVolume,
-		Secret: paths,
-	}
-
-	return &volume
+	containerGroup.ContainerGroupProperties.Containers = append(containerGroup.ContainerGroupProperties.Containers, *(p.kubeProxyContainer))
+	containerGroup.ContainerGroupProperties.Volumes = append(containerGroup.ContainerGroupProperties.Volumes, *(p.kubeProxyVolume))
 }
 
 // UpdatePod is a noop, ACI currently does not support live updates of a pod.
@@ -1141,6 +1202,10 @@ func containerGroupToPod(cg *aci.ContainerGroup) (*v1.Pod, error) {
 	containers := make([]v1.Container, 0, len(cg.Containers))
 	containerStatuses := make([]v1.ContainerStatus, 0, len(cg.Containers))
 	for _, c := range cg.Containers {
+		if strings.EqualFold(c.Name, kubeProxyContainerName) {
+			continue;
+		}
+
 		container := v1.Container{
 			Name:    c.Name,
 			Image:   c.Image,
