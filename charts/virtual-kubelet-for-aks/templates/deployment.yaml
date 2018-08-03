@@ -56,5 +56,8 @@ spec:
         hostPath:
           path: /etc/kubernetes/azure.json
           type: File
+      {{ if .Values.rbac.install }}
+      serviceAccountName: {{ template "fullname" . }}
+      {{ end }}
       nodeSelector:
         beta.kubernetes.io/os: linux

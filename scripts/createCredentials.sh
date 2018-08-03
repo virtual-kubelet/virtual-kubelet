@@ -15,6 +15,14 @@ cat <<EOF > ${outputPathCredsfile}
 }
 EOF
 
+# This will build the log analytics credentials during CI
+cat <<EOF > ${outputPathLogAnalyticsFile}
+{
+    "workspaceID": "$omsworkspaceID",
+    "workspaceKey": "$omsworkspaceKey"
+}
+EOF
+
 # This will build the kubeConfig during the CI
 cat <<EOF > ${outputPathKubeConfigFile}
 ---

@@ -63,7 +63,7 @@ func (p *FargateProvider) loadConfigFile(filePath string) error {
 	return err
 }
 
-// loadConfigStream loads the given Fargate provider TOML configuration stream.
+// loadConfig loads the given Fargate provider TOML configuration stream.
 func (p *FargateProvider) loadConfig(r io.Reader) error {
 	var config providerConfig
 	var q resource.Quantity

@@ -18,6 +18,7 @@ import (
 	"github.com/virtual-kubelet/virtual-kubelet/providers/huawei"
 	"github.com/virtual-kubelet/virtual-kubelet/providers/hypersh"
 	"github.com/virtual-kubelet/virtual-kubelet/providers/mock"
+	"github.com/virtual-kubelet/virtual-kubelet/providers/sfmesh"
 	"github.com/virtual-kubelet/virtual-kubelet/providers/vic"
 	"github.com/virtual-kubelet/virtual-kubelet/providers/web"
 	corev1 "k8s.io/api/core/v1"
@@ -31,7 +32,7 @@ import (
 )
 
 const (
-        PodStatusReason_ProviderFailed = "ProviderFailed"
+	PodStatusReason_ProviderFailed = "ProviderFailed"
 )
 
 // Server masquarades itself as a kubelet and allows for the virtual node to be backed by non-vm/node providers.
@@ -124,6 +125,11 @@ func New(nodeName, operatingSystem, namespace, kubeConfig, taint, provider, prov
 		}
 	case "huawei":
 		p, err = huawei.NewCCIProvider(providerConfig, rm, nodeName, operatingSystem, internalIP, daemonEndpointPort)
+		if err != nil {
+			return nil, err
+		}
+	case "sfmesh":
+		p, err = sfmesh.NewSFMeshProvider(rm, nodeName, operatingSystem, internalIP, daemonEndpointPort)
 		if err != nil {
 			return nil, err
 		}
@@ -236,7 +242,7 @@ func (s *Server) Run() error {
 			log.Fatal("Failed to watch pods", err)
 		}
 
-		loop:
+	loop:
 		for {
 			select {
 			case ev, ok := <-s.podWatcher.ResultChan():
@@ -251,15 +257,19 @@ func (s *Server) Run() error {
 				}
 
 				log.Println("Pod watcher event is received:", ev.Type)
+				reconcile := false
 				switch ev.Type {
 				case watch.Added:
-					s.resourceManager.AddPod(ev.Object.(*corev1.Pod))
+					reconcile = s.resourceManager.UpdatePod(ev.Object.(*corev1.Pod))
 				case watch.Modified:
-					s.resourceManager.UpdatePod(ev.Object.(*corev1.Pod))
+					reconcile = s.resourceManager.UpdatePod(ev.Object.(*corev1.Pod))
 				case watch.Deleted:
-					s.resourceManager.DeletePod(ev.Object.(*corev1.Pod))
+					reconcile = s.resourceManager.DeletePod(ev.Object.(*corev1.Pod))
 				}
-				s.reconcile()
+
+				if reconcile {
+					s.reconcile()
+				}
 			}
 		}
 
@@ -285,10 +295,10 @@ func (s *Server) updateNode() {
 	}
 
 	if errors.IsNotFound(err) {
-	        if err = s.registerNode(); err != nil {
+		if err = s.registerNode(); err != nil {
 			log.Println("Failed to register node:", err)
-		        return
-	        }
+			return
+		}
 	}
 
 	n.ResourceVersion = "" // Blank out resource version to prevent object has been modified error
@@ -310,6 +320,7 @@ func (s *Server) updateNode() {
 // reconcile is the main reconciliation loop that compares differences between Kubernetes and
 // the active provider and reconciles the differences.
 func (s *Server) reconcile() {
+	log.Println("Start reconcile.")
 	providerPods, err := s.provider.GetPods()
 	if err != nil {
 		log.Println(err)
@@ -318,7 +329,8 @@ func (s *Server) reconcile() {
 
 	for _, pod := range providerPods {
 		// Delete pods that don't exist in Kubernetes
-		if p := s.resourceManager.GetPod(pod.Namespace, pod.Name); p == nil {
+		if p := s.resourceManager.GetPod(pod.Namespace, pod.Name); p == nil || p.DeletionTimestamp != nil {
+			log.Printf("Deleting pod '%s'\n", pod.Name)
 			if err := s.deletePod(pod); err != nil {
 				log.Printf("Error deleting pod '%s': %s\n", pod.Name, err)
 				continue
@@ -329,21 +341,25 @@ func (s *Server) reconcile() {
 	// Create any pods for k8s pods that don't exist in the provider
 	pods := s.resourceManager.GetPods()
 	for _, pod := range pods {
-		p, err := s.provider.GetPod(pod.Namespace, pod.Name)
-		if err != nil {
-			log.Printf("Error retrieving pod '%s' from provider: %s\n", pod.Name, err)
+		var providerPod *corev1.Pod
+		for _, p := range providerPods {
+			if p.Namespace == pod.Namespace && p.Name == pod.Name {
+				providerPod = p
+				break
+			}
 		}
 
-		if pod.DeletionTimestamp == nil && pod.Status.Phase != corev1.PodFailed && p == nil {
+		if pod.DeletionTimestamp == nil && pod.Status.Phase != corev1.PodFailed && providerPod == nil {
+			log.Printf("Creating pod '%s'\n", pod.Name)
 			if err := s.createPod(pod); err != nil {
 				log.Printf("Error creating pod '%s': %s\n", pod.Name, err)
 				continue
 			}
-			log.Printf("Pod '%s' created.\n", pod.Name)
 		}
 
-		// Delete pod if DeletionTimestamp set
+		// Delete pod if DeletionTimestamp is set
 		if pod.DeletionTimestamp != nil {
+			log.Printf("Pod '%s' is pending deletion.\n", pod.Name)
 			var err error
 			if err = s.deletePod(pod); err != nil {
 				log.Printf("Error deleting pod '%s': %s\n", pod.Name, err)
@@ -373,24 +389,29 @@ func (s *Server) createPod(pod *corev1.Pod) error {
 		return origErr
 	}
 
+	log.Printf("Pod '%s' created.\n", pod.Name)
+
 	return nil
 }
 
 func (s *Server) deletePod(pod *corev1.Pod) error {
 	var delErr error
 	if delErr = s.provider.DeletePod(pod); delErr != nil && errors.IsNotFound(delErr) {
-		return fmt.Errorf("Error deleting pod '%s': %s", pod.Name, delErr)
+		return delErr
 	}
 
 	if !errors.IsNotFound(delErr) {
 		var grace int64
 		if err := s.k8sClient.CoreV1().Pods(pod.Namespace).Delete(pod.Name, &metav1.DeleteOptions{GracePeriodSeconds: &grace}); err != nil && errors.IsNotFound(err) {
 			if errors.IsNotFound(err) {
+				log.Printf("Pod '%s' doesn't exist.\n", pod.Name)
 				return nil
 			}
 
 			return fmt.Errorf("Failed to delete kubernetes pod: %s", err)
 		}
+
+		s.resourceManager.DeletePod(pod)
 
 		log.Printf("Pod '%s' deleted.\n", pod.Name)
 	}
@@ -403,17 +424,13 @@ func (s *Server) updatePodStatuses() {
 	// Update all the pods with the provider status.
 	pods := s.resourceManager.GetPods()
 	for _, pod := range pods {
-		if pod.DeletionTimestamp != nil && pod.Status.Phase == corev1.PodSucceeded {
-			continue
-		}
-
-		if pod.Status.Phase == corev1.PodFailed && pod.Status.Reason == PodStatusReason_ProviderFailed {
+		if pod.Status.Phase == corev1.PodSucceeded || (pod.Status.Phase == corev1.PodFailed && pod.Status.Reason == PodStatusReason_ProviderFailed) {
 			continue
 		}
 
 		status, err := s.provider.GetPodStatus(pod.Namespace, pod.Name)
 		if err != nil {
-			log.Printf("Error retrieving pod '%s' status from provider: %s\n", pod.Name, err)
+			log.Printf("Error retrieving pod '%s' in namespace '%s' status from provider: %s\n", pod.Name, pod.Namespace, err)
 			return
 		}
 
