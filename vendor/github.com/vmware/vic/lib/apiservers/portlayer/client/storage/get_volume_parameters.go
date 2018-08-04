@@ -60,6 +60,8 @@ for the get volume operation typically these are written to a http.Request
 */
 type GetVolumeParams struct {
 
+	/*OpID*/
+	OpID *string
 	/*Name*/
 	Name string
 
@@ -101,6 +103,17 @@ func (o *GetVolumeParams) SetHTTPClient(client *http.Client) {
 	o.HTTPClient = client
 }
 
+// WithOpID adds the opID to the get volume params
+func (o *GetVolumeParams) WithOpID(opID *string) *GetVolumeParams {
+	o.SetOpID(opID)
+	return o
+}
+
+// SetOpID adds the opId to the get volume params
+func (o *GetVolumeParams) SetOpID(opID *string) {
+	o.OpID = opID
+}
+
 // WithName adds the name to the get volume params
 func (o *GetVolumeParams) WithName(name string) *GetVolumeParams {
 	o.SetName(name)
@@ -117,6 +130,15 @@ func (o *GetVolumeParams) WriteToRequest(r runtime.ClientRequest, reg strfmt.Reg
 
 	r.SetTimeout(o.timeout)
 	var res []error
+
+	if o.OpID != nil {
+
+		// header param Op-ID
+		if err := r.SetHeaderParam("Op-ID", *o.OpID); err != nil {
+			return err
+		}
+
+	}
 
 	// path param name
 	if err := r.SetPathParam("name", o.Name); err != nil {

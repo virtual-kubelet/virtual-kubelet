@@ -62,7 +62,7 @@ func init() {
 // decode is the generic switcher that decides which decoder to use for a field
 func encode(sink DataSink, src reflect.Value, prefix string, depth recursion) {
 	// if depth has reached zero, we skip encoding entirely
-	if depth.depth == 0 {
+	if depth.depth == 0 || depth.skipEncode {
 		return
 	}
 	depth.depth--
@@ -258,7 +258,7 @@ type DataSink func(string, string) error
 
 // Encode serializes the given type to the supplied data sink
 func Encode(sink DataSink, src interface{}) {
-	encode(sink, reflect.ValueOf(src), DefaultPrefix, Unbounded)
+	encode(sink, reflect.ValueOf(src), "", Unbounded)
 }
 
 // EncodeWithPrefix serializes the given type to the supplied data sink, using

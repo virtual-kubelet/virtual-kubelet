@@ -60,6 +60,8 @@ for the get operation typically these are written to a http.Request
 */
 type GetParams struct {
 
+	/*OpID*/
+	OpID *string
 	/*ID*/
 	ID string
 
@@ -101,6 +103,17 @@ func (o *GetParams) SetHTTPClient(client *http.Client) {
 	o.HTTPClient = client
 }
 
+// WithOpID adds the opID to the get params
+func (o *GetParams) WithOpID(opID *string) *GetParams {
+	o.SetOpID(opID)
+	return o
+}
+
+// SetOpID adds the opId to the get params
+func (o *GetParams) SetOpID(opID *string) {
+	o.OpID = opID
+}
+
 // WithID adds the id to the get params
 func (o *GetParams) WithID(id string) *GetParams {
 	o.SetID(id)
@@ -117,6 +130,15 @@ func (o *GetParams) WriteToRequest(r runtime.ClientRequest, reg strfmt.Registry)
 
 	r.SetTimeout(o.timeout)
 	var res []error
+
+	if o.OpID != nil {
+
+		// header param Op-ID
+		if err := r.SetHeaderParam("Op-ID", *o.OpID); err != nil {
+			return err
+		}
+
+	}
 
 	// path param id
 	if err := r.SetPathParam("id", o.ID); err != nil {

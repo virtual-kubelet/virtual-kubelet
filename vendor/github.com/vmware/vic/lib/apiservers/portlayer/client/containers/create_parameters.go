@@ -62,6 +62,8 @@ for the create operation typically these are written to a http.Request
 */
 type CreateParams struct {
 
+	/*OpID*/
+	OpID *string
 	/*CreateConfig*/
 	CreateConfig *models.ContainerCreateConfig
 	/*Name*/
@@ -105,6 +107,17 @@ func (o *CreateParams) SetHTTPClient(client *http.Client) {
 	o.HTTPClient = client
 }
 
+// WithOpID adds the opID to the create params
+func (o *CreateParams) WithOpID(opID *string) *CreateParams {
+	o.SetOpID(opID)
+	return o
+}
+
+// SetOpID adds the opId to the create params
+func (o *CreateParams) SetOpID(opID *string) {
+	o.OpID = opID
+}
+
 // WithCreateConfig adds the createConfig to the create params
 func (o *CreateParams) WithCreateConfig(createConfig *models.ContainerCreateConfig) *CreateParams {
 	o.SetCreateConfig(createConfig)
@@ -132,6 +145,15 @@ func (o *CreateParams) WriteToRequest(r runtime.ClientRequest, reg strfmt.Regist
 
 	r.SetTimeout(o.timeout)
 	var res []error
+
+	if o.OpID != nil {
+
+		// header param Op-ID
+		if err := r.SetHeaderParam("Op-ID", *o.OpID); err != nil {
+			return err
+		}
+
+	}
 
 	if o.CreateConfig == nil {
 		o.CreateConfig = new(models.ContainerCreateConfig)

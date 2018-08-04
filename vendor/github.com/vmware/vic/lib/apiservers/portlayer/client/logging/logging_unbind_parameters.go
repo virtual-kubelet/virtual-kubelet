@@ -62,6 +62,8 @@ for the logging unbind operation typically these are written to a http.Request
 */
 type LoggingUnbindParams struct {
 
+	/*OpID*/
+	OpID *string
 	/*Config*/
 	Config *models.LoggingUnbindConfig
 
@@ -103,6 +105,17 @@ func (o *LoggingUnbindParams) SetHTTPClient(client *http.Client) {
 	o.HTTPClient = client
 }
 
+// WithOpID adds the opID to the logging unbind params
+func (o *LoggingUnbindParams) WithOpID(opID *string) *LoggingUnbindParams {
+	o.SetOpID(opID)
+	return o
+}
+
+// SetOpID adds the opId to the logging unbind params
+func (o *LoggingUnbindParams) SetOpID(opID *string) {
+	o.OpID = opID
+}
+
 // WithConfig adds the config to the logging unbind params
 func (o *LoggingUnbindParams) WithConfig(config *models.LoggingUnbindConfig) *LoggingUnbindParams {
 	o.SetConfig(config)
@@ -119,6 +132,15 @@ func (o *LoggingUnbindParams) WriteToRequest(r runtime.ClientRequest, reg strfmt
 
 	r.SetTimeout(o.timeout)
 	var res []error
+
+	if o.OpID != nil {
+
+		// header param Op-ID
+		if err := r.SetHeaderParam("Op-ID", *o.OpID); err != nil {
+			return err
+		}
+
+	}
 
 	if o.Config == nil {
 		o.Config = new(models.LoggingUnbindConfig)

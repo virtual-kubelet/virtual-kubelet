@@ -61,6 +61,8 @@ for the container signal operation typically these are written to a http.Request
 */
 type ContainerSignalParams struct {
 
+	/*OpID*/
+	OpID *string
 	/*ID*/
 	ID string
 	/*Signal*/
@@ -104,6 +106,17 @@ func (o *ContainerSignalParams) SetHTTPClient(client *http.Client) {
 	o.HTTPClient = client
 }
 
+// WithOpID adds the opID to the container signal params
+func (o *ContainerSignalParams) WithOpID(opID *string) *ContainerSignalParams {
+	o.SetOpID(opID)
+	return o
+}
+
+// SetOpID adds the opId to the container signal params
+func (o *ContainerSignalParams) SetOpID(opID *string) {
+	o.OpID = opID
+}
+
 // WithID adds the id to the container signal params
 func (o *ContainerSignalParams) WithID(id string) *ContainerSignalParams {
 	o.SetID(id)
@@ -131,6 +144,15 @@ func (o *ContainerSignalParams) WriteToRequest(r runtime.ClientRequest, reg strf
 
 	r.SetTimeout(o.timeout)
 	var res []error
+
+	if o.OpID != nil {
+
+		// header param Op-ID
+		if err := r.SetHeaderParam("Op-ID", *o.OpID); err != nil {
+			return err
+		}
+
+	}
 
 	// path param id
 	if err := r.SetPathParam("id", o.ID); err != nil {
