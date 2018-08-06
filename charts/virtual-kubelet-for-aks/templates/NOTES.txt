@@ -1,0 +1,12 @@
+The virtual kubelet is getting deployed on your cluster.
+
+To verify that virtual kubelet has started, run:
+
+  kubectl --namespace={{ .Release.Namespace }} get pods -l "app={{ template "fullname" . }}"
+
+{{- if (not .Values.env.apiserverCert) and (not .Values.env.apiserverKey) }}
+
+Note: 
+TLS key pair not provided for VK HTTP listener. A key pair was generated for you. This generated key pair is not suitable for production use.
+
+{{- end }}
