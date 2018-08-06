@@ -60,6 +60,8 @@ for the container rename operation typically these are written to a http.Request
 */
 type ContainerRenameParams struct {
 
+	/*OpID*/
+	OpID *string
 	/*Handle*/
 	Handle string
 	/*Name
@@ -106,6 +108,17 @@ func (o *ContainerRenameParams) SetHTTPClient(client *http.Client) {
 	o.HTTPClient = client
 }
 
+// WithOpID adds the opID to the container rename params
+func (o *ContainerRenameParams) WithOpID(opID *string) *ContainerRenameParams {
+	o.SetOpID(opID)
+	return o
+}
+
+// SetOpID adds the opId to the container rename params
+func (o *ContainerRenameParams) SetOpID(opID *string) {
+	o.OpID = opID
+}
+
 // WithHandle adds the handle to the container rename params
 func (o *ContainerRenameParams) WithHandle(handle string) *ContainerRenameParams {
 	o.SetHandle(handle)
@@ -133,6 +146,15 @@ func (o *ContainerRenameParams) WriteToRequest(r runtime.ClientRequest, reg strf
 
 	r.SetTimeout(o.timeout)
 	var res []error
+
+	if o.OpID != nil {
+
+		// header param Op-ID
+		if err := r.SetHeaderParam("Op-ID", *o.OpID); err != nil {
+			return err
+		}
+
+	}
 
 	// path param handle
 	if err := r.SetPathParam("handle", o.Handle); err != nil {

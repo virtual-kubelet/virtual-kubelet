@@ -62,6 +62,8 @@ for the interaction unbind operation typically these are written to a http.Reque
 */
 type InteractionUnbindParams struct {
 
+	/*OpID*/
+	OpID *string
 	/*Config*/
 	Config *models.InteractionUnbindConfig
 
@@ -103,6 +105,17 @@ func (o *InteractionUnbindParams) SetHTTPClient(client *http.Client) {
 	o.HTTPClient = client
 }
 
+// WithOpID adds the opID to the interaction unbind params
+func (o *InteractionUnbindParams) WithOpID(opID *string) *InteractionUnbindParams {
+	o.SetOpID(opID)
+	return o
+}
+
+// SetOpID adds the opId to the interaction unbind params
+func (o *InteractionUnbindParams) SetOpID(opID *string) {
+	o.OpID = opID
+}
+
 // WithConfig adds the config to the interaction unbind params
 func (o *InteractionUnbindParams) WithConfig(config *models.InteractionUnbindConfig) *InteractionUnbindParams {
 	o.SetConfig(config)
@@ -119,6 +132,15 @@ func (o *InteractionUnbindParams) WriteToRequest(r runtime.ClientRequest, reg st
 
 	r.SetTimeout(o.timeout)
 	var res []error
+
+	if o.OpID != nil {
+
+		// header param Op-ID
+		if err := r.SetHeaderParam("Op-ID", *o.OpID); err != nil {
+			return err
+		}
+
+	}
 
 	if o.Config == nil {
 		o.Config = new(models.InteractionUnbindConfig)

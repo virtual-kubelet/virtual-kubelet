@@ -60,6 +60,8 @@ for the delete scope operation typically these are written to a http.Request
 */
 type DeleteScopeParams struct {
 
+	/*OpID*/
+	OpID *string
 	/*IDName*/
 	IDName string
 
@@ -101,6 +103,17 @@ func (o *DeleteScopeParams) SetHTTPClient(client *http.Client) {
 	o.HTTPClient = client
 }
 
+// WithOpID adds the opID to the delete scope params
+func (o *DeleteScopeParams) WithOpID(opID *string) *DeleteScopeParams {
+	o.SetOpID(opID)
+	return o
+}
+
+// SetOpID adds the opId to the delete scope params
+func (o *DeleteScopeParams) SetOpID(opID *string) {
+	o.OpID = opID
+}
+
 // WithIDName adds the iDName to the delete scope params
 func (o *DeleteScopeParams) WithIDName(iDName string) *DeleteScopeParams {
 	o.SetIDName(iDName)
@@ -117,6 +130,15 @@ func (o *DeleteScopeParams) WriteToRequest(r runtime.ClientRequest, reg strfmt.R
 
 	r.SetTimeout(o.timeout)
 	var res []error
+
+	if o.OpID != nil {
+
+		// header param Op-ID
+		if err := r.SetHeaderParam("Op-ID", *o.OpID); err != nil {
+			return err
+		}
+
+	}
 
 	// path param idName
 	if err := r.SetPathParam("idName", o.IDName); err != nil {

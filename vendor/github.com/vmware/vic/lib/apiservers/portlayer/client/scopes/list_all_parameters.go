@@ -19,7 +19,7 @@ import (
 // NewListAllParams creates a new ListAllParams object
 // with the default values initialized.
 func NewListAllParams() *ListAllParams {
-
+	var ()
 	return &ListAllParams{
 
 		timeout: cr.DefaultTimeout,
@@ -29,7 +29,7 @@ func NewListAllParams() *ListAllParams {
 // NewListAllParamsWithTimeout creates a new ListAllParams object
 // with the default values initialized, and the ability to set a timeout on a request
 func NewListAllParamsWithTimeout(timeout time.Duration) *ListAllParams {
-
+	var ()
 	return &ListAllParams{
 
 		timeout: timeout,
@@ -39,7 +39,7 @@ func NewListAllParamsWithTimeout(timeout time.Duration) *ListAllParams {
 // NewListAllParamsWithContext creates a new ListAllParams object
 // with the default values initialized, and the ability to set a context for a request
 func NewListAllParamsWithContext(ctx context.Context) *ListAllParams {
-
+	var ()
 	return &ListAllParams{
 
 		Context: ctx,
@@ -49,7 +49,7 @@ func NewListAllParamsWithContext(ctx context.Context) *ListAllParams {
 // NewListAllParamsWithHTTPClient creates a new ListAllParams object
 // with the default values initialized, and the ability to set a custom HTTPClient for a request
 func NewListAllParamsWithHTTPClient(client *http.Client) *ListAllParams {
-
+	var ()
 	return &ListAllParams{
 		HTTPClient: client,
 	}
@@ -59,6 +59,10 @@ func NewListAllParamsWithHTTPClient(client *http.Client) *ListAllParams {
 for the list all operation typically these are written to a http.Request
 */
 type ListAllParams struct {
+
+	/*OpID*/
+	OpID *string
+
 	timeout    time.Duration
 	Context    context.Context
 	HTTPClient *http.Client
@@ -97,11 +101,31 @@ func (o *ListAllParams) SetHTTPClient(client *http.Client) {
 	o.HTTPClient = client
 }
 
+// WithOpID adds the opID to the list all params
+func (o *ListAllParams) WithOpID(opID *string) *ListAllParams {
+	o.SetOpID(opID)
+	return o
+}
+
+// SetOpID adds the opId to the list all params
+func (o *ListAllParams) SetOpID(opID *string) {
+	o.OpID = opID
+}
+
 // WriteToRequest writes these params to a swagger request
 func (o *ListAllParams) WriteToRequest(r runtime.ClientRequest, reg strfmt.Registry) error {
 
 	r.SetTimeout(o.timeout)
 	var res []error
+
+	if o.OpID != nil {
+
+		// header param Op-ID
+		if err := r.SetHeaderParam("Op-ID", *o.OpID); err != nil {
+			return err
+		}
+
+	}
 
 	if len(res) > 0 {
 		return errors.CompositeValidationError(res...)

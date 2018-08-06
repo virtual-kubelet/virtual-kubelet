@@ -62,6 +62,8 @@ for the create scope operation typically these are written to a http.Request
 */
 type CreateScopeParams struct {
 
+	/*OpID*/
+	OpID *string
 	/*Config*/
 	Config *models.ScopeConfig
 
@@ -103,6 +105,17 @@ func (o *CreateScopeParams) SetHTTPClient(client *http.Client) {
 	o.HTTPClient = client
 }
 
+// WithOpID adds the opID to the create scope params
+func (o *CreateScopeParams) WithOpID(opID *string) *CreateScopeParams {
+	o.SetOpID(opID)
+	return o
+}
+
+// SetOpID adds the opId to the create scope params
+func (o *CreateScopeParams) SetOpID(opID *string) {
+	o.OpID = opID
+}
+
 // WithConfig adds the config to the create scope params
 func (o *CreateScopeParams) WithConfig(config *models.ScopeConfig) *CreateScopeParams {
 	o.SetConfig(config)
@@ -119,6 +132,15 @@ func (o *CreateScopeParams) WriteToRequest(r runtime.ClientRequest, reg strfmt.R
 
 	r.SetTimeout(o.timeout)
 	var res []error
+
+	if o.OpID != nil {
+
+		// header param Op-ID
+		if err := r.SetHeaderParam("Op-ID", *o.OpID); err != nil {
+			return err
+		}
+
+	}
 
 	if o.Config == nil {
 		o.Config = new(models.ScopeConfig)

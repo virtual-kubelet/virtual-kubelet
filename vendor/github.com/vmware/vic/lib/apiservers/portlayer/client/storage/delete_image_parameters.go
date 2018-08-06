@@ -61,6 +61,8 @@ for the delete image operation typically these are written to a http.Request
 */
 type DeleteImageParams struct {
 
+	/*OpID*/
+	OpID *string
 	/*ID*/
 	ID string
 	/*KeepNodes*/
@@ -106,6 +108,17 @@ func (o *DeleteImageParams) SetHTTPClient(client *http.Client) {
 	o.HTTPClient = client
 }
 
+// WithOpID adds the opID to the delete image params
+func (o *DeleteImageParams) WithOpID(opID *string) *DeleteImageParams {
+	o.SetOpID(opID)
+	return o
+}
+
+// SetOpID adds the opId to the delete image params
+func (o *DeleteImageParams) SetOpID(opID *string) {
+	o.OpID = opID
+}
+
 // WithID adds the id to the delete image params
 func (o *DeleteImageParams) WithID(id string) *DeleteImageParams {
 	o.SetID(id)
@@ -144,6 +157,15 @@ func (o *DeleteImageParams) WriteToRequest(r runtime.ClientRequest, reg strfmt.R
 
 	r.SetTimeout(o.timeout)
 	var res []error
+
+	if o.OpID != nil {
+
+		// header param Op-ID
+		if err := r.SetHeaderParam("Op-ID", *o.OpID); err != nil {
+			return err
+		}
+
+	}
 
 	// path param id
 	if err := r.SetPathParam("id", o.ID); err != nil {

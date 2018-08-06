@@ -60,6 +60,8 @@ for the get value operation typically these are written to a http.Request
 */
 type GetValueParams struct {
 
+	/*OpID*/
+	OpID *string
 	/*Key*/
 	Key string
 
@@ -101,6 +103,17 @@ func (o *GetValueParams) SetHTTPClient(client *http.Client) {
 	o.HTTPClient = client
 }
 
+// WithOpID adds the opID to the get value params
+func (o *GetValueParams) WithOpID(opID *string) *GetValueParams {
+	o.SetOpID(opID)
+	return o
+}
+
+// SetOpID adds the opId to the get value params
+func (o *GetValueParams) SetOpID(opID *string) {
+	o.OpID = opID
+}
+
 // WithKey adds the key to the get value params
 func (o *GetValueParams) WithKey(key string) *GetValueParams {
 	o.SetKey(key)
@@ -117,6 +130,15 @@ func (o *GetValueParams) WriteToRequest(r runtime.ClientRequest, reg strfmt.Regi
 
 	r.SetTimeout(o.timeout)
 	var res []error
+
+	if o.OpID != nil {
+
+		// header param Op-ID
+		if err := r.SetHeaderParam("Op-ID", *o.OpID); err != nil {
+			return err
+		}
+
+	}
 
 	// path param key
 	if err := r.SetPathParam("key", o.Key); err != nil {

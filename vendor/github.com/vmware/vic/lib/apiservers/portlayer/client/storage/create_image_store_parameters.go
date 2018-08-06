@@ -62,6 +62,8 @@ for the create image store operation typically these are written to a http.Reque
 */
 type CreateImageStoreParams struct {
 
+	/*OpID*/
+	OpID *string
 	/*Body*/
 	Body *models.ImageStore
 
@@ -103,6 +105,17 @@ func (o *CreateImageStoreParams) SetHTTPClient(client *http.Client) {
 	o.HTTPClient = client
 }
 
+// WithOpID adds the opID to the create image store params
+func (o *CreateImageStoreParams) WithOpID(opID *string) *CreateImageStoreParams {
+	o.SetOpID(opID)
+	return o
+}
+
+// SetOpID adds the opId to the create image store params
+func (o *CreateImageStoreParams) SetOpID(opID *string) {
+	o.OpID = opID
+}
+
 // WithBody adds the body to the create image store params
 func (o *CreateImageStoreParams) WithBody(body *models.ImageStore) *CreateImageStoreParams {
 	o.SetBody(body)
@@ -119,6 +132,15 @@ func (o *CreateImageStoreParams) WriteToRequest(r runtime.ClientRequest, reg str
 
 	r.SetTimeout(o.timeout)
 	var res []error
+
+	if o.OpID != nil {
+
+		// header param Op-ID
+		if err := r.SetHeaderParam("Op-ID", *o.OpID); err != nil {
+			return err
+		}
+
+	}
 
 	if o.Body == nil {
 		o.Body = new(models.ImageStore)

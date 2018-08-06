@@ -62,6 +62,8 @@ for the inspect operation typically these are written to a http.Request
 */
 type InspectParams struct {
 
+	/*OpID*/
+	OpID *string
 	/*Config*/
 	Config *models.TaskInspectConfig
 
@@ -103,6 +105,17 @@ func (o *InspectParams) SetHTTPClient(client *http.Client) {
 	o.HTTPClient = client
 }
 
+// WithOpID adds the opID to the inspect params
+func (o *InspectParams) WithOpID(opID *string) *InspectParams {
+	o.SetOpID(opID)
+	return o
+}
+
+// SetOpID adds the opId to the inspect params
+func (o *InspectParams) SetOpID(opID *string) {
+	o.OpID = opID
+}
+
 // WithConfig adds the config to the inspect params
 func (o *InspectParams) WithConfig(config *models.TaskInspectConfig) *InspectParams {
 	o.SetConfig(config)
@@ -119,6 +132,15 @@ func (o *InspectParams) WriteToRequest(r runtime.ClientRequest, reg strfmt.Regis
 
 	r.SetTimeout(o.timeout)
 	var res []error
+
+	if o.OpID != nil {
+
+		// header param Op-ID
+		if err := r.SetHeaderParam("Op-ID", *o.OpID); err != nil {
+			return err
+		}
+
+	}
 
 	if o.Config == nil {
 		o.Config = new(models.TaskInspectConfig)
