@@ -27,22 +27,63 @@ import (
 )
 
 const (
-	// DefaultTagName value
+	// GuestInfoPrefix is dictated by vSphere
+	GuestInfoPrefix = "guestinfo."
+
+	// ScopeTag is the tag name used for declaring scopes for a field
+	ScopeTag = "scope"
+	// KeyTag is the tag name by which to override default key naming based on field name
+	KeyTag = "key"
+	// RecurseTag is the tag name with which different recursion properties are declared
+	RecurseTag = "recurse"
+
+	// HiddenScope means the key is hidden from the guest and will not have a GuestInfoPrefix
+	HiddenScope = "hidden"
+	// ReadOnlyScope means the key is read-only from the guest
+	ReadOnlyScope = "read-only"
+	// ReadWriteScope means the key may be read and modified by the guest
+	ReadWriteScope = "read-write"
+	// VolatileScope means that the value is expected to change and should be refreshed on use
+	VolatileScope = "volatile"
+
+	// SecretSuffix means the value should be encrypted in the vmx.
+	SecretSuffix = "secret"
+	// NonPersistentSuffix means the key should only be written if the key will be deleted on guest power off.
+	NonPersistentSuffix = "non-persistent"
+
+	// RecurseDepthProperty controls how deep to recuse into a structure field from this level. A value of zero
+	// prevents both encode and decode of that field. This is provided to control recursion into unannotated structures.
+	// This is unbounded if not specified.
+	RecurseDepthProperty = "depth"
+	// RecurseFollowProperty instructs encode and decode to follow pointers.
+	RecurseFollowProperty = "follow"
+	// RecurseNoFollowProperty instructs encode and decode not to follow pointers.
+	RecurseNoFollowProperty = "nofollow"
+	// RecurseSkipEncodeProperty causes the marked field and subfields to be skipped when encoding.
+	RecurseSkipEncodeProperty = "skip-encode"
+	// RecurseSkipDecodeProperty causes the marked field and subfields to be skipped when decoding.
+	RecurseSkipDecodeProperty = "skip-decode"
+)
+
+// TODO: this entire section of variables should be turned into a config struct
+// that can be passed to Encode and Decode, or that Encode and Decode are method on
+var (
+	// DefaultTagName is the annotation tag name we use for basic semantic version. Not currently used.
 	DefaultTagName = "vic"
-	// DefaultPrefix value
-	DefaultPrefix = ""
-	// DefaultGuestInfoPrefix value
-	DefaultGuestInfoPrefix = "guestinfo.vice."
+
+	// DefaultPrefix is prepended to generated key paths for basic namespacing
+	DefaultPrefix = "vice."
+
 	//Separator for slice values and map keys
 	Separator = "|"
 
 	// suffix separator character
 	suffixSeparator = "@"
-	// secret suffix
-	secretSuffix = "secret"
-	// non-persistent suffix
-	nonpersistentSuffix = "non-persistent"
 )
+
+func defaultGuestInfoPrefix() string {
+	return GuestInfoPrefix + DefaultPrefix
+}
 
 const (
 	// Invalid value
@@ -51,6 +92,8 @@ const (
 	Hidden
 	// ReadOnly value
 	ReadOnly
+	// WriteOnly value
+	WriteOnly
 	// ReadWrite value
 	ReadWrite
 	// NonPersistent value
@@ -66,6 +109,10 @@ type recursion struct {
 	depth int
 	// follow controls whether we follow pointers
 	follow bool
+	// set to skip decode of a field but still allow encode
+	skipDecode bool
+	// set to skip encode of a field but still allow decode
+	skipEncode bool
 }
 
 // Unbounded is the value used for unbounded recursion
@@ -103,17 +150,17 @@ func calculateScope(scopes []string) uint {
 
 	for _, v := range scopes {
 		switch v {
-		case "hidden":
+		case HiddenScope:
 			scope |= Hidden
-		case "read-only":
+		case ReadOnlyScope:
 			scope |= ReadOnly
-		case "read-write":
+		case ReadWriteScope:
 			scope |= ReadWrite
-		case nonpersistentSuffix:
-			scope |= NonPersistent
-		case "volatile":
+		case VolatileScope:
 			scope |= Volatile
-		case secretSuffix:
+		case NonPersistentSuffix:
+			scope |= NonPersistent
+		case SecretSuffix:
 			scope |= Secret | ReadOnly
 		default:
 			return Invalid
@@ -130,7 +177,7 @@ func isSecret(key string) bool {
 	}
 
 	for i := range suffix[1:] {
-		if suffix[i+1] == secretSuffix {
+		if suffix[i+1] == SecretSuffix {
 			return true
 		}
 	}
@@ -146,7 +193,7 @@ func isNonPersistent(key string) bool {
 	}
 
 	for i := range suffix[1:] {
-		if suffix[i+1] == nonpersistentSuffix {
+		if suffix[i+1] == NonPersistentSuffix {
 			return true
 		}
 	}
@@ -157,22 +204,22 @@ func isNonPersistent(key string) bool {
 func calculateScopeFromKey(key string) []string {
 	scopes := []string{}
 
-	if !strings.HasPrefix(key, DefaultGuestInfoPrefix) {
-		scopes = append(scopes, "hidden")
+	if !strings.HasPrefix(key, GuestInfoPrefix) {
+		scopes = append(scopes, HiddenScope)
 	}
 
 	if strings.Contains(key, "/") {
-		scopes = append(scopes, "read-only")
+		scopes = append(scopes, ReadOnlyScope)
 	} else {
-		scopes = append(scopes, "read-write")
+		scopes = append(scopes, ReadWriteScope)
 	}
 
 	if isSecret(key) {
-		scopes = append(scopes, secretSuffix)
+		scopes = append(scopes, SecretSuffix)
 	}
 
 	if isNonPersistent(key) {
-		scopes = append(scopes, nonpersistentSuffix)
+		scopes = append(scopes, NonPersistentSuffix)
 	}
 
 	return scopes
@@ -202,21 +249,21 @@ func calculateKeyFromField(field reflect.StructField, prefix string, depth recur
 	// do we have DefaultTagName?
 	if tags.Get(DefaultTagName) != "" {
 		// get the scopes
-		scopes = strings.Split(tags.Get("scope"), ",")
+		scopes = strings.Split(tags.Get(ScopeTag), ",")
 		logger.Debugf("Scopes: %#v", scopes)
 
 		// get the keys and split properties from it
-		key = tags.Get("key")
+		key = tags.Get(KeyTag)
 		logger.Debugf("Key specified: %s", key)
 
 		// get the keys and split properties from it
-		recurse := tags.Get("recurse")
+		recurse := tags.Get(RecurseTag)
 		if recurse != "" {
 			props := strings.Split(recurse, ",")
 			// process properties
 			for _, prop := range props {
 				// determine recursion depth
-				if strings.HasPrefix(prop, "depth") {
+				if strings.HasPrefix(prop, RecurseDepthProperty) {
 					parts := strings.Split(prop, "=")
 					if len(parts) != 2 {
 						logger.Warnf("Skipping field with incorrect recurse property: %s", prop)
@@ -229,10 +276,14 @@ func calculateKeyFromField(field reflect.StructField, prefix string, depth recur
 						return "", skip
 					}
 					fdepth.depth = int(val)
-				} else if prop == "nofollow" {
+				} else if prop == RecurseNoFollowProperty {
 					fdepth.follow = false
-				} else if prop == "follow" {
+				} else if prop == RecurseFollowProperty {
 					fdepth.follow = true
+				} else if prop == RecurseSkipDecodeProperty {
+					fdepth.skipDecode = true
+				} else if prop == RecurseSkipEncodeProperty {
+					fdepth.skipEncode = true
 				} else {
 					logger.Warnf("Ignoring unknown recurse property %s (%s)", key, prop)
 					continue
@@ -278,7 +329,7 @@ func calculateKey(scope uint, prefix string, key string) string {
 
 	hide := scope&Hidden != 0
 	write := scope&ReadWrite != 0
-	visible := strings.HasPrefix(prefix, DefaultGuestInfoPrefix)
+	visible := strings.HasPrefix(prefix, GuestInfoPrefix)
 
 	if !hide && write {
 		oldSep = "/"
@@ -298,7 +349,7 @@ func calculateKey(scope uint, prefix string, key string) string {
 	}
 
 	if scope&Secret != 0 {
-		out += suffixSeparator + secretSuffix
+		out += suffixSeparator + SecretSuffix
 	}
 
 	if scope&NonPersistent != 0 {
@@ -306,7 +357,7 @@ func calculateKey(scope uint, prefix string, key string) string {
 			logger.Debugf("Unable to combine non-persistent and hidden scopes")
 			return ""
 		}
-		out += suffixSeparator + nonpersistentSuffix
+		out += suffixSeparator + NonPersistentSuffix
 	}
 
 	// we don't care about existing separators when hiden
@@ -316,7 +367,7 @@ func calculateKey(scope uint, prefix string, key string) string {
 		}
 
 		// strip the prefix and the leading r/w signifier
-		return out[len(DefaultGuestInfoPrefix)+1:]
+		return out[len(defaultGuestInfoPrefix())+1:]
 	}
 
 	// ensure that separators are correct
@@ -324,11 +375,11 @@ func calculateKey(scope uint, prefix string, key string) string {
 
 	// Assemble the base that controls key publishing in guest
 	if !visible {
-		return DefaultGuestInfoPrefix + newSep + out
+		return defaultGuestInfoPrefix() + newSep + out
 	}
 
 	// prefix will have been mangled by strings.Replace
-	return DefaultGuestInfoPrefix + out[len(DefaultGuestInfoPrefix):]
+	return defaultGuestInfoPrefix() + out[len(defaultGuestInfoPrefix()):]
 }
 
 // utility function to allow adding of arbitrary prefix into key
@@ -507,4 +558,15 @@ func calculateKeys(v reflect.Value, field string, prefix string) []string {
 //
 func CalculateKeys(obj interface{}, field string, prefix string) []string {
 	return calculateKeys(reflect.ValueOf(obj), field, prefix)
+}
+
+// CalculateKey is a specific case of CalculateKeys that will panic if more than one key
+// matches the field pattern passed in.
+func CalculateKey(obj interface{}, field string, prefix string) string {
+	keys := calculateKeys(reflect.ValueOf(obj), field, prefix)
+	if len(keys) != 1 {
+		panic("CalculateKey should only ever return one key")
+	}
+
+	return keys[0]
 }

@@ -60,6 +60,8 @@ for the get state operation typically these are written to a http.Request
 */
 type GetStateParams struct {
 
+	/*OpID*/
+	OpID *string
 	/*Handle*/
 	Handle string
 
@@ -101,6 +103,17 @@ func (o *GetStateParams) SetHTTPClient(client *http.Client) {
 	o.HTTPClient = client
 }
 
+// WithOpID adds the opID to the get state params
+func (o *GetStateParams) WithOpID(opID *string) *GetStateParams {
+	o.SetOpID(opID)
+	return o
+}
+
+// SetOpID adds the opId to the get state params
+func (o *GetStateParams) SetOpID(opID *string) {
+	o.OpID = opID
+}
+
 // WithHandle adds the handle to the get state params
 func (o *GetStateParams) WithHandle(handle string) *GetStateParams {
 	o.SetHandle(handle)
@@ -117,6 +130,15 @@ func (o *GetStateParams) WriteToRequest(r runtime.ClientRequest, reg strfmt.Regi
 
 	r.SetTimeout(o.timeout)
 	var res []error
+
+	if o.OpID != nil {
+
+		// header param Op-ID
+		if err := r.SetHeaderParam("Op-ID", *o.OpID); err != nil {
+			return err
+		}
+
+	}
 
 	// path param handle
 	if err := r.SetPathParam("handle", o.Handle); err != nil {

@@ -60,6 +60,8 @@ for the delete value operation typically these are written to a http.Request
 */
 type DeleteValueParams struct {
 
+	/*OpID*/
+	OpID *string
 	/*Key*/
 	Key string
 
@@ -101,6 +103,17 @@ func (o *DeleteValueParams) SetHTTPClient(client *http.Client) {
 	o.HTTPClient = client
 }
 
+// WithOpID adds the opID to the delete value params
+func (o *DeleteValueParams) WithOpID(opID *string) *DeleteValueParams {
+	o.SetOpID(opID)
+	return o
+}
+
+// SetOpID adds the opId to the delete value params
+func (o *DeleteValueParams) SetOpID(opID *string) {
+	o.OpID = opID
+}
+
 // WithKey adds the key to the delete value params
 func (o *DeleteValueParams) WithKey(key string) *DeleteValueParams {
 	o.SetKey(key)
@@ -117,6 +130,15 @@ func (o *DeleteValueParams) WriteToRequest(r runtime.ClientRequest, reg strfmt.R
 
 	r.SetTimeout(o.timeout)
 	var res []error
+
+	if o.OpID != nil {
+
+		// header param Op-ID
+		if err := r.SetHeaderParam("Op-ID", *o.OpID); err != nil {
+			return err
+		}
+
+	}
 
 	// path param key
 	if err := r.SetPathParam("key", o.Key); err != nil {
