@@ -38,11 +38,11 @@ spec:
         - name: ACS_CREDENTIAL_LOCATION
           value: /etc/acs/azure.json
         - name: AZURE_TENANT_ID
-          value: {{ required "tenantId is required" .tenantId }}
+          value: {{ .tenantId }}
         - name: AZURE_SUBSCRIPTION_ID
-          value: {{ required "subscriptionId is required" .subscriptionId }}
+          value: {{ .subscriptionId }}
         - name: AZURE_CLIENT_ID
-          value: {{ required "clientId is required" .clientId }}
+          value: {{ .clientId }}
         - name: AZURE_CLIENT_SECRET
           valueFrom:
             secretKeyRef:
