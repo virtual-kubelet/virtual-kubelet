@@ -1028,6 +1028,14 @@
 
 [[projects]]
   branch = "master"
+  digest = "1:39ebcc2b11457b703ae9ee2e8cca0f68df21969c6102cb3b705f76cca0ea0239"
+  name = "golang.org/x/sync"
+  packages = ["errgroup"]
+  pruneopts = "NUT"
+  revision = "1d60e4601c6fd243af51cc01ddf169918a5407ca"
+
+[[projects]]
+  branch = "master"
   digest = "1:ee40f9506736b3b55162b22d82911b797301904848b1f1ae5db49f561ad48a79"
   name = "golang.org/x/sys"
   packages = [
@@ -1406,6 +1414,7 @@
     "github.com/vmware/vic/pkg/trace",
     "github.com/vmware/vic/pkg/vsphere/sys",
     "golang.org/x/net/context",
+    "golang.org/x/sync/errgroup",
     "google.golang.org/grpc",
     "gopkg.in/yaml.v2",
     "k8s.io/api/core/v1",
