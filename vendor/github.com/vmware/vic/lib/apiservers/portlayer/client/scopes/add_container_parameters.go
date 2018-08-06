@@ -62,6 +62,8 @@ for the add container operation typically these are written to a http.Request
 */
 type AddContainerParams struct {
 
+	/*OpID*/
+	OpID *string
 	/*Config*/
 	Config *models.ScopesAddContainerConfig
 	/*Scope*/
@@ -105,6 +107,17 @@ func (o *AddContainerParams) SetHTTPClient(client *http.Client) {
 	o.HTTPClient = client
 }
 
+// WithOpID adds the opID to the add container params
+func (o *AddContainerParams) WithOpID(opID *string) *AddContainerParams {
+	o.SetOpID(opID)
+	return o
+}
+
+// SetOpID adds the opId to the add container params
+func (o *AddContainerParams) SetOpID(opID *string) {
+	o.OpID = opID
+}
+
 // WithConfig adds the config to the add container params
 func (o *AddContainerParams) WithConfig(config *models.ScopesAddContainerConfig) *AddContainerParams {
 	o.SetConfig(config)
@@ -132,6 +145,15 @@ func (o *AddContainerParams) WriteToRequest(r runtime.ClientRequest, reg strfmt.
 
 	r.SetTimeout(o.timeout)
 	var res []error
+
+	if o.OpID != nil {
+
+		// header param Op-ID
+		if err := r.SetHeaderParam("Op-ID", *o.OpID); err != nil {
+			return err
+		}
+
+	}
 
 	if o.Config == nil {
 		o.Config = new(models.ScopesAddContainerConfig)

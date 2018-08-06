@@ -61,6 +61,8 @@ for the container set stdin operation typically these are written to a http.Requ
 */
 type ContainerSetStdinParams struct {
 
+	/*OpID*/
+	OpID *string
 	/*Deadline*/
 	Deadline *strfmt.DateTime
 	/*ID*/
@@ -106,6 +108,17 @@ func (o *ContainerSetStdinParams) SetHTTPClient(client *http.Client) {
 	o.HTTPClient = client
 }
 
+// WithOpID adds the opID to the container set stdin params
+func (o *ContainerSetStdinParams) WithOpID(opID *string) *ContainerSetStdinParams {
+	o.SetOpID(opID)
+	return o
+}
+
+// SetOpID adds the opId to the container set stdin params
+func (o *ContainerSetStdinParams) SetOpID(opID *string) {
+	o.OpID = opID
+}
+
 // WithDeadline adds the deadline to the container set stdin params
 func (o *ContainerSetStdinParams) WithDeadline(deadline *strfmt.DateTime) *ContainerSetStdinParams {
 	o.SetDeadline(deadline)
@@ -144,6 +157,15 @@ func (o *ContainerSetStdinParams) WriteToRequest(r runtime.ClientRequest, reg st
 
 	r.SetTimeout(o.timeout)
 	var res []error
+
+	if o.OpID != nil {
+
+		// header param Op-ID
+		if err := r.SetHeaderParam("Op-ID", *o.OpID); err != nil {
+			return err
+		}
+
+	}
 
 	if o.Deadline != nil {
 

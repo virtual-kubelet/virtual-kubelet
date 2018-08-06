@@ -52,6 +52,18 @@ func newContainer(spec *corev1.Container) (*container, error) {
 		cntr.definition.WorkingDirectory = aws.String(spec.WorkingDir)
 	}
 
+	// Add environment variables.
+	if spec.Env != nil {
+		for _, env := range spec.Env {
+			cntr.definition.Environment = append(
+				cntr.definition.Environment,
+				&ecs.KeyValuePair{
+					Name:  aws.String(env.Name),
+					Value: aws.String(env.Value),
+				})
+		}
+	}
+
 	// Translate the Kubernetes container resource requirements to Fargate units.
 	cntr.setResourceRequirements(&spec.Resources)
 

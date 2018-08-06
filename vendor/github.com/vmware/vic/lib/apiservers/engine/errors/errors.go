@@ -34,6 +34,14 @@ func (e InvalidVolumeError) Error() string {
 	return fmt.Sprintf("mounting directories as a data volume is not supported.")
 }
 
+type VolumeExistError struct {
+	Volume string
+}
+
+func (e VolumeExistError) Error() string {
+	return fmt.Sprintf("A volume named %s already exists. Choose a different volume name.", e.Volume)
+}
+
 // InvalidBindError is returned when create/run -v has more params than allowed.
 type InvalidBindError struct {
 	Volume string
@@ -183,6 +191,12 @@ func IsResourceInUse(err error) bool {
 
 func IsServerNotReady(err error) bool {
 	_, ok := err.(ServerNotReadyError)
+
+	return ok
+}
+
+func IsVolumeExistError(err error) bool {
+	_, ok := err.(VolumeExistError)
 
 	return ok
 }

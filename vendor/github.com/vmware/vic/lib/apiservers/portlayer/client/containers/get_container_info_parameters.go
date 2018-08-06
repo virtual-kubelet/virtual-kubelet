@@ -60,6 +60,8 @@ for the get container info operation typically these are written to a http.Reque
 */
 type GetContainerInfoParams struct {
 
+	/*OpID*/
+	OpID *string
 	/*ID*/
 	ID string
 
@@ -101,6 +103,17 @@ func (o *GetContainerInfoParams) SetHTTPClient(client *http.Client) {
 	o.HTTPClient = client
 }
 
+// WithOpID adds the opID to the get container info params
+func (o *GetContainerInfoParams) WithOpID(opID *string) *GetContainerInfoParams {
+	o.SetOpID(opID)
+	return o
+}
+
+// SetOpID adds the opId to the get container info params
+func (o *GetContainerInfoParams) SetOpID(opID *string) {
+	o.OpID = opID
+}
+
 // WithID adds the id to the get container info params
 func (o *GetContainerInfoParams) WithID(id string) *GetContainerInfoParams {
 	o.SetID(id)
@@ -117,6 +130,15 @@ func (o *GetContainerInfoParams) WriteToRequest(r runtime.ClientRequest, reg str
 
 	r.SetTimeout(o.timeout)
 	var res []error
+
+	if o.OpID != nil {
+
+		// header param Op-ID
+		if err := r.SetHeaderParam("Op-ID", *o.OpID); err != nil {
+			return err
+		}
+
+	}
 
 	// path param id
 	if err := r.SetPathParam("id", o.ID); err != nil {

@@ -62,6 +62,8 @@ for the join operation typically these are written to a http.Request
 */
 type JoinParams struct {
 
+	/*OpID*/
+	OpID *string
 	/*Config*/
 	Config *models.TaskJoinConfig
 
@@ -103,6 +105,17 @@ func (o *JoinParams) SetHTTPClient(client *http.Client) {
 	o.HTTPClient = client
 }
 
+// WithOpID adds the opID to the join params
+func (o *JoinParams) WithOpID(opID *string) *JoinParams {
+	o.SetOpID(opID)
+	return o
+}
+
+// SetOpID adds the opId to the join params
+func (o *JoinParams) SetOpID(opID *string) {
+	o.OpID = opID
+}
+
 // WithConfig adds the config to the join params
 func (o *JoinParams) WithConfig(config *models.TaskJoinConfig) *JoinParams {
 	o.SetConfig(config)
@@ -119,6 +132,15 @@ func (o *JoinParams) WriteToRequest(r runtime.ClientRequest, reg strfmt.Registry
 
 	r.SetTimeout(o.timeout)
 	var res []error
+
+	if o.OpID != nil {
+
+		// header param Op-ID
+		if err := r.SetHeaderParam("Op-ID", *o.OpID); err != nil {
+			return err
+		}
+
+	}
 
 	if o.Config == nil {
 		o.Config = new(models.TaskJoinConfig)

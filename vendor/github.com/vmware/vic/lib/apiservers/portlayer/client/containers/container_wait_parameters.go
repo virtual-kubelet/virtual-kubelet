@@ -61,6 +61,8 @@ for the container wait operation typically these are written to a http.Request
 */
 type ContainerWaitParams struct {
 
+	/*OpID*/
+	OpID *string
 	/*ID*/
 	ID string
 	/*Timeout*/
@@ -104,6 +106,17 @@ func (o *ContainerWaitParams) SetHTTPClient(client *http.Client) {
 	o.HTTPClient = client
 }
 
+// WithOpID adds the opID to the container wait params
+func (o *ContainerWaitParams) WithOpID(opID *string) *ContainerWaitParams {
+	o.SetOpID(opID)
+	return o
+}
+
+// SetOpID adds the opId to the container wait params
+func (o *ContainerWaitParams) SetOpID(opID *string) {
+	o.OpID = opID
+}
+
 // WithID adds the id to the container wait params
 func (o *ContainerWaitParams) WithID(id string) *ContainerWaitParams {
 	o.SetID(id)
@@ -131,6 +144,15 @@ func (o *ContainerWaitParams) WriteToRequest(r runtime.ClientRequest, reg strfmt
 
 	r.SetTimeout(o.requestTimeout)
 	var res []error
+
+	if o.OpID != nil {
+
+		// header param Op-ID
+		if err := r.SetHeaderParam("Op-ID", *o.OpID); err != nil {
+			return err
+		}
+
+	}
 
 	// path param id
 	if err := r.SetPathParam("id", o.ID); err != nil {

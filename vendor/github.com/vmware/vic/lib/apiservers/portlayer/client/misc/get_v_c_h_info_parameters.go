@@ -19,7 +19,7 @@ import (
 // NewGetVCHInfoParams creates a new GetVCHInfoParams object
 // with the default values initialized.
 func NewGetVCHInfoParams() *GetVCHInfoParams {
-
+	var ()
 	return &GetVCHInfoParams{
 
 		timeout: cr.DefaultTimeout,
@@ -29,7 +29,7 @@ func NewGetVCHInfoParams() *GetVCHInfoParams {
 // NewGetVCHInfoParamsWithTimeout creates a new GetVCHInfoParams object
 // with the default values initialized, and the ability to set a timeout on a request
 func NewGetVCHInfoParamsWithTimeout(timeout time.Duration) *GetVCHInfoParams {
-
+	var ()
 	return &GetVCHInfoParams{
 
 		timeout: timeout,
@@ -39,7 +39,7 @@ func NewGetVCHInfoParamsWithTimeout(timeout time.Duration) *GetVCHInfoParams {
 // NewGetVCHInfoParamsWithContext creates a new GetVCHInfoParams object
 // with the default values initialized, and the ability to set a context for a request
 func NewGetVCHInfoParamsWithContext(ctx context.Context) *GetVCHInfoParams {
-
+	var ()
 	return &GetVCHInfoParams{
 
 		Context: ctx,
@@ -49,7 +49,7 @@ func NewGetVCHInfoParamsWithContext(ctx context.Context) *GetVCHInfoParams {
 // NewGetVCHInfoParamsWithHTTPClient creates a new GetVCHInfoParams object
 // with the default values initialized, and the ability to set a custom HTTPClient for a request
 func NewGetVCHInfoParamsWithHTTPClient(client *http.Client) *GetVCHInfoParams {
-
+	var ()
 	return &GetVCHInfoParams{
 		HTTPClient: client,
 	}
@@ -59,6 +59,10 @@ func NewGetVCHInfoParamsWithHTTPClient(client *http.Client) *GetVCHInfoParams {
 for the get v c h info operation typically these are written to a http.Request
 */
 type GetVCHInfoParams struct {
+
+	/*OpID*/
+	OpID *string
+
 	timeout    time.Duration
 	Context    context.Context
 	HTTPClient *http.Client
@@ -97,11 +101,31 @@ func (o *GetVCHInfoParams) SetHTTPClient(client *http.Client) {
 	o.HTTPClient = client
 }
 
+// WithOpID adds the opID to the get v c h info params
+func (o *GetVCHInfoParams) WithOpID(opID *string) *GetVCHInfoParams {
+	o.SetOpID(opID)
+	return o
+}
+
+// SetOpID adds the opId to the get v c h info params
+func (o *GetVCHInfoParams) SetOpID(opID *string) {
+	o.OpID = opID
+}
+
 // WriteToRequest writes these params to a swagger request
 func (o *GetVCHInfoParams) WriteToRequest(r runtime.ClientRequest, reg strfmt.Registry) error {
 
 	r.SetTimeout(o.timeout)
 	var res []error
+
+	if o.OpID != nil {
+
+		// header param Op-ID
+		if err := r.SetHeaderParam("Op-ID", *o.OpID); err != nil {
+			return err
+		}
+
+	}
 
 	if len(res) > 0 {
 		return errors.CompositeValidationError(res...)

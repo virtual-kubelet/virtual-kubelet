@@ -19,7 +19,7 @@ import (
 // NewVolumeStoresListParams creates a new VolumeStoresListParams object
 // with the default values initialized.
 func NewVolumeStoresListParams() *VolumeStoresListParams {
-
+	var ()
 	return &VolumeStoresListParams{
 
 		timeout: cr.DefaultTimeout,
@@ -29,7 +29,7 @@ func NewVolumeStoresListParams() *VolumeStoresListParams {
 // NewVolumeStoresListParamsWithTimeout creates a new VolumeStoresListParams object
 // with the default values initialized, and the ability to set a timeout on a request
 func NewVolumeStoresListParamsWithTimeout(timeout time.Duration) *VolumeStoresListParams {
-
+	var ()
 	return &VolumeStoresListParams{
 
 		timeout: timeout,
@@ -39,7 +39,7 @@ func NewVolumeStoresListParamsWithTimeout(timeout time.Duration) *VolumeStoresLi
 // NewVolumeStoresListParamsWithContext creates a new VolumeStoresListParams object
 // with the default values initialized, and the ability to set a context for a request
 func NewVolumeStoresListParamsWithContext(ctx context.Context) *VolumeStoresListParams {
-
+	var ()
 	return &VolumeStoresListParams{
 
 		Context: ctx,
@@ -49,7 +49,7 @@ func NewVolumeStoresListParamsWithContext(ctx context.Context) *VolumeStoresList
 // NewVolumeStoresListParamsWithHTTPClient creates a new VolumeStoresListParams object
 // with the default values initialized, and the ability to set a custom HTTPClient for a request
 func NewVolumeStoresListParamsWithHTTPClient(client *http.Client) *VolumeStoresListParams {
-
+	var ()
 	return &VolumeStoresListParams{
 		HTTPClient: client,
 	}
@@ -59,6 +59,10 @@ func NewVolumeStoresListParamsWithHTTPClient(client *http.Client) *VolumeStoresL
 for the volume stores list operation typically these are written to a http.Request
 */
 type VolumeStoresListParams struct {
+
+	/*OpID*/
+	OpID *string
+
 	timeout    time.Duration
 	Context    context.Context
 	HTTPClient *http.Client
@@ -97,11 +101,31 @@ func (o *VolumeStoresListParams) SetHTTPClient(client *http.Client) {
 	o.HTTPClient = client
 }
 
+// WithOpID adds the opID to the volume stores list params
+func (o *VolumeStoresListParams) WithOpID(opID *string) *VolumeStoresListParams {
+	o.SetOpID(opID)
+	return o
+}
+
+// SetOpID adds the opId to the volume stores list params
+func (o *VolumeStoresListParams) SetOpID(opID *string) {
+	o.OpID = opID
+}
+
 // WriteToRequest writes these params to a swagger request
 func (o *VolumeStoresListParams) WriteToRequest(r runtime.ClientRequest, reg strfmt.Registry) error {
 
 	r.SetTimeout(o.timeout)
 	var res []error
+
+	if o.OpID != nil {
+
+		// header param Op-ID
+		if err := r.SetHeaderParam("Op-ID", *o.OpID); err != nil {
+			return err
+		}
+
+	}
 
 	if len(res) > 0 {
 		return errors.CompositeValidationError(res...)

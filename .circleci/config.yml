@@ -17,7 +17,7 @@ jobs:
           echo 'export KUBECONFIG=${outputPathKubeConfigFile}' >> $BASH_ENV
       - run:
           name: Dependencies
-          command: go get -v -t -d ./...
+          command: scripts/validate/dep.sh
       - run:
           name: Build
           command: V=1 make build

@@ -81,6 +81,8 @@ for the container remove operation typically these are written to a http.Request
 */
 type ContainerRemoveParams struct {
 
+	/*OpID*/
+	OpID *string
 	/*Force*/
 	Force *bool
 	/*ID*/
@@ -126,6 +128,17 @@ func (o *ContainerRemoveParams) SetHTTPClient(client *http.Client) {
 	o.HTTPClient = client
 }
 
+// WithOpID adds the opID to the container remove params
+func (o *ContainerRemoveParams) WithOpID(opID *string) *ContainerRemoveParams {
+	o.SetOpID(opID)
+	return o
+}
+
+// SetOpID adds the opId to the container remove params
+func (o *ContainerRemoveParams) SetOpID(opID *string) {
+	o.OpID = opID
+}
+
 // WithForce adds the force to the container remove params
 func (o *ContainerRemoveParams) WithForce(force *bool) *ContainerRemoveParams {
 	o.SetForce(force)
@@ -164,6 +177,15 @@ func (o *ContainerRemoveParams) WriteToRequest(r runtime.ClientRequest, reg strf
 
 	r.SetTimeout(o.timeout)
 	var res []error
+
+	if o.OpID != nil {
+
+		// header param Op-ID
+		if err := r.SetHeaderParam("Op-ID", *o.OpID); err != nil {
+			return err
+		}
+
+	}
 
 	if o.Force != nil {
 
