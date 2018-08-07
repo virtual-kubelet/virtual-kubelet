@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"os"
 	"reflect"
@@ -1150,4 +1151,50 @@ func getACIEnvVar(e v1.EnvVar) aci.EnvironmentVariable {
 		}
 	}
 	return envVar
+}
+
+func containsPort(exposedPorts []aci.Port, port int32) bool {
+	for _, p := range exposedPorts {
+		if p.Port == port {
+			return true
+		}
+	}
+	return false
+}
+
+func (p *ACIProvider) PortForward(name string, uid types.UID, port int32, stream io.ReadWriteCloser) error {
+	cg, err, _ := p.aciClient.GetContainerGroup(p.resourceGroup, name)
+	if err != nil {
+		return fmt.Errorf("unable to obtain pod info: %s", err)
+	}
+	if cg.IPAddress == nil {
+		return fmt.Errorf("no IP Address exposed for pod")
+	}
+	if !containsPort(cg.IPAddress.Ports, port) {
+		return fmt.Errorf("port not exposed: %d", port)
+	}
+	fmt.Printf("conencting to %s", fmt.Sprintf("%s:%d", cg.IPAddress.IP, port))
+	// open a connection to IP Address on port
+	conn, err := net.Dial("tcp", fmt.Sprintf("%s:%d", cg.IPAddress.IP, port))
+	if err != nil {
+		return fmt.Errorf("unable to open connection: %s", err)
+	}
+	defer conn.Close()
+	errs := make(chan error)
+	go func() {
+		defer stream.Close()
+		fmt.Printf("Writing to stream")
+		_, err := io.Copy(stream, conn)
+		if err != nil {
+			errs <- err
+		} else {
+			errs <- nil
+		}
+	}()
+	buf := make([]byte, 1024)
+	_, err = io.CopyBuffer(conn, stream, buf)
+	if err != nil {
+		return err
+	}
+	return <-errs
 }

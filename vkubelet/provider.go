@@ -61,3 +61,9 @@ type Provider interface {
 type MetricsProvider interface {
 	GetStatsSummary(context.Context) (*stats.Summary, error)
 }
+
+// PortForwarder is an optional interface that providers can declare if they support port forwarding
+type PortForwarder interface {
+	// PortForward forwards a port from virtual-kubelet to the pod
+	PortForward(name string, uid types.UID, port int32, stream io.ReadWriteCloser) error
+}

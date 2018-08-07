@@ -1331,6 +1331,7 @@
     "pkg/apis/core",
     "pkg/kubelet/apis/cri/runtime/v1alpha2",
     "pkg/kubelet/apis/stats/v1alpha1",
+    "pkg/kubelet/server/portforward",
     "pkg/kubelet/server/remotecommand",
   ]
   pruneopts = "NUT"
@@ -1434,6 +1435,7 @@
     "k8s.io/client-go/tools/remotecommand",
     "k8s.io/kubernetes/pkg/kubelet/apis/cri/runtime/v1alpha2",
     "k8s.io/kubernetes/pkg/kubelet/apis/stats/v1alpha1",
+    "k8s.io/kubernetes/pkg/kubelet/server/portforward",
     "k8s.io/kubernetes/pkg/kubelet/server/remotecommand",
   ]
   solver-name = "gps-cdcl"

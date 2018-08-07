@@ -15,6 +15,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/pkg/errors"
 	"github.com/virtual-kubelet/virtual-kubelet/log"
+	"k8s.io/kubernetes/pkg/kubelet/server/portforward"
 	"k8s.io/kubernetes/pkg/kubelet/server/remotecommand"
 )
 
@@ -50,6 +51,7 @@ func KubeletServerStart(p Provider) {
 	s := &KubeletServer{p: p}
 	r.HandleFunc("/containerLogs/{namespace}/{pod}/{container}", s.ApiServerHandler).Methods("GET")
 	r.HandleFunc("/exec/{namespace}/{pod}/{container}", s.ApiServerHandlerExec).Methods("POST")
+	r.HandleFunc("/portForward/{namespace}/{pod}", s.ApiServerHandlerPortForward).Methods("POST")
 	r.NotFoundHandler = http.HandlerFunc(NotFound)
 
 	if err := http.ListenAndServeTLS(addr, certFilePath, keyFilePath, r); err != nil {
@@ -177,4 +179,17 @@ func (s *KubeletServer) ApiServerHandlerExec(w http.ResponseWriter, req *http.Re
 	streamCreationTimeout := time.Second * 30
 
 	remotecommand.ServeExec(w, req, s.p, fmt.Sprintf("%s-%s", namespace, pod), "", container, command, streamOpts, idleTimeout, streamCreationTimeout, supportedStreamProtocols)
+}
+
+func (s *KubeletServer) ApiServerHandlerPortForward(w http.ResponseWriter, req *http.Request) {
+	pf, ok := s.p.(PortForwarder)
+	if ok {
+		vars := mux.Vars(req)
+		namespace := vars["namespace"]
+		pod := vars["pod"]
+		portforward.ServePortForward(w, req, pf, fmt.Sprintf("%s-%s", namespace, pod), "", nil, time.Second*60, time.Second*60, []string{})
+	} else {
+		// Port Forward is Not Supported By This Provider, return a 501.
+		http.Error(w, "port-forward not supported", 501)
+	}
 }
