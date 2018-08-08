@@ -1,0 +1,5 @@
+#!/bin/sh
+
+# Allow access to VM uuid for self-reflection
+chmod 444 /sys/devices/virtual/dmi/id/product_serial
+chmod 444 /sys/class/dmi/id/product_serial

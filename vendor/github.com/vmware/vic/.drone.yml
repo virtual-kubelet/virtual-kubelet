@@ -1,0 +1,419 @@
+
+workspace:
+
+  base: /go
+  path: src/github.com/vmware/vic
+
+clone:
+  git:
+    image: plugins/git
+    tags: true
+    recursive: false
+
+pipeline:
+
+  display-status:
+    image: 'wdc-harbor-ci.eng.vmware.com/default-project/vic-integration-test:1.48'
+    pull: true
+    environment:
+      BIN: bin
+      SHELL: /bin/bash
+    commands:
+      - 'export COMMIT=${DRONE_COMMIT}'
+      - 'echo "Expecting ${DRONE_COMMIT}"'
+      - 'git log -5'
+      - 'git log -1 --pretty=oneline | grep "^${DRONE_COMMIT}" > /dev/null && echo ''Build matches'' || (git log -1 --pretty=oneline | grep "Merge ${DRONE_COMMIT}" > /dev/null && echo ''Build is of a merge commit'' || (echo ''Build does not match!'' && exit 1))'
+
+  wait-for-build:
+    image: 'wdc-harbor-ci.eng.vmware.com/default-project/vic-integration-test:1.48'
+    pull: true
+    environment:
+      BIN: bin
+      GOPATH: /go
+      SHELL: /bin/bash
+    secrets:
+      - drone_server
+      - drone_token
+      - haas_url_array
+      - overflow_url_array
+    commands:
+      - export TEST_URL_ARRAY="$HAAS_URL_ARRAY $OVERFLOW_URL_ARRAY"
+      - tests/wait_until_previous_builds_complete.sh
+
+  check-org-membership:
+    image: 'wdc-harbor-ci.eng.vmware.com/default-project/vic-integration-test:1.48'
+    pull: true
+    environment:
+      BIN: bin
+      GOPATH: /go
+      SHELL: /bin/bash
+    secrets:
+      - github_automation_api_key
+      - skip_check_membership
+    commands:
+      - echo ${DRONE_COMMIT_AUTHOR}
+      - echo $SKIP_CHECK_MEMBERSHIP
+      - if [ "$SKIP_CHECK_MEMBERSHIP" = "true" ]; then echo 'check-org-membership step skipped'; else /bin/bash -c '[[ ! $(curl --silent "https://api.github.com/orgs/vmware/members/${DRONE_COMMIT_AUTHOR}?access_token=$GITHUB_AUTOMATION_API_KEY") ]]'; fi
+    when:
+      status: success
+
+  vic-engine:
+    image: 'wdc-harbor-ci.eng.vmware.com/default-project/vic-integration-test:1.48'
+    pull: true
+    environment:
+      BIN: bin
+      GOPATH: /go
+      SHELL: /bin/bash
+    secrets:
+      - drone_server
+      - drone_token
+      - github_automation_api_key
+      - codecov_token
+    commands:
+      - export BUILD_NUMBER=${DRONE_BUILD_NUMBER}
+      - make all
+      - tests/unit-test-check.sh
+    when:
+      status: success
+
+  vic-integration-test-on-pr:
+    image: 'wdc-harbor-ci.eng.vmware.com/default-project/vic-integration-test:1.48'
+    pull: true
+    privileged: true
+    environment:
+      BIN: bin
+      GOPATH: /go
+      SHELL: /bin/bash
+      LOG_TEMP_DIR: install-logs
+    secrets:
+      - ci_domain
+      - debug_vch
+      - drone_server
+      - drone_token
+      - drone_machine
+      - github_automation_api_key
+      - gs_client_email
+      - gs_private_key
+      - gs_project_id
+      - public_network
+      - registry_password
+      - reporting_server_url
+      - syslog_passwd
+      - syslog_server
+      - syslog_user
+      - test_datastore
+      - test_resource
+      - test_timeout
+      - test_password
+      - test_username
+      - haas_url_array
+      - overflow_test_timeout
+      - overflow_url_array
+      - ssh_test_username
+      - ssh_test_password
+      - vch_ops_username
+      - vch_ops_password
+    commands:
+      - export GOVC_INSECURE=true
+      - export GOVC_USERNAME=$TEST_USERNAME
+      - export GOVC_PASSWORD=$TEST_PASSWORD
+      - export GOVC_DATASTORE=$TEST_DATASTORE
+      - export DOMAIN=$CI_DOMAIN
+      - export MULTI_VCH=1
+      - echo $DOMAIN
+      - export TEST_URL_ARRAY="$HAAS_URL_ARRAY $OVERFLOW_URL_ARRAY"
+      - tests/integration-test.sh
+    volumes:
+      - /tmp
+    when:
+      status: success
+
+  vic-ui:
+    image: 'wdc-harbor-ci.eng.vmware.com/default-project/vic-integration-test:1.48'
+    pull: true
+    environment:
+     BIN: bin
+    secrets:
+      - gs_client_email
+      - gs_private_key
+      - gs_project_id
+    commands:
+      - 'export BUILD_NUMBER=${DRONE_BUILD_NUMBER}'
+      - 'mkdir -p $BIN/ui'
+      - 'export LATEST_VIC_UI_BUILD="$(gsutil ls -l ''gs://vic-ui-builds'' | grep -v TOTAL | grep vic_ | sort -k2 -r | (trap '' '' PIPE; head -1))"'
+      - 'export VIC_UI_URL=$(echo $LATEST_VIC_UI_BUILD | xargs | cut -d " " -f 3 | sed "s|gs://|https://storage.googleapis.com/|")'
+      - 'wget -nv $VIC_UI_URL -P $BIN'
+      - 'tar -xvzf $BIN/vic_ui_*.tar.gz'
+      - 'ls -la ./$BIN && ./$BIN/ui/sync-vic-ui-version.sh -p bin/ 2>&1'
+      - 'rm $BIN/vic_ui_*.tar.gz'
+    when:
+      event: [push, pull_request]
+      status: [success, failure]
+
+  vic-ui-release:
+    image: 'wdc-harbor-ci.eng.vmware.com/default-project/vic-integration-test:1.48'
+    pull: true
+    environment:
+      BIN: bin
+    secrets:
+      - gs_client_email
+      - gs_private_key
+      - gs_project_id
+    commands:
+      - 'export BUILD_NUMBER=${DRONE_BUILD_NUMBER}'
+      - 'mkdir -p $BIN/ui'
+      - 'export LATEST_VIC_UI_RELEASE="$(gsutil ls -l ''gs://vic-ui-releases'' | grep -v TOTAL | grep vic_ | sort -k2 -r | (trap '' '' PIPE; head -1))"'
+      - 'export VIC_UI_URL=$(echo $LATEST_VIC_UI_RELEASE | xargs | cut -d " " -f 3 | sed "s|gs://|https://storage.googleapis.com/|")'
+      - 'wget -nv $VIC_UI_URL -P $BIN'
+      - 'tar -xvzf $BIN/vic_ui_*.tar.gz'
+      - 'ls -la ./$BIN && ./$BIN/ui/sync-vic-ui-version.sh -p bin/ 2>&1'
+      - 'rm $BIN/vic_ui_*.tar.gz'
+    when:
+      branch: ['releases/*']
+      event: tag
+
+  bundle:
+    image: 'wdc-harbor-ci.eng.vmware.com/default-project/golang:1.8'
+    pull: true
+    environment:
+      BIN: bin
+      BIN_TEMP_DIR: bin/vic
+      GOPATH: /go
+      SHELL: /bin/bash
+    commands:
+      - 'rm -rf $BIN_TEMP_DIR'
+      - 'mkdir -p $BIN_TEMP_DIR'
+      - 'mv $BIN/ui $BIN_TEMP_DIR'
+      - 'cp LICENSE $BIN_TEMP_DIR'
+      - 'cp doc/bundle/README $BIN_TEMP_DIR'
+      - 'cp $BIN/vic-machine* $BIN_TEMP_DIR'
+      - 'cp $BIN/vic-ui* $BIN_TEMP_DIR'
+      - 'cp $BIN/appliance.iso $BIN_TEMP_DIR'
+      - 'cp $BIN/bootstrap.iso $BIN_TEMP_DIR'
+      - 'mkdir -p $BIN_TEMP_DIR/autocomplete/bash'
+      - 'cp infra/scripts/bash_autocomplete $BIN_TEMP_DIR/autocomplete/bash/vic-machine-darwin'
+      - 'cp infra/scripts/bash_autocomplete $BIN_TEMP_DIR/autocomplete/bash/vic-machine-linux'
+      - 'cp infra/scripts/bash_autocomplete $BIN_TEMP_DIR/autocomplete/bash/vic-machine-windows.exe'
+      - 'mkdir -p $BIN_TEMP_DIR/autocomplete/zsh'
+      - 'cp infra/scripts/zsh_autocomplete $BIN_TEMP_DIR/autocomplete/zsh/vic-machine-darwin'
+      - 'cp infra/scripts/zsh_autocomplete $BIN_TEMP_DIR/autocomplete/zsh/vic-machine-linux'
+      - 'cp infra/scripts/zsh_autocomplete $BIN_TEMP_DIR/autocomplete/zsh/vic-machine-windows.exe'
+      - 'tar czvf $BIN/vic_${DRONE_BUILD_NUMBER}.tar.gz -C $BIN vic'
+      - 'shasum -a 256 $BIN/vic_${DRONE_BUILD_NUMBER}.tar.gz'
+      - 'shasum -a 1 $BIN/vic_${DRONE_BUILD_NUMBER}.tar.gz'
+      - 'md5sum $BIN/vic_${DRONE_BUILD_NUMBER}.tar.gz'
+      - 'du -ks $BIN/vic_${DRONE_BUILD_NUMBER}.tar.gz | awk ''{print $1 / 1024}'' | { read x; echo $x MB; }'
+      - 'mkdir bundle'
+      - 'mkdir bundle-release'
+      - 'cp $BIN/vic_${DRONE_BUILD_NUMBER}.tar.gz bundle'
+      - 'cp $BIN/vic_${DRONE_BUILD_NUMBER}.tar.gz bundle-release/vic_$(git describe --tags --abbrev=0).tar.gz'
+    when:
+      repo: vmware/vic
+      status: [success, failure]
+
+  publish-gcs-builds-for-pr:
+    image: 'victest/drone-gcs:1'
+    pull: true
+    secrets:
+      - google_key
+    source: bundle
+    target: vic-engine-pr-builds/pull/${DRONE_PULL_REQUEST}/
+    acl:
+      - 'allUsers:READER'
+    cache_control: 'public,max-age=3600'
+    when:
+      repo: vmware/vic
+      event: pull_request
+      status: success
+
+  publish-gcs-builds-on-master-push-pass:
+    image: 'victest/drone-gcs:1'
+    pull: true
+    secrets:
+      - google_key
+    source: bundle
+    target: vic-engine-builds/
+    acl:
+      - 'allUsers:READER'
+    cache_control: 'public,max-age=3600'
+    when:
+      repo: vmware/vic
+      event: push
+      branch: [master]
+      status: success
+
+  publish-gcs-builds-on-release-push-pass:
+    image: 'victest/drone-gcs:1'
+    pull: true
+    secrets:
+      - google_key
+    source: bundle
+    target: vic-engine-builds/${DRONE_BRANCH}/
+    acl:
+      - 'allUsers:READER'
+    cache_control: 'public,max-age=3600'
+    when:
+      repo: vmware/vic
+      event: push
+      branch: ['releases/*']
+      status: success
+
+  publish-gcs-builds-on-fail:
+    image: 'victest/drone-gcs:1'
+    pull: true
+    secrets:
+      - google_key
+    source: bundle
+    target: vic-engine-failed-builds/
+    acl:
+      - 'allUsers:READER'
+    cache_control: 'public,max-age=3600'
+    when:
+      repo: vmware/vic
+      event: [push, tag]
+      branch: [master, 'releases/*']
+      status: failure
+
+  publish-gcs-releases:
+    image: 'victest/drone-gcs:1'
+    pull: true
+    secrets:
+      - google_key
+    source: bundle-release
+    target: vic-engine-releases/
+    acl:
+      - 'allUsers:READER'
+    cache_control: 'public,max-age=3600'
+    when:
+      repo: vmware/vic
+      branch: ['releases/*']
+      event: tag
+      status: success
+
+  vic-machine-server-tags-dev:
+    image: 'wdc-harbor-ci.eng.vmware.com/default-project/vic-integration-test:1.48'
+    pull: true
+    environment:
+      BIN: bin
+      SHELL: /bin/bash
+    commands:
+      - 'echo -n "$(git describe --tags --abbrev=0)-${DRONE_BUILD_NUMBER}-$(git rev-parse --short=8 HEAD)" > .tags;'
+      - 'if [ -n "$(echo "${DRONE_BRANCH}" | grep "master")" ]; then echo ",dev" >> .tags; fi'
+      - 'cat .tags'
+    when:
+      repo: vmware/vic
+      event: push
+      branch: [master, 'releases/*']
+      status: success
+
+  vic-machine-server-tags-release:
+    image: 'wdc-harbor-ci.eng.vmware.com/default-project/vic-integration-test:1.48'
+    pull: true
+    environment:
+      BIN: bin
+      SHELL: /bin/bash
+    commands:
+      - 'echo -n "$(git describe --tags --abbrev=0)-${DRONE_BUILD_NUMBER}-$(git rev-parse --short=8 HEAD),$(git describe --tags --abbrev=0),latest" > .tags;'
+      - 'cat .tags'
+    when:
+      repo: vmware/vic
+      event: tag
+      branch: 'releases/*'
+      status: success
+
+  vic-machine-server-publish:
+    image: plugins/gcr
+    pull: true
+    repo: eminent-nation-87317/vic-machine-server
+    dockerfile: cmd/vic-machine-server/Dockerfile
+    custom_dns: 10.142.7.21, 10.142.7.22, 10.166.17.90
+    secrets: [ token ]
+    when:
+      repo: vmware/vic
+      event: [push, tag]
+      branch: [master, 'releases/*']
+      status: success
+
+  trigger-downstream:
+    image: 'gcr.io/eminent-nation-87317/vic-downstream-trigger:1.3'
+    environment:
+      SHELL: /bin/bash
+      DOWNSTREAM_REPO: vmware/vic-product
+      DOWNSTREAM_BRANCH: ${DRONE_BRANCH}
+    secrets:
+      - drone_server
+      - drone_token
+    when:
+      repo: vmware/vic
+      event: [push]
+      branch: [master]
+      status: success
+
+  trigger-downstream-tag:
+    image: 'gcr.io/eminent-nation-87317/vic-downstream-trigger:1.3'
+    environment:
+      SHELL: /bin/bash
+      DOWNSTREAM_REPO: vmware/vic-product
+      DOWNSTREAM_BRANCH: ${DRONE_BRANCH}
+    secrets:
+      - drone_server
+      - drone_token
+    when:
+      repo: vmware/vic
+      event: [tag]
+      branch: [master, 'releases/*']
+      status: success
+
+  notify-slack-on-fail:
+    image: plugins/slack
+    secrets:
+      - source: slack_url
+        target: slack_webhook
+    username: drone
+    template: "Build https://ci-vic.vmware.com/vmware/vic/{{ build.number }} by {{ build.author }} finished with a {{ build.status }} status. Logs: https://console.cloud.google.com/m/cloudstorage/b/vic-ci-logs/o/integration_logs_{{ build.number }}_{{ build.commit }}.zip?authuser=1\n"
+    when:
+      repo: vmware/vic
+      event: [push, tag]
+      branch: [master, 'releases/*']
+      status: failure
+
+  notify-slack-on-pass:
+    image: plugins/slack
+    secrets:
+      - source: slack_url
+        target: slack_webhook
+    username: drone
+    template: "Build https://ci-vic.vmware.com/vmware/vic/{{ build.number }} by {{ build.author }} finished with a {{ build.status }} status, find the build at: https://storage.googleapis.com/vic-engine-builds/vic_{{ build.number }}.tar.gz\n"
+    when:
+      repo: vmware/vic
+      event: push
+      branch: [master, 'releases/*']
+      status: success
+
+  notify-slack-on-successful-tag:
+    image: plugins/slack
+    secrets:
+      - source: slack_url
+        target: slack_webhook
+    username: drone
+    template: "The latest version of VIC engine has been released, find the build here: https://console.cloud.google.com/storage/browser/vic-engine-releases\n"
+    when:
+      repo: vmware/vic
+      branch: ['releases/*']
+      event: tag
+      status: success
+
+  pass-rate:
+    image: 'wdc-harbor-ci.eng.vmware.com/default-project/vic-pass-rate:1.0'
+    pull: true
+    environment:
+      BIN: bin
+      SHELL: /bin/bash
+    secrets:
+      - github_automation_api_key
+      - slack_url
+    when:
+      repo: vmware/vic
+      event: [push, tag]
+      branch: [master, 'releases/*']
+      status: [success, failure]

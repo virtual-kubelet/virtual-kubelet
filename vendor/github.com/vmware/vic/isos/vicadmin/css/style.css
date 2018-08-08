@@ -1,0 +1,22 @@
+.main-nav .header {background-color: #004A70;}
+.header .github {position: absolute; right:18px; top:6px;}
+.header .logout {position: absolute; right:210px; top:6px}
+.header .icon-github-circled {font-size:20px}
+.header .icon-logout {font-size:20px}
+
+section {width: 100%; padding-left: 24px; padding-right: 24px; max-width: 1056px; margin: 0 auto; padding-top: 24px;}
+.community-top-section {padding-top: 0;}
+
+
+.card .row {margin:0 18px 10px;}
+.sixty {width:60%; margin-right:5px;}
+.forty {width:35%;}
+.center{ float:none; margin-left:auto; margin-right:auto;}
+.right {float:right; margin-right:18px;}
+li .right {margin-right:120px}
+
+.icon-ok {color:#62A420;}
+.icon-attention {color:#EB8D00;}
+.error-message {color:#c92100; font-size:12px; line-height:12px; display:block; margin-bottom:8px;}
+
+form {padding-top:0;}

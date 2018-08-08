@@ -1,0 +1,11 @@
+[Unit]
+Description=NAT setup for bridge network
+After=iptables.service
+
+[Service]
+Type=oneshot
+ExecStart=/etc/systemd/scripts/nat-setup
+RemainAfterExit=yes
+
+[Install]
+WantedBy=vic.target

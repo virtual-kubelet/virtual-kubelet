@@ -1,0 +1,14 @@
+# This is a GitHub CODEOWNERS file
+# See https://help.github.com/articles/about-codeowners/ for more information
+
+# Default group from which to request review for all pull requests.
+*				@vmware/vic-maintainers
+
+# Changes to this file should be reviewed by an admin
+/.github/CODEOWNERS		@vmware/vic-admins
+
+# Changes to documentation should be reviewed by someone from our IX team
+/doc/				@stuclem @alextopuzov
+
+# Changes to design documentation should be reviewed by our architect instead of IX
+/doc/design/			@hickeng

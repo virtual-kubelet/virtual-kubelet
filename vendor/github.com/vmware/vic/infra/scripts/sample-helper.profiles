@@ -1,0 +1,70 @@
+#!/bin/bash
+
+# example entry, actived by typing "my-vch"
+# multiple argument variables where those arguments may contain spaces are arrays to allow for proper quoting
+#  - array variables must be exported in a separate command
+#
+my-vch () {
+    ## first is some boiler plate that is common to all profiles
+    #   clear any settings from a different profile
+    #   set the variable $vch_name to the name of the profile
+    init-profile
+
+    ## below here are the profile specific variables
+    #
+    #   vSphere target
+    vsphere='host.domain.com'
+    datacenter='datacenter'
+    user='username'
+    password='password'
+
+    # uncomment opsuser and opspass if user/password above should not be used for ongoing vch operations
+    #opsuser='ops-user'
+    #opspass='ops-password'
+    # uncomment to automatically grant appropriate privileges to the ops user
+    #opsgrant=1
+
+    timeout=10m
+
+    # uncomment if values in target are ambiguous without specifics, i.e. more than one of each
+    #compute='cluster/pool'
+    #datastore='datastore1'
+
+    # uncomment for non-default (google) DNS servers
+    #dns=("8.8.8.8" "8.8.4.4")
+
+    # uncomment for non-default values or non-DHCP environment
+    #publicNet="VM Network"
+    #publicIP=vch-hostname.domain.com/24
+    #publicGW=x.x.x.x
+
+    #bridgeNet="set-if-vcenter"
+
+    #bridgeRange=172.16.0.0/12
+    #clientNet='not-the-same-as-public'
+    #clientIP=x.x.x.x/24
+    #clientGW=x.x.x.1
+    #managementNet='not-the-same-as-public'
+    #managementIP=x.x.x.x/24
+    #managementGW=a.a.a.a/24,b.b.b.b/24,x.x.x.x
+
+    # TLS optons - defaults to a wildcard on the current system domain and setting the certificate descriptions to the
+    # local computer hostname and the profile name
+    # Requires DNS resolution for local domain addresses - uncomment for DHCP TLS
+    #tls=("--tls-cname=*.$(domainname)")
+    tls+=("--organization=${vch_name}" "--organization=$(hostname)")
+    # Uncomment to disable TLS
+    #tls=("--no-tls")
+
+    # add two volume stores
+    #  "default" enables anonymous volumes and is the default if -opt VolumeStore=name is not specified
+    #  "non-default" is just a second volume store for easy use/testing
+
+    # uncomment preserveVolumestores if the stores should not be deleted by default during vic-delete
+    volumestores=("--volume-store=${datastore:-datastore1}/${vch_name}_default_vols:default" "--volume-store=${datastore:-datastore1}/${vch_name}_non-default_vols:non-default")
+    #preserveVolumestores=1
+
+    # adds a DHCP container network on the same vSwitch/Portgroup as the publicNet. If publicNet is static then this needs the additional network options
+    # added to the array
+    containernet=("--container-network=${publicNet:-VM Network}:public")
+}

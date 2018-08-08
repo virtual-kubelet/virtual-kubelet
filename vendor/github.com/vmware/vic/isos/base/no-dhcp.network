@@ -1,0 +1,5 @@
+[Match]
+Name=*
+
+[Network]
+DHCP=no

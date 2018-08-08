@@ -1,0 +1,96 @@
+EXEC PROCESS FINITE STATE MACHINE(does not include cvm process/vic-init thought yet... )
+
+STATES(PROCESS OF CVM):
+
+0. Config Initialized -> The task has been establish into exsistence. The config is communicated to the tether and the tether can attempt binary resolution against it. 
+1. Config Validated -> Is the process a legitimate process with legitimate configuration to run AKA `Config Validation` 
+2. Process Ready -> config is validated successfully and the process can be started at any moment.
+3. Process Started/running -> should we have a separate started and running? Running should be sufficient... the process was ready and now it is being allowed to proceed.
+4. Process Exited w/o error -> process has run and has an exit code, this exit code came from the process naturally exiting and not getting a signal;(perhaps the two different Process Exited states are not needed. but could help us to determine if restart/increase audit logging/additional intervention/etc are needed)
+5. Process Exited w/ Error -> the task was cancelled/timed out/failed/signaled prematurely before finishing and was thus terminated by the tether/OS rather than by the process' own means. (perhaps we do not need this distinction. as the FSM is drawn and constructed it should inform further)
+
+Thoughts:
+
+* Do we need s_1? **more input below in the transitions for s_1**
+
+============================================================
+
+S_0 TRANSITIONS:
+
+- s_0 -> s_1 : the binary resolution and config is successfully validated. The config is now validated and we must decide to schedule/make ready the process.
+
+- S_0 -> s_5 : the binary resolution or config validation has failed. The process should be marked as exited or failed by means of the tether/Administration layer. The process cannot be run. 
+
+
+Thoughts: 
+
+* Should we include another s_1 -> s_5 based on a time out for the validation?
+
+
+============================================================
+
+S_1 TRANSITIONS:
+
+- S_1 -> s_2 : Process initializations are made(any kind of scheduling/batching/administrative/application setup).
+
+- S_1 -> s_5 : Failure to perform needed administrative work. 
+
+Thoughts: 
+
+* S_1 may not be needed really. the config validation could be the transition action on it's own. e.g. `config_init` -> `Process ready` : due to config validation and setup based on the config. And scheduling/app setup/admin/etc could be part of the current s_2 -> s_3 transition(launching of the process).
+
+============================================================
+
+S_2 TRANSITIONS: 
+
+- s_2 -> s_3 : Process is launched successfully and is now running.
+
+- S_2 -> s_5 : Inability to launch process(could be due to bad conf validation or other issues such as an OS process setup failure). We will want a timeout here as well 
+
+Thoughts: 
+
+* most likely the only problems here would be resource issues or a sig term received before we launched. 
+
+
+============================================================
+
+S_3 TRANSITIONS: 
+
+- s_3 -> s_4 : Process Ran and successfully exited properly. 
+
+- s_3 -> s_5 : Process signalledby outside actor or intervention(container shutdown could occur here but the state transition won't occur. we have separate logic) 
+
+- s_3 -> s_5 : Process dispatching took too long. Timeout. (unlikely to happen? unless there are a lot being launched...). Could be a self loop(generally what happens in the OS...)
+
+Thoughts: 
+
+* s_3 -> s_5 would naturally also include a mid flight shutdown. But we cannot expect the FSM to make that kind of transition, as such we have outside logic to determine this situation. 
+
+* s_3 -> S_5 due to a timeout could also potentially be a s_3 -> s_3 if we want to reattempt the launch later... perhaps we should have a deadline for the process launch and up until that deadline we reattempt all launces that timeout? This could imply blocking or serializing execs in the tether... or having a max in flight... etc.
+
+============================================================
+
+S_4 TRANSITIONS: 
+
+Thoughts/Notes:
+
+* NO TRANSITIONS: This is an accepting state. If we have reached s_4 along the exec path then we should definitely have an indication of a successful, non-interrupted exec action.
+
+* For NON-EXEC we can definitely move from here to ready to launch again in a restart scenario if we do not power down the container(I need to look into that path...). Otherwise marking S_0 as the start state means we should always initialize back to s_0 when we restart a container(original config... but we do not store this... so perhaps we should have a sane default setup. rc -> 0 or -1 before the s3 -> s4 transition... etc.)
+
+============================================================
+
+S_5 TRANSITIONS: 
+
+Thoughts/Notes : 
+
+ * NO TRANSITIONS: This is the only failure state for the FSM right now. It indicates that some where along the process of performing an exec action we met with an action/scenario that we could not resolve and continue the EXEC. 
+
+
+OVERALL TRANSITION THOUGHTS: 
+
+* A termination signal can come at any point from the portlayer indicating that the exec should be abandoned. This may imply a general transition of `s_x -> s_5 where x does not equal 5`. Each state will likely need to understand the implication of a cancelled exec. Design question: Should we make cancelled a separate state?(personal opinion: Probably not, we should have an audit log. So we should be able to generalize the failure path.)
+
+* This does need to be generalize further for the standard CVM path and the VIC_INIT path. However, one thought along those lines. With a good s_0 definition we can capture the "repeatable" nature of both VIC_INIT and the CVM. Such as log for the "start state transition" which implies that the config for the process always starts in a certain state(default rc, stream setup, consistent audit log state(keeping older entries if we have a ring buffer)) before validation. 
+
+* If we can make a good design without `Config Validated` being a state this is ideal. The less times we we need to update the state book keeping the better as it can be slow. unnecessary slowness should be avoided if possible. May not really matter since we should not be waiting for the `Config Validated` state but would still involve an update to the vmx... 

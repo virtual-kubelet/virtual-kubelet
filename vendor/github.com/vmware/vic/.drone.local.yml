@@ -1,0 +1,45 @@
+workspace:
+  base: /go
+  path: src/github.com/vmware/vic
+
+pipeline:
+  vic-integration-test-on-pr:
+    image: '${TEST_BUILD_IMAGE=gcr.io/eminent-nation-87317/vic-integration-test:1.48}'
+    pull: true
+    environment:
+      BIN: bin
+      GOPATH: /go
+      SHELL: /bin/bash
+      LOG_TEMP_DIR: install-logs
+    secrets:
+      - bridge_network
+      - debug_vch
+      - drone_server
+      - drone_token
+      - drone_machine
+      - github_automation_api_key
+      - gs_client_email
+      - gs_private_key
+      - gs_project_id
+      - public_network
+      - registry_password
+      - reporting_server_url
+      - syslog_passwd
+      - syslog_server
+      - syslog_user
+      - test_datastore
+      - test_resource
+      - test_timeout
+      - test_password
+      - test_url_array
+      - test_username
+    commands:
+      - 'export GOVC_INSECURE=true'
+      - 'export GOVC_USERNAME=${TEST_USERNAME}'
+      - 'export GOVC_PASSWORD=${TEST_PASSWORD}'
+      - 'export GOVC_DATASTORE=${TEST_DATASTORE}'
+      - 'export DOMAIN=${DOMAIN}'
+      - tests/integration-test.sh
+      # - pybot -t "Delete VCH with non-cVM in same RP" tests/test-cases/Group6-VIC-Machine/6-03-Delete.robot
+    volumes:
+      - /tmp
