@@ -69,8 +69,9 @@ func init() {
 
 	// read default node name from environment variable.
 	// it can be overwritten by cli flags if specified.
-	if os.Getenv("DEFAULT_NODE_NAME") != "" {
-		nodeName = os.Getenv("DEFAULT_NODE_NAME")
+	defaultNodeName := os.Getenv("DEFAULT_NODE_NAME")
+	if defaultNodeName == "" {
+		defaultNodeName = "virtual-kubelet"
 	}
 	// Here you will define your flags and configuration settings.
 	// Cobra supports persistent flags, which, if defined here,
@@ -78,7 +79,7 @@ func init() {
 	//RootCmd.PersistentFlags().StringVar(&kubeletConfig, "config", "", "config file (default is $HOME/.virtual-kubelet.yaml)")
 	RootCmd.PersistentFlags().StringVar(&kubeConfig, "kubeconfig", "", "config file (default is $HOME/.kube/config)")
 	RootCmd.PersistentFlags().StringVar(&kubeNamespace, "namespace", "", "kubernetes namespace (default is 'all')")
-	RootCmd.PersistentFlags().StringVar(&nodeName, "nodename", "virtual-kubelet", "kubernetes node name")
+	RootCmd.PersistentFlags().StringVar(&nodeName, "nodename", defaultNodeName, "kubernetes node name")
 	RootCmd.PersistentFlags().StringVar(&operatingSystem, "os", "Linux", "Operating System (Linux/Windows)")
 	RootCmd.PersistentFlags().StringVar(&provider, "provider", "", "cloud provider")
 	RootCmd.PersistentFlags().StringVar(&taint, "taint", "", "apply taint to node, making scheduling explicit")
