@@ -11,16 +11,6 @@ import (
 	"time"
 
 	"github.com/virtual-kubelet/virtual-kubelet/manager"
-	"github.com/virtual-kubelet/virtual-kubelet/providers/aws"
-	"github.com/virtual-kubelet/virtual-kubelet/providers/azure"
-	"github.com/virtual-kubelet/virtual-kubelet/providers/azurebatch"
-	"github.com/virtual-kubelet/virtual-kubelet/providers/cri"
-	"github.com/virtual-kubelet/virtual-kubelet/providers/huawei"
-	"github.com/virtual-kubelet/virtual-kubelet/providers/hypersh"
-	"github.com/virtual-kubelet/virtual-kubelet/providers/mock"
-	"github.com/virtual-kubelet/virtual-kubelet/providers/sfmesh"
-	"github.com/virtual-kubelet/virtual-kubelet/providers/vic"
-	"github.com/virtual-kubelet/virtual-kubelet/providers/web"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -81,60 +71,9 @@ func New(nodeName, operatingSystem, namespace, kubeConfig, taint, provider, prov
 
 	internalIP := os.Getenv("VKUBELET_POD_IP")
 
-	var p Provider
-	switch provider {
-	case "aws":
-		p, err = aws.NewFargateProvider(providerConfig, rm, nodeName, operatingSystem, internalIP, daemonEndpointPort)
-		if err != nil {
-			return nil, err
-		}
-	case "azure":
-		p, err = azure.NewACIProvider(providerConfig, rm, nodeName, operatingSystem, internalIP, daemonEndpointPort)
-		if err != nil {
-			return nil, err
-		}
-	case "azurebatch":
-		p, err = azurebatch.NewBatchProvider(providerConfig, rm, nodeName, operatingSystem, internalIP, daemonEndpointPort)
-		if err != nil {
-			return nil, err
-		}
-	case "hyper":
-		p, err = hypersh.NewHyperProvider(providerConfig, rm, nodeName, operatingSystem)
-		if err != nil {
-			return nil, err
-		}
-	case "vic":
-		p, err = vic.NewVicProvider(providerConfig, rm, nodeName, operatingSystem)
-		if err != nil {
-			return nil, err
-		}
-	case "web":
-		p, err = web.NewBrokerProvider(nodeName, operatingSystem, daemonEndpointPort)
-		if err != nil {
-			return nil, err
-		}
-	case "mock":
-		p, err = mock.NewMockProvider(providerConfig, nodeName, operatingSystem, internalIP, daemonEndpointPort)
-		if err != nil {
-			return nil, err
-		}
-	case "cri":
-		p, err = cri.NewCRIProvider(nodeName, operatingSystem, internalIP, rm, daemonEndpointPort)
-		if err != nil {
-			return nil, err
-		}
-	case "huawei":
-		p, err = huawei.NewCCIProvider(providerConfig, rm, nodeName, operatingSystem, internalIP, daemonEndpointPort)
-		if err != nil {
-			return nil, err
-		}
-	case "sfmesh":
-		p, err = sfmesh.NewSFMeshProvider(rm, nodeName, operatingSystem, internalIP, daemonEndpointPort)
-		if err != nil {
-			return nil, err
-		}
-	default:
-		fmt.Printf("Provider '%s' is not supported\n", provider)
+	p, err = lookupProvider(provider, providerConfig, rm, nodeName, operatingSystem, internalIP, daemonEndpointPort)
+	if err != nil {
+		return nil, err
 	}
 
 	s := &Server{
