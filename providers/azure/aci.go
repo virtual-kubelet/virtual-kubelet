@@ -60,12 +60,15 @@ type AuthConfig struct {
 
 // See https://azure.microsoft.com/en-us/status/ for valid regions.
 var validAciRegions = []string{
-	"westeurope",
-	"westus",
+	"centralus",
 	"eastus",
-	"southeastasia",
+	"eastus2",
+	"westus",
 	"westus2",
 	"northeurope",
+	"westeurope",
+	"southeastasia",
+	"australiaeast"
 }
 
 // isValidACIRegion checks to make sure we're using a valid ACI region
