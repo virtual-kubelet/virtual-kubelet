@@ -68,7 +68,7 @@ var validAciRegions = []string{
 	"northeurope",
 	"westeurope",
 	"southeastasia",
-	"australiaeast"
+	"australiaeast",
 }
 
 // isValidACIRegion checks to make sure we're using a valid ACI region
