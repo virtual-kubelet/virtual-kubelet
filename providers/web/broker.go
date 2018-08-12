@@ -221,6 +221,11 @@ func (p *BrokerProvider) OperatingSystem() string {
 	return p.operatingSystem
 }
 
+// Labels returns provider specific labels
+func (p *BrokerProvider) Labels() map[string]string {
+	return nil
+}
+
 func (p *BrokerProvider) doGetRequest(urlPathStr string, v interface{}) error {
 	response, err := p.doGetRequestBytes(urlPathStr)
 	if err != nil {

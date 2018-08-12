@@ -129,5 +129,5 @@ func TestStopPodErrorCommit(t *testing.T) {
 	fakeErr := fakeError("failed Commit")
 	ip.On("CommitHandle", op, podHandle, podID, int32(-1)).Return(fakeErr)
 	err = s.Stop(op, podID, podName)
-	assert.Equal(t, err, fakeErr ,"Expected failed Commit error")
+	assert.Equal(t, err, fakeErr, "Expected failed Commit error")
 }

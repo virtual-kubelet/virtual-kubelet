@@ -340,3 +340,8 @@ func (p *FargateProvider) OperatingSystem() string {
 
 	return p.operatingSystem
 }
+
+// Labels returns provider specific labels
+func (p *FargateProvider) Labels() map[string]string {
+	return nil
+}

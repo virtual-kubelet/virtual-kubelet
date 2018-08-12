@@ -451,3 +451,8 @@ func (p *HyperProvider) NodeDaemonEndpoints() *v1.NodeDaemonEndpoints {
 func (p *HyperProvider) OperatingSystem() string {
 	return providers.OperatingSystemLinux
 }
+
+// Labels returns provider specific labels
+func (p *HyperProvider) Labels() map[string]string {
+	return nil
+}

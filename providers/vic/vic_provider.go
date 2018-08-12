@@ -467,6 +467,11 @@ func (v *VicProvider) OperatingSystem() string {
 	return v.os
 }
 
+// Labels returns provider specific labels
+func (v *VicProvider) Labels() map[string]string {
+	return nil
+}
+
 //------------------------------------
 // Utility Functions
 //------------------------------------

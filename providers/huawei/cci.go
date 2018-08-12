@@ -426,3 +426,8 @@ func (p *CCIProvider) NodeDaemonEndpoints() *v1.NodeDaemonEndpoints {
 func (p *CCIProvider) OperatingSystem() string {
 	return p.operatingSystem
 }
+
+// Labels returns provider specific labels
+func (p *CCIProvider) Labels() map[string]string {
+	return nil
+}

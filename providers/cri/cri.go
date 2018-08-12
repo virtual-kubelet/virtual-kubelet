@@ -929,3 +929,8 @@ func (p *CRIProvider) OperatingSystem() string {
 
 	return providers.OperatingSystemLinux
 }
+
+// Labels returns provider specific labels
+func (p *CRIProvider) Labels() map[string]string {
+	return nil
+}

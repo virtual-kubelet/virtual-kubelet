@@ -559,6 +559,11 @@ func (p *ACIProvider) OperatingSystem() string {
 	return p.operatingSystem
 }
 
+// Labels returns provider specific labels
+func (p *ACIProvider) Labels() map[string]string {
+	return nil
+}
+
 func (p *ACIProvider) getImagePullSecrets(pod *v1.Pod) ([]aci.ImageRegistryCredential, error) {
 	ips := make([]aci.ImageRegistryCredential, 0, len(pod.Spec.ImagePullSecrets))
 	for _, ref := range pod.Spec.ImagePullSecrets {

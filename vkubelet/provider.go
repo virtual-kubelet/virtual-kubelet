@@ -53,4 +53,7 @@ type Provider interface {
 
 	// OperatingSystem returns the operating system the provider is for.
 	OperatingSystem() string
+
+	// Labels returns provider specific labels to add on nodes.
+	Labels() map[string]string
 }

@@ -35,9 +35,10 @@ type MockProvider struct {
 
 // MockConfig contains a mock virtual-kubelet's configurable parameters.
 type MockConfig struct {
-	CPU    string `json:"cpu,omitempty"`
-	Memory string `json:"memory,omitempty"`
-	Pods   string `json:"pods,omitempty"`
+	CPU    string            `json:"cpu,omitempty"`
+	Memory string            `json:"memory,omitempty"`
+	Pods   string            `json:"pods,omitempty"`
+	Labels map[string]string `json:"labels,omitempty"`
 }
 
 // NewMockProvider creates a new MockProvider
@@ -318,6 +319,11 @@ func (p *MockProvider) NodeDaemonEndpoints() *v1.NodeDaemonEndpoints {
 // This is a noop to default to Linux for now.
 func (p *MockProvider) OperatingSystem() string {
 	return providers.OperatingSystemLinux
+}
+
+// Labels returns provider specific labels
+func (p *MockProvider) Labels() map[string]string {
+	return p.config.Labels
 }
 
 func buildKeyFromNames(namespace string, name string) (string, error) {

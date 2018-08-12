@@ -12,7 +12,7 @@ import (
 )
 
 var (
-	testpod              *v1.Pod
+	testpod *v1.Pod
 )
 
 func init() {
@@ -25,7 +25,7 @@ func setup(t *testing.T, op trace.Operation) PodCache {
 
 	//populate with dummy data
 	vp := pod.VicPod{
-		ID: "123",
+		ID:  "123",
 		Pod: testpod,
 	}
 	c.Add(op, "namespace1", "testpod1a", &vp)
@@ -55,7 +55,7 @@ func TestAdd(t *testing.T) {
 
 	//populate with dummy data
 	vp := pod.VicPod{
-		ID: "123",
+		ID:  "123",
 		Pod: testpod,
 	}
 
@@ -136,4 +136,3 @@ func TestDelete(t *testing.T) {
 	//vps = c.GetAll(op)
 	//assert.Len(t, vps, currCount, "PodCache.Delete ignored namespace")
 }
-

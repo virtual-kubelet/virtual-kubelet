@@ -424,3 +424,8 @@ func (p *Provider) NodeDaemonEndpoints() *v1.NodeDaemonEndpoints {
 func (p *Provider) OperatingSystem() string {
 	return p.operatingSystem
 }
+
+// Labels returns provider specific labels
+func (p *Provider) Labels() map[string]string {
+	return nil
+}
