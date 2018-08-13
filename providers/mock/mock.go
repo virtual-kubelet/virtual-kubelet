@@ -6,6 +6,7 @@ import (
 	"io"
 	"io/ioutil"
 	"log"
+	"sort"
 	"time"
 
 	"github.com/virtual-kubelet/virtual-kubelet/providers"
@@ -174,8 +175,28 @@ func (p *MockProvider) ExecInContainer(name string, uid types.UID, container str
 
 // GetPodStatus returns the status of a pod by name that is "running".
 // returns nil if a pod by that name is not found.
+// GetPodStatus also detects pods that exceeds node's resources and
+// reject pods that we cannot run.
 func (p *MockProvider) GetPodStatus(namespace, name string) (*v1.PodStatus, error) {
 	log.Printf("receive GetPodStatus %q\n", name)
+
+	pods := []*v1.Pod{}
+	for _, pod := range p.pods {
+		pods = append(pods, pod)
+	}
+	// Respect the pod creation order when resolving conflicts.
+	sort.Sort(podsByCreationTime(pods))
+	_, notFitting := checkPodsExceedingCapacity(pods, p.Capacity())
+
+	for _, pod := range notFitting {
+		if pod.Namespace == namespace && pod.Name == name {
+			return &v1.PodStatus{
+				Phase:   v1.PodFailed,
+				Reason:  "CapacityExceeded",
+				Message: "Pod cannot be started due to exceeded capacity",
+			}, nil
+		}
+	}
 
 	now := metav1.NewTime(time.Now())
 
@@ -335,4 +356,61 @@ func buildKey(pod *v1.Pod) (string, error) {
 	}
 
 	return buildKeyFromNames(pod.ObjectMeta.Namespace, pod.ObjectMeta.Name)
+}
+
+type resourceRequest struct {
+	milliCPU int64
+	memory   int64
+}
+
+func getResourceRequest(pod *v1.Pod) resourceRequest {
+	result := resourceRequest{}
+	for ix := range pod.Spec.Containers {
+		limits := pod.Spec.Containers[ix].Resources.Limits
+		result.memory += limits.Memory().Value()
+		result.milliCPU += limits.Cpu().MilliValue()
+	}
+	return result
+}
+
+func checkPodsExceedingCapacity(pods []*v1.Pod, capacity v1.ResourceList) (fitting []*v1.Pod, notFitting []*v1.Pod) {
+	totalMilliCPU := capacity.Cpu().MilliValue()
+	totalMemory := capacity.Memory().Value()
+	totalPodsNum := capacity.Pods().Value()
+	milliCPURequested := int64(0)
+	memoryRequested := int64(0)
+	for i, pod := range pods {
+		if i >= int(totalPodsNum) {
+			notFitting = append(notFitting, pod)
+			continue
+		}
+
+		podRequest := getResourceRequest(pod)
+		fitsCPU := totalMilliCPU == 0 || (totalMilliCPU-milliCPURequested) >= podRequest.milliCPU
+		fitsMemory := totalMemory == 0 || (totalMemory-memoryRequested) >= podRequest.memory
+		if !fitsCPU || !fitsMemory {
+			// the pod doesn't fit
+			notFitting = append(notFitting, pod)
+			continue
+		}
+		// the pod fits
+		milliCPURequested += podRequest.milliCPU
+		memoryRequested += podRequest.memory
+		fitting = append(fitting, pod)
+	}
+	return
+}
+
+type podsByCreationTime []*v1.Pod
+
+func (s podsByCreationTime) Len() int {
+	return len(s)
+}
+
+func (s podsByCreationTime) Swap(i, j int) {
+	s[i], s[j] = s[j], s[i]
+}
+
+func (s podsByCreationTime) Less(i, j int) bool {
+	return s[i].CreationTimestamp.Before(&s[j].CreationTimestamp)
 }
