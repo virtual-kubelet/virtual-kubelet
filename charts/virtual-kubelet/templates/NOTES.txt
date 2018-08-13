@@ -1,21 +1,12 @@
-{{- if and .Values.env.azureClientId .Values.env.azureClientKey .Values.env.azureTenantId .Values.env.azureSubscriptionId .Values.env.aciResourceGroup -}}
-
 The virtual kubelet is getting deployed on your cluster.
 
 To verify that virtual kubelet has started, run:
 
-  kubectl --namespace={{ .Release.Namespace }} get pods -l "app={{ template "fullname" . }}"
+  kubectl --namespace={{ .Release.Namespace }} get pods -l "app={{ template "vk.name" . }}"
 
-{{- else -}}
-##############################################################################
-####  ERROR: You are missing required values in the values.yaml file.     ####
-##############################################################################
+{{- if (not .Values.env.apiserverCert) and (not .Values.env.apiserverKey) }}
 
-This deployment will be incomplete until all the required fields in the values.yaml file have been provided.
-
-To update, run:
-
-    helm upgrade {{ .Release.Name }} \
-    --set env.azureClientId=<YOUR-AZURECLIENTID-HERE>,env.azureClientKey=<YOUR-AZURECLIENTKEY-HERE>,env.azureTenantId=<YOUR-AZURETENANTID-HERE>,env.azureSubscriptionId=<YOUR-AZURESUBSCRIPTIONID-HERE>,env.aciResourceGroup=<YOUR-ACIRESOURCEGROUP-HERE>,ev.aciOsType=<Linux|Windows>,rbac.install=<false|true>
+Note: 
+TLS key pair not provided for VK HTTP listener. A key pair was generated for you. This generated key pair is not suitable for production use.
 
 {{- end }}

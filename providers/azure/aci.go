@@ -84,12 +84,15 @@ type AuthConfig struct {
 
 // See https://azure.microsoft.com/en-us/status/ for valid regions.
 var validAciRegions = []string{
-	"westeurope",
-	"westus",
+	"centralus",
 	"eastus",
-	"southeastasia",
+	"eastus2",
+	"westus",
 	"westus2",
 	"northeurope",
+	"westeurope",
+	"southeastasia",
+	"australiaeast",
 	"eastus2euap",
 	"westcentralus",
 }
@@ -953,8 +956,10 @@ func (p *ACIProvider) getContainers(pod *v1.Pod) ([]aci.Container, error) {
 
 		c.EnvironmentVariables = make([]aci.EnvironmentVariable, 0, len(container.Env))
 		for _, e := range container.Env {
-			envVar := getACIEnvVar(e)
-			c.EnvironmentVariables = append(c.EnvironmentVariables, envVar)
+			if e.Value != "" {
+				envVar := getACIEnvVar(e)
+				c.EnvironmentVariables = append(c.EnvironmentVariables, envVar)
+			}
 		}
 
 		// NOTE(robbiezhang): ACI CPU request must be times of 10m
@@ -1397,7 +1402,7 @@ func filterServiceAccountSecretVolume(osType string, containerGroup *aci.Contain
 func getACIEnvVar(e v1.EnvVar) aci.EnvironmentVariable {
 	var envVar aci.EnvironmentVariable
 	// If the variable is a secret, use SecureValue
-	if e.ValueFrom.SecretKeyRef != nil {
+	if e.ValueFrom != nil && e.ValueFrom.SecretKeyRef != nil {
 		envVar = aci.EnvironmentVariable{
 			Name:        e.Name,
 			SecureValue: e.Value,

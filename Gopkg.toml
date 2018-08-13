@@ -57,7 +57,7 @@
 
 [[constraint]]
   name = "github.com/Azure/azure-sdk-for-go"
-  version = "19.0.0"
+  version = "19.1.0"
 
 [[constraint]]
   name = "github.com/lawrencegripper/pod2docker"

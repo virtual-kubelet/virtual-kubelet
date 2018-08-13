@@ -11,15 +11,6 @@ import (
 	"time"
 
 	"github.com/virtual-kubelet/virtual-kubelet/manager"
-	"github.com/virtual-kubelet/virtual-kubelet/providers/aws"
-	"github.com/virtual-kubelet/virtual-kubelet/providers/azure"
-	"github.com/virtual-kubelet/virtual-kubelet/providers/azurebatch"
-	"github.com/virtual-kubelet/virtual-kubelet/providers/cri"
-	"github.com/virtual-kubelet/virtual-kubelet/providers/huawei"
-	"github.com/virtual-kubelet/virtual-kubelet/providers/hypersh"
-	"github.com/virtual-kubelet/virtual-kubelet/providers/mock"
-	"github.com/virtual-kubelet/virtual-kubelet/providers/vic"
-	"github.com/virtual-kubelet/virtual-kubelet/providers/web"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -31,7 +22,7 @@ import (
 )
 
 const (
-        PodStatusReason_ProviderFailed = "ProviderFailed"
+	PodStatusReason_ProviderFailed = "ProviderFailed"
 )
 
 // Server masquarades itself as a kubelet and allows for the virtual node to be backed by non-vm/node providers.
@@ -80,55 +71,9 @@ func New(nodeName, operatingSystem, namespace, kubeConfig, taint, provider, prov
 
 	internalIP := os.Getenv("VKUBELET_POD_IP")
 
-	var p Provider
-	switch provider {
-	case "aws":
-		p, err = aws.NewFargateProvider(providerConfig, rm, nodeName, operatingSystem, internalIP, daemonEndpointPort)
-		if err != nil {
-			return nil, err
-		}
-	case "azure":
-		p, err = azure.NewACIProvider(providerConfig, rm, nodeName, operatingSystem, internalIP, daemonEndpointPort)
-		if err != nil {
-			return nil, err
-		}
-	case "azurebatch":
-		p, err = azurebatch.NewBatchProvider(providerConfig, rm, nodeName, operatingSystem, internalIP, daemonEndpointPort)
-		if err != nil {
-			return nil, err
-		}
-	case "hyper":
-		p, err = hypersh.NewHyperProvider(providerConfig, rm, nodeName, operatingSystem)
-		if err != nil {
-			return nil, err
-		}
-	case "vic":
-		p, err = vic.NewVicProvider(providerConfig, rm, nodeName, operatingSystem)
-		if err != nil {
-			return nil, err
-		}
-	case "web":
-		p, err = web.NewBrokerProvider(nodeName, operatingSystem, daemonEndpointPort)
-		if err != nil {
-			return nil, err
-		}
-	case "mock":
-		p, err = mock.NewMockProvider(providerConfig, nodeName, operatingSystem, internalIP, daemonEndpointPort)
-		if err != nil {
-			return nil, err
-		}
-	case "cri":
-		p, err = cri.NewCRIProvider(nodeName, operatingSystem, internalIP, rm, daemonEndpointPort)
-		if err != nil {
-			return nil, err
-		}
-	case "huawei":
-		p, err = huawei.NewCCIProvider(providerConfig, rm, nodeName, operatingSystem, internalIP, daemonEndpointPort)
-		if err != nil {
-			return nil, err
-		}
-	default:
-		fmt.Printf("Provider '%s' is not supported\n", provider)
+	p, err = lookupProvider(provider, providerConfig, rm, nodeName, operatingSystem, internalIP, daemonEndpointPort)
+	if err != nil {
+		return nil, err
 	}
 
 	s := &Server{
@@ -236,7 +181,7 @@ func (s *Server) Run() error {
 			log.Fatal("Failed to watch pods", err)
 		}
 
-		loop:
+	loop:
 		for {
 			select {
 			case ev, ok := <-s.podWatcher.ResultChan():
@@ -289,10 +234,10 @@ func (s *Server) updateNode() {
 	}
 
 	if errors.IsNotFound(err) {
-	        if err = s.registerNode(); err != nil {
+		if err = s.registerNode(); err != nil {
 			log.Println("Failed to register node:", err)
-		        return
-	        }
+			return
+		}
 	}
 
 	n.ResourceVersion = "" // Blank out resource version to prevent object has been modified error
@@ -339,7 +284,7 @@ func (s *Server) reconcile() {
 		for _, p := range providerPods {
 			if p.Namespace == pod.Namespace && p.Name == pod.Name {
 				providerPod = p
-				break;
+				break
 			}
 		}
 

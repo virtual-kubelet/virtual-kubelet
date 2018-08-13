@@ -32,6 +32,10 @@ var (
 		Command:    []string{"anyCmd"},
 		Args:       []string{"anyArg1", "anyArg2"},
 		WorkingDir: "/any/working/dir",
+		Env: []corev1.EnvVar{
+			{Name: "anyEnvName1", Value: "anyEnvValue1"},
+			{Name: "anyEnvName2", Value: "anyEnvValue2"},
+		},
 	}
 )
 
@@ -46,8 +50,17 @@ func TestContainerDefinition(t *testing.T) {
 	assert.Equal(t, cntrSpec.Name, *cntr.definition.Name, "incorrect name")
 	assert.Equal(t, cntrSpec.Image, *cntr.definition.Image, "incorrect image")
 	assert.Equal(t, cntrSpec.Command[0], *cntr.definition.EntryPoint[0], "incorrect command")
-	assert.Equal(t, cntrSpec.Args[0], *cntr.definition.Command[0], "incorrect args")
+
+	for i, env := range cntrSpec.Args {
+		assert.Equal(t, env, *cntr.definition.Command[i], "incorrect args")
+	}
+
 	assert.Equal(t, cntrSpec.WorkingDir, *cntr.definition.WorkingDirectory, "incorrect working dir")
+
+	for i, env := range cntrSpec.Env {
+		assert.Equal(t, env.Name, *cntr.definition.Environment[i].Name, "incorrect env name")
+		assert.Equal(t, env.Value, *cntr.definition.Environment[i].Value, "incorrect env value")
+	}
 }
 
 // TestContainerResourceRequirementsDefaults verifies whether the container gets default CPU
