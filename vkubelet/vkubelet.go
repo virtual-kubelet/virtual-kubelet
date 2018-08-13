@@ -37,7 +37,7 @@ type Server struct {
 }
 
 // New creates a new virtual-kubelet server.
-func New(nodeName, operatingSystem, namespace, kubeConfig, taint, provider, providerConfig string) (*Server, error) {
+func New(nodeName, operatingSystem, namespace, kubeConfig, taint, provider, providerConfig string, podStatusUpdate bool) (*Server, error) {
 	var config *rest.Config
 
 	// Check if the kubeConfig file exists.
@@ -95,7 +95,9 @@ func New(nodeName, operatingSystem, namespace, kubeConfig, taint, provider, prov
 	go func() {
 		for range tick {
 			s.updateNode()
-			s.updatePodStatuses()
+			if podStatusUpdate {
+				s.updatePodStatuses()
+			}
 		}
 	}()
 

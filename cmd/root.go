@@ -37,6 +37,7 @@ var operatingSystem string
 var provider string
 var providerConfig string
 var taint string
+var podStatusUpdate bool
 
 // RootCmd represents the base command when called without any subcommands
 var RootCmd = &cobra.Command{
@@ -47,7 +48,7 @@ backend implementation allowing users to create kubernetes nodes without running
 This allows users to schedule kubernetes workloads on nodes that aren't running Kubernetes.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println(kubeConfig)
-		f, err := vkubelet.New(nodeName, operatingSystem, kubeNamespace, kubeConfig, taint, provider, providerConfig)
+		f, err := vkubelet.New(nodeName, operatingSystem, kubeNamespace, kubeConfig, taint, provider, providerConfig, podStatusUpdate)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -84,6 +85,7 @@ func init() {
 	RootCmd.PersistentFlags().StringVar(&provider, "provider", "", "cloud provider")
 	RootCmd.PersistentFlags().StringVar(&taint, "taint", "", "apply taint to node, making scheduling explicit")
 	RootCmd.PersistentFlags().StringVar(&providerConfig, "provider-config", "", "cloud provider configuration file")
+	RootCmd.PersistentFlags().BoolVar(&podStatusUpdate, "pod-status-update", true, "whether update pod status")
 
 	// Cobra also supports local flags, which will only run
 	// when this action is called directly.
