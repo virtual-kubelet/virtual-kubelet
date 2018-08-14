@@ -46,7 +46,7 @@ func getEnv(key, defaultValue string) string {
 }
 
 // New creates a new virtual-kubelet server.
-func New(nodeName, operatingSystem, namespace, kubeConfig, provider, providerConfig string, disableTaint bool) (*Server, error) {
+func New(nodeName, operatingSystem, namespace, kubeConfig, provider, providerConfig, taintKey string, disableTaint bool) (*Server, error) {
 	var config *rest.Config
 
 	// Check if the kubeConfig file exists.
@@ -80,7 +80,13 @@ func New(nodeName, operatingSystem, namespace, kubeConfig, provider, providerCon
 
 	internalIP := os.Getenv("VKUBELET_POD_IP")
 
-	vkTaintKey := getEnv("VKUBELET_TAINT_KEY", "virtual-kubelet.io/provider")
+	var defaultTaintKey string
+	if taintKey != "" {
+		defaultTaintKey = taintKey
+	} else {
+		defaultTaintKey = "virtual-kubelet.io/provider"
+	}
+	vkTaintKey := getEnv("VKUBELET_TAINT_KEY", defaultTaintKey)
 	vkTaintValue := getEnv("VKUBELET_TAINT_VALUE", provider)
 	vkTaintEffectEnv := getEnv("VKUBELET_TAINT_EFFECT", "NoSchedule")
 	var vkTaintEffect corev1.TaintEffect
