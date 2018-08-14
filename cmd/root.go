@@ -36,6 +36,7 @@ var nodeName string
 var operatingSystem string
 var provider string
 var providerConfig string
+var taintKey string
 var disableTaint bool
 
 // RootCmd represents the base command when called without any subcommands
@@ -47,7 +48,7 @@ backend implementation allowing users to create kubernetes nodes without running
 This allows users to schedule kubernetes workloads on nodes that aren't running Kubernetes.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println(kubeConfig)
-		f, err := vkubelet.New(nodeName, operatingSystem, kubeNamespace, kubeConfig, provider, providerConfig, disableTaint)
+		f, err := vkubelet.New(nodeName, operatingSystem, kubeNamespace, kubeConfig, provider, providerConfig, taintKey, disableTaint)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -84,6 +85,8 @@ func init() {
 	RootCmd.PersistentFlags().StringVar(&provider, "provider", "", "cloud provider")
 	RootCmd.PersistentFlags().BoolVar(&disableTaint, "disable-taint", false, "disable the virtual-kubelet node taint")
 	RootCmd.PersistentFlags().StringVar(&providerConfig, "provider-config", "", "cloud provider configuration file")
+	RootCmd.PersistentFlags().StringVar(&taintKey, "taint", "", "Set node taint key")
+	RootCmd.PersistentFlags().MarkDeprecated("taint", "Taint key should now be configured using the VK_TAINT_KEY environment variable")
 
 	// Cobra also supports local flags, which will only run
 	// when this action is called directly.
