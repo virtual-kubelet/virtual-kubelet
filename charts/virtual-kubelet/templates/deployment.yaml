@@ -28,6 +28,12 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: status.podIP
+        - name: VKUBELET_TAINT_KEY
+          value: {{ .Values.taint.key }}
+        - name: VKUBELET_TAINT_VALUE
+          value: {{ tpl .Values.taint.value $ }}
+        - name: VKUBELET_TAINT_EFFECT
+          value: {{ .Values.taint.effect }}
 {{- if eq .Values.provider "azure" }}
 {{- with .Values.providers.azure }}
 {{- if .loganalytics.enabled }}
@@ -73,11 +79,13 @@ spec:
 {{- end }}
         command: ["virtual-kubelet"]
         args: [
+{{- if not .Values.taint.enabled }}
+          "--disable-taint", "true",
+{{- end }}
           "--provider", "{{ required "provider is required" .Values.provider }}",
           "--namespace", "{{ .Values.monitoredNamespace }}",
           "--nodename", "{{ required "nodeName is required" .Values.nodeName }}",
-          "--os", "{{ .Values.nodeOsType }}",
-          "--taint", "{{ .Values.nodeTaint }}"
+          "--os", "{{ .Values.nodeOsType }}"
         ]
       volumes:
       - name: credentials
