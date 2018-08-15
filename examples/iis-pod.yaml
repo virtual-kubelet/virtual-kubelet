@@ -27,5 +27,5 @@ spec:
     type: virtual-kubelet
   automountServiceAccountToken: false
   tolerations:
-  - key: azure.com/aci
-    effect: NoSchedule
+  - key: virtual-kubelet.io/provider
+    operator: Exists

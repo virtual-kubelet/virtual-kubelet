@@ -30,14 +30,23 @@ type Server struct {
 	nodeName        string
 	namespace       string
 	k8sClient       *kubernetes.Clientset
-	taint           string
+	taint           corev1.Taint
+	disableTaint    bool
 	provider        Provider
 	podWatcher      watch.Interface
 	resourceManager *manager.ResourceManager
 }
 
+func getEnv(key, defaultValue string) string {
+	value, found := os.LookupEnv(key)
+	if found {
+		return value
+	}
+	return defaultValue
+}
+
 // New creates a new virtual-kubelet server.
-func New(nodeName, operatingSystem, namespace, kubeConfig, taint, provider, providerConfig string) (*Server, error) {
+func New(nodeName, operatingSystem, namespace, kubeConfig, provider, providerConfig, taintKey string, disableTaint bool) (*Server, error) {
 	var config *rest.Config
 
 	// Check if the kubeConfig file exists.
@@ -71,6 +80,33 @@ func New(nodeName, operatingSystem, namespace, kubeConfig, taint, provider, prov
 
 	internalIP := os.Getenv("VKUBELET_POD_IP")
 
+	var defaultTaintKey string
+	if taintKey != "" {
+		defaultTaintKey = taintKey
+	} else {
+		defaultTaintKey = "virtual-kubelet.io/provider"
+	}
+	vkTaintKey := getEnv("VKUBELET_TAINT_KEY", defaultTaintKey)
+	vkTaintValue := getEnv("VKUBELET_TAINT_VALUE", provider)
+	vkTaintEffectEnv := getEnv("VKUBELET_TAINT_EFFECT", "NoSchedule")
+	var vkTaintEffect corev1.TaintEffect
+	switch vkTaintEffectEnv {
+	case "NoSchedule":
+		vkTaintEffect = corev1.TaintEffectNoSchedule
+	case "NoExecute":
+		vkTaintEffect = corev1.TaintEffectNoExecute
+	case "PreferNoSchedule":
+		vkTaintEffect = corev1.TaintEffectPreferNoSchedule
+	default:
+		fmt.Printf("Taint effect '%s' is not supported\n", vkTaintEffectEnv)
+	}
+
+	taint := corev1.Taint{
+		Key:    vkTaintKey,
+		Value:  vkTaintValue,
+		Effect: vkTaintEffect,
+	}
+
 	p, err = lookupProvider(provider, providerConfig, rm, nodeName, operatingSystem, internalIP, daemonEndpointPort)
 	if err != nil {
 		return nil, err
@@ -80,6 +116,7 @@ func New(nodeName, operatingSystem, namespace, kubeConfig, taint, provider, prov
 		namespace:       namespace,
 		nodeName:        nodeName,
 		taint:           taint,
+		disableTaint:    disableTaint,
 		k8sClient:       clientset,
 		resourceManager: rm,
 		provider:        p,
@@ -106,11 +143,8 @@ func New(nodeName, operatingSystem, namespace, kubeConfig, taint, provider, prov
 func (s *Server) registerNode() error {
 	taints := make([]corev1.Taint, 0)
 
-	if s.taint != "" {
-		taints = append(taints, corev1.Taint{
-			Key:    s.taint,
-			Effect: corev1.TaintEffectNoSchedule,
-		})
+	if !s.disableTaint {
+		taints = append(taints, s.taint)
 	}
 
 	labels := map[string]string{
