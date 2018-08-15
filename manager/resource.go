@@ -85,7 +85,7 @@ func (rm *ResourceManager) SetPods(pods *v1.PodList) {
 	for k, p := range pods.Items {
 		rm.pods[rm.getStoreKey(p.Namespace, p.Name)] = &pods.Items[k]
 
-		rm.incrementRefCounters(&p)
+		rm.incrementRefCounters(&pods.Items[k])
 	}
 }
 
