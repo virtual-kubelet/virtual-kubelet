@@ -23,5 +23,8 @@ spec:
     kubernetes.io/hostname: "{{ .Values.nodeName }}"
   restartPolicy: Never
   tolerations:
-  - key: "{{ .Values.nodeTaint }}"
-    effect: NoSchedule
+{{- if .Values.taint.enabled }}
+  - key: "{{ .Values.taint.key }}"
+    value: "{{ tpl .Values.taint.value $ }}"
+    effect: "{{ .Values.taint.effect }}"
+{{- end }}
