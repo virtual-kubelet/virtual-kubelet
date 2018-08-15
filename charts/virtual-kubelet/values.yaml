@@ -6,11 +6,17 @@ image:
 ## `provider` should be one of aws, azure, azurebatch, etc...
 provider: 
 nodeName: "virtual-kubelet"
-nodeTaint: "azure.com/aci"
 nodeOsType: "Linux"
 monitoredNamespace: ""
 apiserverCert: 
 apiserverKey: 
+
+taint:
+  enabled: true
+  key: virtual-kubelet.io/provider
+  value: "{{ .Values.provider }}"
+  ## `effect` must be `NoSchedule`, `PreferNoSchedule` or `NoExecute`.
+  effect: NoSchedule
 
 providers:
   azure:

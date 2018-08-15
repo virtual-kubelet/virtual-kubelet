@@ -320,7 +320,8 @@ spec:
   dnsPolicy: ClusterFirst
   nodeName: virtual-kubelet-myconnector-linux
   tolerations:
-  - key: azure.com/aci
+  - key: virtual-kubelet.io/provider
+    value: azure
     effect: NoSchedule
 ```
 
@@ -328,7 +329,8 @@ Notice that Virtual-Kubelet nodes are tainted by default to avoid unexpected pod
 
 ```
   tolerations:
-  - key: azure.com/aci
+  - key: virtual-kubelet.io/provider
+    value: azure
     effect: NoSchedule
 ```
 
