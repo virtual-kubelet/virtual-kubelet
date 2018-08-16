@@ -81,13 +81,16 @@ func New(nodeName, operatingSystem, namespace, kubeConfig, provider, providerCon
 	internalIP := os.Getenv("VKUBELET_POD_IP")
 
 	var defaultTaintKey string
+	var defaultTaintValue string
 	if taintKey != "" {
 		defaultTaintKey = taintKey
+		defaultTaintValue = ""
 	} else {
 		defaultTaintKey = "virtual-kubelet.io/provider"
+		defaultTaintValue = provider
 	}
 	vkTaintKey := getEnv("VKUBELET_TAINT_KEY", defaultTaintKey)
-	vkTaintValue := getEnv("VKUBELET_TAINT_VALUE", provider)
+	vkTaintValue := getEnv("VKUBELET_TAINT_VALUE", defaultTaintValue)
 	vkTaintEffectEnv := getEnv("VKUBELET_TAINT_EFFECT", "NoSchedule")
 	var vkTaintEffect corev1.TaintEffect
 	switch vkTaintEffectEnv {
