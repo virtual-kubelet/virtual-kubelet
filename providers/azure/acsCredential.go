@@ -1,10 +1,12 @@
 package azure
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"log"
+
+	"github.com/virtual-kubelet/virtual-kubelet/log"
 )
 
 // AcsCredential represents the credential file for ACS
@@ -19,12 +21,13 @@ type AcsCredential struct {
 }
 
 // NewAcsCredential returns an AcsCredential struct from file path
-func NewAcsCredential(filepath string) (*AcsCredential, error) {
-	log.Printf("Reading ACS credential file %q", filepath)
+func NewAcsCredential(p string) (*AcsCredential, error) {
+	logger := log.G(context.TODO()).WithField("method", "NewAcsCredential").WithField("file", p)
+	log.Trace(logger, "Reading ACS credential file")
 
-	b, err := ioutil.ReadFile(filepath)
+	b, err := ioutil.ReadFile(p)
 	if err != nil {
-		return nil, fmt.Errorf("Reading ACS credential file %q failed: %v", filepath, err)
+		return nil, fmt.Errorf("Reading ACS credential file %q failed: %v", p, err)
 	}
 
 	// Unmarshal the authentication file.
@@ -33,6 +36,6 @@ func NewAcsCredential(filepath string) (*AcsCredential, error) {
 		return nil, err
 	}
 
-	log.Printf("Load ACS credential file %q successfully", filepath)
+	log.Trace(logger, "Load ACS credential file successfully")
 	return &cred, nil
 }

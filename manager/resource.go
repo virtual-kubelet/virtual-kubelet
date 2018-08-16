@@ -1,10 +1,10 @@
 package manager
 
 import (
-	"log"
 	"sync"
 	"time"
 
+	"github.com/pkg/errors"
 	"k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/watch"
@@ -26,7 +26,7 @@ type ResourceManager struct {
 }
 
 // NewResourceManager returns a ResourceManager with the internal maps initialized.
-func NewResourceManager(k8sClient kubernetes.Interface) *ResourceManager {
+func NewResourceManager(k8sClient kubernetes.Interface) (*ResourceManager, error) {
 	rm := ResourceManager{
 		pods:         make(map[string]*v1.Pod, 0),
 		deletingPods: make(map[string]*v1.Pod, 0),
@@ -37,8 +37,18 @@ func NewResourceManager(k8sClient kubernetes.Interface) *ResourceManager {
 		k8sClient:    k8sClient,
 	}
 
-	go rm.watchConfigMaps()
-	go rm.watchSecrets()
+	configW, err := rm.k8sClient.CoreV1().ConfigMaps(v1.NamespaceAll).Watch(metav1.ListOptions{})
+	if err != nil {
+		return nil, errors.Wrap(err, "error getting config watch")
+	}
+
+	secretsW, err := rm.k8sClient.CoreV1().Secrets(v1.NamespaceAll).Watch(metav1.ListOptions{})
+	if err != nil {
+		return nil, errors.Wrap(err, "error getting secrets watch")
+	}
+
+	go rm.watchConfigMaps(configW)
+	go rm.watchSecrets(secretsW)
 
 	tick := time.Tick(5 * time.Minute)
 	go func() {
@@ -68,7 +78,7 @@ func NewResourceManager(k8sClient kubernetes.Interface) *ResourceManager {
 		}
 	}()
 
-	return &rm
+	return &rm, nil
 }
 
 // SetPods clears the internal cache and populates it with the supplied pods.
@@ -213,12 +223,7 @@ func (rm *ResourceManager) GetSecret(name, namespace string) (*v1.Secret, error)
 
 // watchConfigMaps monitors the kubernetes API for modifications and deletions of configmaps
 // it evicts them from the internal cache
-func (rm *ResourceManager) watchConfigMaps() {
-	var opts metav1.ListOptions
-	w, err := rm.k8sClient.CoreV1().ConfigMaps(v1.NamespaceAll).Watch(opts)
-	if err != nil {
-		log.Fatal(err)
-	}
+func (rm *ResourceManager) watchConfigMaps(w watch.Interface) {
 
 	for {
 		select {
@@ -242,12 +247,7 @@ func (rm *ResourceManager) watchConfigMaps() {
 
 // watchSecretes monitors the kubernetes API for modifications and deletions of secrets
 // it evicts them from the internal cache
-func (rm *ResourceManager) watchSecrets() {
-	var opts metav1.ListOptions
-	w, err := rm.k8sClient.CoreV1().Secrets(v1.NamespaceAll).Watch(opts)
-	if err != nil {
-		log.Fatal(err)
-	}
+func (rm *ResourceManager) watchSecrets(w watch.Interface) {
 
 	for {
 		select {

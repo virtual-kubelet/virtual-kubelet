@@ -1,24 +1,36 @@
 package vkubelet
 
 import (
+	"context"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"os"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/Sirupsen/logrus"
 	"github.com/gorilla/mux"
+	"github.com/virtual-kubelet/virtual-kubelet/log"
 	"k8s.io/kubernetes/pkg/kubelet/server/remotecommand"
 )
 
 var p Provider
 var r mux.Router
 
+func loggingContext(r *http.Request) context.Context {
+	ctx := r.Context()
+	logger := log.G(ctx).WithFields(logrus.Fields{
+		"uri":  r.RequestURI,
+		"vars": mux.Vars(r),
+	})
+	return log.WithLogger(ctx, logger)
+}
+
 func NotFound(w http.ResponseWriter, r *http.Request) {
-	log.Printf("404 request not found. \n %v", mux.Vars(r))
+	logger := log.G(loggingContext(r))
+	log.Trace(logger, "404 request not found")
 	http.Error(w, "404 request not found", http.StatusNotFound)
 }
 
@@ -35,37 +47,45 @@ func ApiserverStart(provider Provider) {
 	r.NotFoundHandler = http.HandlerFunc(NotFound)
 
 	if err := http.ListenAndServeTLS(addr, certFilePath, keyFilePath, r); err != nil {
-		log.Println(err)
+		log.G(context.TODO()).WithError(err).Error("error setting up http server")
 	}
 }
 
 func ApiServerHandler(w http.ResponseWriter, req *http.Request) {
 	vars := mux.Vars(req)
-	if len(vars) == 3 {
-		namespace := vars["namespace"]
-		pod := vars["pod"]
-		container := vars["container"]
-		tail := 10
-		q := req.URL.Query()
-		queryTail := q.Get("tailLines")
-		if queryTail != "" {
-			t, err := strconv.Atoi(queryTail)
-			if err != nil {
-				log.Println(err)
-				io.WriteString(w, err.Error())
-			} else {
-				tail = t
-			}
-		}
-		podsLogs, err := p.GetContainerLogs(namespace, pod, container, tail)
-		if err != nil {
-			log.Println(err)
-			io.WriteString(w, err.Error())
-		} else {
-			io.WriteString(w, podsLogs)
-		}
-	} else {
+	if len(vars) != 3 {
 		NotFound(w, req)
+		return
+	}
+
+	ctx := loggingContext(req)
+
+	namespace := vars["namespace"]
+	pod := vars["pod"]
+	container := vars["container"]
+	tail := 10
+	q := req.URL.Query()
+
+	if queryTail := q.Get("tailLines"); queryTail != "" {
+		t, err := strconv.Atoi(queryTail)
+		if err != nil {
+			logger := log.G(context.TODO()).WithError(err)
+			log.Trace(logger, "could not parse tailLines")
+			http.Error(w, fmt.Sprintf("could not parse \"tailLines\": %v", err), http.StatusBadRequest)
+			return
+		}
+		tail = t
+	}
+
+	podsLogs, err := p.GetContainerLogs(namespace, pod, container, tail)
+	if err != nil {
+		log.G(ctx).WithError(err).Error("error getting container logs")
+		http.Error(w, fmt.Sprintf("error while getting container logs: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	if _, err := io.WriteString(w, podsLogs); err != nil {
+		log.G(ctx).WithError(err).Warn("error writing response to client")
 	}
 }
 
