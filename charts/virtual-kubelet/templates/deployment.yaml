@@ -85,6 +85,9 @@ spec:
           "--provider", "{{ required "provider is required" .Values.provider }}",
           "--namespace", "{{ .Values.monitoredNamespace }}",
           "--nodename", "{{ required "nodeName is required" .Values.nodeName }}",
+          {{- if .Values.logLevel }}
+          "--log-level", "{{.Values.logLevel}}",
+          {{- end }}
           "--os", "{{ .Values.nodeOsType }}"
         ]
       volumes:

@@ -2,19 +2,21 @@ package azure
 
 import (
 	"bytes"
+	"context"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"os"
 	"reflect"
 	"strings"
 	"time"
 
+	"github.com/Sirupsen/logrus"
 	"github.com/gorilla/websocket"
+	"github.com/virtual-kubelet/virtual-kubelet/log"
 	"github.com/virtual-kubelet/virtual-kubelet/manager"
 	client "github.com/virtual-kubelet/virtual-kubelet/providers/azure/client"
 	"github.com/virtual-kubelet/virtual-kubelet/providers/azure/client/aci"
@@ -345,7 +347,7 @@ func (p *ACIProvider) GetContainerLogs(namespace, podName, containerName string,
 	for i := 0; i < retry; i++ {
 		cLogs, err := p.aciClient.GetContainerLogs(p.resourceGroup, cg.Name, containerName, tail)
 		if err != nil {
-			log.Println(err)
+			log.G(context.TODO()).WithField("method", "GetContainerLogs").WithError(err).Debug("Error getting container logs, retrying")
 			time.Sleep(5000 * time.Millisecond)
 		} else {
 			logContent = cLogs.Content
@@ -469,7 +471,11 @@ func (p *ACIProvider) GetPods() ([]*v1.Pod, error) {
 
 		p, err := containerGroupToPod(&c)
 		if err != nil {
-			log.Println(err)
+			log.G(context.TODO()).WithFields(logrus.Fields{
+				"name": c.Name,
+				"id":   c.ID,
+			}).WithError(err).Error("error converting container group to pod")
+
 			continue
 		}
 		pods = append(pods, p)
@@ -1105,7 +1111,8 @@ func filterServiceAccountSecretVolume(osType string, containerGroup *aci.Contain
 			return
 		}
 
-		log.Printf("Ignoring service account secret volumes '%v' for Windows", reflect.ValueOf(serviceAccountSecretVolumeName).MapKeys())
+		l := log.G(context.TODO()).WithField("containerGroup", containerGroup.Name)
+		l.Infof("Ignoring service account secret volumes '%v' for Windows", reflect.ValueOf(serviceAccountSecretVolumeName).MapKeys())
 
 		volumes := make([]aci.Volume, 0, len(containerGroup.ContainerGroupProperties.Volumes))
 		for _, volume := range containerGroup.ContainerGroupProperties.Volumes {

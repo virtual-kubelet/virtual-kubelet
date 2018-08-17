@@ -1,8 +1,7 @@
 package vkubelet
 
 import (
-	"fmt"
-
+	"github.com/pkg/errors"
 	"github.com/virtual-kubelet/virtual-kubelet/manager"
 	"github.com/virtual-kubelet/virtual-kubelet/providers/aws"
 	"github.com/virtual-kubelet/virtual-kubelet/providers/azure"
@@ -43,8 +42,6 @@ func lookupProvider(provider, providerConfig string, rm *manager.ResourceManager
 	case "sfmesh":
 		return sfmesh.NewSFMeshProvider(rm, nodeName, operatingSystem, internalIP, daemonEndpointPort)
 	default:
-		fmt.Printf("Provider '%s' is not supported\n", provider)
+		return nil, errors.New("provider is not supported")
 	}
-	var p Provider
-	return p, nil
 }

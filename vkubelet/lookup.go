@@ -3,8 +3,7 @@
 package vkubelet
 
 import (
-	"fmt"
-
+	"github.com/pkg/errors"
 	"github.com/virtual-kubelet/virtual-kubelet/manager"
 	"github.com/virtual-kubelet/virtual-kubelet/providers/aws"
 	"github.com/virtual-kubelet/virtual-kubelet/providers/azure"
@@ -56,8 +55,6 @@ func lookupProvider(provider, providerConfig string, rm *manager.ResourceManager
 	case "vic":
 		return vic.NewVicProvider(providerConfig, rm, nodeName, operatingSystem)
 	default:
-		fmt.Printf("Provider '%s' is not supported\n", provider)
+		return nil, errors.New("provider not supported")
 	}
-	var p Provider
-	return p, nil
 }

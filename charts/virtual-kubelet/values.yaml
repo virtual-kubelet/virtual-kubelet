@@ -10,6 +10,7 @@ nodeOsType: "Linux"
 monitoredNamespace: ""
 apiserverCert: 
 apiserverKey: 
+logLevel: 
 
 taint:
   enabled: true
