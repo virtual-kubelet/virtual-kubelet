@@ -2,6 +2,7 @@ package azure
 
 import (
 	"bytes"
+	"context"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
@@ -14,9 +15,12 @@ import (
 	"os"
 	"reflect"
 	"strings"
+	"sync"
 	"time"
 
+	"github.com/Sirupsen/logrus"
 	"github.com/gorilla/websocket"
+	"github.com/virtual-kubelet/virtual-kubelet/log"
 	"github.com/virtual-kubelet/virtual-kubelet/manager"
 	client "github.com/virtual-kubelet/virtual-kubelet/providers/azure/client"
 	"github.com/virtual-kubelet/virtual-kubelet/providers/azure/client/aci"
@@ -28,6 +32,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	clientcmdv1 "k8s.io/client-go/tools/clientcmd/api/v1"
 	"k8s.io/client-go/tools/remotecommand"
+	stats "k8s.io/kubernetes/pkg/kubelet/apis/stats/v1alpha1"
 )
 
 const (
@@ -69,6 +74,10 @@ type ACIProvider struct {
 	networkProfile     string
 	kubeProxyContainer *aci.Container
 	kubeProxyVolume    *aci.Volume
+
+	metricsSync     sync.Mutex
+	metricsSyncTime time.Time
+	lastMetric      *stats.Summary
 }
 
 // AuthConfig is the secret returned from an ImageRegistryCredential
@@ -560,7 +569,7 @@ func (p *ACIProvider) CreatePod(pod *v1.Pod) error {
 
 	_, err = p.aciClient.CreateContainerGroup(
 		p.resourceGroup,
-		fmt.Sprintf("%s-%s", pod.Namespace, pod.Name),
+		containerGroupName(pod),
 		containerGroup,
 	)
 
@@ -576,6 +585,10 @@ func (p *ACIProvider) amendVnetResources(containerGroup *aci.ContainerGroup) {
 
 	containerGroup.ContainerGroupProperties.Containers = append(containerGroup.ContainerGroupProperties.Containers, *(p.kubeProxyContainer))
 	containerGroup.ContainerGroupProperties.Volumes = append(containerGroup.ContainerGroupProperties.Volumes, *(p.kubeProxyVolume))
+}
+
+func containerGroupName(pod *v1.Pod) string {
+	return fmt.Sprintf("%s-%s", pod.Namespace, pod.Name)
 }
 
 // UpdatePod is a noop, ACI currently does not support live updates of a pod.
@@ -622,7 +635,7 @@ func (p *ACIProvider) GetContainerLogs(namespace, podName, containerName string,
 	for i := 0; i < retry; i++ {
 		cLogs, err := p.aciClient.GetContainerLogs(p.resourceGroup, cg.Name, containerName, tail)
 		if err != nil {
-			log.Println(err)
+			log.G(context.TODO()).WithField("method", "GetContainerLogs").WithError(err).Debug("Error getting container logs, retrying")
 			time.Sleep(5000 * time.Millisecond)
 		} else {
 			logContent = cLogs.Content
@@ -746,7 +759,11 @@ func (p *ACIProvider) GetPods() ([]*v1.Pod, error) {
 
 		p, err := containerGroupToPod(&c)
 		if err != nil {
-			log.Println(err)
+			log.G(context.TODO()).WithFields(logrus.Fields{
+				"name": c.Name,
+				"id":   c.ID,
+			}).WithError(err).Error("error converting container group to pod")
+
 			continue
 		}
 		pods = append(pods, p)
@@ -1386,7 +1403,8 @@ func filterServiceAccountSecretVolume(osType string, containerGroup *aci.Contain
 			return
 		}
 
-		log.Printf("Ignoring service account secret volumes '%v' for Windows", reflect.ValueOf(serviceAccountSecretVolumeName).MapKeys())
+		l := log.G(context.TODO()).WithField("containerGroup", containerGroup.Name)
+		l.Infof("Ignoring service account secret volumes '%v' for Windows", reflect.ValueOf(serviceAccountSecretVolumeName).MapKeys())
 
 		volumes := make([]aci.Volume, 0, len(containerGroup.ContainerGroupProperties.Volumes))
 		for _, volume := range containerGroup.ContainerGroupProperties.Volumes {

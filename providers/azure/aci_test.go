@@ -449,7 +449,10 @@ func prepareMocks() (*AADMock, *ACIMock, *ACIProvider, error) {
 	os.Setenv("ACI_RESOURCE_GROUP", fakeResourceGroup)
 
 	clientset := fake.NewSimpleClientset()
-	rm := manager.NewResourceManager(clientset)
+	rm, err := manager.NewResourceManager(clientset)
+	if err != nil {
+		return nil, nil, nil, err
+	}
 
 	provider, err := NewACIProvider("example.toml", rm, fakeNodeName, "Linux", "0.0.0.0", 10250)
 	if err != nil {
