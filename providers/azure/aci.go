@@ -327,7 +327,7 @@ func (p *ACIProvider) setupNetworkProfile(auth *client.Authentication) error {
 			subnet = &network.Subnet{Name: p.subnetName}
 		}
 		populateSubnet(subnet, p.subnetCIDR)
-		subnet, err = c.CreateOrUpdateSubnet(p.resourceGroup, p.vnetName, subnet)
+		subnet, err = c.CreateOrUpdateSubnet(p.vnetResourceGroup, p.vnetName, subnet)
 		if err != nil {
 			return fmt.Errorf("error creating subnet: %v", err)
 		}
