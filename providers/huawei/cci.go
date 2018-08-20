@@ -280,12 +280,6 @@ func (p *CCIProvider) GetContainerLogs(namespace, podName, containerName string,
 	return "", nil
 }
 
-// Get full pod name as defined in the provider context
-// TODO: Implementation
-func (p *CCIProvider) GetPodFullName(namespace string, pod string) string {
-	return ""
-}
-
 // ExecInContainer executes a command in a container in the pod, copying data
 // between in/out/err and the container's stdin/stdout/stderr.
 // TODO: Implementation

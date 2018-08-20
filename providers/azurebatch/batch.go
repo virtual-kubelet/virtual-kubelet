@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/Azure/go-autorest/autorest"
 	"io"
 	"io/ioutil"
 	"log"
@@ -12,6 +11,8 @@ import (
 	"os"
 	"strings"
 	"time"
+
+	"github.com/Azure/go-autorest/autorest"
 
 	"github.com/Azure/go-autorest/autorest/azure"
 
@@ -301,12 +302,6 @@ func (p *Provider) GetContainerLogs(namespace, podName, containerName string, ta
 	}
 
 	return result, nil
-}
-
-// Get full pod name as defined in the provider context
-// TODO: Implementation
-func (p *Provider) GetPodFullName(namespace string, pod string) string {
-	return ""
 }
 
 // ExecInContainer executes a command in a container in the pod, copying data
