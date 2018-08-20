@@ -1028,6 +1028,14 @@
 
 [[projects]]
   branch = "master"
+  digest = "1:39ebcc2b11457b703ae9ee2e8cca0f68df21969c6102cb3b705f76cca0ea0239"
+  name = "golang.org/x/sync"
+  packages = ["errgroup"]
+  pruneopts = "NUT"
+  revision = "1d60e4601c6fd243af51cc01ddf169918a5407ca"
+
+[[projects]]
+  branch = "master"
   digest = "1:ee40f9506736b3b55162b22d82911b797301904848b1f1ae5db49f561ad48a79"
   name = "golang.org/x/sys"
   packages = [
@@ -1317,11 +1325,12 @@
   version = "v7.0.0"
 
 [[projects]]
-  digest = "1:3f23907ae824a94920ce9bc22310631cb2be91787bd7de16de84bbb9af92cad4"
+  digest = "1:58c71c78f19e62f5f3ba1f37d21670481de1f46c4a2d4d4ee31fe70b03b57ab3"
   name = "k8s.io/kubernetes"
   packages = [
     "pkg/apis/core",
     "pkg/kubelet/apis/cri/runtime/v1alpha2",
+    "pkg/kubelet/apis/stats/v1alpha1",
     "pkg/kubelet/server/remotecommand",
   ]
   pruneopts = "NUT"
@@ -1381,6 +1390,7 @@
     "github.com/kr/pretty",
     "github.com/lawrencegripper/pod2docker",
     "github.com/mitchellh/go-homedir",
+    "github.com/pkg/errors",
     "github.com/spf13/cobra",
     "github.com/spf13/viper",
     "github.com/stretchr/testify/assert",
@@ -1405,6 +1415,7 @@
     "github.com/vmware/vic/pkg/trace",
     "github.com/vmware/vic/pkg/vsphere/sys",
     "golang.org/x/net/context",
+    "golang.org/x/sync/errgroup",
     "google.golang.org/grpc",
     "gopkg.in/yaml.v2",
     "k8s.io/api/core/v1",
@@ -1422,6 +1433,7 @@
     "k8s.io/client-go/tools/clientcmd",
     "k8s.io/client-go/tools/remotecommand",
     "k8s.io/kubernetes/pkg/kubelet/apis/cri/runtime/v1alpha2",
+    "k8s.io/kubernetes/pkg/kubelet/apis/stats/v1alpha1",
     "k8s.io/kubernetes/pkg/kubelet/server/remotecommand",
   ]
   solver-name = "gps-cdcl"

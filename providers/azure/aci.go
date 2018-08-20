@@ -12,6 +12,7 @@ import (
 	"os"
 	"reflect"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/Sirupsen/logrus"
@@ -26,6 +27,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/remotecommand"
+	stats "k8s.io/kubernetes/pkg/kubelet/apis/stats/v1alpha1"
 )
 
 // The service account secret mount path.
@@ -47,6 +49,10 @@ type ACIProvider struct {
 	internalIP         string
 	daemonEndpointPort int32
 	diagnostics        *aci.ContainerGroupDiagnostics
+
+	metricsSync     sync.Mutex
+	metricsSyncTime time.Time
+	lastMetric      *stats.Summary
 }
 
 // AuthConfig is the secret returned from an ImageRegistryCredential
@@ -296,11 +302,15 @@ func (p *ACIProvider) CreatePod(pod *v1.Pod) error {
 	// TODO(BJK) containergrouprestartpolicy??
 	_, err = p.aciClient.CreateContainerGroup(
 		p.resourceGroup,
-		fmt.Sprintf("%s-%s", pod.Namespace, pod.Name),
+		containerGroupName(pod),
 		containerGroup,
 	)
 
 	return err
+}
+
+func containerGroupName(pod *v1.Pod) string {
+	return fmt.Sprintf("%s-%s", pod.Namespace, pod.Name)
 }
 
 // UpdatePod is a noop, ACI currently does not support live updates of a pod.
