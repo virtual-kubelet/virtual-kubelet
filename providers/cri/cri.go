@@ -2,6 +2,7 @@ package cri
 
 import (
 	"bufio"
+	"context"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -486,7 +487,7 @@ func generateContainerConfig(container *v1.Container, pod *v1.Pod, imageRef, pod
 }
 
 // Provider function to create a Pod
-func (p *CRIProvider) CreatePod(pod *v1.Pod) error {
+func (p *CRIProvider) CreatePod(ctx context.Context, pod *v1.Pod) error {
 	log.Printf("receive CreatePod %q", pod.Name)
 
 	var attempt uint32 // TODO: Track attempts. Currently always 0
@@ -548,14 +549,14 @@ func (p *CRIProvider) CreatePod(pod *v1.Pod) error {
 }
 
 // Update is currently not required or even called by VK, so not implemented
-func (p *CRIProvider) UpdatePod(pod *v1.Pod) error {
+func (p *CRIProvider) UpdatePod(ctx context.Context, pod *v1.Pod) error {
 	log.Printf("receive UpdatePod %q", pod.Name)
 
 	return nil
 }
 
 // Provider function to delete a pod and its containers
-func (p *CRIProvider) DeletePod(pod *v1.Pod) error {
+func (p *CRIProvider) DeletePod(ctx context.Context, pod *v1.Pod) error {
 	log.Printf("receive DeletePod %q", pod.Name)
 
 	err := p.refreshNodeState()
@@ -587,7 +588,7 @@ func (p *CRIProvider) DeletePod(pod *v1.Pod) error {
 }
 
 // Provider function to return a Pod spec - mostly used for its status
-func (p *CRIProvider) GetPod(namespace, name string) (*v1.Pod, error) {
+func (p *CRIProvider) GetPod(ctx context.Context, namespace, name string) (*v1.Pod, error) {
 	log.Printf("receive GetPod %q", name)
 
 	err := p.refreshNodeState()
@@ -624,7 +625,7 @@ func readLogFile(filename string, tail int) (string, error) {
 }
 
 // Provider function to read the logs of a container
-func (p *CRIProvider) GetContainerLogs(namespace, podName, containerName string, tail int) (string, error) {
+func (p *CRIProvider) GetContainerLogs(ctx context.Context, namespace, podName, containerName string, tail int) (string, error) {
 	log.Printf("receive GetContainerLogs %q", containerName)
 
 	err := p.refreshNodeState()
@@ -672,7 +673,7 @@ func (p *CRIProvider) findPodByName(namespace, name string) *CRIPod {
 }
 
 // Provider function to return the status of a Pod
-func (p *CRIProvider) GetPodStatus(namespace, name string) (*v1.PodStatus, error) {
+func (p *CRIProvider) GetPodStatus(ctx context.Context, namespace, name string) (*v1.PodStatus, error) {
 	log.Printf("receive GetPodStatus %q", name)
 
 	err := p.refreshNodeState()
@@ -803,7 +804,7 @@ func createPodSpecFromCRI(p *CRIPod, nodeName string) *v1.Pod {
 
 // Provider function to return all known pods
 // TODO: Should this be all pods or just running pods?
-func (p *CRIProvider) GetPods() ([]*v1.Pod, error) {
+func (p *CRIProvider) GetPods(ctx context.Context) ([]*v1.Pod, error) {
 	log.Printf("receive GetPods")
 
 	var pods []*v1.Pod
@@ -831,7 +832,7 @@ func getSystemTotalMemory() uint64 {
 }
 
 // Provider function to return the capacity of the node
-func (p *CRIProvider) Capacity() v1.ResourceList {
+func (p *CRIProvider) Capacity(ctx context.Context) v1.ResourceList {
 	log.Printf("receive Capacity")
 
 	err := p.refreshNodeState()
@@ -853,7 +854,7 @@ func (p *CRIProvider) Capacity() v1.ResourceList {
 
 // Provider function to return node conditions
 // TODO: For now, use the same node conditions as the MockProvider
-func (p *CRIProvider) NodeConditions() []v1.NodeCondition {
+func (p *CRIProvider) NodeConditions(ctx context.Context) []v1.NodeCondition {
 	// TODO: Make this configurable
 	return []v1.NodeCondition{
 		{
@@ -901,7 +902,7 @@ func (p *CRIProvider) NodeConditions() []v1.NodeCondition {
 }
 
 // Provider function to return a list of node addresses
-func (p *CRIProvider) NodeAddresses() []v1.NodeAddress {
+func (p *CRIProvider) NodeAddresses(ctx context.Context) []v1.NodeAddress {
 	log.Printf("receive NodeAddresses - returning %s", p.internalIP)
 
 	return []v1.NodeAddress{
@@ -913,7 +914,7 @@ func (p *CRIProvider) NodeAddresses() []v1.NodeAddress {
 }
 
 // Provider function to return the daemon endpoint
-func (p *CRIProvider) NodeDaemonEndpoints() *v1.NodeDaemonEndpoints {
+func (p *CRIProvider) NodeDaemonEndpoints(ctx context.Context) *v1.NodeDaemonEndpoints {
 	log.Printf("receive NodeDaemonEndpoints - returning %v", p.daemonEndpointPort)
 
 	return &v1.NodeDaemonEndpoints{

@@ -1,6 +1,7 @@
 package aci
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -16,7 +17,7 @@ import (
 // if it is not empty.
 // From: https://docs.microsoft.com/en-us/rest/api/container-instances/containergroups/list
 // From: https://docs.microsoft.com/en-us/rest/api/container-instances/containergroups/listbyresourcegroup
-func (c *Client) ListContainerGroups(resourceGroup string) (*ContainerGroupListResult, error) {
+func (c *Client) ListContainerGroups(ctx context.Context, resourceGroup string) (*ContainerGroupListResult, error) {
 	urlParams := url.Values{
 		"api-version": []string{apiVersion},
 	}
@@ -35,6 +36,7 @@ func (c *Client) ListContainerGroups(resourceGroup string) (*ContainerGroupListR
 	if err != nil {
 		return nil, fmt.Errorf("Creating get container group list uri request failed: %v", err)
 	}
+	req = req.WithContext(ctx)
 
 	// Add the parameters to the url.
 	if err := api.ExpandURL(req.URL, map[string]string{

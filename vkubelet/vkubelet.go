@@ -189,11 +189,11 @@ func (s *Server) registerNode(ctx context.Context) error {
 				Architecture:    "amd64",
 				KubeletVersion:  "v1.11.2",
 			},
-			Capacity:        s.provider.Capacity(),
-			Allocatable:     s.provider.Capacity(),
-			Conditions:      s.provider.NodeConditions(),
-			Addresses:       s.provider.NodeAddresses(),
-			DaemonEndpoints: *s.provider.NodeDaemonEndpoints(),
+			Capacity:        s.provider.Capacity(ctx),
+			Allocatable:     s.provider.Capacity(ctx),
+			Conditions:      s.provider.NodeConditions(ctx),
+			Addresses:       s.provider.NodeAddresses(ctx),
+			DaemonEndpoints: *s.provider.NodeDaemonEndpoints(ctx),
 		},
 	}
 
@@ -297,13 +297,13 @@ func (s *Server) updateNode(ctx context.Context) {
 	}
 
 	n.ResourceVersion = "" // Blank out resource version to prevent object has been modified error
-	n.Status.Conditions = s.provider.NodeConditions()
+	n.Status.Conditions = s.provider.NodeConditions(ctx)
 
-	capacity := s.provider.Capacity()
+	capacity := s.provider.Capacity(ctx)
 	n.Status.Capacity = capacity
 	n.Status.Allocatable = capacity
 
-	n.Status.Addresses = s.provider.NodeAddresses()
+	n.Status.Addresses = s.provider.NodeAddresses(ctx)
 
 	n, err = s.k8sClient.CoreV1().Nodes().UpdateStatus(n)
 	if err != nil {
@@ -319,7 +319,7 @@ func (s *Server) reconcile(ctx context.Context) {
 	logger.Debug("Start reconcile")
 	defer logger.Debug("End reconcile")
 
-	providerPods, err := s.provider.GetPods()
+	providerPods, err := s.provider.GetPods(ctx)
 	if err != nil {
 		logger.WithError(err).Error("Error getting pod list from provider")
 		return
@@ -377,7 +377,7 @@ func (s *Server) createPod(ctx context.Context, pod *corev1.Pod) error {
 
 	logger := log.G(ctx).WithField("pod", pod.Name)
 
-	if origErr := s.provider.CreatePod(pod); origErr != nil {
+	if origErr := s.provider.CreatePod(ctx, pod); origErr != nil {
 		pod.ResourceVersion = "" // Blank out resource version to prevent object has been modified error
 		pod.Status.Phase = corev1.PodFailed
 		pod.Status.Reason = PodStatusReason_ProviderFailed
@@ -398,7 +398,7 @@ func (s *Server) createPod(ctx context.Context, pod *corev1.Pod) error {
 
 func (s *Server) deletePod(ctx context.Context, pod *corev1.Pod) error {
 	var delErr error
-	if delErr = s.provider.DeletePod(pod); delErr != nil && errors.IsNotFound(delErr) {
+	if delErr = s.provider.DeletePod(ctx, pod); delErr != nil && errors.IsNotFound(delErr) {
 		return delErr
 	}
 
@@ -430,7 +430,7 @@ func (s *Server) updatePodStatuses(ctx context.Context) {
 			continue
 		}
 
-		status, err := s.provider.GetPodStatus(pod.Namespace, pod.Name)
+		status, err := s.provider.GetPodStatus(ctx, pod.Namespace, pod.Name)
 		if err != nil {
 			log.G(ctx).WithField("pod", pod.Name).Error("Error retrieving pod status")
 			return

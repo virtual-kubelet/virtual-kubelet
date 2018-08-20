@@ -2,6 +2,7 @@ package aci
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -14,7 +15,7 @@ import (
 // CreateContainerGroup creates a new Azure Container Instance with the
 // provided properties.
 // From: https://docs.microsoft.com/en-us/rest/api/container-instances/containergroups/createorupdate
-func (c *Client) CreateContainerGroup(resourceGroup, containerGroupName string, containerGroup ContainerGroup) (*ContainerGroup, error) {
+func (c *Client) CreateContainerGroup(ctx context.Context, resourceGroup, containerGroupName string, containerGroup ContainerGroup) (*ContainerGroup, error) {
 	urlParams := url.Values{
 		"api-version": []string{apiVersion},
 	}
@@ -34,6 +35,7 @@ func (c *Client) CreateContainerGroup(resourceGroup, containerGroupName string, 
 	if err != nil {
 		return nil, fmt.Errorf("Creating create/update container group uri request failed: %v", err)
 	}
+	req = req.WithContext(ctx)
 
 	// Add the parameters to the url.
 	if err := api.ExpandURL(req.URL, map[string]string{
