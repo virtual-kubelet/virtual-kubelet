@@ -115,7 +115,7 @@ func New(nodeName, operatingSystem, namespace, kubeConfig, provider, providerCon
 		Effect: vkTaintEffect,
 	}
 
-	p, err = lookupProvider(provider, providerConfig, rm, nodeName, operatingSystem, internalIP, daemonEndpointPort)
+	p, err := lookupProvider(provider, providerConfig, rm, nodeName, operatingSystem, internalIP, daemonEndpointPort)
 	if err != nil {
 		return nil, err
 	}
@@ -137,7 +137,13 @@ func New(nodeName, operatingSystem, namespace, kubeConfig, provider, providerCon
 		return s, err
 	}
 
-	go ApiserverStart(p, metricsAddr)
+	go KubeletServerStart(p)
+
+	if metricsAddr != "" {
+		go MetricsServerStart(p, metricsAddr)
+	} else {
+		log.G(ctx).Info("Skipping metrics server startup since no address was provided")
+	}
 
 	tick := time.Tick(5 * time.Second)
 
