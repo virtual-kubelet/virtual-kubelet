@@ -18,6 +18,7 @@ const (
 	containerGroupListByResourceGroupURLPath = "subscriptions/{{.subscriptionId}}/resourceGroups/{{.resourceGroup}}/providers/Microsoft.ContainerInstance/containerGroups"
 	containerLogsURLPath                     = containerGroupURLPath + "/containers/{{.containerName}}/logs"
 	containerExecURLPath                     = containerGroupURLPath + "/containers/{{.containerName}}/exec"
+	containerGroupMetricsURLPath             = containerGroupURLPath + "/providers/microsoft.Insights/metrics"
 )
 
 // Client is a client for interacting with Azure Container Instances.

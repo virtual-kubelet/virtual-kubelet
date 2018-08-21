@@ -19,7 +19,10 @@ func init() {
 }
 
 func TestResourceManager(t *testing.T) {
-	pm := NewResourceManager(fakeClient)
+	pm, err := NewResourceManager(fakeClient)
+	if err != nil {
+		t.Fatal(err)
+	}
 	pod1Name := "Pod1"
 	pod1Namespace := "Pod1Namespace"
 	pod1 := makePod(pod1Namespace, pod1Name)
@@ -36,7 +39,10 @@ func TestResourceManager(t *testing.T) {
 }
 
 func TestResourceManagerDeletePod(t *testing.T) {
-	pm := NewResourceManager(fakeClient)
+	pm, err := NewResourceManager(fakeClient)
+	if err != nil {
+		t.Fatal(err)
+	}
 	pod1Name := "Pod1"
 	pod1Namespace := "Pod1Namespace"
 	pod1 := makePod(pod1Namespace, pod1Name)
@@ -61,7 +67,10 @@ func makePod(namespace, name string) *v1.Pod {
 }
 
 func TestResourceManagerUpdatePod(t *testing.T) {
-	pm := NewResourceManager(fakeClient)
+	pm, err := NewResourceManager(fakeClient)
+	if err != nil {
+		t.Fatal(err)
+	}
 	pod1Name := "Pod1"
 	pod1Namespace := "Pod1Namespace"
 	pod1 := makePod(pod1Namespace, pod1Name)

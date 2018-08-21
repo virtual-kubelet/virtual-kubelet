@@ -1,8 +1,8 @@
 package vkubelet
 
 import (
+	"context"
 	"fmt"
-	"log"
 	"os"
 	"os/signal"
 	"strconv"
@@ -10,6 +10,8 @@ import (
 	"syscall"
 	"time"
 
+	pkgerrors "github.com/pkg/errors"
+	"github.com/virtual-kubelet/virtual-kubelet/log"
 	"github.com/virtual-kubelet/virtual-kubelet/manager"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -30,14 +32,23 @@ type Server struct {
 	nodeName        string
 	namespace       string
 	k8sClient       *kubernetes.Clientset
-	taint           string
+	taint           corev1.Taint
+	disableTaint    bool
 	provider        Provider
 	podWatcher      watch.Interface
 	resourceManager *manager.ResourceManager
 }
 
+func getEnv(key, defaultValue string) string {
+	value, found := os.LookupEnv(key)
+	if found {
+		return value
+	}
+	return defaultValue
+}
+
 // New creates a new virtual-kubelet server.
-func New(nodeName, operatingSystem, namespace, kubeConfig, taint, provider, providerConfig string) (*Server, error) {
+func New(nodeName, operatingSystem, namespace, kubeConfig, provider, providerConfig, taintKey string, disableTaint bool, metricsAddr string) (*Server, error) {
 	var config *rest.Config
 
 	// Check if the kubeConfig file exists.
@@ -60,7 +71,10 @@ func New(nodeName, operatingSystem, namespace, kubeConfig, taint, provider, prov
 		return nil, err
 	}
 
-	rm := manager.NewResourceManager(clientset)
+	rm, err := manager.NewResourceManager(clientset)
+	if err != nil {
+		return nil, pkgerrors.Wrap(err, "error creating resource manager")
+	}
 
 	daemonEndpointPortEnv := os.Getenv("KUBELET_PORT")
 	if daemonEndpointPortEnv == "" {
@@ -71,7 +85,37 @@ func New(nodeName, operatingSystem, namespace, kubeConfig, taint, provider, prov
 
 	internalIP := os.Getenv("VKUBELET_POD_IP")
 
-	p, err = lookupProvider(provider, providerConfig, rm, nodeName, operatingSystem, internalIP, daemonEndpointPort)
+	var defaultTaintKey string
+	var defaultTaintValue string
+	if taintKey != "" {
+		defaultTaintKey = taintKey
+		defaultTaintValue = ""
+	} else {
+		defaultTaintKey = "virtual-kubelet.io/provider"
+		defaultTaintValue = provider
+	}
+	vkTaintKey := getEnv("VKUBELET_TAINT_KEY", defaultTaintKey)
+	vkTaintValue := getEnv("VKUBELET_TAINT_VALUE", defaultTaintValue)
+	vkTaintEffectEnv := getEnv("VKUBELET_TAINT_EFFECT", "NoSchedule")
+	var vkTaintEffect corev1.TaintEffect
+	switch vkTaintEffectEnv {
+	case "NoSchedule":
+		vkTaintEffect = corev1.TaintEffectNoSchedule
+	case "NoExecute":
+		vkTaintEffect = corev1.TaintEffectNoExecute
+	case "PreferNoSchedule":
+		vkTaintEffect = corev1.TaintEffectPreferNoSchedule
+	default:
+		return nil, pkgerrors.Errorf("taint effect %q is not supported", vkTaintEffectEnv)
+	}
+
+	taint := corev1.Taint{
+		Key:    vkTaintKey,
+		Value:  vkTaintValue,
+		Effect: vkTaintEffect,
+	}
+
+	p, err := lookupProvider(provider, providerConfig, rm, nodeName, operatingSystem, internalIP, daemonEndpointPort)
 	if err != nil {
 		return nil, err
 	}
@@ -80,22 +124,33 @@ func New(nodeName, operatingSystem, namespace, kubeConfig, taint, provider, prov
 		namespace:       namespace,
 		nodeName:        nodeName,
 		taint:           taint,
+		disableTaint:    disableTaint,
 		k8sClient:       clientset,
 		resourceManager: rm,
 		provider:        p,
 	}
 
-	if err = s.registerNode(); err != nil {
+	ctx := context.TODO()
+	ctx = log.WithLogger(ctx, log.G(ctx))
+
+	if err = s.registerNode(ctx); err != nil {
 		return s, err
 	}
 
-	go ApiserverStart(p)
+	go KubeletServerStart(p)
+
+	if metricsAddr != "" {
+		go MetricsServerStart(p, metricsAddr)
+	} else {
+		log.G(ctx).Info("Skipping metrics server startup since no address was provided")
+	}
 
 	tick := time.Tick(5 * time.Second)
+
 	go func() {
 		for range tick {
-			s.updateNode()
-			s.updatePodStatuses()
+			s.updateNode(ctx)
+			s.updatePodStatuses(ctx)
 		}
 	}()
 
@@ -103,14 +158,11 @@ func New(nodeName, operatingSystem, namespace, kubeConfig, taint, provider, prov
 }
 
 // registerNode registers this virtual node with the Kubernetes API.
-func (s *Server) registerNode() error {
+func (s *Server) registerNode(ctx context.Context) error {
 	taints := make([]corev1.Taint, 0)
 
-	if s.taint != "" {
-		taints = append(taints, corev1.Taint{
-			Key:    s.taint,
-			Effect: corev1.TaintEffectNoSchedule,
-		})
+	if !s.disableTaint {
+		taints = append(taints, s.taint)
 	}
 
 	node := &corev1.Node{
@@ -145,14 +197,14 @@ func (s *Server) registerNode() error {
 		return err
 	}
 
-	log.Printf("Node '%s' with OS type '%s' registered\n", node.Name, node.Status.NodeInfo.OperatingSystem)
+	log.G(ctx).Info("Registered node")
 
 	return nil
 }
 
 // Run starts the server, registers it with Kubernetes and begins watching/reconciling the cluster.
 // Run will block until Stop is called or a SIGINT or SIGTERM signal is received.
-func (s *Server) Run() error {
+func (s *Server) Run(ctx context.Context) error {
 	shouldStop := false
 
 	sig := make(chan os.Signal, 1)
@@ -170,15 +222,15 @@ func (s *Server) Run() error {
 
 		pods, err := s.k8sClient.CoreV1().Pods(s.namespace).List(opts)
 		if err != nil {
-			log.Fatal("Failed to list pods", err)
+			return pkgerrors.Wrap(err, "error getting pod list")
 		}
 		s.resourceManager.SetPods(pods)
-		s.reconcile()
+		s.reconcile(ctx)
 
 		opts.ResourceVersion = pods.ResourceVersion
 		s.podWatcher, err = s.k8sClient.CoreV1().Pods(s.namespace).Watch(opts)
 		if err != nil {
-			log.Fatal("Failed to watch pods", err)
+			return pkgerrors.Wrap(err, "failed to watch pods")
 		}
 
 	loop:
@@ -187,15 +239,15 @@ func (s *Server) Run() error {
 			case ev, ok := <-s.podWatcher.ResultChan():
 				if !ok {
 					if shouldStop {
-						log.Println("Pod watcher is stopped.")
+						log.G(ctx).Info("Pod watcher is stopped")
 						return nil
 					}
 
-					log.Println("Pod watcher connection is closed unexpectedly.")
+					log.G(ctx).Error("Pod watcher connection is closed unexpectedly")
 					break loop
 				}
 
-				log.Println("Pod watcher event is received:", ev.Type)
+				log.G(ctx).WithField("type", ev.Type).Debug("Pod watcher event is received")
 				reconcile := false
 				switch ev.Type {
 				case watch.Added:
@@ -207,7 +259,7 @@ func (s *Server) Run() error {
 				}
 
 				if reconcile {
-					s.reconcile()
+					s.reconcile(ctx)
 				}
 			}
 		}
@@ -225,17 +277,17 @@ func (s *Server) Stop() {
 }
 
 // updateNode updates the node status within Kubernetes with updated NodeConditions.
-func (s *Server) updateNode() {
+func (s *Server) updateNode(ctx context.Context) {
 	opts := metav1.GetOptions{}
 	n, err := s.k8sClient.CoreV1().Nodes().Get(s.nodeName, opts)
 	if err != nil && !errors.IsNotFound(err) {
-		log.Println("Failed to retrieve node:", err)
+		log.G(ctx).WithError(err).Error("Failed to retrieve node")
 		return
 	}
 
 	if errors.IsNotFound(err) {
-		if err = s.registerNode(); err != nil {
-			log.Println("Failed to register node:", err)
+		if err = s.registerNode(ctx); err != nil {
+			log.G(ctx).WithError(err).Error("Failed to register node")
 			return
 		}
 	}
@@ -251,27 +303,31 @@ func (s *Server) updateNode() {
 
 	n, err = s.k8sClient.CoreV1().Nodes().UpdateStatus(n)
 	if err != nil {
-		log.Println("Failed to update node:", err)
+		log.G(ctx).WithError(err).Error("Failed to update node")
 		return
 	}
 }
 
 // reconcile is the main reconciliation loop that compares differences between Kubernetes and
 // the active provider and reconciles the differences.
-func (s *Server) reconcile() {
-	log.Println("Start reconcile.")
+func (s *Server) reconcile(ctx context.Context) {
+	logger := log.G(ctx)
+	logger.Debug("Start reconcile")
+	defer logger.Debug("End reconcile")
+
 	providerPods, err := s.provider.GetPods()
 	if err != nil {
-		log.Println(err)
+		logger.WithError(err).Error("Error getting pod list from provider")
 		return
 	}
 
 	for _, pod := range providerPods {
 		// Delete pods that don't exist in Kubernetes
 		if p := s.resourceManager.GetPod(pod.Namespace, pod.Name); p == nil || p.DeletionTimestamp != nil {
-			log.Printf("Deleting pod '%s'\n", pod.Name)
-			if err := s.deletePod(pod); err != nil {
-				log.Printf("Error deleting pod '%s': %s\n", pod.Name, err)
+			logger := logger.WithField("pod", pod.Name)
+			logger.Debug("Deleting pod '%s'\n", pod.Name)
+			if err := s.deletePod(ctx, pod); err != nil {
+				logger.WithError(err).Error("Error deleting pod")
 				continue
 			}
 		}
@@ -280,6 +336,7 @@ func (s *Server) reconcile() {
 	// Create any pods for k8s pods that don't exist in the provider
 	pods := s.resourceManager.GetPods()
 	for _, pod := range pods {
+		logger := logger.WithField("pod", pod.Name)
 		var providerPod *corev1.Pod
 		for _, p := range providerPods {
 			if p.Namespace == pod.Namespace && p.Name == pod.Name {
@@ -289,29 +346,32 @@ func (s *Server) reconcile() {
 		}
 
 		if pod.DeletionTimestamp == nil && pod.Status.Phase != corev1.PodFailed && providerPod == nil {
-			log.Printf("Creating pod '%s'\n", pod.Name)
-			if err := s.createPod(pod); err != nil {
-				log.Printf("Error creating pod '%s': %s\n", pod.Name, err)
+			logger.Debug("Creating pod")
+			if err := s.createPod(ctx, pod); err != nil {
+				logger.WithError(err).Error("Error creating pod")
 				continue
 			}
 		}
 
 		// Delete pod if DeletionTimestamp is set
 		if pod.DeletionTimestamp != nil {
-			log.Printf("Pod '%s' is pending deletion.\n", pod.Name)
+			log.Trace(logger, "Pod pending deletion")
 			var err error
-			if err = s.deletePod(pod); err != nil {
-				log.Printf("Error deleting pod '%s': %s\n", pod.Name, err)
+			if err = s.deletePod(ctx, pod); err != nil {
+				logger.WithError(err).Error("Error deleting pod")
 				continue
 			}
+			log.Trace(logger, "Pod deletion complete")
 		}
 	}
 }
 
-func (s *Server) createPod(pod *corev1.Pod) error {
+func (s *Server) createPod(ctx context.Context, pod *corev1.Pod) error {
 	if err := s.populateSecretsAndConfigMapsInEnv(pod); err != nil {
 		return err
 	}
+
+	logger := log.G(ctx).WithField("pod", pod.Name)
 
 	if origErr := s.provider.CreatePod(pod); origErr != nil {
 		pod.ResourceVersion = "" // Blank out resource version to prevent object has been modified error
@@ -321,29 +381,29 @@ func (s *Server) createPod(pod *corev1.Pod) error {
 
 		_, err := s.k8sClient.CoreV1().Pods(pod.Namespace).UpdateStatus(pod)
 		if err != nil {
-			log.Println("Failed to update pod status:", err)
-			return origErr
+			logger.WithError(err).Warn("Failed to update pod status")
 		}
 
 		return origErr
 	}
 
-	log.Printf("Pod '%s' created.\n", pod.Name)
+	logger.Info("Pod created")
 
 	return nil
 }
 
-func (s *Server) deletePod(pod *corev1.Pod) error {
+func (s *Server) deletePod(ctx context.Context, pod *corev1.Pod) error {
 	var delErr error
 	if delErr = s.provider.DeletePod(pod); delErr != nil && errors.IsNotFound(delErr) {
 		return delErr
 	}
 
+	logger := log.G(ctx).WithField("pod", pod.Name)
 	if !errors.IsNotFound(delErr) {
 		var grace int64
 		if err := s.k8sClient.CoreV1().Pods(pod.Namespace).Delete(pod.Name, &metav1.DeleteOptions{GracePeriodSeconds: &grace}); err != nil && errors.IsNotFound(err) {
 			if errors.IsNotFound(err) {
-				log.Printf("Pod '%s' doesn't exist.\n", pod.Name)
+				logger.Error("Pod doesn't exist")
 				return nil
 			}
 
@@ -351,15 +411,14 @@ func (s *Server) deletePod(pod *corev1.Pod) error {
 		}
 
 		s.resourceManager.DeletePod(pod)
-
-		log.Printf("Pod '%s' deleted.\n", pod.Name)
+		logger.Info("Pod deleted")
 	}
 
 	return nil
 }
 
 // updatePodStatuses syncs the providers pod status with the kubernetes pod status.
-func (s *Server) updatePodStatuses() {
+func (s *Server) updatePodStatuses(ctx context.Context) {
 	// Update all the pods with the provider status.
 	pods := s.resourceManager.GetPods()
 	for _, pod := range pods {
@@ -369,7 +428,7 @@ func (s *Server) updatePodStatuses() {
 
 		status, err := s.provider.GetPodStatus(pod.Namespace, pod.Name)
 		if err != nil {
-			log.Printf("Error retrieving pod '%s' in namespace '%s' status from provider: %s\n", pod.Name, pod.Namespace, err)
+			log.G(ctx).WithField("pod", pod.Name).Error("Error retrieving pod status")
 			return
 		}
 

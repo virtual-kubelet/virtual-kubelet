@@ -15,15 +15,16 @@
 package cmd
 
 import (
-	"fmt"
-	"log"
+	"context"
 	"os"
 	"path/filepath"
 	"strings"
 
+	"github.com/Sirupsen/logrus"
 	homedir "github.com/mitchellh/go-homedir"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+	"github.com/virtual-kubelet/virtual-kubelet/log"
 	"github.com/virtual-kubelet/virtual-kubelet/providers"
 	vkubelet "github.com/virtual-kubelet/virtual-kubelet/vkubelet"
 	corev1 "k8s.io/api/core/v1"
@@ -36,7 +37,10 @@ var nodeName string
 var operatingSystem string
 var provider string
 var providerConfig string
-var taint string
+var taintKey string
+var disableTaint bool
+var logLevel string
+var metricsAddr string
 
 // RootCmd represents the base command when called without any subcommands
 var RootCmd = &cobra.Command{
@@ -46,12 +50,13 @@ var RootCmd = &cobra.Command{
 backend implementation allowing users to create kubernetes nodes without running the kubelet.
 This allows users to schedule kubernetes workloads on nodes that aren't running Kubernetes.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println(kubeConfig)
-		f, err := vkubelet.New(nodeName, operatingSystem, kubeNamespace, kubeConfig, taint, provider, providerConfig)
+		f, err := vkubelet.New(nodeName, operatingSystem, kubeNamespace, kubeConfig, provider, providerConfig, taintKey, disableTaint, metricsAddr)
 		if err != nil {
-			log.Fatal(err)
+			log.L.WithError(err).Fatal("Error initializing virtual kubelet")
 		}
-		f.Run()
+		if err := f.Run(context.Background()); err != nil {
+			log.L.Fatal(err)
+		}
 	},
 }
 
@@ -59,8 +64,7 @@ This allows users to schedule kubernetes workloads on nodes that aren't running 
 // This is called by main.main(). It only needs to happen once to the rootCmd.
 func Execute() {
 	if err := RootCmd.Execute(); err != nil {
-		fmt.Println(err)
-		os.Exit(1)
+		log.GetLogger(context.TODO()).WithError(err).Fatal("Error executing root command")
 	}
 }
 
@@ -82,8 +86,13 @@ func init() {
 	RootCmd.PersistentFlags().StringVar(&nodeName, "nodename", defaultNodeName, "kubernetes node name")
 	RootCmd.PersistentFlags().StringVar(&operatingSystem, "os", "Linux", "Operating System (Linux/Windows)")
 	RootCmd.PersistentFlags().StringVar(&provider, "provider", "", "cloud provider")
-	RootCmd.PersistentFlags().StringVar(&taint, "taint", "", "apply taint to node, making scheduling explicit")
+	RootCmd.PersistentFlags().BoolVar(&disableTaint, "disable-taint", false, "disable the virtual-kubelet node taint")
 	RootCmd.PersistentFlags().StringVar(&providerConfig, "provider-config", "", "cloud provider configuration file")
+	RootCmd.PersistentFlags().StringVar(&metricsAddr, "metrics-addr", ":10255", "address to listen for metrics/stats requests")
+
+	RootCmd.PersistentFlags().StringVar(&taintKey, "taint", "", "Set node taint key")
+	RootCmd.PersistentFlags().MarkDeprecated("taint", "Taint key should now be configured using the VK_TAINT_KEY environment variable")
+	RootCmd.PersistentFlags().StringVar(&logLevel, "log-level", "info", `set the log level, e.g. "trace", debug", "info", "warn", "error"`)
 
 	// Cobra also supports local flags, which will only run
 	// when this action is called directly.
@@ -93,15 +102,13 @@ func init() {
 // initConfig reads in config file and ENV variables if set.
 func initConfig() {
 	if provider == "" {
-		fmt.Println("You must supply a cloud provider option: use --provider")
-		os.Exit(1)
+		log.G(context.TODO()).Fatal("You must supply a cloud provider option: use --provider")
 	}
 
 	// Find home directory.
 	home, err := homedir.Dir()
 	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
+		log.G(context.TODO()).WithError(err).Fatal("Error reading homedir")
 	}
 
 	if kubeletConfig != "" {
@@ -117,7 +124,7 @@ func initConfig() {
 
 	// If a config file is found, read it in.
 	if err := viper.ReadInConfig(); err == nil {
-		fmt.Println("Using config file:", viper.ConfigFileUsed())
+		log.G(context.TODO()).Debugf("Using config file %s", viper.ConfigFileUsed())
 	}
 
 	if kubeConfig == "" {
@@ -132,7 +139,20 @@ func initConfig() {
 	// Validate operating system.
 	ok, _ := providers.ValidOperatingSystems[operatingSystem]
 	if !ok {
-		fmt.Printf("Operating system '%s' not supported. Valid options are %s\n", operatingSystem, strings.Join(providers.ValidOperatingSystems.Names(), " | "))
-		os.Exit(1)
+		log.G(context.TODO()).WithField("OperatingSystem", operatingSystem).Fatalf("Operating system not supported. Valid options are: %s", strings.Join(providers.ValidOperatingSystems.Names(), " | "))
 	}
+
+	level, err := log.ParseLevel(logLevel)
+	if err != nil {
+		log.G(context.TODO()).WithField("logLevel", logLevel).Fatal("log level is not supported")
+	}
+
+	logger := log.L.WithFields(logrus.Fields{
+		"provider":        provider,
+		"operatingSystem": operatingSystem,
+		"node":            nodeName,
+		"namespace":       kubeNamespace,
+	})
+	logger.Level = level
+	log.L = logger
 }

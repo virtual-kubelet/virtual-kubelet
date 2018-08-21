@@ -1,12 +1,14 @@
 package vkubelet
 
 import (
+	"context"
 	"io"
 	"time"
 
 	"k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/remotecommand"
+	stats "k8s.io/kubernetes/pkg/kubelet/apis/stats/v1alpha1"
 )
 
 // Provider contains the methods required to implement a virtual-kubelet provider.
@@ -53,4 +55,9 @@ type Provider interface {
 
 	// OperatingSystem returns the operating system the provider is for.
 	OperatingSystem() string
+}
+
+// MetricsProvider is an optional interface that providers can implement to expose pod stats
+type MetricsProvider interface {
+	GetStatsSummary(context.Context) (*stats.Summary, error)
 }
