@@ -52,7 +52,7 @@ This allows users to schedule kubernetes workloads on nodes that aren't running 
 	Run: func(cmd *cobra.Command, args []string) {
 		f, err := vkubelet.New(nodeName, operatingSystem, kubeNamespace, kubeConfig, provider, providerConfig, taintKey, disableTaint, metricsAddr)
 		if err != nil {
-			log.L.WithError(err).Fatal("Error initializing vritual kubelet")
+			log.L.WithError(err).Fatal("Error initializing virtual kubelet")
 		}
 		if err := f.Run(context.Background()); err != nil {
 			log.L.Fatal(err)
