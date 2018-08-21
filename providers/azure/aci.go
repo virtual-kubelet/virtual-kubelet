@@ -331,7 +331,7 @@ func (p *ACIProvider) setupNetworkProfile(auth *client.Authentication) error {
 			subnet = &network.Subnet{Name: p.subnetName}
 		}
 		populateSubnet(subnet, p.subnetCIDR)
-		subnet, err = c.CreateOrUpdateSubnet(p.resourceGroup, p.vnetName, subnet)
+		subnet, err = c.CreateOrUpdateSubnet(p.vnetResourceGroup, p.vnetName, subnet)
 		if err != nil {
 			return fmt.Errorf("error creating subnet: %v", err)
 		}
@@ -592,6 +592,10 @@ func (p *ACIProvider) amendVnetResources(containerGroup *aci.ContainerGroup) {
 
 	containerGroup.ContainerGroupProperties.Containers = append(containerGroup.ContainerGroupProperties.Containers, *(p.kubeProxyContainer))
 	containerGroup.ContainerGroupProperties.Volumes = append(containerGroup.ContainerGroupProperties.Volumes, *(p.kubeProxyVolume))
+}
+
+func containerGroupName(pod *v1.Pod) string {
+	return fmt.Sprintf("%s-%s", pod.Namespace, pod.Name)
 }
 
 // UpdatePod is a noop, ACI currently does not support live updates of a pod.
