@@ -465,6 +465,66 @@ func ptrQuantity(q resource.Quantity) *resource.Quantity {
 	return &q
 }
 
+func TestCreatePodWithNamedLivenessProbe(t *testing.T) {
+	_, aciServerMocker, provider, err := prepareMocks()
+
+	if err != nil {
+		t.Fatal("Unable to prepare the mocks", err)
+	}
+
+	podName := "pod-" + uuid.New().String()
+	podNamespace := "ns-" + uuid.New().String()
+
+	aciServerMocker.OnCreate = func(subscription, resourceGroup, containerGroup string, cg *aci.ContainerGroup) (int, interface{}) {
+		assert.NotNil(t, cg.Containers[0].LivenessProbe, "Liveness probe expected")
+		assert.Equal(t, cg.Containers[0].LivenessProbe.InitialDelaySeconds, 10, "Initial Probe Delay doesn't match")
+		assert.Equal(t, cg.Containers[0].LivenessProbe.Period, 5, "Probe Period doesn't match")
+		assert.Equal(t, cg.Containers[0].LivenessProbe.TimeoutSeconds, 60, "Probe Timeout doesn't match")
+		assert.Equal(t, cg.Containers[0].LivenessProbe.SuccessThreshold, 3, "Probe Success Threshold doesn't match")
+		assert.Equal(t, cg.Containers[0].LivenessProbe.FailureThreshold, 5, "Probe Failure Threshold doesn't match")
+		assert.NotNil(t, cg.Containers[0].LivenessProbe.HTTPGet, "Expected an HTTP Get Probe")
+		assert.Equal(t, cg.Containers[0].LivenessProbe.HTTPGet.Port, 8080, "Expected Port to be 8080")
+		pod := &v1.Pod{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      podName,
+				Namespace: podNamespace,
+			},
+			Spec: v1.PodSpec{
+				Containers: []v1.Container{
+					v1.Container{
+						Name: "nginx",
+						Ports: []v1.ContainerPort{
+							v1.ContainerPort{
+								Name: "http",
+								ContainerPort: 8080,
+							},
+						},
+						LivenessProbe: &v1.Probe{
+							Handler: v1.Handler{
+								HTTPGet: &v1.HTTPGetAction{
+									Port: intstr.FromString("http"),
+									Path: "/",
+								},
+							},
+							InitialDelaySeconds: 10,
+							PeriodSeconds:       5,
+							TimeoutSeconds:      60,
+							SuccessThreshold:    3,
+							FailureThreshold:    5,
+						},
+					},
+				},
+			},
+		}
+
+		if err := provider.CreatePod(pod); err != nil {
+			t.Fatal("Failed to create pod", err)
+		}
+
+		return http.StatusOK, cg
+	}
+}
+
 func TestCreatePodWithLivenessProbe(t *testing.T) {
 	_, aciServerMocker, provider, err := prepareMocks()
 

@@ -26,6 +26,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/tools/remotecommand"
 	stats "k8s.io/kubernetes/pkg/kubelet/apis/stats/v1alpha1"
 )
@@ -744,7 +745,7 @@ func (p *ACIProvider) getContainers(pod *v1.Pod) ([]aci.Container, error) {
 		}
 
 		if container.LivenessProbe != nil {
-			probe, err := getProbe(container.LivenessProbe)
+			probe, err := getProbe(container.LivenessProbe, container.Ports)
 			if err != nil {
 				return nil, err
 			}
@@ -752,7 +753,7 @@ func (p *ACIProvider) getContainers(pod *v1.Pod) ([]aci.Container, error) {
 		}
 
 		if container.ReadinessProbe != nil {
-			probe, err := getProbe(container.ReadinessProbe)
+			probe, err := getProbe(container.ReadinessProbe, container.Ports)
 			if err != nil {
 				return nil, err
 			}
@@ -764,8 +765,7 @@ func (p *ACIProvider) getContainers(pod *v1.Pod) ([]aci.Container, error) {
 	return containers, nil
 }
 
-func getProbe(probe *v1.Probe) (*aci.ContainerProbe, error) {
-
+func getProbe(probe *v1.Probe, ports []v1.ContainerPort) (*aci.ContainerProbe, error) {
 	if probe.Handler.Exec != nil && probe.Handler.HTTPGet != nil {
 		return nil, fmt.Errorf("probe may not specify more than one of \"exec\" and \"httpGet\"")
 	}
@@ -786,8 +786,26 @@ func getProbe(probe *v1.Probe) (*aci.ContainerProbe, error) {
 
 	var httpGET *aci.ContainerHTTPGetProbe
 	if probe.Handler.HTTPGet != nil {
+		var portValue int
+		port := probe.Handler.HTTPGet.Port
+		switch port.Type {
+		case intstr.Int:
+			portValue = port.IntValue()
+		case intstr.String:
+			portValue = -1
+			portName := port.String()
+			for _, p := range ports {
+				if portName == p.Name {
+					portValue = int(p.ContainerPort)
+				}
+			}
+			if portValue == -1 {
+				return nil, fmt.Errorf("unable to find named port: %s", portName)
+			}
+		}
+
 		httpGET = &aci.ContainerHTTPGetProbe{
-			Port:   probe.Handler.HTTPGet.Port.IntValue(),
+			Port:   portValue,
 			Path:   probe.Handler.HTTPGet.Path,
 			Scheme: string(probe.Handler.HTTPGet.Scheme),
 		}
