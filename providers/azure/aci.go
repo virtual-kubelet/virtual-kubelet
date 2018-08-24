@@ -413,7 +413,7 @@ func getKubeProxyContainer(clusterCIDR string) *aci.Container {
 			Command: []string{
 				"/bin/bash",
 				"-c",
-				"/hyperkube proxy --kubeconfig="+kubeConfigDir+"/"+kubeConfigFile+" --cluster-cidr="+clusterCIDR+" --feature-gates=ExperimentalCriticalPodAnnotation=true",
+				"while true; do /setup_iptables.sh && /hyperkube proxy --kubeconfig="+kubeConfigDir+"/"+kubeConfigFile+" --cluster-cidr="+clusterCIDR+" --feature-gates=ExperimentalCriticalPodAnnotation=true; done",
 			},
 		},
 	}
