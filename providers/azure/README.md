@@ -318,10 +318,10 @@ spec:
     - containerPort: 443
       name: https
   dnsPolicy: ClusterFirst
-  nodeName: virtual-kubelet-myconnector-linux
   tolerations:
   - key: virtual-kubelet.io/provider
-    value: azure
+    operator: Exists
+  - key: azure.com/aci
     effect: NoSchedule
 ```
 
@@ -330,7 +330,8 @@ Notice that Virtual-Kubelet nodes are tainted by default to avoid unexpected pod
 ```
   tolerations:
   - key: virtual-kubelet.io/provider
-    value: azure
+    operator: Exists
+  - key: azure.com/aci
     effect: NoSchedule
 ```
 
@@ -395,7 +396,11 @@ spec:
     - containerPort: 443
       name: https
   dnsPolicy: ClusterFirst
-  nodeName: virtual-kubelet
+  tolerations:
+  - key: virtual-kubelet.io/provider
+    operator: Exists
+  - key: azure.com/aci
+    effect: NoSchedule
 ```
 
 To confirm the Azure Container Instance received and bound the DNS Name specified, use the [az container show][az-container-show] Azure CLI command. Virtual Kubelet's naming
