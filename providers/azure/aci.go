@@ -48,7 +48,7 @@ const (
 
 	// KubeProxy SideCar Container
 	kubeProxyContainerName  = "vk-side-car-kube-proxy"
-	kubeProxyImageName      = "k8s-gcrio.azureedge.net/hyperkube-amd64:v1.8.2"
+	kubeProxyImageName      = "mcr.microsoft.com/aci/sc-proxy:v1.9.10-master_20180816.1"
 	kubeConfigDir	        = "/etc/kube-proxy"
 	kubeConfigFile          = "kubeconfig"
 	kubeConfigSecretVolume  = "vk-side-car-kubeconfig-secret-volume"
@@ -411,11 +411,9 @@ func getKubeProxyContainer(clusterCIDR string) *aci.Container {
 		ContainerProperties: aci.ContainerProperties{
 			Image:   kubeProxyImageName,
 			Command: []string{
-				"/hyperkube",
-				"proxy",
-				"--kubeconfig="+kubeConfigDir+"/"+kubeConfigFile,
-				"--cluster-cidr="+clusterCIDR,
-				"--feature-gates=ExperimentalCriticalPodAnnotation=true",
+				"/bin/bash",
+				"-c",
+				"/hyperkube proxy --kubeconfig="+kubeConfigDir+"/"+kubeConfigFile+" --cluster-cidr="+clusterCIDR+" --feature-gates=ExperimentalCriticalPodAnnotation=true",
 			},
 		},
 	}
