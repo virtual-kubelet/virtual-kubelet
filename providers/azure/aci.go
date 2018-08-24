@@ -36,6 +36,8 @@ const serviceAccountSecretMountPath = "/var/run/secrets/kubernetes.io/serviceacc
 
 const virtualKubeletDNSNameLabel = "virtualkubelet.io/dnsnamelabel"
 
+var pfPool *sync.Pool
+
 // ACIProvider implements the virtual-kubelet provider interface and communicates with Azure's ACI APIs.
 type ACIProvider struct {
 	aciClient          *aci.Client
@@ -99,6 +101,11 @@ func NewACIProvider(config string, rm *manager.ResourceManager, nodeName, operat
 	var p ACIProvider
 	var err error
 
+	pfPool = &sync.Pool{
+		New: func() interface{} {
+			return make([]byte, 32*1024)
+		},
+	}
 	p.resourceManager = rm
 
 	if config != "" {
@@ -1175,7 +1182,7 @@ func (p *ACIProvider) PortForward(name string, uid types.UID, port int32, stream
 		return fmt.Errorf("port not exposed: %d", port)
 	}
 	remoteAddr, err := net.ResolveTCPAddr(
-		"tcp", 
+		"tcp",
 		fmt.Sprintf("%s:%d", cg.IPAddress.IP, port),
 	)
 	if err != nil {
@@ -1186,18 +1193,17 @@ func (p *ACIProvider) PortForward(name string, uid types.UID, port int32, stream
 		return fmt.Errorf("unable to open connection: %s", err)
 	}
 	defer conn.Close()
-	errs := make(chan error)
+	errs := make(chan error, 1)
 	go func() {
 		fmt.Printf("Writing to stream")
-		_, err := io.Copy(stream, conn)
+		buf := pfPool.Get().([]byte)
+		defer pfPool.Put(buf)
+		_, err := io.CopyBuffer(stream, conn, buf)
 		conn.CloseRead()
-		if err != nil {
-			errs <- err
-		} else {
-			errs <- nil
-		}
+		errs <- err
 	}()
-	buf := make([]byte, 1024)
+	buf := pfPool.Get().([]byte)
+	defer pfPool.Put(buf)
 	_, err = io.CopyBuffer(conn, stream, buf)
 	conn.CloseWrite()
 	if err != nil {
