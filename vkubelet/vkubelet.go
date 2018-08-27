@@ -288,8 +288,8 @@ func (s *Server) updateNode(ctx context.Context) {
 	if errors.IsNotFound(err) {
 		if err = s.registerNode(ctx); err != nil {
 			log.G(ctx).WithError(err).Error("Failed to register node")
-			return
 		}
+		return
 	}
 
 	n.ResourceVersion = "" // Blank out resource version to prevent object has been modified error
