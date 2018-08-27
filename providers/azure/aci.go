@@ -3,7 +3,9 @@ package azure
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
 	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -974,7 +976,7 @@ func containerGroupToPod(cg *aci.ContainerGroup) (*v1.Pod, error) {
 			RestartCount:         c.InstanceView.RestartCount,
 			Image:                c.Image,
 			ImageID:              "",
-			ContainerID:          "",
+			ContainerID:          getContainerID(cg.ID, c.Name),
 		}
 
 		// Add to containerStatuses
@@ -1016,6 +1018,19 @@ func containerGroupToPod(cg *aci.ContainerGroup) (*v1.Pod, error) {
 	}
 
 	return &p, nil
+}
+
+func getContainerID(cgID, containerName string) string {
+	if cgID == "" {
+		return ""
+	}
+
+	containerResourceID := fmt.Sprintf("%s/containers/%s", cgID, containerName)
+
+	h := sha256.New()
+	h.Write([]byte(strings.ToUpper(containerResourceID)))
+	hashBytes := h.Sum(nil)
+	return fmt.Sprintf("aci://%s", hex.EncodeToString(hashBytes))
 }
 
 func aciStateToPodPhase(state string) v1.PodPhase {
