@@ -12,8 +12,8 @@ import (
 
 const (
 	baseURI    = "https://management.azure.com"
-	userAgent  = "virtual-kubelet/azure-arm-networking/2018-05-01"
-	apiVersion = "2018-05-01"
+	userAgent  = "virtual-kubelet/azure-arm-networking/2018-07-01"
+	apiVersion = "2018-07-01"
 )
 
 // Client is a client for interacting with Azure networking
