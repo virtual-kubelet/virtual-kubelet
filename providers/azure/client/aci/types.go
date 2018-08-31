@@ -95,6 +95,8 @@ type ContainerGroupProperties struct {
 	InstanceView             ContainerGroupPropertiesInstanceView `json:"instanceView,omitempty"`
 	Diagnostics              *ContainerGroupDiagnostics           `json:"diagnostics,omitempty"`
 	NetworkProfile           *NetworkProfileDefinition            `json:"networkProfile,omitempty"`
+	Extensions               []Extension                          `json:"extension,omitempty"`
+	DNSConfig                *DNSConfig                           `json:"dnsConfig,omitempty"`
 }
 
 // ContainerGroupPropertiesInstanceView is the instance view of the container group. Only valid in response.
@@ -301,7 +303,7 @@ type ExecRequest struct {
 	TerminalSize TerminalSize `json:"terminalSize,omitempty"`
 }
 
-// ExecRequest is a request for Launch Exec API response for ACI.
+// ExecResponse is a request for Launch Exec API response for ACI.
 type ExecResponse struct {
 	WebSocketUri string `json:"webSocketUri,omitempty"`
 	Password     string `json:"password,omitempty"`
@@ -423,3 +425,48 @@ const (
 	AggregationTypeAverage AggregationType = "average"
 	AggregationTypeTotal   AggregationType = "total"
 )
+
+// Extension is the container group extension
+type Extension struct {
+	Name       string               `json:"name"`
+	Properties *ExtensionProperties `json:"properties"`
+}
+
+// ExtensionProperties is the properties for extension
+type ExtensionProperties struct {
+	Type              ExtensionType     `json:"extensionType"`
+	Version           ExtensionVersion  `json:"version"`
+	Settings          map[string]string `json:"settings,omitempty"`
+	ProtectedSettings map[string]string `json:"protectedSettings,omitempty"`
+}
+
+// ExtensionType is an enum type for defining supported extension types
+type ExtensionType string
+
+// Supported extension types
+const (
+	ExtensionTypeKubeProxy ExtensionType = "kube-proxy"
+)
+
+// ExtensionVersion is an enum type for defining supported extension versions
+type ExtensionVersion string
+
+// Supported extension version
+const (
+	ExtensionVersion1_0 ExtensionVersion = "1.0"
+)
+
+// Supported kube-proxy extension constants
+const (
+	KubeProxyExtensionSettingClusterCIDR string = "clusterCidr"
+	KubeProxyExtensionSettingKubeVersion string = "kubeVersion"
+	KubeProxyExtensionSettingKubeConfig  string = "kubeConfig"
+	KubeProxyExtensionKubeVersion        string = "v1.9.10"
+)
+
+// DNSConfig is the DNS config for container group
+type DNSConfig struct {
+	NameServers   []string `json:"nameServers"`
+	SearchDomains string   `json:"searchDomains,omitempty"`
+	Options       string   `json:"options,omitempty"`
+}

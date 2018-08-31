@@ -45,13 +45,6 @@ const (
 	subnetsAction           = "Microsoft.Network/virtualNetworks/subnets/action"
 	subnetDelegationService = "Microsoft.ContainerInstance/containerGroups"
 	networkProfileType      = "Microsoft.Network/networkProfiles"
-
-	// KubeProxy SideCar Container
-	kubeProxyContainerName  = "vk-side-car-kube-proxy"
-	kubeProxyImageName      = "mcr.microsoft.com/aci/sc-proxy:v1.9.10-master_20180816.1"
-	kubeConfigDir	        = "/etc/kube-proxy"
-	kubeConfigFile          = "kubeconfig"
-	kubeConfigSecretVolume  = "vk-side-car-kubeconfig-secret-volume"
 )
 
 // ACIProvider implements the virtual-kubelet provider interface and communicates with Azure's ACI APIs.
@@ -73,11 +66,9 @@ type ACIProvider struct {
 	vnetName           string
 	vnetResourceGroup  string
 	networkProfile     string
-	masterURI          string
-	clusterCIDR        string
-	kubeProxyContainer *aci.Container
-	kubeProxyVolume    *aci.Volume
-		
+	kubeProxyExtension *aci.Extension
+	kubeDNSIP          string
+
 	metricsSync     sync.Mutex
 	metricsSyncTime time.Time
 	lastMetric      *stats.Summary
@@ -287,17 +278,20 @@ func NewACIProvider(config string, rm *manager.ResourceManager, nodeName, operat
 			masterURI = "10.0.0.1"
 		}
 
-		p.kubeProxyVolume, err = getKubeProxyVolume(serviceAccountSecretMountPath, masterURI)
-		if err != nil {
-			return nil, fmt.Errorf("error creating kube proxy volume spec: %v", err)
-		}
-
 		clusterCIDR := os.Getenv("CLUSTER_CIDR")
 		if clusterCIDR == "" {
 			clusterCIDR = "10.240.0.0/16"
 		}
 
-		p.kubeProxyContainer = getKubeProxyContainer(clusterCIDR)
+		p.kubeProxyExtension, err = getKubeProxyExtension(serviceAccountSecretMountPath, masterURI, clusterCIDR)
+		if err != nil {
+			return nil, fmt.Errorf("error creating kube proxy extension: %v", err)
+		}
+
+		p.kubeDNSIP = "10.0.0.10"
+		if kubeDNSIP := os.Getenv("KUBE_DNS_IP"); kubeDNSIP != "" {
+			p.kubeDNSIP = kubeDNSIP
+		}
 	}
 
 	return &p, err
@@ -404,39 +398,7 @@ func populateNetworkProfile(p *network.Profile, subnet *network.Subnet) {
 	})
 }
 
-
-func getKubeProxyContainer(clusterCIDR string) *aci.Container {
-	container := aci.Container{
-		Name: kubeProxyContainerName,
-		ContainerProperties: aci.ContainerProperties{
-			Image:   kubeProxyImageName,
-			Command: []string{
-				"/bin/bash",
-				"-c",
-				"while true; do /setup_iptables.sh && /hyperkube proxy --kubeconfig="+kubeConfigDir+"/"+kubeConfigFile+" --cluster-cidr="+clusterCIDR+" --feature-gates=ExperimentalCriticalPodAnnotation=true; done",
-			},
-		},
-	}
-
-	container.VolumeMounts = []aci.VolumeMount{
-		aci.VolumeMount{
-			Name:      kubeConfigSecretVolume,
-			MountPath: kubeConfigDir,
-			ReadOnly:  true,
-		},
-	}
-
-	container.Resources = aci.ResourceRequirements{
-		Requests: &aci.ResourceRequests{
-			CPU:        0.1,
-			MemoryInGB: 0.10,
-		},
-	}
-
-	return &container
-}
-
-func getKubeProxyVolume(secretPath, masterURI string) (*aci.Volume, error) {
+func getKubeProxyExtension(secretPath, masterURI, clusterCIDR string) (*aci.Extension, error) {
 	ca, err := ioutil.ReadFile(secretPath + "/ca.crt")
 	if err != nil {
 		return nil, fmt.Errorf("failed to read ca.crt file: %v", err)
@@ -487,15 +449,22 @@ func getKubeProxyVolume(secretPath, masterURI string) (*aci.Volume, error) {
 		return nil, fmt.Errorf("failed to encode the kubeconfig: %v", err)
 	}
 
-	paths := make(map[string]string)
-	paths[kubeConfigFile] = base64.StdEncoding.EncodeToString(b.Bytes())
-
-	volume := aci.Volume{
-		Name:   kubeConfigSecretVolume,
-		Secret: paths,
+	extension := aci.Extension{
+		Name:   "kube-proxy",
+		Properties: &aci.ExtensionProperties{
+			Type:    aci.ExtensionTypeKubeProxy,
+			Version: aci.ExtensionVersion1_0,
+			Settings:          map[string]string{
+				aci.KubeProxyExtensionSettingClusterCIDR: clusterCIDR,
+				aci.KubeProxyExtensionSettingKubeVersion: aci.KubeProxyExtensionKubeVersion,
+			},
+			ProtectedSettings: map[string]string{
+				aci.KubeProxyExtensionSettingKubeConfig: base64.StdEncoding.EncodeToString(b.Bytes()),
+			},
+		},
 	}
 
-	return &volume, nil
+	return &extension, nil
 }
 
 // CreatePod accepts a Pod definition and creates
@@ -566,7 +535,7 @@ func (p *ACIProvider) CreatePod(pod *v1.Pod) error {
 		"CreationTimestamp": podCreationTimestamp,
 	}
 
-	p.amendVnetResources(&containerGroup)
+	p.amendVnetResources(&containerGroup, pod)
 
 	_, err = p.aciClient.CreateContainerGroup(
 		p.resourceGroup,
@@ -577,19 +546,54 @@ func (p *ACIProvider) CreatePod(pod *v1.Pod) error {
 	return err
 }
 
-func containerGroupName(pod *v1.Pod) string {
-	return fmt.Sprintf("%s-%s", pod.Namespace, pod.Name)
-}
-
-func (p *ACIProvider) amendVnetResources(containerGroup *aci.ContainerGroup) {
+func (p *ACIProvider) amendVnetResources(containerGroup *aci.ContainerGroup, pod *v1.Pod) {
 	if p.networkProfile == "" {
 		return
 	}
 
 	containerGroup.NetworkProfile = &aci.NetworkProfileDefinition{ID: p.networkProfile}
 
-	containerGroup.ContainerGroupProperties.Containers = append(containerGroup.ContainerGroupProperties.Containers, *(p.kubeProxyContainer))
-	containerGroup.ContainerGroupProperties.Volumes = append(containerGroup.ContainerGroupProperties.Volumes, *(p.kubeProxyVolume))
+	extensions := make([]aci.Extension, 0, 1)
+	extensions = append(extensions, *p.kubeProxyExtension)
+
+	containerGroup.ContainerGroupProperties.Extensions = extensions
+	containerGroup.ContainerGroupProperties.DNSConfig = p.getDNSConfig(pod.Spec.DNSPolicy, pod.Spec.DNSConfig)
+}
+
+func (p *ACIProvider) getDNSConfig(dnsPolicy v1.DNSPolicy, dnsConfig *v1.PodDNSConfig) *aci.DNSConfig {
+	nameServers := make([]string, 0)
+
+	if dnsPolicy == v1.DNSClusterFirst || dnsPolicy == v1.DNSClusterFirstWithHostNet {
+		nameServers = append(nameServers, p.kubeDNSIP)
+	}
+
+	var searchDomains string
+	options := []string{}
+
+	if dnsConfig != nil {
+		nameServers = append(nameServers, dnsConfig.Nameservers...)
+		searchDomains = strings.Join(dnsConfig.Nameservers, " ")
+
+		for _, option := range dnsConfig.Options {
+			op := option.Name
+			if option.Value != nil && *(option.Value) != "" {
+				op = op + ":" + *(option.Value)
+			}
+			options = append(options, op)
+		}
+	}
+
+	if len(nameServers) == 0 {
+		return nil
+	}
+
+	result := aci.DNSConfig{
+		NameServers: nameServers,
+		SearchDomains: searchDomains,
+		Options:       strings.Join(options, " "),
+	}
+
+	return &result
 }
 
 func containerGroupName(pod *v1.Pod) string {
@@ -1229,10 +1233,6 @@ func containerGroupToPod(cg *aci.ContainerGroup) (*v1.Pod, error) {
 	containers := make([]v1.Container, 0, len(cg.Containers))
 	containerStatuses := make([]v1.ContainerStatus, 0, len(cg.Containers))
 	for _, c := range cg.Containers {
-		if strings.EqualFold(c.Name, kubeProxyContainerName) {
-			continue;
-		}
-
 		container := v1.Container{
 			Name:    c.Name,
 			Image:   c.Image,
