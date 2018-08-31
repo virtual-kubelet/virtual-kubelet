@@ -14,7 +14,7 @@ import (
 
 var (
 	client         *Client
-	location       = "eastus2euap"
+	location       = "westcentralus"
 	resourceGroup  = "virtual-kubelet-tests"
 	containerGroup = "virtual-kubelet-test-container-group"
 	subscriptionID string
