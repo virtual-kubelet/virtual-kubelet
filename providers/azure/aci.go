@@ -47,6 +47,13 @@ const (
 	networkProfileType      = "Microsoft.Network/networkProfiles"
 )
 
+// DNS configuration settings
+const (
+	maxDNSNameservers     = 3
+	maxDNSSearchPaths     = 6
+	maxDNSSearchListChars = 256
+)
+
 // ACIProvider implements the virtual-kubelet provider interface and communicates with Azure's ACI APIs.
 type ACIProvider struct {
 	aciClient          *aci.Client
@@ -553,10 +560,7 @@ func (p *ACIProvider) amendVnetResources(containerGroup *aci.ContainerGroup, pod
 
 	containerGroup.NetworkProfile = &aci.NetworkProfileDefinition{ID: p.networkProfile}
 
-	extensions := make([]aci.Extension, 0, 1)
-	extensions = append(extensions, *p.kubeProxyExtension)
-
-	containerGroup.ContainerGroupProperties.Extensions = extensions
+	containerGroup.ContainerGroupProperties.Extensions = []*aci.Extension{p.kubeProxyExtension}
 	containerGroup.ContainerGroupProperties.DNSConfig = p.getDNSConfig(pod.Spec.DNSPolicy, pod.Spec.DNSConfig)
 }
 
@@ -567,12 +571,12 @@ func (p *ACIProvider) getDNSConfig(dnsPolicy v1.DNSPolicy, dnsConfig *v1.PodDNSC
 		nameServers = append(nameServers, p.kubeDNSIP)
 	}
 
-	var searchDomains string
+	searchDomains := []string{}
 	options := []string{}
 
 	if dnsConfig != nil {
-		nameServers = append(nameServers, dnsConfig.Nameservers...)
-		searchDomains = strings.Join(dnsConfig.Nameservers, " ")
+		nameServers = omitDuplicates(append(nameServers, dnsConfig.Nameservers...))
+		searchDomains = omitDuplicates(dnsConfig.Searches)
 
 		for _, option := range dnsConfig.Options {
 			op := option.Name
@@ -588,12 +592,66 @@ func (p *ACIProvider) getDNSConfig(dnsPolicy v1.DNSPolicy, dnsConfig *v1.PodDNSC
 	}
 
 	result := aci.DNSConfig{
-		NameServers: nameServers,
-		SearchDomains: searchDomains,
+		NameServers: formDNSNameserversFitsLimits(nameServers),
+		SearchDomains: formDNSSearchFitsLimits(searchDomains),
 		Options:       strings.Join(options, " "),
 	}
 
 	return &result
+}
+
+func omitDuplicates(strs []string) []string {
+	uniqueStrs := make(map[string]bool)
+
+	var ret []string
+	for _, str := range strs {
+		if !uniqueStrs[str] {
+			ret = append(ret, str)
+			uniqueStrs[str] = true
+		}
+	}
+	return ret
+}
+
+func formDNSNameserversFitsLimits(nameservers []string) []string {
+	if len(nameservers) > maxDNSNameservers {
+		nameservers = nameservers[:maxDNSNameservers]
+		msg := fmt.Sprintf("Nameserver limits were exceeded, some nameservers have been omitted, the applied nameserver line is: %s", strings.Join(nameservers, ";"))
+		log.G(context.TODO()).WithField("method", "formDNSNameserversFitsLimits").Warn(msg)
+	}
+	return nameservers
+}
+
+func formDNSSearchFitsLimits(searches []string) string {
+	limitsExceeded := false
+
+	if len(searches) > maxDNSSearchPaths {
+		searches = searches[:maxDNSSearchPaths]
+		limitsExceeded = true
+	}
+
+	if resolvSearchLineStrLen := len(strings.Join(searches, " ")); resolvSearchLineStrLen > maxDNSSearchListChars {
+		cutDomainsNum := 0
+		cutDomainsLen := 0
+		for i := len(searches) - 1; i >= 0; i-- {
+			cutDomainsLen += len(searches[i]) + 1
+			cutDomainsNum++
+
+			if (resolvSearchLineStrLen - cutDomainsLen) <= maxDNSSearchListChars {
+				break
+			}
+		}
+
+		searches = searches[:(len(searches) - cutDomainsNum)]
+		limitsExceeded = true
+	}
+
+	if limitsExceeded {
+		msg := fmt.Sprintf("Search Line limits were exceeded, some search paths have been omitted, the applied search line is: %s", strings.Join(searches, ";"))
+		log.G(context.TODO()).WithField("method", "formDNSSearchFitsLimits").Warn(msg)
+	}
+
+	return strings.Join(searches, " ")
 }
 
 func containerGroupName(pod *v1.Pod) string {
@@ -655,7 +713,7 @@ func (p *ACIProvider) GetContainerLogs(namespace, podName, containerName string,
 	return logContent, err
 }
 
-// Get full pod name as defined in the provider context
+// GetPodFullName as defined in the provider context
 func (p *ACIProvider) GetPodFullName(namespace string, pod string) string {
 	return fmt.Sprintf("%s-%s", namespace, pod)
 }
