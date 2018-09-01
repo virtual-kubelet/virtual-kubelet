@@ -95,7 +95,7 @@ type ContainerGroupProperties struct {
 	InstanceView             ContainerGroupPropertiesInstanceView `json:"instanceView,omitempty"`
 	Diagnostics              *ContainerGroupDiagnostics           `json:"diagnostics,omitempty"`
 	NetworkProfile           *NetworkProfileDefinition            `json:"networkProfile,omitempty"`
-	Extensions               []*Extension                         `json:"extension,omitempty"`
+	Extensions               []*Extension                         `json:"extensions,omitempty"`
 	DNSConfig                *DNSConfig                           `json:"dnsConfig,omitempty"`
 }
 
