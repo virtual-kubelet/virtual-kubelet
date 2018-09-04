@@ -218,6 +218,16 @@ func NewACIProvider(config string, rm *manager.ResourceManager, nodeName, operat
 		}
 	}
 
+	if clusterResourceID := os.Getenv("CLUSTER_RESOURCE_ID"); clusterResourceID != "" {
+		if p.diagnostics != nil && p.diagnostics.LogAnalytics != nil {
+			p.diagnostics.LogAnalytics.LogType = aci.LogAnlyticsLogTypeContainerInsights
+			p.diagnostics.LogAnalytics.Metadata = map[string]string{
+				aci.LogAnalyticsMetadataKeyClusterResourceID: clusterResourceID,
+				aci.LogAnalyticsMetadataKeyNodeName:          nodeName,
+			}
+		}
+	}
+
 	if rg := os.Getenv("ACI_RESOURCE_GROUP"); rg != "" {
 		p.resourceGroup = rg
 	}
@@ -650,6 +660,15 @@ func formDNSSearchFitsLimits(searches []string) string {
 	}
 
 	return strings.Join(searches, " ")
+}
+
+func (p *ACIProvider) getDiagnostics(pod *v1.Pod) *aci.ContainerGroupDiagnostics {
+	if p.diagnostics != nil && p.diagnostics.LogAnalytics != nil && p.diagnostics.LogAnalytics.LogType == aci.LogAnlyticsLogTypeContainerInsights {
+		d := *p.diagnostics
+		d.LogAnalytics.Metadata[aci.LogAnalyticsMetadataKeyPodUUID] = string(pod.ObjectMeta.UID)
+		return &d
+	}
+	return p.diagnostics
 }
 
 func containerGroupName(pod *v1.Pod) string {
