@@ -340,8 +340,10 @@ type ContainerGroupDiagnostics struct {
 
 // LogAnalyticsWorkspace defines details for a Log Analytics workspace
 type LogAnalyticsWorkspace struct {
-	WorkspaceID  string `json:"workspaceID,omitempty"`
-	WorkspaceKey string `json:"workspaceKey,omitempty"`
+	WorkspaceID  string              `json:"workspaceID,omitempty"`
+	WorkspaceKey string              `json:"workspaceKey,omitempty"`
+	LogType      LogAnalyticsLogType `json:"logType,omitempty"`
+	Metadata     map[string]string   `json:"metadata,omitempty"`
 }
 
 // ContainerGroupMetricsResult stores all the results for a container group metrics request.
@@ -470,3 +472,19 @@ type DNSConfig struct {
 	SearchDomains string   `json:"searchDomains,omitempty"`
 	Options       string   `json:"options,omitempty"`
 }
+
+// LogAnalyticsLogType is an enum type for defining supported log analytics log types
+type LogAnalyticsLogType string
+
+// Supported log analytics log types
+const (
+	LogAnlyticsLogTypeContainerInsights LogAnalyticsLogType = "ContainerInsights"
+	LogAnlyticsLogTypeContainerInstance LogAnalyticsLogType = "ContainerInstance"
+)
+
+// Supported log analytics metadata keys
+const (
+	LogAnalyticsMetadataKeyPodUUID           string = "pod-uuid"
+	LogAnalyticsMetadataKeyNodeName          string = "node-name"
+	LogAnalyticsMetadataKeyClusterResourceID string = "cluster-resource-id"
+)
