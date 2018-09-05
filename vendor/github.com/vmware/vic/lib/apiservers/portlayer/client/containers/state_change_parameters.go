@@ -60,6 +60,8 @@ for the state change operation typically these are written to a http.Request
 */
 type StateChangeParams struct {
 
+	/*OpID*/
+	OpID *string
 	/*Handle*/
 	Handle string
 	/*State*/
@@ -103,6 +105,17 @@ func (o *StateChangeParams) SetHTTPClient(client *http.Client) {
 	o.HTTPClient = client
 }
 
+// WithOpID adds the opID to the state change params
+func (o *StateChangeParams) WithOpID(opID *string) *StateChangeParams {
+	o.SetOpID(opID)
+	return o
+}
+
+// SetOpID adds the opId to the state change params
+func (o *StateChangeParams) SetOpID(opID *string) {
+	o.OpID = opID
+}
+
 // WithHandle adds the handle to the state change params
 func (o *StateChangeParams) WithHandle(handle string) *StateChangeParams {
 	o.SetHandle(handle)
@@ -130,6 +143,15 @@ func (o *StateChangeParams) WriteToRequest(r runtime.ClientRequest, reg strfmt.R
 
 	r.SetTimeout(o.timeout)
 	var res []error
+
+	if o.OpID != nil {
+
+		// header param Op-ID
+		if err := r.SetHeaderParam("Op-ID", *o.OpID); err != nil {
+			return err
+		}
+
+	}
 
 	// path param handle
 	if err := r.SetPathParam("handle", o.Handle); err != nil {

@@ -2,25 +2,44 @@ image:
   repository: microsoft/virtual-kubelet
   tag: latest
   pullPolicy: Always
-env:
-  azureClientId: 
-  azureClientKey: 
-  azureTenantId: 
-  azureSubscriptionId: 
-  aciResourceGroup: 
-  aciRegion: 
-  nodeName: 
-  nodeTaint: 
-  nodeOsType: 
-  apiserverCert: 
-  apiserverKey: 
-  monitoredNamespace: 
 
-# Install Default RBAC roles and bindings
+## `provider` should be one of aws, azure, azurebatch, etc...
+provider: 
+nodeName: "virtual-kubelet"
+nodeOsType: "Linux"
+monitoredNamespace: ""
+apiserverCert: 
+apiserverKey: 
+logLevel: 
+
+taint:
+  enabled: true
+  key: virtual-kubelet.io/provider
+  value: "{{ .Values.provider }}"
+  ## `effect` must be `NoSchedule`, `PreferNoSchedule` or `NoExecute`.
+  effect: NoSchedule
+
+providers:
+  azure:
+    ## Set to true if deploying to Azure Kubernetes Service (AKS), otherwise false
+    targetAKS: true
+    clientId: 
+    clientKey: 
+    tenantId: 
+    subscriptionId: 
+    ## `aciResourceGroup` and `aciRegion` are required only for non-AKS deployments
+    aciResourceGroup: 
+    aciRegion: 
+    loganalytics:
+      enabled: false
+      workspaceID: 
+      workspaceKey: 
+
+## Install Default RBAC roles and bindings
 rbac:
-  install: false
+  install: true
   serviceAccountName: virtual-kubelet
-  # RBAC api version (currently v1beta1)
+  ## RBAC api version
   apiVersion: v1beta1
-  # Cluster role reference
+  ## Cluster role reference
   roleRef: cluster-admin

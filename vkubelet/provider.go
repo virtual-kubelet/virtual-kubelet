@@ -1,33 +1,15 @@
 package vkubelet
 
 import (
+	"context"
 	"io"
 	"time"
 
-	"github.com/virtual-kubelet/virtual-kubelet/providers/aws"
-	"github.com/virtual-kubelet/virtual-kubelet/providers/azure"
-	"github.com/virtual-kubelet/virtual-kubelet/providers/azurebatch"
-	"github.com/virtual-kubelet/virtual-kubelet/providers/cri"
-	"github.com/virtual-kubelet/virtual-kubelet/providers/huawei"
-	"github.com/virtual-kubelet/virtual-kubelet/providers/hypersh"
-	"github.com/virtual-kubelet/virtual-kubelet/providers/mock"
-	"github.com/virtual-kubelet/virtual-kubelet/providers/vic"
-	"github.com/virtual-kubelet/virtual-kubelet/providers/web"
 	"k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/remotecommand"
+	stats "k8s.io/kubernetes/pkg/kubelet/apis/stats/v1alpha1"
 )
-
-// Compile time proof that our implementations meet the Provider interface.
-var _ Provider = (*aws.FargateProvider)(nil)
-var _ Provider = (*azure.ACIProvider)(nil)
-var _ Provider = (*hypersh.HyperProvider)(nil)
-var _ Provider = (*vic.VicProvider)(nil)
-var _ Provider = (*web.BrokerProvider)(nil)
-var _ Provider = (*mock.MockProvider)(nil)
-var _ Provider = (*huawei.CCIProvider)(nil)
-var _ Provider = (*azurebatch.Provider)(nil)
-var _ Provider = (*cri.CRIProvider)(nil)
 
 // Provider contains the methods required to implement a virtual-kubelet provider.
 type Provider interface {
@@ -73,4 +55,9 @@ type Provider interface {
 
 	// OperatingSystem returns the operating system the provider is for.
 	OperatingSystem() string
+}
+
+// MetricsProvider is an optional interface that providers can implement to expose pod stats
+type MetricsProvider interface {
+	GetStatsSummary(context.Context) (*stats.Summary, error)
 }

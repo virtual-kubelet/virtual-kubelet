@@ -61,6 +61,8 @@ for the write image operation typically these are written to a http.Request
 */
 type WriteImageParams struct {
 
+	/*OpID*/
+	OpID *string
 	/*ImageFile*/
 	ImageFile io.ReadCloser
 	/*ImageID*/
@@ -112,6 +114,17 @@ func (o *WriteImageParams) WithHTTPClient(client *http.Client) *WriteImageParams
 // SetHTTPClient adds the HTTPClient to the write image params
 func (o *WriteImageParams) SetHTTPClient(client *http.Client) {
 	o.HTTPClient = client
+}
+
+// WithOpID adds the opID to the write image params
+func (o *WriteImageParams) WithOpID(opID *string) *WriteImageParams {
+	o.SetOpID(opID)
+	return o
+}
+
+// SetOpID adds the opId to the write image params
+func (o *WriteImageParams) SetOpID(opID *string) {
+	o.OpID = opID
 }
 
 // WithImageFile adds the imageFile to the write image params
@@ -196,6 +209,15 @@ func (o *WriteImageParams) WriteToRequest(r runtime.ClientRequest, reg strfmt.Re
 
 	r.SetTimeout(o.timeout)
 	var res []error
+
+	if o.OpID != nil {
+
+		// header param Op-ID
+		if err := r.SetHeaderParam("Op-ID", *o.OpID); err != nil {
+			return err
+		}
+
+	}
 
 	if err := r.SetBodyParam(o.ImageFile); err != nil {
 		return err

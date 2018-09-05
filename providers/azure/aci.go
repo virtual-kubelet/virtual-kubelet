@@ -2,19 +2,24 @@ package azure
 
 import (
 	"bytes"
+	"context"
+	"crypto/sha256"
 	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"os"
 	"reflect"
 	"strings"
+	"sync"
 	"time"
 
+	"github.com/Sirupsen/logrus"
 	"github.com/gorilla/websocket"
+	"github.com/virtual-kubelet/virtual-kubelet/log"
 	"github.com/virtual-kubelet/virtual-kubelet/manager"
 	client "github.com/virtual-kubelet/virtual-kubelet/providers/azure/client"
 	"github.com/virtual-kubelet/virtual-kubelet/providers/azure/client/aci"
@@ -24,6 +29,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/remotecommand"
+	stats "k8s.io/kubernetes/pkg/kubelet/apis/stats/v1alpha1"
 )
 
 // The service account secret mount path.
@@ -44,6 +50,11 @@ type ACIProvider struct {
 	pods               string
 	internalIP         string
 	daemonEndpointPort int32
+	diagnostics        *aci.ContainerGroupDiagnostics
+
+	metricsSync     sync.Mutex
+	metricsSyncTime time.Time
+	lastMetric      *stats.Summary
 }
 
 // AuthConfig is the secret returned from an ImageRegistryCredential
@@ -59,12 +70,15 @@ type AuthConfig struct {
 
 // See https://azure.microsoft.com/en-us/status/ for valid regions.
 var validAciRegions = []string{
-	"westeurope",
-	"westus",
+	"centralus",
 	"eastus",
-	"southeastasia",
+	"eastus2",
+	"westus",
 	"westus2",
 	"northeurope",
+	"westeurope",
+	"southeastasia",
+	"australiaeast",
 }
 
 // isValidACIRegion checks to make sure we're using a valid ACI region
@@ -155,6 +169,25 @@ func NewACIProvider(config string, rm *manager.ResourceManager, nodeName, operat
 		return nil, err
 	}
 
+	// If the log analytics file has been specified, load workspace credentials from the file
+	if logAnalyticsAuthFile := os.Getenv("LOG_ANALYTICS_AUTH_LOCATION"); logAnalyticsAuthFile != "" {
+		p.diagnostics, err = aci.NewContainerGroupDiagnosticsFromFile(logAnalyticsAuthFile)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	// If we have both the log analytics workspace id and key, add them to the provider
+	// Environment variables overwrite the values provided in the file
+	if logAnalyticsID := os.Getenv("LOG_ANALYTICS_ID"); logAnalyticsID != "" {
+		if logAnalyticsKey := os.Getenv("LOG_ANALYTICS_KEY"); logAnalyticsKey != "" {
+			p.diagnostics, err = aci.NewContainerGroupDiagnostics(logAnalyticsID, logAnalyticsKey)
+			if err != nil {
+				return nil, err
+			}
+		}
+	}
+
 	if rg := os.Getenv("ACI_RESOURCE_GROUP"); rg != "" {
 		p.resourceGroup = rg
 	}
@@ -227,6 +260,7 @@ func (p *ACIProvider) CreatePod(pod *v1.Pod) error {
 	containerGroup.ContainerGroupProperties.Containers = containers
 	containerGroup.ContainerGroupProperties.Volumes = volumes
 	containerGroup.ContainerGroupProperties.ImageRegistryCredentials = creds
+	containerGroup.ContainerGroupProperties.Diagnostics = p.diagnostics
 
 	filterServiceAccountSecretVolume(p.operatingSystem, &containerGroup)
 
@@ -270,11 +304,15 @@ func (p *ACIProvider) CreatePod(pod *v1.Pod) error {
 	// TODO(BJK) containergrouprestartpolicy??
 	_, err = p.aciClient.CreateContainerGroup(
 		p.resourceGroup,
-		fmt.Sprintf("%s-%s", pod.Namespace, pod.Name),
+		containerGroupName(pod),
 		containerGroup,
 	)
 
 	return err
+}
+
+func containerGroupName(pod *v1.Pod) string {
+	return fmt.Sprintf("%s-%s", pod.Namespace, pod.Name)
 }
 
 // UpdatePod is a noop, ACI currently does not support live updates of a pod.
@@ -321,7 +359,7 @@ func (p *ACIProvider) GetContainerLogs(namespace, podName, containerName string,
 	for i := 0; i < retry; i++ {
 		cLogs, err := p.aciClient.GetContainerLogs(p.resourceGroup, cg.Name, containerName, tail)
 		if err != nil {
-			log.Println(err)
+			log.G(context.TODO()).WithField("method", "GetContainerLogs").WithError(err).Debug("Error getting container logs, retrying")
 			time.Sleep(5000 * time.Millisecond)
 		} else {
 			logContent = cLogs.Content
@@ -445,7 +483,11 @@ func (p *ACIProvider) GetPods() ([]*v1.Pod, error) {
 
 		p, err := containerGroupToPod(&c)
 		if err != nil {
-			log.Println(err)
+			log.G(context.TODO()).WithFields(logrus.Fields{
+				"name": c.Name,
+				"id":   c.ID,
+			}).WithError(err).Error("error converting container group to pod")
+
 			continue
 		}
 		pods = append(pods, p)
@@ -655,10 +697,10 @@ func (p *ACIProvider) getContainers(pod *v1.Pod) ([]aci.Container, error) {
 
 		c.EnvironmentVariables = make([]aci.EnvironmentVariable, 0, len(container.Env))
 		for _, e := range container.Env {
-			c.EnvironmentVariables = append(c.EnvironmentVariables, aci.EnvironmentVariable{
-				Name:  e.Name,
-				Value: e.Value,
-			})
+			if e.Value != "" {
+				envVar := getACIEnvVar(e)
+				c.EnvironmentVariables = append(c.EnvironmentVariables, envVar)
+			}
 		}
 
 		// NOTE(robbiezhang): ACI CPU request must be times of 10m
@@ -703,9 +745,65 @@ func (p *ACIProvider) getContainers(pod *v1.Pod) ([]aci.Container, error) {
 			}
 		}
 
+		if container.LivenessProbe != nil {
+			probe, err := getProbe(container.LivenessProbe)
+			if err != nil {
+				return nil, err
+			}
+			c.LivenessProbe = probe
+		}
+
+		if container.ReadinessProbe != nil {
+			probe, err := getProbe(container.ReadinessProbe)
+			if err != nil {
+				return nil, err
+			}
+			c.ReadinessProbe = probe
+		}
+
 		containers = append(containers, c)
 	}
 	return containers, nil
+}
+
+func getProbe(probe *v1.Probe) (*aci.ContainerProbe, error) {
+
+	if probe.Handler.Exec != nil && probe.Handler.HTTPGet != nil {
+		return nil, fmt.Errorf("probe may not specify more than one of \"exec\" and \"httpGet\"")
+	}
+
+	if probe.Handler.Exec == nil && probe.Handler.HTTPGet == nil {
+		return nil, fmt.Errorf("probe must specify one of \"exec\" and \"httpGet\"")
+	}
+
+	// Probes have can have a Exec or HTTP Get Handler.
+	// Create those if they exist, then add to the
+	// ContainerProbe struct
+	var exec *aci.ContainerExecProbe
+	if probe.Handler.Exec != nil {
+		exec = &aci.ContainerExecProbe{
+			Command: probe.Handler.Exec.Command,
+		}
+	}
+
+	var httpGET *aci.ContainerHTTPGetProbe
+	if probe.Handler.HTTPGet != nil {
+		httpGET = &aci.ContainerHTTPGetProbe{
+			Port:   probe.Handler.HTTPGet.Port.IntValue(),
+			Path:   probe.Handler.HTTPGet.Path,
+			Scheme: string(probe.Handler.HTTPGet.Scheme),
+		}
+	}
+
+	return &aci.ContainerProbe{
+		Exec:                exec,
+		HTTPGet:             httpGET,
+		InitialDelaySeconds: probe.InitialDelaySeconds,
+		Period:              probe.PeriodSeconds,
+		FailureThreshold:    probe.FailureThreshold,
+		SuccessThreshold:    probe.SuccessThreshold,
+		TimeoutSeconds:      probe.TimeoutSeconds,
+	}, nil
 }
 
 func (p *ACIProvider) getVolumes(pod *v1.Pod) ([]aci.Volume, error) {
@@ -878,7 +976,7 @@ func containerGroupToPod(cg *aci.ContainerGroup) (*v1.Pod, error) {
 			RestartCount:         c.InstanceView.RestartCount,
 			Image:                c.Image,
 			ImageID:              "",
-			ContainerID:          "",
+			ContainerID:          getContainerID(cg.ID, c.Name),
 		}
 
 		// Add to containerStatuses
@@ -920,6 +1018,19 @@ func containerGroupToPod(cg *aci.ContainerGroup) (*v1.Pod, error) {
 	}
 
 	return &p, nil
+}
+
+func getContainerID(cgID, containerName string) string {
+	if cgID == "" {
+		return ""
+	}
+
+	containerResourceID := fmt.Sprintf("%s/containers/%s", cgID, containerName)
+
+	h := sha256.New()
+	h.Write([]byte(strings.ToUpper(containerResourceID)))
+	hashBytes := h.Sum(nil)
+	return fmt.Sprintf("aci://%s", hex.EncodeToString(hashBytes))
 }
 
 func aciStateToPodPhase(state string) v1.PodPhase {
@@ -1025,7 +1136,8 @@ func filterServiceAccountSecretVolume(osType string, containerGroup *aci.Contain
 			return
 		}
 
-		log.Printf("Ignoring service account secret volumes '%v' for Windows", reflect.ValueOf(serviceAccountSecretVolumeName).MapKeys())
+		l := log.G(context.TODO()).WithField("containerGroup", containerGroup.Name)
+		l.Infof("Ignoring service account secret volumes '%v' for Windows", reflect.ValueOf(serviceAccountSecretVolumeName).MapKeys())
 
 		volumes := make([]aci.Volume, 0, len(containerGroup.ContainerGroupProperties.Volumes))
 		for _, volume := range containerGroup.ContainerGroupProperties.Volumes {
@@ -1036,4 +1148,21 @@ func filterServiceAccountSecretVolume(osType string, containerGroup *aci.Contain
 
 		containerGroup.ContainerGroupProperties.Volumes = volumes
 	}
+}
+
+func getACIEnvVar(e v1.EnvVar) aci.EnvironmentVariable {
+	var envVar aci.EnvironmentVariable
+	// If the variable is a secret, use SecureValue
+	if e.ValueFrom != nil && e.ValueFrom.SecretKeyRef != nil {
+		envVar = aci.EnvironmentVariable{
+			Name:        e.Name,
+			SecureValue: e.Value,
+		}
+	} else {
+		envVar = aci.EnvironmentVariable{
+			Name:  e.Name,
+			Value: e.Value,
+		}
+	}
+	return envVar
 }

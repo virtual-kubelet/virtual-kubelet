@@ -69,7 +69,7 @@ type WaitOK struct {
 }
 
 func (o *WaitOK) Error() string {
-	return fmt.Sprintf("[PUT /tasks][%d] waitOK ", 200)
+	return fmt.Sprintf("[GET /tasks/wait][%d] waitOK ", 200)
 }
 
 func (o *WaitOK) readResponse(response runtime.ClientResponse, consumer runtime.Consumer, formats strfmt.Registry) error {
@@ -91,7 +91,7 @@ type WaitNotFound struct {
 }
 
 func (o *WaitNotFound) Error() string {
-	return fmt.Sprintf("[PUT /tasks][%d] waitNotFound  %+v", 404, o.Payload)
+	return fmt.Sprintf("[GET /tasks/wait][%d] waitNotFound  %+v", 404, o.Payload)
 }
 
 func (o *WaitNotFound) readResponse(response runtime.ClientResponse, consumer runtime.Consumer, formats strfmt.Registry) error {
@@ -120,7 +120,7 @@ type WaitPreconditionRequired struct {
 }
 
 func (o *WaitPreconditionRequired) Error() string {
-	return fmt.Sprintf("[PUT /tasks][%d] waitPreconditionRequired  %+v", 428, o.Payload)
+	return fmt.Sprintf("[GET /tasks/wait][%d] waitPreconditionRequired  %+v", 428, o.Payload)
 }
 
 func (o *WaitPreconditionRequired) readResponse(response runtime.ClientResponse, consumer runtime.Consumer, formats strfmt.Registry) error {
@@ -142,14 +142,14 @@ func NewWaitInternalServerError() *WaitInternalServerError {
 
 /*WaitInternalServerError handles this case with default header values.
 
-Wait of task failed
+wait of task failed
 */
 type WaitInternalServerError struct {
 	Payload *models.Error
 }
 
 func (o *WaitInternalServerError) Error() string {
-	return fmt.Sprintf("[PUT /tasks][%d] waitInternalServerError  %+v", 500, o.Payload)
+	return fmt.Sprintf("[GET /tasks/wait][%d] waitInternalServerError  %+v", 500, o.Payload)
 }
 
 func (o *WaitInternalServerError) readResponse(response runtime.ClientResponse, consumer runtime.Consumer, formats strfmt.Registry) error {

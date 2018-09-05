@@ -37,7 +37,6 @@ import (
 
 	"golang.org/x/net/context"
 
-	log "github.com/Sirupsen/logrus"
 	derr "github.com/docker/docker/api/errors"
 
 	"github.com/vmware/vic/lib/apiservers/engine/errors"
@@ -48,36 +47,37 @@ import (
 	"github.com/vmware/vic/pkg/trace"
 )
 
-type VicSystemProxy interface {
+type SystemProxy interface {
 	PingPortlayer(ctx context.Context) bool
 	ContainerCount(ctx context.Context) (int, int, int, error)
 	VCHInfo(ctx context.Context) (*models.VCHInfo, error)
 }
 
-type SystemProxy struct {
+type VicSystemProxy struct {
 	client *client.PortLayer
 }
 
-func NewSystemProxy(client *client.PortLayer) VicSystemProxy {
+func NewSystemProxy(client *client.PortLayer) *VicSystemProxy {
 	if client == nil {
 		return nil
 	}
 
-	return &SystemProxy{client: client}
+	return &VicSystemProxy{client: client}
 }
 
-func (s *SystemProxy) PingPortlayer(ctx context.Context) bool {
-	defer trace.End(trace.Begin(""))
+func (s *VicSystemProxy) PingPortlayer(ctx context.Context) bool {
+	op := trace.FromContext(ctx, "")
+	defer trace.End(trace.Begin("", op))
 
 	if s.client == nil {
-		log.Errorf("Portlayer client is invalid")
+		op.Errorf("Portlayer client is invalid")
 		return false
 	}
 
 	pingParams := misc.NewPingParamsWithContext(ctx)
 	_, err := s.client.Misc.Ping(pingParams)
 	if err != nil {
-		log.Info("Ping to portlayer failed")
+		op.Info("Ping to portlayer failed")
 		return false
 	}
 	return true
@@ -85,8 +85,10 @@ func (s *SystemProxy) PingPortlayer(ctx context.Context) bool {
 
 // Use the Portlayer's support for docker ps to get the container count
 //   return order: running, paused, stopped counts
-func (s *SystemProxy) ContainerCount(ctx context.Context) (int, int, int, error) {
-	defer trace.End(trace.Begin(""))
+func (s *VicSystemProxy) ContainerCount(ctx context.Context) (int, int, int, error) {
+	op := trace.FromContext(ctx, "")
+	defer trace.End(trace.Begin("", op))
+	opID := op.ID()
 
 	var running, paused, stopped int
 
@@ -95,7 +97,8 @@ func (s *SystemProxy) ContainerCount(ctx context.Context) (int, int, int, error)
 	}
 
 	all := true
-	containList, err := s.client.Containers.GetContainerList(containers.NewGetContainerListParamsWithContext(ctx).WithAll(&all))
+	params := containers.NewGetContainerListParamsWithContext(ctx).WithAll(&all).WithOpID(&opID)
+	containList, err := s.client.Containers.GetContainerList(params)
 	if err != nil {
 		return 0, 0, 0, derr.NewErrorWithStatusCode(fmt.Errorf("Failed to get container list: %s", err), http.StatusInternalServerError)
 	}
@@ -112,14 +115,16 @@ func (s *SystemProxy) ContainerCount(ctx context.Context) (int, int, int, error)
 	return running, paused, stopped, nil
 }
 
-func (s *SystemProxy) VCHInfo(ctx context.Context) (*models.VCHInfo, error) {
-	defer trace.End(trace.Begin(""))
+func (s *VicSystemProxy) VCHInfo(ctx context.Context) (*models.VCHInfo, error) {
+	op := trace.FromContext(ctx, "")
+	defer trace.End(trace.Begin("", op))
+	opID := op.ID()
 
 	if s.client == nil {
 		return nil, errors.NillPortlayerClientError("SystemProxy")
 	}
 
-	params := misc.NewGetVCHInfoParamsWithContext(ctx)
+	params := misc.NewGetVCHInfoParamsWithContext(ctx).WithOpID(&opID)
 	resp, err := s.client.Misc.GetVCHInfo(params)
 	if err != nil {
 		//There are no custom error for this operation.  If we get back an error, it's

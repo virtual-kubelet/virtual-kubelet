@@ -60,6 +60,8 @@ for the bind container operation typically these are written to a http.Request
 */
 type BindContainerParams struct {
 
+	/*OpID*/
+	OpID *string
 	/*Handle*/
 	Handle string
 
@@ -101,6 +103,17 @@ func (o *BindContainerParams) SetHTTPClient(client *http.Client) {
 	o.HTTPClient = client
 }
 
+// WithOpID adds the opID to the bind container params
+func (o *BindContainerParams) WithOpID(opID *string) *BindContainerParams {
+	o.SetOpID(opID)
+	return o
+}
+
+// SetOpID adds the opId to the bind container params
+func (o *BindContainerParams) SetOpID(opID *string) {
+	o.OpID = opID
+}
+
 // WithHandle adds the handle to the bind container params
 func (o *BindContainerParams) WithHandle(handle string) *BindContainerParams {
 	o.SetHandle(handle)
@@ -117,6 +130,15 @@ func (o *BindContainerParams) WriteToRequest(r runtime.ClientRequest, reg strfmt
 
 	r.SetTimeout(o.timeout)
 	var res []error
+
+	if o.OpID != nil {
+
+		// header param Op-ID
+		if err := r.SetHeaderParam("Op-ID", *o.OpID); err != nil {
+			return err
+		}
+
+	}
 
 	// path param handle
 	if err := r.SetPathParam("handle", o.Handle); err != nil {

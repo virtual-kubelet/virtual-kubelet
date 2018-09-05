@@ -23,6 +23,7 @@ The best description is "Kubernetes API on top, programmable back."
 	+ [Azure Batch GPU Provider](./providers/azurebatch/README.md)
     + [AWS Fargate Provider](#aws-fargate-provider)
     + [Hyper.sh Provider](#hypersh-provider)
+    + [Service Fabric Mesh Provider](#service-fabric-mesh-provider)
     + [Adding a New Provider via the Provider Interface](#adding-a-new-provider-via-the-provider-interface)
 * [Testing](#testing)
     + [Testing the Azure Provider Client](#testing-the-azure-provider-client)
@@ -142,6 +143,19 @@ Kubernetes cluster.
 ```bash
 ./bin/virtual-kubelet --provider hyper
 ```
+
+### Service Fabric Mesh Provider
+
+The Service Fabric Mesh Provider allows you to deploy pods to Azure [Service Fabric Mesh](https://docs.microsoft.com/en-us/azure/service-fabric-mesh/service-fabric-mesh-overview).
+
+Service Fabric Mesh is a fully managed service that lets developers deploy microservices without managing the underlying infrastructure.
+ Pods deployed to Service Fabric Mesh will be assigned Public IPs from the Service Fabric Mesh network.
+
+```
+./bin/virtual-kubelet --provider sfmesh --taint azure.com/sfmesh
+```
+
+More detailed instructions can be found [here](providers/sfmesh/README.md).
 
 ### Adding a New Provider via the Provider Interface
 

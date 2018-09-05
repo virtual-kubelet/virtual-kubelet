@@ -60,6 +60,8 @@ for the remove volume operation typically these are written to a http.Request
 */
 type RemoveVolumeParams struct {
 
+	/*OpID*/
+	OpID *string
 	/*Name*/
 	Name string
 
@@ -101,6 +103,17 @@ func (o *RemoveVolumeParams) SetHTTPClient(client *http.Client) {
 	o.HTTPClient = client
 }
 
+// WithOpID adds the opID to the remove volume params
+func (o *RemoveVolumeParams) WithOpID(opID *string) *RemoveVolumeParams {
+	o.SetOpID(opID)
+	return o
+}
+
+// SetOpID adds the opId to the remove volume params
+func (o *RemoveVolumeParams) SetOpID(opID *string) {
+	o.OpID = opID
+}
+
 // WithName adds the name to the remove volume params
 func (o *RemoveVolumeParams) WithName(name string) *RemoveVolumeParams {
 	o.SetName(name)
@@ -117,6 +130,15 @@ func (o *RemoveVolumeParams) WriteToRequest(r runtime.ClientRequest, reg strfmt.
 
 	r.SetTimeout(o.timeout)
 	var res []error
+
+	if o.OpID != nil {
+
+		// header param Op-ID
+		if err := r.SetHeaderParam("Op-ID", *o.OpID); err != nil {
+			return err
+		}
+
+	}
 
 	// path param name
 	if err := r.SetPathParam("name", o.Name); err != nil {

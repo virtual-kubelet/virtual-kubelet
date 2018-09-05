@@ -120,7 +120,7 @@ that you've created an [AKS cluster](https://docs.microsoft.com/en-us/azure/aks/
 
 To install the ACI Connector use the az cli and the aks namespace. Make sure to use the resource group of the aks cluster you've created and the name of the aks cluster you've created. You can choose the connector name to be anything. Choose any command below to install the Linux, Windows, or both the Windows and Linux Connector.
 
-Note: You need to specify the --aci-resource-group, due to a bug in the az cli. The resource groupis the auto-generated. To find the name navigate to the Azure Portal resource groups, scroll down and find the name that matches MC_aks cluster name_aks rg_location.
+Note: You need to specify the --aci-resource-group, due to a bug in the az cli. The resource group is then auto-generated. To find the name navigate to the Azure Portal resource groups, scroll down and find the name that matches MC_aks cluster name_aks rg_location.
 
 1. Install the Linux ACI Connector
 
@@ -186,26 +186,19 @@ resources on your account on behalf of Kubernetes.
 
 You will need to enable ACI in your subscription:
 
-    ```cli
-    az provider register -n Microsoft.ContainerInstance
-    ```
+```cli
+az provider register -n Microsoft.ContainerInstance
+```
 
 ## Deployment of the ACI provider in your cluster
 
 Run these commands to deploy the virtual kubelet which connects your Kubernetes cluster to Azure Container Instances.
 
-If your cluster is an AKS cluster:
-
 ```cli
-export VK_RELEASE=virtual-kubelet-for-aks-0.1.3
-````
-
-For any other type of Kubernetes cluster:
-
-```cli
-export VK_RELEASE=virtual-kubelet-0.1.1
+export VK_RELEASE=virtual-kubelet-0.2.0
 ```
 
+If your cluster is an AKS cluster:
 ```cli
 RELEASE_NAME=virtual-kubelet
 NODE_NAME=virtual-kubelet
@@ -216,7 +209,37 @@ chmod +x createCertAndKey.sh
 . ./createCertAndKey.sh
 
 helm install "$CHART_URL" --name "$RELEASE_NAME" \
-    --set env.azureClientId="$AZURE_CLIENT_ID",env.azureClientKey="$AZURE_CLIENT_SECRET",env.azureTenantId="$AZURE_TENANT_ID",env.azureSubscriptionId="$AZURE_SUBSCRIPTION_ID",env.aciRegion="$ACI_REGION",env.aciResourceGroup="$AZURE_RG",env.nodeName="$NODE_NAME",env.nodeOsType=<Linux|Windows>,env.apiserverCert=$cert,env.apiserverKey=$key,rbac.install=false
+  --set provider=azure \
+  --set providers.azure.targetAKS=true \
+  --set providers.azure.tenantId=$AZURE_TENANT_ID \
+  --set providers.azure.subscriptionId=$AZURE_SUBSCRIPTION_ID \
+  --set providers.azure.clientId=$AZURE_CLIENT_ID \
+  --set apiserverCert=$cert \
+  --set apiserverKey=$key
+```
+
+For any other type of Kubernetes cluster:
+```cli
+RELEASE_NAME=virtual-kubelet
+NODE_NAME=virtual-kubelet
+CHART_URL=https://github.com/virtual-kubelet/virtual-kubelet/raw/master/charts/$VK_RELEASE.tgz
+
+curl https://raw.githubusercontent.com/virtual-kubelet/virtual-kubelet/master/scripts/createCertAndKey.sh > createCertAndKey.sh
+chmod +x createCertAndKey.sh
+. ./createCertAndKey.sh
+
+helm install "$CHART_URL" --name "$RELEASE_NAME" \
+  --set provider=azure \
+  --set rbac.install=true \
+  --set providers.azure.targetAKS=false \
+  --set providers.azure.tenantId=$AZURE_TENANT_ID \
+  --set providers.azure.subscriptionId=$AZURE_SUBSCRIPTION_ID \
+  --set providers.azure.clientId=$AZURE_CLIENT_ID \
+  --set providers.azure.clientKey=$AZURE_CLIENT_SECRET \
+  --set providers.azure.aciResourceGroup=$AZURE_RG \
+  --set providers.azure.aciRegion=$ACI_REGION \
+  --set apiserverCert=$cert \
+  --set apiserverKey=$key
 ```
 
 If your cluster has RBAC enabled set ```rbac.install=true```
@@ -295,8 +318,9 @@ spec:
     - containerPort: 443
       name: https
   dnsPolicy: ClusterFirst
-  nodeName: virtual-kubelet-myconnector-linux
   tolerations:
+  - key: virtual-kubelet.io/provider
+    operator: Exists
   - key: azure.com/aci
     effect: NoSchedule
 ```
@@ -305,6 +329,8 @@ Notice that Virtual-Kubelet nodes are tainted by default to avoid unexpected pod
 
 ```
   tolerations:
+  - key: virtual-kubelet.io/provider
+    operator: Exists
   - key: azure.com/aci
     effect: NoSchedule
 ```
@@ -370,7 +396,11 @@ spec:
     - containerPort: 443
       name: https
   dnsPolicy: ClusterFirst
-  nodeName: virtual-kubelet
+  tolerations:
+  - key: virtual-kubelet.io/provider
+    operator: Exists
+  - key: azure.com/aci
+    effect: NoSchedule
 ```
 
 To confirm the Azure Container Instance received and bound the DNS Name specified, use the [az container show][az-container-show] Azure CLI command. Virtual Kubelet's naming

@@ -60,6 +60,8 @@ for the container close stdin operation typically these are written to a http.Re
 */
 type ContainerCloseStdinParams struct {
 
+	/*OpID*/
+	OpID *string
 	/*ID*/
 	ID string
 
@@ -101,6 +103,17 @@ func (o *ContainerCloseStdinParams) SetHTTPClient(client *http.Client) {
 	o.HTTPClient = client
 }
 
+// WithOpID adds the opID to the container close stdin params
+func (o *ContainerCloseStdinParams) WithOpID(opID *string) *ContainerCloseStdinParams {
+	o.SetOpID(opID)
+	return o
+}
+
+// SetOpID adds the opId to the container close stdin params
+func (o *ContainerCloseStdinParams) SetOpID(opID *string) {
+	o.OpID = opID
+}
+
 // WithID adds the id to the container close stdin params
 func (o *ContainerCloseStdinParams) WithID(id string) *ContainerCloseStdinParams {
 	o.SetID(id)
@@ -117,6 +130,15 @@ func (o *ContainerCloseStdinParams) WriteToRequest(r runtime.ClientRequest, reg 
 
 	r.SetTimeout(o.timeout)
 	var res []error
+
+	if o.OpID != nil {
+
+		// header param Op-ID
+		if err := r.SetHeaderParam("Op-ID", *o.OpID); err != nil {
+			return err
+		}
+
+	}
 
 	// path param id
 	if err := r.SetPathParam("id", o.ID); err != nil {

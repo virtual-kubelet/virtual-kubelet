@@ -62,6 +62,8 @@ for the remove operation typically these are written to a http.Request
 */
 type RemoveParams struct {
 
+	/*OpID*/
+	OpID *string
 	/*Config*/
 	Config *models.TaskRemoveConfig
 
@@ -103,6 +105,17 @@ func (o *RemoveParams) SetHTTPClient(client *http.Client) {
 	o.HTTPClient = client
 }
 
+// WithOpID adds the opID to the remove params
+func (o *RemoveParams) WithOpID(opID *string) *RemoveParams {
+	o.SetOpID(opID)
+	return o
+}
+
+// SetOpID adds the opId to the remove params
+func (o *RemoveParams) SetOpID(opID *string) {
+	o.OpID = opID
+}
+
 // WithConfig adds the config to the remove params
 func (o *RemoveParams) WithConfig(config *models.TaskRemoveConfig) *RemoveParams {
 	o.SetConfig(config)
@@ -119,6 +132,15 @@ func (o *RemoveParams) WriteToRequest(r runtime.ClientRequest, reg strfmt.Regist
 
 	r.SetTimeout(o.timeout)
 	var res []error
+
+	if o.OpID != nil {
+
+		// header param Op-ID
+		if err := r.SetHeaderParam("Op-ID", *o.OpID); err != nil {
+			return err
+		}
+
+	}
 
 	if o.Config == nil {
 		o.Config = new(models.TaskRemoveConfig)

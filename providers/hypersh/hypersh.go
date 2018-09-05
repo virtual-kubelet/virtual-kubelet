@@ -443,7 +443,7 @@ func (p *HyperProvider) NodeAddresses() []v1.NodeAddress {
 // NodeDaemonEndpoints returns NodeDaemonEndpoints for the node status
 // within Kubernetes.
 func (p *HyperProvider) NodeDaemonEndpoints() *v1.NodeDaemonEndpoints {
-	return nil
+	return &v1.NodeDaemonEndpoints{}
 }
 
 // OperatingSystem returns the operating system for this provider.

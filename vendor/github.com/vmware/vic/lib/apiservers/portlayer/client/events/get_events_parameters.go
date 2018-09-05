@@ -19,7 +19,7 @@ import (
 // NewGetEventsParams creates a new GetEventsParams object
 // with the default values initialized.
 func NewGetEventsParams() *GetEventsParams {
-
+	var ()
 	return &GetEventsParams{
 
 		timeout: cr.DefaultTimeout,
@@ -29,7 +29,7 @@ func NewGetEventsParams() *GetEventsParams {
 // NewGetEventsParamsWithTimeout creates a new GetEventsParams object
 // with the default values initialized, and the ability to set a timeout on a request
 func NewGetEventsParamsWithTimeout(timeout time.Duration) *GetEventsParams {
-
+	var ()
 	return &GetEventsParams{
 
 		timeout: timeout,
@@ -39,7 +39,7 @@ func NewGetEventsParamsWithTimeout(timeout time.Duration) *GetEventsParams {
 // NewGetEventsParamsWithContext creates a new GetEventsParams object
 // with the default values initialized, and the ability to set a context for a request
 func NewGetEventsParamsWithContext(ctx context.Context) *GetEventsParams {
-
+	var ()
 	return &GetEventsParams{
 
 		Context: ctx,
@@ -49,7 +49,7 @@ func NewGetEventsParamsWithContext(ctx context.Context) *GetEventsParams {
 // NewGetEventsParamsWithHTTPClient creates a new GetEventsParams object
 // with the default values initialized, and the ability to set a custom HTTPClient for a request
 func NewGetEventsParamsWithHTTPClient(client *http.Client) *GetEventsParams {
-
+	var ()
 	return &GetEventsParams{
 		HTTPClient: client,
 	}
@@ -59,6 +59,10 @@ func NewGetEventsParamsWithHTTPClient(client *http.Client) *GetEventsParams {
 for the get events operation typically these are written to a http.Request
 */
 type GetEventsParams struct {
+
+	/*OpID*/
+	OpID *string
+
 	timeout    time.Duration
 	Context    context.Context
 	HTTPClient *http.Client
@@ -97,11 +101,31 @@ func (o *GetEventsParams) SetHTTPClient(client *http.Client) {
 	o.HTTPClient = client
 }
 
+// WithOpID adds the opID to the get events params
+func (o *GetEventsParams) WithOpID(opID *string) *GetEventsParams {
+	o.SetOpID(opID)
+	return o
+}
+
+// SetOpID adds the opId to the get events params
+func (o *GetEventsParams) SetOpID(opID *string) {
+	o.OpID = opID
+}
+
 // WriteToRequest writes these params to a swagger request
 func (o *GetEventsParams) WriteToRequest(r runtime.ClientRequest, reg strfmt.Registry) error {
 
 	r.SetTimeout(o.timeout)
 	var res []error
+
+	if o.OpID != nil {
+
+		// header param Op-ID
+		if err := r.SetHeaderParam("Op-ID", *o.OpID); err != nil {
+			return err
+		}
+
+	}
 
 	if len(res) > 0 {
 		return errors.CompositeValidationError(res...)

@@ -53,9 +53,9 @@ func (a *Client) Bind(params *BindParams) (*BindOK, error) {
 }
 
 /*
-Inspect initiates an task inspect operation
+Inspect initiates a task inspect operation
 
-Initiates an task inspect operation
+Initiates a task inspect operation
 */
 func (a *Client) Inspect(params *InspectParams) (*InspectOK, error) {
 	// TODO: Validate the params before sending
@@ -83,9 +83,9 @@ func (a *Client) Inspect(params *InspectParams) (*InspectOK, error) {
 }
 
 /*
-Join initiates an task join operation
+Join initiates a task join operation
 
-Initiates an task join operation
+Initiates a task join operation
 */
 func (a *Client) Join(params *JoinParams) (*JoinOK, error) {
 	// TODO: Validate the params before sending
@@ -113,9 +113,9 @@ func (a *Client) Join(params *JoinParams) (*JoinOK, error) {
 }
 
 /*
-Remove initiates an task remove operation
+Remove initiates a task remove operation
 
-Initiates an task remove operation
+Initiates a task remove operation
 */
 func (a *Client) Remove(params *RemoveParams) (*RemoveOK, error) {
 	// TODO: Validate the params before sending
@@ -173,9 +173,9 @@ func (a *Client) Unbind(params *UnbindParams) (*UnbindOK, error) {
 }
 
 /*
-Wait initiates an task wait operation
+Wait initiates a task wait operation
 
-Initiates an task wait operation
+Initiates a task wait operation
 */
 func (a *Client) Wait(params *WaitParams) (*WaitOK, error) {
 	// TODO: Validate the params before sending
@@ -185,8 +185,8 @@ func (a *Client) Wait(params *WaitParams) (*WaitOK, error) {
 
 	result, err := a.transport.Submit(&runtime.ClientOperation{
 		ID:                 "Wait",
-		Method:             "PUT",
-		PathPattern:        "/tasks",
+		Method:             "GET",
+		PathPattern:        "/tasks/wait",
 		ProducesMediaTypes: []string{"application/json"},
 		ConsumesMediaTypes: []string{"application/json", "application/octet-stream"},
 		Schemes:            []string{"http"},

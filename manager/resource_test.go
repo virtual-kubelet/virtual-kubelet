@@ -19,11 +19,14 @@ func init() {
 }
 
 func TestResourceManager(t *testing.T) {
-	pm := NewResourceManager(fakeClient)
+	pm, err := NewResourceManager(fakeClient)
+	if err != nil {
+		t.Fatal(err)
+	}
 	pod1Name := "Pod1"
 	pod1Namespace := "Pod1Namespace"
 	pod1 := makePod(pod1Namespace, pod1Name)
-	pm.AddPod(pod1)
+	pm.UpdatePod(pod1)
 
 	pods := pm.GetPods()
 	if len(pods) != 1 {
@@ -36,11 +39,14 @@ func TestResourceManager(t *testing.T) {
 }
 
 func TestResourceManagerDeletePod(t *testing.T) {
-	pm := NewResourceManager(fakeClient)
+	pm, err := NewResourceManager(fakeClient)
+	if err != nil {
+		t.Fatal(err)
+	}
 	pod1Name := "Pod1"
 	pod1Namespace := "Pod1Namespace"
 	pod1 := makePod(pod1Namespace, pod1Name)
-	pm.AddPod(pod1)
+	pm.UpdatePod(pod1)
 	pods := pm.GetPods()
 	if len(pods) != 1 {
 		t.Errorf("Got %d, expected 1 pod", len(pods))
@@ -61,11 +67,14 @@ func makePod(namespace, name string) *v1.Pod {
 }
 
 func TestResourceManagerUpdatePod(t *testing.T) {
-	pm := NewResourceManager(fakeClient)
+	pm, err := NewResourceManager(fakeClient)
+	if err != nil {
+		t.Fatal(err)
+	}
 	pod1Name := "Pod1"
 	pod1Namespace := "Pod1Namespace"
 	pod1 := makePod(pod1Namespace, pod1Name)
-	pm.AddPod(pod1)
+	pm.UpdatePod(pod1)
 
 	pods := pm.GetPods()
 	if len(pods) != 1 {

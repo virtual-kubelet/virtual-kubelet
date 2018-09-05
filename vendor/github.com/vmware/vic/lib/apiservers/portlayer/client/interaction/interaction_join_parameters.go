@@ -62,6 +62,8 @@ for the interaction join operation typically these are written to a http.Request
 */
 type InteractionJoinParams struct {
 
+	/*OpID*/
+	OpID *string
 	/*Config*/
 	Config *models.InteractionJoinConfig
 
@@ -103,6 +105,17 @@ func (o *InteractionJoinParams) SetHTTPClient(client *http.Client) {
 	o.HTTPClient = client
 }
 
+// WithOpID adds the opID to the interaction join params
+func (o *InteractionJoinParams) WithOpID(opID *string) *InteractionJoinParams {
+	o.SetOpID(opID)
+	return o
+}
+
+// SetOpID adds the opId to the interaction join params
+func (o *InteractionJoinParams) SetOpID(opID *string) {
+	o.OpID = opID
+}
+
 // WithConfig adds the config to the interaction join params
 func (o *InteractionJoinParams) WithConfig(config *models.InteractionJoinConfig) *InteractionJoinParams {
 	o.SetConfig(config)
@@ -119,6 +132,15 @@ func (o *InteractionJoinParams) WriteToRequest(r runtime.ClientRequest, reg strf
 
 	r.SetTimeout(o.timeout)
 	var res []error
+
+	if o.OpID != nil {
+
+		// header param Op-ID
+		if err := r.SetHeaderParam("Op-ID", *o.OpID); err != nil {
+			return err
+		}
+
+	}
 
 	if o.Config == nil {
 		o.Config = new(models.InteractionJoinConfig)

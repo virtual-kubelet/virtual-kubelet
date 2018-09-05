@@ -60,6 +60,8 @@ for the unbind container operation typically these are written to a http.Request
 */
 type UnbindContainerParams struct {
 
+	/*OpID*/
+	OpID *string
 	/*Handle*/
 	Handle string
 
@@ -101,6 +103,17 @@ func (o *UnbindContainerParams) SetHTTPClient(client *http.Client) {
 	o.HTTPClient = client
 }
 
+// WithOpID adds the opID to the unbind container params
+func (o *UnbindContainerParams) WithOpID(opID *string) *UnbindContainerParams {
+	o.SetOpID(opID)
+	return o
+}
+
+// SetOpID adds the opId to the unbind container params
+func (o *UnbindContainerParams) SetOpID(opID *string) {
+	o.OpID = opID
+}
+
 // WithHandle adds the handle to the unbind container params
 func (o *UnbindContainerParams) WithHandle(handle string) *UnbindContainerParams {
 	o.SetHandle(handle)
@@ -117,6 +130,15 @@ func (o *UnbindContainerParams) WriteToRequest(r runtime.ClientRequest, reg strf
 
 	r.SetTimeout(o.timeout)
 	var res []error
+
+	if o.OpID != nil {
+
+		// header param Op-ID
+		if err := r.SetHeaderParam("Op-ID", *o.OpID); err != nil {
+			return err
+		}
+
+	}
 
 	// path param handle
 	if err := r.SetPathParam("handle", o.Handle); err != nil {

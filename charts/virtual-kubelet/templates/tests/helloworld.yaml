@@ -1,0 +1,30 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: "{{ .Release.Name }}-{{ .Release.Revision }}-test"
+{{ include "vk.labels" . | indent 2 }}
+    component: test
+  annotations:
+    "helm.sh/hook": test-success
+spec:
+  containers:
+  - image: hello-world:linux
+    imagePullPolicy: Always
+    name: helloworld
+    resources:
+      requests:
+        memory: "0.1G"
+        cpu: 10m
+      limits:
+        memory: "0.1G"
+        cpu: 10m
+  dnsPolicy: ClusterFirst
+  nodeSelector:
+    kubernetes.io/hostname: "{{ .Values.nodeName }}"
+  restartPolicy: Never
+  tolerations:
+{{- if .Values.taint.enabled }}
+  - key: "{{ .Values.taint.key }}"
+    value: "{{ tpl .Values.taint.value $ }}"
+    effect: "{{ .Values.taint.effect }}"
+{{- end }}

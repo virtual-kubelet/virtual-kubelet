@@ -61,6 +61,8 @@ for the export archive operation typically these are written to a http.Request
 */
 type ExportArchiveParams struct {
 
+	/*OpID*/
+	OpID *string
 	/*Ancestor*/
 	Ancestor *string
 	/*AncestorStore*/
@@ -110,6 +112,17 @@ func (o *ExportArchiveParams) WithHTTPClient(client *http.Client) *ExportArchive
 // SetHTTPClient adds the HTTPClient to the export archive params
 func (o *ExportArchiveParams) SetHTTPClient(client *http.Client) {
 	o.HTTPClient = client
+}
+
+// WithOpID adds the opID to the export archive params
+func (o *ExportArchiveParams) WithOpID(opID *string) *ExportArchiveParams {
+	o.SetOpID(opID)
+	return o
+}
+
+// SetOpID adds the opId to the export archive params
+func (o *ExportArchiveParams) SetOpID(opID *string) {
+	o.OpID = opID
 }
 
 // WithAncestor adds the ancestor to the export archive params
@@ -183,6 +196,15 @@ func (o *ExportArchiveParams) WriteToRequest(r runtime.ClientRequest, reg strfmt
 
 	r.SetTimeout(o.timeout)
 	var res []error
+
+	if o.OpID != nil {
+
+		// header param Op-ID
+		if err := r.SetHeaderParam("Op-ID", *o.OpID); err != nil {
+			return err
+		}
+
+	}
 
 	if o.Ancestor != nil {
 

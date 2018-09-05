@@ -27,7 +27,7 @@ import (
 
 // The value of this key is hidden from API requests, but visible within the guest
 // #nosec: Potential hardcoded credentials
-const GuestInfoSecretKey = "guestinfo.ovfEnv"
+const GuestInfoSecretKey = GuestInfoPrefix + "ovfEnv"
 
 // SecretKey provides helpers to encrypt/decrypt extraconfig values
 type SecretKey struct {

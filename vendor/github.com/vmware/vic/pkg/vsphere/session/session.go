@@ -226,6 +226,9 @@ func (s *Session) Connect(ctx context.Context) (*Session, error) {
 	}
 
 	soapClient.UserAgent = s.UserAgent
+	if s.UserAgent == "" {
+		op.Debug("DEVNOTICE: Session created with default user agent.")
+	}
 
 	soapClient.SetThumbprint(soapURL.Host, s.Thumbprint)
 
@@ -366,10 +369,46 @@ func (s *Session) Populate(ctx context.Context) (*Session, error) {
 		op.Debugf("Cached pool: %s", s.PoolPath)
 	}
 
+	err = s.setDatacenterFolders(op)
+	if err != nil {
+		errs = append(errs, fmt.Sprintf("Failure finding folders (%s): %s", s.DatacenterPath, err.Error()))
+	}
+
+	if len(errs) > 0 {
+		op.Debugf("Error count populating vSphere cache: (%d)", len(errs))
+		return nil, errors.New(strings.Join(errs, "\n"))
+	}
+	op.Debug("vSphere resource cache populated...")
+	return s, nil
+}
+
+func (s *Session) SetDatacenter(op trace.Operation, datacenter *object.Datacenter) error {
+	s.Datacenter = datacenter
+	s.Finder.SetDatacenter(datacenter)
+
+	if datacenter == nil {
+		s.DatacenterPath = ""
+		return nil
+	}
+
+	s.DatacenterPath = datacenter.InventoryPath
+
+	// Do what Populate would have done if datacenterPath were set
+	err := s.setDatacenterFolders(op)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (s *Session) setDatacenterFolders(op trace.Operation) error {
+	var err error
+
 	if s.Datacenter != nil {
-		folders, err := s.Datacenter.Folders(op)
-		if err != nil {
-			errs = append(errs, fmt.Sprintf("Failure finding folders (%s): %s", s.DatacenterPath, err.Error()))
+		folders, e := s.Datacenter.Folders(op)
+		if e != nil {
+			err = e
 		} else {
 			op.Debugf("Cached folders: %s", s.DatacenterPath)
 		}
@@ -384,12 +423,7 @@ func (s *Session) Populate(ctx context.Context) (*Session, error) {
 		s.VCHFolder = folders.VmFolder
 	}
 
-	if len(errs) > 0 {
-		op.Debugf("Error count populating vSphere cache: (%d)", len(errs))
-		return nil, errors.New(strings.Join(errs, "\n"))
-	}
-	op.Debug("vSphere resource cache populated...")
-	return s, nil
+	return err
 }
 
 func (s *Session) logEnvironmentInfo(op trace.Operation) {

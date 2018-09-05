@@ -1,9 +1,6 @@
 package aci
 
 import (
-	"encoding/json"
-	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 	"strings"
@@ -363,21 +360,8 @@ func TestCreateContainerGroupWithReadinessProbe(t *testing.T) {
 	}
 }
 
-func logAnalyticsWorkspaceFromFile(filepath string) (*LogAnalyticsWorkspace, error) {
-	analyticsdata, err := ioutil.ReadFile(filepath)
-	if err != nil {
-		return nil, fmt.Errorf("Reading LogAnalyticsWorkspace file %q failed: %v", filepath, err)
-	}
-	// Unmarshal the log analytics file.
-	var law LogAnalyticsWorkspace
-	if err := json.Unmarshal(analyticsdata, &law); err != nil {
-		return nil, err
-	}
-	return &law, nil
-}
-
 func TestCreateContainerGroupWithLogAnalytics(t *testing.T) {
-	law, err := logAnalyticsWorkspaceFromFile("../../../../loganalytics.json")
+	diagnostics, err := NewContainerGroupDiagnosticsFromFile("../../../../loganalytics.json")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -411,9 +395,7 @@ func TestCreateContainerGroupWithLogAnalytics(t *testing.T) {
 					},
 				},
 			},
-			Diagnostics: &ContainerGroupDiagnostics{
-				LogAnalytics: law,
-			},
+			Diagnostics: diagnostics,
 		},
 	})
 	if err != nil {

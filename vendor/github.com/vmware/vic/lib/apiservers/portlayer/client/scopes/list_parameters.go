@@ -60,6 +60,8 @@ for the list operation typically these are written to a http.Request
 */
 type ListParams struct {
 
+	/*OpID*/
+	OpID *string
 	/*IDName*/
 	IDName string
 
@@ -101,6 +103,17 @@ func (o *ListParams) SetHTTPClient(client *http.Client) {
 	o.HTTPClient = client
 }
 
+// WithOpID adds the opID to the list params
+func (o *ListParams) WithOpID(opID *string) *ListParams {
+	o.SetOpID(opID)
+	return o
+}
+
+// SetOpID adds the opId to the list params
+func (o *ListParams) SetOpID(opID *string) {
+	o.OpID = opID
+}
+
 // WithIDName adds the iDName to the list params
 func (o *ListParams) WithIDName(iDName string) *ListParams {
 	o.SetIDName(iDName)
@@ -117,6 +130,15 @@ func (o *ListParams) WriteToRequest(r runtime.ClientRequest, reg strfmt.Registry
 
 	r.SetTimeout(o.timeout)
 	var res []error
+
+	if o.OpID != nil {
+
+		// header param Op-ID
+		if err := r.SetHeaderParam("Op-ID", *o.OpID); err != nil {
+			return err
+		}
+
+	}
 
 	// path param idName
 	if err := r.SetPathParam("idName", o.IDName); err != nil {
