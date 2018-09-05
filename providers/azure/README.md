@@ -111,6 +111,12 @@ First let's identify your Azure subscription and save it for use later on in the
     $env:AZURE_SUBSCRIPTION_ID = "<SubscriptionId>"
     ```
 
+4. Enable ACI in your subscription:
+
+   ```cli
+   az provider register -n Microsoft.ContainerInstance
+   ```
+
 ## Quick set-up with the ACI Connector
 
 The Azure cli can be used to install the ACI provider. We like to say Azure's provider or implementation for Virtual Kubelet is the ACI Connector. 
@@ -181,14 +187,6 @@ resources on your account on behalf of Kubernetes.
     $env:AZURE_CLIENT_ID = "<AppId>"
     $env:AZURE_CLIENT_SECRET = "<Password>"
     ```
-
-### Setting up your Azure account to use ACI
-
-You will need to enable ACI in your subscription:
-
-```cli
-az provider register -n Microsoft.ContainerInstance
-```
 
 ## Deployment of the ACI provider in your cluster
 
@@ -318,10 +316,10 @@ spec:
     - containerPort: 443
       name: https
   dnsPolicy: ClusterFirst
-  nodeName: virtual-kubelet-myconnector-linux
   tolerations:
   - key: virtual-kubelet.io/provider
-    value: azure
+    operator: Exists
+  - key: azure.com/aci
     effect: NoSchedule
 ```
 
@@ -330,7 +328,8 @@ Notice that Virtual-Kubelet nodes are tainted by default to avoid unexpected pod
 ```
   tolerations:
   - key: virtual-kubelet.io/provider
-    value: azure
+    operator: Exists
+  - key: azure.com/aci
     effect: NoSchedule
 ```
 
@@ -395,7 +394,11 @@ spec:
     - containerPort: 443
       name: https
   dnsPolicy: ClusterFirst
-  nodeName: virtual-kubelet
+  tolerations:
+  - key: virtual-kubelet.io/provider
+    operator: Exists
+  - key: azure.com/aci
+    effect: NoSchedule
 ```
 
 To confirm the Azure Container Instance received and bound the DNS Name specified, use the [az container show][az-container-show] Azure CLI command. Virtual Kubelet's naming

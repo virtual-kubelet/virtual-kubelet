@@ -53,6 +53,7 @@ This allows users to schedule kubernetes workloads on nodes that aren't running 
 		f, err := vkubelet.New(nodeName, operatingSystem, kubeNamespace, kubeConfig, provider, providerConfig, taintKey, disableTaint, metricsAddr)
 		if err != nil {
 			log.L.WithError(err).Fatal("Error initializing virtual kubelet")
+			log.L.WithError(err).Fatal("Error initializing vritual kubelet")
 		}
 		if err := f.Run(context.Background()); err != nil {
 			log.L.Fatal(err)
