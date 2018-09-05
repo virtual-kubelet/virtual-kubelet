@@ -602,7 +602,7 @@ func (p *ACIProvider) getDNSConfig(dnsPolicy v1.DNSPolicy, dnsConfig *v1.PodDNSC
 	}
 
 	result := aci.DNSConfig{
-		NameServers: formDNSNameserversFitsLimits(nameServers),
+		NameServers:   formDNSNameserversFitsLimits(nameServers),
 		SearchDomains: formDNSSearchFitsLimits(searchDomains),
 		Options:       strings.Join(options, " "),
 	}
