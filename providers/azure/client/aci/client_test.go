@@ -1,6 +1,7 @@
 package aci
 
 import (
+	"encoding/base64"
 	"fmt"
 	"log"
 	"os"
@@ -14,7 +15,7 @@ import (
 
 var (
 	client         *Client
-	location       = "westcentralus"
+	location       = "westus"
 	resourceGroup  = "virtual-kubelet-tests"
 	containerGroup = "virtual-kubelet-test-container-group"
 	subscriptionID string
@@ -272,8 +273,8 @@ func TestListContainerGroup(t *testing.T) {
 
 func TestCreateContainerGroupWithLivenessProbe(t *testing.T) {
 	uid := uuid.New()
-	congainerGroupName := containerGroup + "-" + uid.String()[0:6]
-	cg, err := client.CreateContainerGroup(resourceGroup, congainerGroupName, ContainerGroup{
+	containerGroupName := containerGroup + "-" + uid.String()[0:6]
+	cg, err := client.CreateContainerGroup(resourceGroup, containerGroupName, ContainerGroup{
 		Location: location,
 		ContainerGroupProperties: ContainerGroupProperties{
 			OsType: Linux,
@@ -312,15 +313,15 @@ func TestCreateContainerGroupWithLivenessProbe(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if cg.Name != congainerGroupName {
-		t.Fatalf("resource group name is %s, expected %s", cg.Name, congainerGroupName)
+	if cg.Name != containerGroupName {
+		t.Fatalf("resource group name is %s, expected %s", cg.Name, containerGroupName)
 	}
 }
 
 func TestCreateContainerGroupFailsWithLivenessProbeMissingPort(t *testing.T) {
 	uid := uuid.New()
-	congainerGroupName := containerGroup + "-" + uid.String()[0:6]
-	_, err := client.CreateContainerGroup(resourceGroup, congainerGroupName, ContainerGroup{
+	containerGroupName := containerGroup + "-" + uid.String()[0:6]
+	_, err := client.CreateContainerGroup(resourceGroup, containerGroupName, ContainerGroup{
 		Location: location,
 		ContainerGroupProperties: ContainerGroupProperties{
 			OsType: Linux,
@@ -363,8 +364,8 @@ func TestCreateContainerGroupFailsWithLivenessProbeMissingPort(t *testing.T) {
 
 func TestCreateContainerGroupWithReadinessProbe(t *testing.T) {
 	uid := uuid.New()
-	congainerGroupName := containerGroup + "-" + uid.String()[0:6]
-	cg, err := client.CreateContainerGroup(resourceGroup, congainerGroupName, ContainerGroup{
+	containerGroupName := containerGroup + "-" + uid.String()[0:6]
+	cg, err := client.CreateContainerGroup(resourceGroup, containerGroupName, ContainerGroup{
 		Location: location,
 		ContainerGroupProperties: ContainerGroupProperties{
 			OsType: Linux,
@@ -408,8 +409,8 @@ func TestCreateContainerGroupWithReadinessProbe(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if cg.Name != congainerGroupName {
-		t.Fatalf("resource group name is %s, expected %s", cg.Name, congainerGroupName)
+	if cg.Name != containerGroupName {
+		t.Fatalf("resource group name is %s, expected %s", cg.Name, containerGroupName)
 	}
 }
 
@@ -501,6 +502,84 @@ func TestCreateContainerGroupWithInvalidLogAnalytics(t *testing.T) {
 	if err == nil {
 		t.Fatal("TestCreateContainerGroupWithInvalidLogAnalytics should fail but encountered no errors")
 	}
+}
+
+func TestCreateContainerGroupWithVNet(t *testing.T) {
+	uid := uuid.New()
+        containerGroupName := containerGroup + "-" + uid.String()[0:6]
+	fakeKubeConfig := base64.StdEncoding.EncodeToString([]byte(uid.String()))
+	networkProfileId := "/subscriptions/ae43b1e3-c35d-4c8c-bc0d-f148b4c52b78/resourceGroups/aci-connector/providers/Microsoft.Network/networkprofiles/aci-connector-network-profile-westus"
+        diagnostics, err := NewContainerGroupDiagnosticsFromFile("../../../../loganalytics.json")
+        if err != nil {
+                t.Fatal(err)
+        }
+
+	diagnostics.LogAnalytics.LogType = LogAnlyticsLogTypeContainerInsights
+
+        cg, err := client.CreateContainerGroup(resourceGroup, containerGroupName, ContainerGroup{
+                Location: location,
+                ContainerGroupProperties: ContainerGroupProperties{
+                        OsType: Linux,
+                        Containers: []Container{
+                                {
+                                        Name: "nginx",
+                                        ContainerProperties: ContainerProperties{
+                                                Image:   "nginx",
+                                                Command: []string{"nginx", "-g", "daemon off;"},
+                                                Ports: []ContainerPort{
+                                                        {
+                                                                Protocol: ContainerNetworkProtocolTCP,
+                                                                Port:     80,
+                                                        },
+                                                },
+                                                Resources: ResourceRequirements{
+                                                        Requests: &ResourceRequests{
+                                                                CPU:        1,
+                                                                MemoryInGB: 1,
+                                                        },
+                                                        Limits: &ResourceLimits{
+                                                                CPU:        1,
+                                                                MemoryInGB: 1,
+                                                        },
+                                                },
+                                        },
+                                },
+                        },
+                        NetworkProfile: &NetworkProfileDefinition{
+                                ID: networkProfileId,
+                        },
+			Extensions: []*Extension{
+				&Extension{
+					Name: "kube-proxy",
+						Properties: &ExtensionProperties{
+						Type:    ExtensionTypeKubeProxy,
+						Version: ExtensionVersion1_0,
+						Settings: map[string]string{
+							KubeProxyExtensionSettingClusterCIDR: "10.240.0.0/16",
+							KubeProxyExtensionSettingKubeVersion: KubeProxyExtensionKubeVersion,
+						},
+						ProtectedSettings: map[string]string{
+							KubeProxyExtensionSettingKubeConfig: fakeKubeConfig,
+						},
+					},
+				},
+			},
+			DNSConfig: &DNSConfig{
+				NameServers: []string{"1.1.1.1"},
+			},
+                        Diagnostics: diagnostics,
+                },
+        })
+
+        if err != nil {
+                t.Fatal(err)
+        }
+        if cg.Name != containerGroupName {
+                t.Fatalf("resource group name is %s, expected %s", cg.Name, containerGroupName)
+        }
+        if err := client.DeleteContainerGroup(resourceGroup, containerGroupName); err != nil {
+                t.Fatalf("Delete Container Group failed: %s", err.Error())
+        }
 }
 
 func TestDeleteContainerGroup(t *testing.T) {
