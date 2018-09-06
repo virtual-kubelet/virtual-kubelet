@@ -511,7 +511,7 @@ func (p *ACIProvider) CreatePod(pod *v1.Pod) error {
 	containerGroup.ContainerGroupProperties.Containers = containers
 	containerGroup.ContainerGroupProperties.Volumes = volumes
 	containerGroup.ContainerGroupProperties.ImageRegistryCredentials = creds
-	containerGroup.ContainerGroupProperties.Diagnostics = p.diagnostics
+	containerGroup.ContainerGroupProperties.Diagnostics = p.getDiagnostics(pod)
 
 	filterServiceAccountSecretVolume(p.operatingSystem, &containerGroup)
 
