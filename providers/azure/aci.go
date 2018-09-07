@@ -251,9 +251,9 @@ func NewACIProvider(config string, rm *manager.ResourceManager, nodeName, operat
 	}
 
 	// Set sane defaults for Capacity in case config is not supplied
-	p.cpu = "1000"
+	p.cpu = "800"
 	p.memory = "4Ti"
-	p.pods = "1000"
+	p.pods = "800"
 
 	if cpuQuota := os.Getenv("ACI_QUOTA_CPU"); cpuQuota != "" {
 		p.cpu = cpuQuota
