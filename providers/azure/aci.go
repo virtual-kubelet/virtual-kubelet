@@ -325,9 +325,15 @@ func (p *ACIProvider) setupNetworkProfile(auth *client.Authentication) error {
 	if err != nil && !network.IsNotFound(err) {
 		return fmt.Errorf("error while looking up subnet: %v", err)
 	}
+	if network.IsNotFound(err) && p.subnetCIDR == "" {
+		return fmt.Errorf("subnet '%s' is not found in vnet '%s' in resource group '%s' and subnet CIDR is not specified", p.subnetName, p.vnetName, p.vnetResourceGroup)
+	}
 	if err == nil {
+		if p.subnetCIDR == "" {
+			p.subnetCIDR = subnet.Properties.AddressPrefix
+		}
 		if p.subnetCIDR != subnet.Properties.AddressPrefix {
-			return fmt.Errorf("found existing subnet with different CIDR")
+			return fmt.Errorf("found subnet '%s' using different CIDR: '%s'. desired: '%s'", p.subnetName, subnet.Properties.AddressPrefix, p.subnetCIDR)
 		}
 		for _, d := range subnet.Properties.Delegations {
 			if d.Properties.ServiceName == subnetDelegationService {
