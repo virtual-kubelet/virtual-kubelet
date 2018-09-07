@@ -183,7 +183,7 @@ func (s *Server) registerNode(ctx context.Context) error {
 			NodeInfo: corev1.NodeSystemInfo{
 				OperatingSystem: s.provider.OperatingSystem(),
 				Architecture:    "amd64",
-				KubeletVersion:  "v1.8.3",
+				KubeletVersion:  "v1.11.2",
 			},
 			Capacity:        s.provider.Capacity(),
 			Allocatable:     s.provider.Capacity(),
