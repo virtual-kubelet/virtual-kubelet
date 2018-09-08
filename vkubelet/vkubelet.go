@@ -66,6 +66,10 @@ func New(nodeName, operatingSystem, namespace, kubeConfig, provider, providerCon
 		}
 	}
 
+	if masterURI := os.Getenv("MASTER_URI"); masterURI != "" {
+		config.Host = masterURI
+	}
+
 	clientset, err := kubernetes.NewForConfig(config)
 	if err != nil {
 		return nil, err
