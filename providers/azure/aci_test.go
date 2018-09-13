@@ -6,6 +6,7 @@ package azure
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -77,7 +78,7 @@ func TestCreatePodWithoutResourceSpec(t *testing.T) {
 		},
 	}
 
-	if err := provider.CreatePod(pod); err != nil {
+	if err := provider.CreatePod(context.Background(), pod); err != nil {
 		t.Fatal("Failed to create pod", err)
 	}
 }
@@ -131,7 +132,7 @@ func TestCreatePodWithResourceRequestOnly(t *testing.T) {
 		},
 	}
 
-	if err := provider.CreatePod(pod); err != nil {
+	if err := provider.CreatePod(context.Background(), pod); err != nil {
 		t.Fatal("Failed to create pod", err)
 	}
 }
@@ -190,7 +191,7 @@ func TestCreatePodWithResourceRequestAndLimit(t *testing.T) {
 		},
 	}
 
-	if err := provider.CreatePod(pod); err != nil {
+	if err := provider.CreatePod(context.Background(), pod); err != nil {
 		t.Fatal("Failed to create pod", err)
 	}
 }
@@ -212,7 +213,7 @@ func TestGetPodsWithEmptyList(t *testing.T) {
 		}
 	}
 
-	pods, err := provider.GetPods()
+	pods, err := provider.GetPods(context.Background())
 	if err != nil {
 		t.Fatal("Failed to get pods", err)
 	}
@@ -269,7 +270,7 @@ func TestGetPodsWithoutResourceRequestsLimits(t *testing.T) {
 		}
 	}
 
-	pods, err := provider.GetPods()
+	pods, err := provider.GetPods(context.Background())
 	if err != nil {
 		t.Fatal("Failed to get pods", err)
 	}
@@ -343,7 +344,7 @@ func TestGetPodWithoutResourceRequestsLimits(t *testing.T) {
 		}
 	}
 
-	pod, err := provider.GetPod(podNamespace, podName)
+	pod, err := provider.GetPod(context.Background(), podNamespace, podName)
 	if err != nil {
 		t.Fatal("Failed to get pod", err)
 	}
@@ -385,7 +386,7 @@ func TestGetPodWithContainerID(t *testing.T) {
 		assert.Equal(t, podNamespace+"-"+podName, containerGroup, "Container group name is not expected")
 
 		return http.StatusOK, aci.ContainerGroup{
-			ID:   cgID,
+			ID: cgID,
 			Tags: map[string]string{
 				"NodeName": fakeNodeName,
 			},
@@ -405,7 +406,7 @@ func TestGetPodWithContainerID(t *testing.T) {
 							},
 							Resources: aci.ResourceRequirements{
 								Requests: &aci.ResourceRequests{
-									CPU:	0.99,
+									CPU:        0.99,
 									MemoryInGB: 1.5,
 								},
 							},
@@ -416,7 +417,7 @@ func TestGetPodWithContainerID(t *testing.T) {
 		}
 	}
 
-	pod, err := provider.GetPod(podNamespace, podName)
+	pod, err := provider.GetPod(context.Background(), podNamespace, podName)
 	if err != nil {
 		t.Fatal("Failed to get pod", err)
 	}
@@ -586,7 +587,7 @@ func TestCreatePodWithLivenessProbe(t *testing.T) {
 		},
 	}
 
-	if err := provider.CreatePod(pod); err != nil {
+	if err := provider.CreatePod(context.Background(), pod); err != nil {
 		t.Fatal("Failed to create pod", err)
 	}
 }
@@ -648,7 +649,7 @@ func TestCreatePodWithReadinessProbe(t *testing.T) {
 		},
 	}
 
-	if err := provider.CreatePod(pod); err != nil {
+	if err := provider.CreatePod(context.Background(), pod); err != nil {
 		t.Fatal("Failed to create pod", err)
 	}
 }

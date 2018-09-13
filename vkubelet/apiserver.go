@@ -134,7 +134,7 @@ func (s *KubeletServer) ApiServerHandler(w http.ResponseWriter, req *http.Reques
 		tail = t
 	}
 
-	podsLogs, err := s.p.GetContainerLogs(namespace, pod, container, tail)
+	podsLogs, err := s.p.GetContainerLogs(ctx, namespace, pod, container, tail)
 	if err != nil {
 		log.G(ctx).WithError(err).Error("error getting container logs")
 		http.Error(w, fmt.Sprintf("error while getting container logs: %v", err), http.StatusInternalServerError)

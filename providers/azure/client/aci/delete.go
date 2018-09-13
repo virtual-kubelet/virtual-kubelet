@@ -1,6 +1,7 @@
 package aci
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -11,7 +12,7 @@ import (
 // DeleteContainerGroup deletes an Azure Container Instance in the provided
 // resource group with the given container group name.
 // From: https://docs.microsoft.com/en-us/rest/api/container-instances/containergroups/delete
-func (c *Client) DeleteContainerGroup(resourceGroup, containerGroupName string) error {
+func (c *Client) DeleteContainerGroup(ctx context.Context, resourceGroup, containerGroupName string) error {
 	urlParams := url.Values{
 		"api-version": []string{apiVersion},
 	}
@@ -25,6 +26,7 @@ func (c *Client) DeleteContainerGroup(resourceGroup, containerGroupName string) 
 	if err != nil {
 		return fmt.Errorf("Creating delete container group uri request failed: %v", err)
 	}
+	req = req.WithContext(ctx)
 
 	// Add the parameters to the url.
 	if err := api.ExpandURL(req.URL, map[string]string{

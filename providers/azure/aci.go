@@ -492,7 +492,7 @@ func getKubeProxyExtension(secretPath, masterURI, clusterCIDR string) (*aci.Exte
 
 // CreatePod accepts a Pod definition and creates
 // an ACI deployment
-func (p *ACIProvider) CreatePod(pod *v1.Pod) error {
+func (p *ACIProvider) CreatePod(ctx context.Context, pod *v1.Pod) error {
 	var containerGroup aci.ContainerGroup
 	containerGroup.Location = p.region
 	containerGroup.RestartPolicy = aci.ContainerGroupRestartPolicy(pod.Spec.RestartPolicy)
@@ -561,6 +561,7 @@ func (p *ACIProvider) CreatePod(pod *v1.Pod) error {
 	p.amendVnetResources(&containerGroup, pod)
 
 	_, err = p.aciClient.CreateContainerGroup(
+		ctx,
 		p.resourceGroup,
 		containerGroupName(pod),
 		containerGroup,
@@ -684,19 +685,19 @@ func containerGroupName(pod *v1.Pod) string {
 }
 
 // UpdatePod is a noop, ACI currently does not support live updates of a pod.
-func (p *ACIProvider) UpdatePod(pod *v1.Pod) error {
+func (p *ACIProvider) UpdatePod(ctx context.Context, pod *v1.Pod) error {
 	return nil
 }
 
 // DeletePod deletes the specified pod out of ACI.
-func (p *ACIProvider) DeletePod(pod *v1.Pod) error {
-	return p.aciClient.DeleteContainerGroup(p.resourceGroup, fmt.Sprintf("%s-%s", pod.Namespace, pod.Name))
+func (p *ACIProvider) DeletePod(ctx context.Context, pod *v1.Pod) error {
+	return p.aciClient.DeleteContainerGroup(ctx, p.resourceGroup, fmt.Sprintf("%s-%s", pod.Namespace, pod.Name))
 }
 
 // GetPod returns a pod by name that is running inside ACI
 // returns nil if a pod by that name is not found.
-func (p *ACIProvider) GetPod(namespace, name string) (*v1.Pod, error) {
-	cg, err, status := p.aciClient.GetContainerGroup(p.resourceGroup, fmt.Sprintf("%s-%s", namespace, name))
+func (p *ACIProvider) GetPod(ctx context.Context, namespace, name string) (*v1.Pod, error) {
+	cg, err, status := p.aciClient.GetContainerGroup(ctx, p.resourceGroup, fmt.Sprintf("%s-%s", namespace, name))
 	if err != nil {
 		if *status == http.StatusNotFound {
 			return nil, nil
@@ -712,9 +713,9 @@ func (p *ACIProvider) GetPod(namespace, name string) (*v1.Pod, error) {
 }
 
 // GetContainerLogs returns the logs of a pod by name that is running inside ACI.
-func (p *ACIProvider) GetContainerLogs(namespace, podName, containerName string, tail int) (string, error) {
+func (p *ACIProvider) GetContainerLogs(ctx context.Context, namespace, podName, containerName string, tail int) (string, error) {
 	logContent := ""
-	cg, err, _ := p.aciClient.GetContainerGroup(p.resourceGroup, fmt.Sprintf("%s-%s", namespace, podName))
+	cg, err, _ := p.aciClient.GetContainerGroup(ctx, p.resourceGroup, fmt.Sprintf("%s-%s", namespace, podName))
 	if err != nil {
 		return logContent, err
 	}
@@ -725,9 +726,9 @@ func (p *ACIProvider) GetContainerLogs(namespace, podName, containerName string,
 	// get logs from cg
 	retry := 10
 	for i := 0; i < retry; i++ {
-		cLogs, err := p.aciClient.GetContainerLogs(p.resourceGroup, cg.Name, containerName, tail)
+		cLogs, err := p.aciClient.GetContainerLogs(ctx, p.resourceGroup, cg.Name, containerName, tail)
 		if err != nil {
-			log.G(context.TODO()).WithField("method", "GetContainerLogs").WithError(err).Debug("Error getting container logs, retrying")
+			log.G(ctx).WithField("method", "GetContainerLogs").WithError(err).Debug("Error getting container logs, retrying")
 			time.Sleep(5000 * time.Millisecond)
 		} else {
 			logContent = cLogs.Content
@@ -754,7 +755,7 @@ func (p *ACIProvider) ExecInContainer(name string, uid types.UID, container stri
 		defer errstream.Close()
 	}
 
-	cg, err, _ := p.aciClient.GetContainerGroup(p.resourceGroup, name)
+	cg, err, _ := p.aciClient.GetContainerGroup(context.TODO(), p.resourceGroup, name)
 	if err != nil {
 		return err
 	}
@@ -822,8 +823,8 @@ func (p *ACIProvider) ExecInContainer(name string, uid types.UID, container stri
 
 // GetPodStatus returns the status of a pod by name that is running inside ACI
 // returns nil if a pod by that name is not found.
-func (p *ACIProvider) GetPodStatus(namespace, name string) (*v1.PodStatus, error) {
-	pod, err := p.GetPod(namespace, name)
+func (p *ACIProvider) GetPodStatus(ctx context.Context, namespace, name string) (*v1.PodStatus, error) {
+	pod, err := p.GetPod(ctx, namespace, name)
 	if err != nil {
 		return nil, err
 	}
@@ -836,8 +837,8 @@ func (p *ACIProvider) GetPodStatus(namespace, name string) (*v1.PodStatus, error
 }
 
 // GetPods returns a list of all pods known to be running within ACI.
-func (p *ACIProvider) GetPods() ([]*v1.Pod, error) {
-	cgs, err := p.aciClient.ListContainerGroups(p.resourceGroup)
+func (p *ACIProvider) GetPods(ctx context.Context) ([]*v1.Pod, error) {
+	cgs, err := p.aciClient.ListContainerGroups(ctx, p.resourceGroup)
 	if err != nil {
 		return nil, err
 	}
@@ -865,7 +866,7 @@ func (p *ACIProvider) GetPods() ([]*v1.Pod, error) {
 }
 
 // Capacity returns a resource list containing the capacity limits set for ACI.
-func (p *ACIProvider) Capacity() v1.ResourceList {
+func (p *ACIProvider) Capacity(ctx context.Context) v1.ResourceList {
 	return v1.ResourceList{
 		"cpu":    resource.MustParse(p.cpu),
 		"memory": resource.MustParse(p.memory),
@@ -875,7 +876,7 @@ func (p *ACIProvider) Capacity() v1.ResourceList {
 
 // NodeConditions returns a list of conditions (Ready, OutOfDisk, etc), for updates to the node status
 // within Kubernetes.
-func (p *ACIProvider) NodeConditions() []v1.NodeCondition {
+func (p *ACIProvider) NodeConditions(ctx context.Context) []v1.NodeCondition {
 	// TODO: Make these dynamic and augment with custom ACI specific conditions of interest
 	return []v1.NodeCondition{
 		{
@@ -923,7 +924,7 @@ func (p *ACIProvider) NodeConditions() []v1.NodeCondition {
 
 // NodeAddresses returns a list of addresses for the node status
 // within Kubernetes.
-func (p *ACIProvider) NodeAddresses() []v1.NodeAddress {
+func (p *ACIProvider) NodeAddresses(ctx context.Context) []v1.NodeAddress {
 	// TODO: Make these dynamic and augment with custom ACI specific conditions of interest
 	return []v1.NodeAddress{
 		{
@@ -935,7 +936,7 @@ func (p *ACIProvider) NodeAddresses() []v1.NodeAddress {
 
 // NodeDaemonEndpoints returns NodeDaemonEndpoints for the node status
 // within Kubernetes.
-func (p *ACIProvider) NodeDaemonEndpoints() *v1.NodeDaemonEndpoints {
+func (p *ACIProvider) NodeDaemonEndpoints(ctx context.Context) *v1.NodeDaemonEndpoints {
 	return &v1.NodeDaemonEndpoints{
 		KubeletEndpoint: v1.DaemonEndpoint{
 			Port: p.daemonEndpointPort,
