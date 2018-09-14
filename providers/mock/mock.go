@@ -1,6 +1,7 @@
 package mock
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -96,7 +97,7 @@ func loadConfig(providerConfig, nodeName string) (config MockConfig, err error) 
 }
 
 // CreatePod accepts a Pod definition and stores it in memory.
-func (p *MockProvider) CreatePod(pod *v1.Pod) error {
+func (p *MockProvider) CreatePod(ctx context.Context, pod *v1.Pod) error {
 	log.Printf("receive CreatePod %q\n", pod.Name)
 
 	key, err := buildKey(pod)
@@ -110,7 +111,7 @@ func (p *MockProvider) CreatePod(pod *v1.Pod) error {
 }
 
 // UpdatePod accepts a Pod definition and updates its reference.
-func (p *MockProvider) UpdatePod(pod *v1.Pod) error {
+func (p *MockProvider) UpdatePod(ctx context.Context, pod *v1.Pod) error {
 	log.Printf("receive UpdatePod %q\n", pod.Name)
 
 	key, err := buildKey(pod)
@@ -124,7 +125,7 @@ func (p *MockProvider) UpdatePod(pod *v1.Pod) error {
 }
 
 // DeletePod deletes the specified pod out of memory.
-func (p *MockProvider) DeletePod(pod *v1.Pod) (err error) {
+func (p *MockProvider) DeletePod(ctx context.Context, pod *v1.Pod) (err error) {
 	log.Printf("receive DeletePod %q\n", pod.Name)
 
 	key, err := buildKey(pod)
@@ -138,7 +139,7 @@ func (p *MockProvider) DeletePod(pod *v1.Pod) (err error) {
 }
 
 // GetPod returns a pod by name that is stored in memory.
-func (p *MockProvider) GetPod(namespace, name string) (pod *v1.Pod, err error) {
+func (p *MockProvider) GetPod(ctx context.Context, namespace, name string) (pod *v1.Pod, err error) {
 	log.Printf("receive GetPod %q\n", name)
 
 	key, err := buildKeyFromNames(namespace, name)
@@ -154,7 +155,7 @@ func (p *MockProvider) GetPod(namespace, name string) (pod *v1.Pod, err error) {
 }
 
 // GetContainerLogs retrieves the logs of a container by name from the provider.
-func (p *MockProvider) GetContainerLogs(namespace, podName, containerName string, tail int) (string, error) {
+func (p *MockProvider) GetContainerLogs(ctx context.Context, namespace, podName, containerName string, tail int) (string, error) {
 	log.Printf("receive GetContainerLogs %q\n", podName)
 	return "", nil
 }
@@ -174,7 +175,7 @@ func (p *MockProvider) ExecInContainer(name string, uid types.UID, container str
 
 // GetPodStatus returns the status of a pod by name that is "running".
 // returns nil if a pod by that name is not found.
-func (p *MockProvider) GetPodStatus(namespace, name string) (*v1.PodStatus, error) {
+func (p *MockProvider) GetPodStatus(ctx context.Context, namespace, name string) (*v1.PodStatus, error) {
 	log.Printf("receive GetPodStatus %q\n", name)
 
 	now := metav1.NewTime(time.Now())
@@ -200,7 +201,7 @@ func (p *MockProvider) GetPodStatus(namespace, name string) (*v1.PodStatus, erro
 		},
 	}
 
-	pod, err := p.GetPod(namespace, name)
+	pod, err := p.GetPod(ctx, namespace, name)
 	if err != nil {
 		return status, err
 	}
@@ -223,7 +224,7 @@ func (p *MockProvider) GetPodStatus(namespace, name string) (*v1.PodStatus, erro
 }
 
 // GetPods returns a list of all pods known to be "running".
-func (p *MockProvider) GetPods() ([]*v1.Pod, error) {
+func (p *MockProvider) GetPods(ctx context.Context) ([]*v1.Pod, error) {
 	log.Printf("receive GetPods\n")
 
 	var pods []*v1.Pod
@@ -236,7 +237,7 @@ func (p *MockProvider) GetPods() ([]*v1.Pod, error) {
 }
 
 // Capacity returns a resource list containing the capacity limits.
-func (p *MockProvider) Capacity() v1.ResourceList {
+func (p *MockProvider) Capacity(ctx context.Context) v1.ResourceList {
 	return v1.ResourceList{
 		"cpu":    resource.MustParse(p.config.CPU),
 		"memory": resource.MustParse(p.config.Memory),
@@ -246,7 +247,7 @@ func (p *MockProvider) Capacity() v1.ResourceList {
 
 // NodeConditions returns a list of conditions (Ready, OutOfDisk, etc), for updates to the node status
 // within Kubernetes.
-func (p *MockProvider) NodeConditions() []v1.NodeCondition {
+func (p *MockProvider) NodeConditions(ctx context.Context) []v1.NodeCondition {
 	// TODO: Make this configurable
 	return []v1.NodeCondition{
 		{
@@ -295,7 +296,7 @@ func (p *MockProvider) NodeConditions() []v1.NodeCondition {
 
 // NodeAddresses returns a list of addresses for the node status
 // within Kubernetes.
-func (p *MockProvider) NodeAddresses() []v1.NodeAddress {
+func (p *MockProvider) NodeAddresses(ctx context.Context) []v1.NodeAddress {
 	return []v1.NodeAddress{
 		{
 			Type:    "InternalIP",
@@ -306,7 +307,7 @@ func (p *MockProvider) NodeAddresses() []v1.NodeAddress {
 
 // NodeDaemonEndpoints returns NodeDaemonEndpoints for the node status
 // within Kubernetes.
-func (p *MockProvider) NodeDaemonEndpoints() *v1.NodeDaemonEndpoints {
+func (p *MockProvider) NodeDaemonEndpoints(ctx context.Context) *v1.NodeDaemonEndpoints {
 	return &v1.NodeDaemonEndpoints{
 		KubeletEndpoint: v1.DaemonEndpoint{
 			Port: p.daemonEndpointPort,

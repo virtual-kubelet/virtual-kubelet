@@ -1,15 +1,17 @@
 package azurebatch
 
 import (
+	"context"
 	"crypto/md5"
 	"fmt"
-	"github.com/Azure/azure-sdk-for-go/services/batch/2017-09-01.6.0/batch"
-	"github.com/Azure/go-autorest/autorest"
 	"io/ioutil"
 	"net/http"
 	"os"
 	"strings"
 	"testing"
+
+	"github.com/Azure/azure-sdk-for-go/services/batch/2017-09-01.6.0/batch"
+	"github.com/Azure/go-autorest/autorest"
 
 	apiv1 "k8s.io/api/core/v1"
 )
@@ -32,7 +34,7 @@ func Test_deletePod(t *testing.T) {
 	pod.Name = podName
 	pod.Namespace = podNamespace
 
-	err := provider.DeletePod(pod)
+	err := provider.DeletePod(context.Background(), pod)
 	if err != nil {
 		t.Error(err)
 	}
@@ -48,7 +50,7 @@ func Test_deletePod_doesntExist(t *testing.T) {
 		return autorest.Response{}, fmt.Errorf("Task doesn't exist")
 	}
 
-	err := provider.DeletePod(pod)
+	err := provider.DeletePod(context.Background(), pod)
 	if err == nil {
 		t.Error("Expected error but none seen")
 	}
@@ -72,7 +74,7 @@ func Test_createPod(t *testing.T) {
 		return autorest.Response{}, nil
 	}
 
-	err := provider.CreatePod(pod)
+	err := provider.CreatePod(context.Background(), pod)
 	if err != nil {
 		t.Errorf("Unexpected error creating pod %v", err)
 	}
@@ -88,7 +90,7 @@ func Test_createPod_errorResponse(t *testing.T) {
 		return autorest.Response{}, fmt.Errorf("Failed creating task")
 	}
 
-	err := provider.CreatePod(pod)
+	err := provider.CreatePod(context.Background(), pod)
 	if err == nil {
 		t.Error("Expected error but none seen")
 	}
@@ -118,7 +120,7 @@ func Test_readLogs_404Response_expectReturnStartupLogs(t *testing.T) {
 		return batch.ReadCloser{}, fmt.Errorf("Failed in test mock of getFileFromTask")
 	}
 
-	result, err := provider.GetContainerLogs(pod.Namespace, pod.Name, containerName, 0)
+	result, err := provider.GetContainerLogs(context.Background(), pod.Namespace, pod.Name, containerName, 0)
 	if err != nil {
 		t.Errorf("GetContainerLogs return error: %v", err)
 	}
@@ -152,7 +154,7 @@ func Test_readLogs_JsonResponse_expectFormattedLogs(t *testing.T) {
 		return batch.ReadCloser{}, fmt.Errorf("Failed in test mock of getFileFromTask")
 	}
 
-	result, err := provider.GetContainerLogs(pod.Namespace, pod.Name, containerName, 0)
+	result, err := provider.GetContainerLogs(context.Background(), pod.Namespace, pod.Name, containerName, 0)
 	if err != nil {
 		t.Errorf("GetContainerLogs return error: %v", err)
 	}

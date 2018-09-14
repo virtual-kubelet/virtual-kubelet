@@ -16,6 +16,7 @@ package web
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -63,17 +64,17 @@ func NewBrokerProvider(nodeName, operatingSystem string, daemonEndpointPort int3
 }
 
 // CreatePod accepts a Pod definition and forwards the call to the web endpoint
-func (p *BrokerProvider) CreatePod(pod *v1.Pod) error {
+func (p *BrokerProvider) CreatePod(ctx context.Context, pod *v1.Pod) error {
 	return p.createUpdatePod(pod, "POST", "/createPod")
 }
 
 // UpdatePod accepts a Pod definition and forwards the call to the web endpoint
-func (p *BrokerProvider) UpdatePod(pod *v1.Pod) error {
+func (p *BrokerProvider) UpdatePod(ctx context.Context, pod *v1.Pod) error {
 	return p.createUpdatePod(pod, "PUT", "/updatePod")
 }
 
 // DeletePod accepts a Pod definition and forwards the call to the web endpoint
-func (p *BrokerProvider) DeletePod(pod *v1.Pod) error {
+func (p *BrokerProvider) DeletePod(ctx context.Context, pod *v1.Pod) error {
 	urlPath, err := url.Parse("/deletePod")
 	if err != nil {
 		return err
@@ -90,7 +91,7 @@ func (p *BrokerProvider) DeletePod(pod *v1.Pod) error {
 }
 
 // GetPod returns a pod by name that is being managed by the web server
-func (p *BrokerProvider) GetPod(namespace, name string) (*v1.Pod, error) {
+func (p *BrokerProvider) GetPod(ctx context.Context, namespace, name string) (*v1.Pod, error) {
 	urlPathStr := fmt.Sprintf(
 		"/getPod?namespace=%s&name=%s",
 		url.QueryEscape(namespace),
@@ -109,7 +110,7 @@ func (p *BrokerProvider) GetPod(namespace, name string) (*v1.Pod, error) {
 }
 
 // GetContainerLogs returns the logs of a container running in a pod by name.
-func (p *BrokerProvider) GetContainerLogs(namespace, podName, containerName string, tail int) (string, error) {
+func (p *BrokerProvider) GetContainerLogs(ctx context.Context, namespace, podName, containerName string, tail int) (string, error) {
 	urlPathStr := fmt.Sprintf(
 		"/getContainerLogs?namespace=%s&podName=%s&containerName=%s&tail=%d",
 		url.QueryEscape(namespace),
@@ -140,7 +141,7 @@ func (p *BrokerProvider) ExecInContainer(name string, uid types.UID, container s
 }
 
 // GetPodStatus retrieves the status of a given pod by name.
-func (p *BrokerProvider) GetPodStatus(namespace, name string) (*v1.PodStatus, error) {
+func (p *BrokerProvider) GetPodStatus(ctx context.Context, namespace, name string) (*v1.PodStatus, error) {
 	urlPathStr := fmt.Sprintf(
 		"/getPodStatus?namespace=%s&name=%s",
 		url.QueryEscape(namespace),
@@ -159,7 +160,7 @@ func (p *BrokerProvider) GetPodStatus(namespace, name string) (*v1.PodStatus, er
 }
 
 // GetPods retrieves a list of all pods scheduled to run.
-func (p *BrokerProvider) GetPods() ([]*v1.Pod, error) {
+func (p *BrokerProvider) GetPods(ctx context.Context) ([]*v1.Pod, error) {
 	var pods []*v1.Pod
 	err := p.doGetRequest("/getPods", &pods)
 
@@ -167,7 +168,7 @@ func (p *BrokerProvider) GetPods() ([]*v1.Pod, error) {
 }
 
 // Capacity returns a resource list containing the capacity limits
-func (p *BrokerProvider) Capacity() v1.ResourceList {
+func (p *BrokerProvider) Capacity(ctx context.Context) v1.ResourceList {
 	var resourceList v1.ResourceList
 	err := p.doGetRequest("/capacity", &resourceList)
 
@@ -180,7 +181,7 @@ func (p *BrokerProvider) Capacity() v1.ResourceList {
 }
 
 // NodeConditions returns a list of conditions (Ready, OutOfDisk, etc), for updates to the node status
-func (p *BrokerProvider) NodeConditions() []v1.NodeCondition {
+func (p *BrokerProvider) NodeConditions(ctx context.Context) []v1.NodeCondition {
 	var nodeConditions []v1.NodeCondition
 	err := p.doGetRequest("/nodeConditions", &nodeConditions)
 
@@ -194,7 +195,7 @@ func (p *BrokerProvider) NodeConditions() []v1.NodeCondition {
 
 // NodeAddresses returns a list of addresses for the node status
 // within Kubernetes.
-func (p *BrokerProvider) NodeAddresses() []v1.NodeAddress {
+func (p *BrokerProvider) NodeAddresses(ctx context.Context) []v1.NodeAddress {
 	var nodeAddresses []v1.NodeAddress
 	err := p.doGetRequest("/nodeAddresses", &nodeAddresses)
 
@@ -208,7 +209,7 @@ func (p *BrokerProvider) NodeAddresses() []v1.NodeAddress {
 
 // NodeDaemonEndpoints returns NodeDaemonEndpoints for the node status
 // within Kubernetes.
-func (p *BrokerProvider) NodeDaemonEndpoints() *v1.NodeDaemonEndpoints {
+func (p *BrokerProvider) NodeDaemonEndpoints(ctx context.Context) *v1.NodeDaemonEndpoints {
 	return &v1.NodeDaemonEndpoints{
 		KubeletEndpoint: v1.DaemonEndpoint{
 			Port: p.daemonEndpointPort,

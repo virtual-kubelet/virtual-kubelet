@@ -1,6 +1,7 @@
 package aci
 
 import (
+	"context"
 	"encoding/base64"
 	"fmt"
 	"log"
@@ -90,7 +91,7 @@ func TestNewClient(t *testing.T) {
 }
 
 func TestCreateContainerGroupFails(t *testing.T) {
-	_, err := client.CreateContainerGroup(resourceGroup, containerGroup, ContainerGroup{
+	_, err := client.CreateContainerGroup(context.Background(), resourceGroup, containerGroup, ContainerGroup{
 		Location: location,
 		ContainerGroupProperties: ContainerGroupProperties{
 			OsType: Linux,
@@ -121,7 +122,7 @@ func TestCreateContainerGroupFails(t *testing.T) {
 }
 
 func TestCreateContainerGroupWithoutResourceLimit(t *testing.T) {
-	cg, err := client.CreateContainerGroup(resourceGroup, containerGroup, ContainerGroup{
+	cg, err := client.CreateContainerGroup(context.Background(), resourceGroup, containerGroup, ContainerGroup{
 		Location: location,
 		ContainerGroupProperties: ContainerGroupProperties{
 			OsType: Linux,
@@ -155,13 +156,13 @@ func TestCreateContainerGroupWithoutResourceLimit(t *testing.T) {
 		t.Fatalf("resource group name is %s, expected %s", cg.Name, containerGroup)
 	}
 
-	if err := client.DeleteContainerGroup(resourceGroup, containerGroup); err != nil {
+	if err := client.DeleteContainerGroup(context.Background(), resourceGroup, containerGroup); err != nil {
 		t.Fatal(err)
 	}
 }
 
 func TestCreateContainerGroup(t *testing.T) {
-	cg, err := client.CreateContainerGroup(resourceGroup, containerGroup, ContainerGroup{
+	cg, err := client.CreateContainerGroup(context.Background(), resourceGroup, containerGroup, ContainerGroup{
 		Location: location,
 		ContainerGroupProperties: ContainerGroupProperties{
 			OsType: Linux,
@@ -201,7 +202,7 @@ func TestCreateContainerGroup(t *testing.T) {
 }
 
 func TestCreateContainerGroupWithBadVNetFails(t *testing.T) {
-	_, err := client.CreateContainerGroup(resourceGroup, containerGroup, ContainerGroup{
+	_, err := client.CreateContainerGroup(context.Background(), resourceGroup, containerGroup, ContainerGroup{
 		Location: location,
 		ContainerGroupProperties: ContainerGroupProperties{
 			OsType: Linux,
@@ -250,7 +251,7 @@ func TestCreateContainerGroupWithBadVNetFails(t *testing.T) {
 }
 
 func TestGetContainerGroup(t *testing.T) {
-	cg, err, _ := client.GetContainerGroup(resourceGroup, containerGroup)
+	cg, err, _ := client.GetContainerGroup(context.Background(), resourceGroup, containerGroup)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -260,7 +261,7 @@ func TestGetContainerGroup(t *testing.T) {
 }
 
 func TestListContainerGroup(t *testing.T) {
-	list, err := client.ListContainerGroups(resourceGroup)
+	list, err := client.ListContainerGroups(context.Background(), resourceGroup)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -274,7 +275,7 @@ func TestListContainerGroup(t *testing.T) {
 func TestCreateContainerGroupWithLivenessProbe(t *testing.T) {
 	uid := uuid.New()
 	containerGroupName := containerGroup + "-" + uid.String()[0:6]
-	cg, err := client.CreateContainerGroup(resourceGroup, containerGroupName, ContainerGroup{
+	cg, err := client.CreateContainerGroup(context.Background(), resourceGroup, containerGroupName, ContainerGroup{
 		Location: location,
 		ContainerGroupProperties: ContainerGroupProperties{
 			OsType: Linux,
@@ -321,7 +322,7 @@ func TestCreateContainerGroupWithLivenessProbe(t *testing.T) {
 func TestCreateContainerGroupFailsWithLivenessProbeMissingPort(t *testing.T) {
 	uid := uuid.New()
 	containerGroupName := containerGroup + "-" + uid.String()[0:6]
-	_, err := client.CreateContainerGroup(resourceGroup, containerGroupName, ContainerGroup{
+	_, err := client.CreateContainerGroup(context.Background(), resourceGroup, containerGroupName, ContainerGroup{
 		Location: location,
 		ContainerGroupProperties: ContainerGroupProperties{
 			OsType: Linux,
@@ -365,7 +366,7 @@ func TestCreateContainerGroupFailsWithLivenessProbeMissingPort(t *testing.T) {
 func TestCreateContainerGroupWithReadinessProbe(t *testing.T) {
 	uid := uuid.New()
 	containerGroupName := containerGroup + "-" + uid.String()[0:6]
-	cg, err := client.CreateContainerGroup(resourceGroup, containerGroupName, ContainerGroup{
+	cg, err := client.CreateContainerGroup(context.Background(), resourceGroup, containerGroupName, ContainerGroup{
 		Location: location,
 		ContainerGroupProperties: ContainerGroupProperties{
 			OsType: Linux,
@@ -420,7 +421,7 @@ func TestCreateContainerGroupWithLogAnalytics(t *testing.T) {
 		t.Fatal(err)
 	}
 	cgname := "cgla"
-	cg, err := client.CreateContainerGroup(resourceGroup, cgname, ContainerGroup{
+	cg, err := client.CreateContainerGroup(context.Background(), resourceGroup, cgname, ContainerGroup{
 		Location: location,
 		ContainerGroupProperties: ContainerGroupProperties{
 			OsType: Linux,
@@ -458,14 +459,14 @@ func TestCreateContainerGroupWithLogAnalytics(t *testing.T) {
 	if cg.Name != cgname {
 		t.Fatalf("resource group name is %s, expected %s", cg.Name, cgname)
 	}
-	if err := client.DeleteContainerGroup(resourceGroup, cgname); err != nil {
+	if err := client.DeleteContainerGroup(context.Background(), resourceGroup, cgname); err != nil {
 		t.Fatalf("Delete Container Group failed: %s", err.Error())
 	}
 }
 
 func TestCreateContainerGroupWithInvalidLogAnalytics(t *testing.T) {
 	law := &LogAnalyticsWorkspace{}
-	_, err := client.CreateContainerGroup(resourceGroup, containerGroup, ContainerGroup{
+	_, err := client.CreateContainerGroup(context.Background(), resourceGroup, containerGroup, ContainerGroup{
 		Location: location,
 		ContainerGroupProperties: ContainerGroupProperties{
 			OsType: Linux,
@@ -506,52 +507,52 @@ func TestCreateContainerGroupWithInvalidLogAnalytics(t *testing.T) {
 
 func TestCreateContainerGroupWithVNet(t *testing.T) {
 	uid := uuid.New()
-        containerGroupName := containerGroup + "-" + uid.String()[0:6]
+	containerGroupName := containerGroup + "-" + uid.String()[0:6]
 	fakeKubeConfig := base64.StdEncoding.EncodeToString([]byte(uid.String()))
 	networkProfileId := "/subscriptions/ae43b1e3-c35d-4c8c-bc0d-f148b4c52b78/resourceGroups/aci-connector/providers/Microsoft.Network/networkprofiles/aci-connector-network-profile-westus"
-        diagnostics, err := NewContainerGroupDiagnosticsFromFile("../../../../loganalytics.json")
-        if err != nil {
-                t.Fatal(err)
-        }
+	diagnostics, err := NewContainerGroupDiagnosticsFromFile("../../../../loganalytics.json")
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	diagnostics.LogAnalytics.LogType = LogAnlyticsLogTypeContainerInsights
 
-        cg, err := client.CreateContainerGroup(resourceGroup, containerGroupName, ContainerGroup{
-                Location: location,
-                ContainerGroupProperties: ContainerGroupProperties{
-                        OsType: Linux,
-                        Containers: []Container{
-                                {
-                                        Name: "nginx",
-                                        ContainerProperties: ContainerProperties{
-                                                Image:   "nginx",
-                                                Command: []string{"nginx", "-g", "daemon off;"},
-                                                Ports: []ContainerPort{
-                                                        {
-                                                                Protocol: ContainerNetworkProtocolTCP,
-                                                                Port:     80,
-                                                        },
-                                                },
-                                                Resources: ResourceRequirements{
-                                                        Requests: &ResourceRequests{
-                                                                CPU:        1,
-                                                                MemoryInGB: 1,
-                                                        },
-                                                        Limits: &ResourceLimits{
-                                                                CPU:        1,
-                                                                MemoryInGB: 1,
-                                                        },
-                                                },
-                                        },
-                                },
-                        },
-                        NetworkProfile: &NetworkProfileDefinition{
-                                ID: networkProfileId,
-                        },
+	cg, err := client.CreateContainerGroup(context.Background(), resourceGroup, containerGroupName, ContainerGroup{
+		Location: location,
+		ContainerGroupProperties: ContainerGroupProperties{
+			OsType: Linux,
+			Containers: []Container{
+				{
+					Name: "nginx",
+					ContainerProperties: ContainerProperties{
+						Image:   "nginx",
+						Command: []string{"nginx", "-g", "daemon off;"},
+						Ports: []ContainerPort{
+							{
+								Protocol: ContainerNetworkProtocolTCP,
+								Port:     80,
+							},
+						},
+						Resources: ResourceRequirements{
+							Requests: &ResourceRequests{
+								CPU:        1,
+								MemoryInGB: 1,
+							},
+							Limits: &ResourceLimits{
+								CPU:        1,
+								MemoryInGB: 1,
+							},
+						},
+					},
+				},
+			},
+			NetworkProfile: &NetworkProfileDefinition{
+				ID: networkProfileId,
+			},
 			Extensions: []*Extension{
 				&Extension{
 					Name: "kube-proxy",
-						Properties: &ExtensionProperties{
+					Properties: &ExtensionProperties{
 						Type:    ExtensionTypeKubeProxy,
 						Version: ExtensionVersion1_0,
 						Settings: map[string]string{
@@ -567,23 +568,23 @@ func TestCreateContainerGroupWithVNet(t *testing.T) {
 			DNSConfig: &DNSConfig{
 				NameServers: []string{"1.1.1.1"},
 			},
-                        Diagnostics: diagnostics,
-                },
-        })
+			Diagnostics: diagnostics,
+		},
+	})
 
-        if err != nil {
-                t.Fatal(err)
-        }
-        if cg.Name != containerGroupName {
-                t.Fatalf("resource group name is %s, expected %s", cg.Name, containerGroupName)
-        }
-        if err := client.DeleteContainerGroup(resourceGroup, containerGroupName); err != nil {
-                t.Fatalf("Delete Container Group failed: %s", err.Error())
-        }
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cg.Name != containerGroupName {
+		t.Fatalf("resource group name is %s, expected %s", cg.Name, containerGroupName)
+	}
+	if err := client.DeleteContainerGroup(context.Background(), resourceGroup, containerGroupName); err != nil {
+		t.Fatalf("Delete Container Group failed: %s", err.Error())
+	}
 }
 
 func TestDeleteContainerGroup(t *testing.T) {
-	err := client.DeleteContainerGroup(resourceGroup, containerGroup)
+	err := client.DeleteContainerGroup(context.Background(), resourceGroup, containerGroup)
 	if err != nil {
 		t.Fatal(err)
 	}

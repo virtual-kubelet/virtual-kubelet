@@ -2,6 +2,7 @@ package huawei
 
 import (
 	"bytes"
+	"context"
 	"crypto/tls"
 	"encoding/json"
 	"errors"
@@ -191,7 +192,7 @@ func (p *CCIProvider) deletePodAnnotations(pod *v1.Pod) error {
 }
 
 // CreatePod takes a Kubernetes Pod and deploys it within the huawei CCI provider.
-func (p *CCIProvider) CreatePod(pod *v1.Pod) error {
+func (p *CCIProvider) CreatePod(ctx context.Context, pod *v1.Pod) error {
 	// Create the createPod request url
 	p.setPodAnnotations(pod)
 	uri := p.apiEndpoint + "/api/v1/namespaces/" + p.project + "/pods"
@@ -218,12 +219,12 @@ func (p *CCIProvider) CreatePod(pod *v1.Pod) error {
 }
 
 // UpdatePod takes a Kubernetes Pod and updates it within the huawei CCI provider.
-func (p *CCIProvider) UpdatePod(pod *v1.Pod) error {
+func (p *CCIProvider) UpdatePod(ctx context.Context, pod *v1.Pod) error {
 	return nil
 }
 
 // DeletePod takes a Kubernetes Pod and deletes it from the huawei CCI provider.
-func (p *CCIProvider) DeletePod(pod *v1.Pod) error {
+func (p *CCIProvider) DeletePod(ctx context.Context, pod *v1.Pod) error {
 	// Create the deletePod request url
 	podName := pod.Namespace + "-" + pod.Name
 	uri := p.apiEndpoint + "/api/v1/namespaces/" + p.project + "/pods/" + podName
@@ -241,7 +242,7 @@ func (p *CCIProvider) DeletePod(pod *v1.Pod) error {
 }
 
 // GetPod retrieves a pod by name from the huawei CCI provider.
-func (p *CCIProvider) GetPod(namespace, name string) (*v1.Pod, error) {
+func (p *CCIProvider) GetPod(ctx context.Context, namespace, name string) (*v1.Pod, error) {
 	// Create the getPod request url
 	podName := namespace + "-" + name
 	uri := p.apiEndpoint + "/api/v1/namespaces/" + p.project + "/pods/" + podName
@@ -276,7 +277,7 @@ func (p *CCIProvider) GetPod(namespace, name string) (*v1.Pod, error) {
 }
 
 // GetContainerLogs retrieves the logs of a container by name from the huawei CCI provider.
-func (p *CCIProvider) GetContainerLogs(namespace, podName, containerName string, tail int) (string, error) {
+func (p *CCIProvider) GetContainerLogs(ctx context.Context, namespace, podName, containerName string, tail int) (string, error) {
 	return "", nil
 }
 
@@ -295,8 +296,8 @@ func (p *CCIProvider) ExecInContainer(name string, uid types.UID, container stri
 }
 
 // GetPodStatus retrieves the status of a pod by name from the huawei CCI provider.
-func (p *CCIProvider) GetPodStatus(namespace, name string) (*v1.PodStatus, error) {
-	pod, err := p.GetPod(namespace, name)
+func (p *CCIProvider) GetPodStatus(ctx context.Context, namespace, name string) (*v1.PodStatus, error) {
+	pod, err := p.GetPod(ctx, namespace, name)
 	if err != nil {
 		return nil, err
 	}
@@ -309,7 +310,7 @@ func (p *CCIProvider) GetPodStatus(namespace, name string) (*v1.PodStatus, error
 }
 
 // GetPods retrieves a list of all pods running on the huawei CCI provider.
-func (p *CCIProvider) GetPods() ([]*v1.Pod, error) {
+func (p *CCIProvider) GetPods(ctx context.Context) ([]*v1.Pod, error) {
 	// Create the getPod request url
 	uri := p.apiEndpoint + "/api/v1/namespaces/" + p.project + "/pods"
 	r, err := http.NewRequest("GET", uri, nil)
@@ -344,7 +345,7 @@ func (p *CCIProvider) GetPods() ([]*v1.Pod, error) {
 }
 
 // Capacity returns a resource list with the capacity constraints of the huawei CCI provider.
-func (p *CCIProvider) Capacity() v1.ResourceList {
+func (p *CCIProvider) Capacity(ctx context.Context) v1.ResourceList {
 	return v1.ResourceList{
 		"cpu":    resource.MustParse(p.cpu),
 		"memory": resource.MustParse(p.memory),
@@ -354,7 +355,7 @@ func (p *CCIProvider) Capacity() v1.ResourceList {
 
 // NodeConditions returns a list of conditions (Ready, OutOfDisk, etc), which is
 // polled periodically to update the node status within Kubernetes.
-func (p *CCIProvider) NodeConditions() []v1.NodeCondition {
+func (p *CCIProvider) NodeConditions(ctx context.Context) []v1.NodeCondition {
 	// TODO: Make these dynamic and augment with custom CCI specific conditions of interest
 	return []v1.NodeCondition{
 		{
@@ -402,7 +403,7 @@ func (p *CCIProvider) NodeConditions() []v1.NodeCondition {
 
 // NodeAddresses returns a list of addresses for the node status
 // within Kubernetes.
-func (p *CCIProvider) NodeAddresses() []v1.NodeAddress {
+func (p *CCIProvider) NodeAddresses(ctx context.Context) []v1.NodeAddress {
 	// TODO: Make these dynamic and augment with custom CCI specific conditions of interest
 	return []v1.NodeAddress{
 		{
@@ -414,7 +415,7 @@ func (p *CCIProvider) NodeAddresses() []v1.NodeAddress {
 
 // NodeDaemonEndpoints returns NodeDaemonEndpoints for the node status
 // within Kubernetes.
-func (p *CCIProvider) NodeDaemonEndpoints() *v1.NodeDaemonEndpoints {
+func (p *CCIProvider) NodeDaemonEndpoints(ctx context.Context) *v1.NodeDaemonEndpoints {
 	return &v1.NodeDaemonEndpoints{
 		KubeletEndpoint: v1.DaemonEndpoint{
 			Port: p.daemonEndpointPort,

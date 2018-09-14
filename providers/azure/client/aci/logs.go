@@ -1,6 +1,7 @@
 package aci
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -13,7 +14,7 @@ import (
 // GetContainerLogs returns the logs from an Azure Container Instance
 // in the provided resource group with the given container group name.
 // From: https://docs.microsoft.com/en-us/rest/api/container-instances/ContainerLogs/List
-func (c *Client) GetContainerLogs(resourceGroup, containerGroupName, containerName string, tail int) (*Logs, error) {
+func (c *Client) GetContainerLogs(ctx context.Context, resourceGroup, containerGroupName, containerName string, tail int) (*Logs, error) {
 	urlParams := url.Values{
 		"api-version": []string{apiVersion},
 		"tail":        []string{fmt.Sprintf("%d", tail)},
@@ -28,6 +29,7 @@ func (c *Client) GetContainerLogs(resourceGroup, containerGroupName, containerNa
 	if err != nil {
 		return nil, fmt.Errorf("Creating get container logs uri request failed: %v", err)
 	}
+	req = req.WithContext(ctx)
 
 	// Add the parameters to the url.
 	if err := api.ExpandURL(req.URL, map[string]string{
