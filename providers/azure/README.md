@@ -10,10 +10,9 @@ This document details configuring the Virtual Kubelet ACI provider.
 * [Prerequiste](#prerequisite)
 * [Quick set-up with the ACI Connector](#quick-set-up-with-the-aci-connector)
 * [Manual set-up](#manual-set-up)
-* [Virtual Network set-up](#set-up with VNet)
 * [Validate the Virtual Kubelet ACI provider](#validate-the-virtual-kubelet-aci-provider)
 * [Schedule a pod in ACI](#schedule-a-pod-in-aci)
-* [Work arounds] (#work-arounds-for-the-aci-connector)
+* [Work arounds](#work-arounds-for-the-aci-connector)
 * [Upgrade the ACI Connector ](#upgrade-the-aci-connector)
 * [Remove the Virtual Kubelet](#remove-the-virtual-kubelet)
 ## Prerequisite
@@ -287,7 +286,7 @@ Output:
 
 ```console
 NAME                                        STATUS    ROLES     AGE       VERSION
-virtual-kubelet-myconnector-linux           Ready     <none>    2m        v1.8.3
+virtual-kubelet-virtual-kubelet             Ready     <none>    2m        v1.8.3
 aks-nodepool1-39289454-0                    Ready     agent     22h       v1.7.7
 aks-nodepool1-39289454-1                    Ready     agent     22h       v1.7.7
 aks-nodepool1-39289454-2                    Ready     agent     22h       v1.7.7
@@ -442,13 +441,14 @@ kubectl logs virtual-kubelet-virtual-kubelet-7bcf5dc749-6mvgp
 
 ### Stream or pod watcher errors 
 
-If you see the following errors in the logs,
+If you see the following errors in the logs: 
+
 ```console 
 ERROR: logging before flag.Parse: E0914 00:02:01.546132       1 streamwatcher.go:109] Unable to decode an event from the watch stream: stream error: stream ID 181; INTERNAL_ERROR
 time="2018-09-14T00:02:01Z" level=error msg="Pod watcher connection is closed unexpectedly" namespace= node=virtual-kubelet-myconnector-linux operatingSystem=Linux provider=azure
 ```
 
-copy your master url with 
+Then copy the master URL with cluster-info. 
 
 ```cli
 kubectl cluster-info
@@ -460,7 +460,7 @@ Output:
 Kubernetes master is running at https://aksxxxx-xxxxx-xxxx-xxxxxxx.hcp.uksouth.azmk8s.io:443
 ```
 
-then edit your aci-connector deployment with these commands. 
+Edit your aci-connector deployment by first getting the deployment name. 
 
 ```cli
 kubectl get deploy 
@@ -474,11 +474,13 @@ virtual-kubelet-virtual-kubelet 1         1         1            1           5d
 aci-helloworld                  1         1         1            0           12m
 ```
 
+Edit the deployment. 
+
 ```cli 
 kubectl edit deploy virtual-kubelet-virtual-kubelet 
 ```
 
-Add the following name and value to the deployment in the enviorment section. Use your copied master url. 
+Add the following name and value to the deployment in the enviorment section. Use your copied master URL. 
 
 ```yaml
 --name: MASTER_URI
@@ -487,13 +489,13 @@ Add the following name and value to the deployment in the enviorment section. Us
 
 ### Taint deprecated errors
 
-If you see the following errors in the logs,
+If you see the following errors in the logs:
 
 ```console 
 Flag --taint has been deprecated, Taint key should now be configured using the VK_TAINT_KEY environment variable
 ```
 
-then edit your aci-connector deployment with these commands. 
+Then edit your aci-connector deployment by first grabbing the deployment name.  
 
 ```cli
 kubectl get deploy 
@@ -506,6 +508,8 @@ NAME                           DESIRED   CURRENT   UP-TO-DATE   AVAILABLE   AGE
 virtual-kubelet-virtual-kubelet 1         1         1            1           5d
 aci-helloworld                  1         1         1            0           12m
 ```
+
+Edit the connector deployment.
 
 ```cli 
 kubectl edit deploy virtual-kubelet-virtual-kubelet 
