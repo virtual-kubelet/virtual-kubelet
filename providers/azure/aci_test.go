@@ -6,7 +6,9 @@ package azure
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"os"
@@ -76,7 +78,7 @@ func TestCreatePodWithoutResourceSpec(t *testing.T) {
 		},
 	}
 
-	if err := provider.CreatePod(pod); err != nil {
+	if err := provider.CreatePod(context.Background(), pod); err != nil {
 		t.Fatal("Failed to create pod", err)
 	}
 }
@@ -130,7 +132,7 @@ func TestCreatePodWithResourceRequestOnly(t *testing.T) {
 		},
 	}
 
-	if err := provider.CreatePod(pod); err != nil {
+	if err := provider.CreatePod(context.Background(), pod); err != nil {
 		t.Fatal("Failed to create pod", err)
 	}
 }
@@ -189,7 +191,7 @@ func TestCreatePodWithResourceRequestAndLimit(t *testing.T) {
 		},
 	}
 
-	if err := provider.CreatePod(pod); err != nil {
+	if err := provider.CreatePod(context.Background(), pod); err != nil {
 		t.Fatal("Failed to create pod", err)
 	}
 }
@@ -211,7 +213,7 @@ func TestGetPodsWithEmptyList(t *testing.T) {
 		}
 	}
 
-	pods, err := provider.GetPods()
+	pods, err := provider.GetPods(context.Background())
 	if err != nil {
 		t.Fatal("Failed to get pods", err)
 	}
@@ -268,7 +270,7 @@ func TestGetPodsWithoutResourceRequestsLimits(t *testing.T) {
 		}
 	}
 
-	pods, err := provider.GetPods()
+	pods, err := provider.GetPods(context.Background())
 	if err != nil {
 		t.Fatal("Failed to get pods", err)
 	}
@@ -342,7 +344,7 @@ func TestGetPodWithoutResourceRequestsLimits(t *testing.T) {
 		}
 	}
 
-	pod, err := provider.GetPod(podNamespace, podName)
+	pod, err := provider.GetPod(context.Background(), podNamespace, podName)
 	if err != nil {
 		t.Fatal("Failed to get pod", err)
 	}
@@ -362,6 +364,69 @@ func TestGetPodWithoutResourceRequestsLimits(t *testing.T) {
 		ptrQuantity(resource.MustParse("1.5G")).Value(),
 		pod.Spec.Containers[0].Resources.Requests.Memory().Value(),
 		"Containers[0].Resources.Requests.Memory doesn't match")
+}
+
+func TestGetPodWithContainerID(t *testing.T) {
+	_, aciServerMocker, provider, err := prepareMocks()
+
+	if err != nil {
+		t.Fatal("Unable to prepare the mocks", err)
+	}
+
+	podName := "pod-" + uuid.New().String()
+	podNamespace := "ns-" + uuid.New().String()
+	containerName := "c-" + uuid.New().String()
+	containerImage := "ci-" + uuid.New().String()
+
+	cgID := fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.ContainerInstance/containerGroups/%s-%s", fakeSubscription, fakeResourceGroup, podNamespace, podName)
+
+	aciServerMocker.OnGetContainerGroup = func(subscription, resourceGroup, containerGroup string) (int, interface{}) {
+		assert.Equal(t, fakeSubscription, subscription, "Subscription doesn't match")
+		assert.Equal(t, fakeResourceGroup, resourceGroup, "Resource group doesn't match")
+		assert.Equal(t, podNamespace+"-"+podName, containerGroup, "Container group name is not expected")
+
+		return http.StatusOK, aci.ContainerGroup{
+			ID: cgID,
+			Tags: map[string]string{
+				"NodeName": fakeNodeName,
+			},
+			ContainerGroupProperties: aci.ContainerGroupProperties{
+				ProvisioningState: "Creating",
+				Containers: []aci.Container{
+					aci.Container{
+						Name: containerName,
+						ContainerProperties: aci.ContainerProperties{
+							Image:   containerImage,
+							Command: []string{"nginx", "-g", "daemon off;"},
+							Ports: []aci.ContainerPort{
+								{
+									Protocol: aci.ContainerNetworkProtocolTCP,
+									Port:     80,
+								},
+							},
+							Resources: aci.ResourceRequirements{
+								Requests: &aci.ResourceRequests{
+									CPU:        0.99,
+									MemoryInGB: 1.5,
+								},
+							},
+						},
+					},
+				},
+			},
+		}
+	}
+
+	pod, err := provider.GetPod(context.Background(), podNamespace, podName)
+	if err != nil {
+		t.Fatal("Failed to get pod", err)
+	}
+
+	assert.NotNil(t, pod, "Response pod should not be nil")
+	assert.Equal(t, 1, len(pod.Status.ContainerStatuses), "1 container status is expected")
+	assert.Equal(t, containerName, pod.Status.ContainerStatuses[0].Name, "Container name in the container status doesn't match")
+	assert.Equal(t, containerImage, pod.Status.ContainerStatuses[0].Image, "Container image in the container status doesn't match")
+	assert.Equal(t, getContainerID(cgID, containerName), pod.Status.ContainerStatuses[0].ContainerID, "Container ID in the container status is not expected")
 }
 
 func TestPodToACISecretEnvVar(t *testing.T) {
@@ -485,45 +550,45 @@ func TestCreatePodWithLivenessProbe(t *testing.T) {
 		assert.Equal(t, 1, len(cg.ContainerGroupProperties.Containers), "1 Container is expected")
 		assert.Equal(t, "nginx", cg.ContainerGroupProperties.Containers[0].Name, "Container nginx is expected")
 		assert.NotNil(t, cg.Containers[0].LivenessProbe, "Liveness probe expected")
-		assert.Equal(t, cg.Containers[0].LivenessProbe.InitialDelaySeconds, 10, "Initial Probe Delay doesn't match")
-		assert.Equal(t, cg.Containers[0].LivenessProbe.Period, 5, "Probe Period doesn't match")
-		assert.Equal(t, cg.Containers[0].LivenessProbe.TimeoutSeconds, 60, "Probe Timeout doesn't match")
-		assert.Equal(t, cg.Containers[0].LivenessProbe.SuccessThreshold, 3, "Probe Success Threshold doesn't match")
-		assert.Equal(t, cg.Containers[0].LivenessProbe.FailureThreshold, 5, "Probe Failure Threshold doesn't match")
+		assert.Equal(t, int32(10), cg.Containers[0].LivenessProbe.InitialDelaySeconds, "Initial Probe Delay doesn't match")
+		assert.Equal(t, int32(5), cg.Containers[0].LivenessProbe.Period, "Probe Period doesn't match")
+		assert.Equal(t, int32(60), cg.Containers[0].LivenessProbe.TimeoutSeconds, "Probe Timeout doesn't match")
+		assert.Equal(t, int32(3), cg.Containers[0].LivenessProbe.SuccessThreshold, "Probe Success Threshold doesn't match")
+		assert.Equal(t, int32(5), cg.Containers[0].LivenessProbe.FailureThreshold, "Probe Failure Threshold doesn't match")
 		assert.NotNil(t, cg.Containers[0].LivenessProbe.HTTPGet, "Expected an HTTP Get Probe")
 
-		pod := &v1.Pod{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      podName,
-				Namespace: podNamespace,
-			},
-			Spec: v1.PodSpec{
-				Containers: []v1.Container{
-					v1.Container{
-						Name: "nginx",
-						LivenessProbe: &v1.Probe{
-							Handler: v1.Handler{
-								HTTPGet: &v1.HTTPGetAction{
-									Port: intstr.FromString("8080"),
-									Path: "/",
-								},
+		return http.StatusOK, cg
+	}
+
+	pod := &v1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      podName,
+			Namespace: podNamespace,
+		},
+		Spec: v1.PodSpec{
+			Containers: []v1.Container{
+				v1.Container{
+					Name: "nginx",
+					LivenessProbe: &v1.Probe{
+						Handler: v1.Handler{
+							HTTPGet: &v1.HTTPGetAction{
+								Port: intstr.FromString("8080"),
+								Path: "/",
 							},
-							InitialDelaySeconds: 10,
-							PeriodSeconds:       5,
-							TimeoutSeconds:      60,
-							SuccessThreshold:    3,
-							FailureThreshold:    5,
 						},
+						InitialDelaySeconds: 10,
+						PeriodSeconds:       5,
+						TimeoutSeconds:      60,
+						SuccessThreshold:    3,
+						FailureThreshold:    5,
 					},
 				},
 			},
-		}
+		},
+	}
 
-		if err := provider.CreatePod(pod); err != nil {
-			t.Fatal("Failed to create pod", err)
-		}
-
-		return http.StatusOK, cg
+	if err := provider.CreatePod(context.Background(), pod); err != nil {
+		t.Fatal("Failed to create pod", err)
 	}
 }
 
@@ -547,44 +612,44 @@ func TestCreatePodWithReadinessProbe(t *testing.T) {
 		assert.Equal(t, 1, len(cg.ContainerGroupProperties.Containers), "1 Container is expected")
 		assert.Equal(t, "nginx", cg.ContainerGroupProperties.Containers[0].Name, "Container nginx is expected")
 		assert.NotNil(t, cg.Containers[0].ReadinessProbe, "Readiness probe expected")
-		assert.Equal(t, cg.Containers[0].ReadinessProbe.InitialDelaySeconds, 10, "Initial Probe Delay doesn't match")
-		assert.Equal(t, cg.Containers[0].ReadinessProbe.Period, 5, "Probe Period doesn't match")
-		assert.Equal(t, cg.Containers[0].ReadinessProbe.TimeoutSeconds, 60, "Probe Timeout doesn't match")
-		assert.Equal(t, cg.Containers[0].ReadinessProbe.SuccessThreshold, 3, "Probe Success Threshold doesn't match")
-		assert.Equal(t, cg.Containers[0].ReadinessProbe.FailureThreshold, 5, "Probe Failure Threshold doesn't match")
+		assert.Equal(t, int32(10), cg.Containers[0].ReadinessProbe.InitialDelaySeconds, "Initial Probe Delay doesn't match")
+		assert.Equal(t, int32(5), cg.Containers[0].ReadinessProbe.Period, "Probe Period doesn't match")
+		assert.Equal(t, int32(60), cg.Containers[0].ReadinessProbe.TimeoutSeconds, "Probe Timeout doesn't match")
+		assert.Equal(t, int32(3), cg.Containers[0].ReadinessProbe.SuccessThreshold, "Probe Success Threshold doesn't match")
+		assert.Equal(t, int32(5), cg.Containers[0].ReadinessProbe.FailureThreshold, "Probe Failure Threshold doesn't match")
 		assert.NotNil(t, cg.Containers[0].ReadinessProbe.HTTPGet, "Expected an HTTP Get Probe")
 
-		pod := &v1.Pod{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      podName,
-				Namespace: podNamespace,
-			},
-			Spec: v1.PodSpec{
-				Containers: []v1.Container{
-					v1.Container{
-						Name: "nginx",
-						ReadinessProbe: &v1.Probe{
-							Handler: v1.Handler{
-								HTTPGet: &v1.HTTPGetAction{
-									Port: intstr.FromString("8080"),
-									Path: "/",
-								},
+		return http.StatusOK, cg
+	}
+
+	pod := &v1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      podName,
+			Namespace: podNamespace,
+		},
+		Spec: v1.PodSpec{
+			Containers: []v1.Container{
+				v1.Container{
+					Name: "nginx",
+					ReadinessProbe: &v1.Probe{
+						Handler: v1.Handler{
+							HTTPGet: &v1.HTTPGetAction{
+								Port: intstr.FromString("8080"),
+								Path: "/",
 							},
-							InitialDelaySeconds: 10,
-							PeriodSeconds:       5,
-							TimeoutSeconds:      60,
-							SuccessThreshold:    3,
-							FailureThreshold:    5,
 						},
+						InitialDelaySeconds: 10,
+						PeriodSeconds:       5,
+						TimeoutSeconds:      60,
+						SuccessThreshold:    3,
+						FailureThreshold:    5,
 					},
 				},
 			},
-		}
+		},
+	}
 
-		if err := provider.CreatePod(pod); err != nil {
-			t.Fatal("Failed to create pod", err)
-		}
-
-		return http.StatusOK, cg
+	if err := provider.CreatePod(context.Background(), pod); err != nil {
+		t.Fatal("Failed to create pod", err)
 	}
 }

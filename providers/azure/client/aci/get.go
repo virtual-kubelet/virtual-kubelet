@@ -1,6 +1,7 @@
 package aci
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -13,7 +14,7 @@ import (
 // GetContainerGroup gets an Azure Container Instance in the provided
 // resource group with the given container group name.
 // From: https://docs.microsoft.com/en-us/rest/api/container-instances/containergroups/get
-func (c *Client) GetContainerGroup(resourceGroup, containerGroupName string) (*ContainerGroup, error, *int) {
+func (c *Client) GetContainerGroup(ctx context.Context, resourceGroup, containerGroupName string) (*ContainerGroup, error, *int) {
 	urlParams := url.Values{
 		"api-version": []string{apiVersion},
 	}
@@ -27,6 +28,7 @@ func (c *Client) GetContainerGroup(resourceGroup, containerGroupName string) (*C
 	if err != nil {
 		return nil, fmt.Errorf("Creating get container group uri request failed: %v", err), nil
 	}
+	req = req.WithContext(ctx)
 
 	// Add the parameters to the url.
 	if err := api.ExpandURL(req.URL, map[string]string{

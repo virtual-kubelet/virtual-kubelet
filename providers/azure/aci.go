@@ -3,11 +3,15 @@ package azure
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
 	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
+	"io/ioutil"
+	"net"
 	"net/http"
 	"os"
 	"reflect"
@@ -21,19 +25,34 @@ import (
 	"github.com/virtual-kubelet/virtual-kubelet/manager"
 	client "github.com/virtual-kubelet/virtual-kubelet/providers/azure/client"
 	"github.com/virtual-kubelet/virtual-kubelet/providers/azure/client/aci"
+	"github.com/virtual-kubelet/virtual-kubelet/providers/azure/client/network"
 	"k8s.io/api/core/v1"
 	k8serr "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	clientcmdv1 "k8s.io/client-go/tools/clientcmd/api/v1"
 	"k8s.io/client-go/tools/remotecommand"
 	stats "k8s.io/kubernetes/pkg/kubelet/apis/stats/v1alpha1"
 )
 
-// The service account secret mount path.
-const serviceAccountSecretMountPath = "/var/run/secrets/kubernetes.io/serviceaccount"
+const (
+	// The service account secret mount path.
+	serviceAccountSecretMountPath = "/var/run/secrets/kubernetes.io/serviceaccount"
 
-const virtualKubeletDNSNameLabel = "virtualkubelet.io/dnsnamelabel"
+	virtualKubeletDNSNameLabel = "virtualkubelet.io/dnsnamelabel"
+
+	subnetsAction           = "Microsoft.Network/virtualNetworks/subnets/action"
+	subnetDelegationService = "Microsoft.ContainerInstance/containerGroups"
+	networkProfileType      = "Microsoft.Network/networkProfiles"
+)
+
+// DNS configuration settings
+const (
+	maxDNSNameservers     = 3
+	maxDNSSearchPaths     = 6
+	maxDNSSearchListChars = 256
+)
 
 // ACIProvider implements the virtual-kubelet provider interface and communicates with Azure's ACI APIs.
 type ACIProvider struct {
@@ -49,6 +68,13 @@ type ACIProvider struct {
 	internalIP         string
 	daemonEndpointPort int32
 	diagnostics        *aci.ContainerGroupDiagnostics
+	subnetName         string
+	subnetCIDR         string
+	vnetName           string
+	vnetResourceGroup  string
+	networkProfile     string
+	kubeProxyExtension *aci.Extension
+	kubeDNSIP          string
 
 	metricsSync     sync.Mutex
 	metricsSyncTime time.Time
@@ -77,6 +103,8 @@ var validAciRegions = []string{
 	"westeurope",
 	"southeastasia",
 	"australiaeast",
+	"eastus2euap",
+	"westcentralus",
 }
 
 // isValidACIRegion checks to make sure we're using a valid ACI region
@@ -143,6 +171,12 @@ func NewACIProvider(config string, rm *manager.ResourceManager, nodeName, operat
 
 			p.resourceGroup = acsCredential.ResourceGroup
 			p.region = acsCredential.Region
+
+			p.vnetName = acsCredential.VNetName
+			p.vnetResourceGroup = acsCredential.VNetResourceGroup
+			if p.vnetResourceGroup == "" {
+				p.vnetResourceGroup = p.resourceGroup
+			}
 		}
 	}
 
@@ -186,6 +220,16 @@ func NewACIProvider(config string, rm *manager.ResourceManager, nodeName, operat
 		}
 	}
 
+	if clusterResourceID := os.Getenv("CLUSTER_RESOURCE_ID"); clusterResourceID != "" {
+		if p.diagnostics != nil && p.diagnostics.LogAnalytics != nil {
+			p.diagnostics.LogAnalytics.LogType = aci.LogAnlyticsLogTypeContainerInsights
+			p.diagnostics.LogAnalytics.Metadata = map[string]string{
+				aci.LogAnalyticsMetadataKeyClusterResourceID: clusterResourceID,
+				aci.LogAnalyticsMetadataKeyNodeName:          nodeName,
+			}
+		}
+	}
+
 	if rg := os.Getenv("ACI_RESOURCE_GROUP"); rg != "" {
 		p.resourceGroup = rg
 	}
@@ -207,9 +251,9 @@ func NewACIProvider(config string, rm *manager.ResourceManager, nodeName, operat
 	}
 
 	// Set sane defaults for Capacity in case config is not supplied
-	p.cpu = "1000"
+	p.cpu = "800"
 	p.memory = "4Ti"
-	p.pods = "1000"
+	p.pods = "800"
 
 	if cpuQuota := os.Getenv("ACI_QUOTA_CPU"); cpuQuota != "" {
 		p.cpu = cpuQuota
@@ -228,12 +272,227 @@ func NewACIProvider(config string, rm *manager.ResourceManager, nodeName, operat
 	p.internalIP = internalIP
 	p.daemonEndpointPort = daemonEndpointPort
 
+	if subnetName := os.Getenv("ACI_SUBNET_NAME"); p.vnetName != "" && subnetName != "" {
+		p.subnetName = subnetName
+	}
+	if subnetCIDR := os.Getenv("ACI_SUBNET_CIDR"); subnetCIDR != "" {
+		if p.subnetName == "" {
+			return nil, fmt.Errorf("subnet CIDR defined but no subnet name, subnet name is required to set a subnet CIDR")
+		}
+		if _, _, err := net.ParseCIDR(subnetCIDR); err != nil {
+			return nil, fmt.Errorf("error parsing provided subnet range: %v", err)
+		}
+		p.subnetCIDR = subnetCIDR
+	}
+
+	if p.subnetName != "" {
+		if err := p.setupNetworkProfile(azAuth); err != nil {
+			return nil, fmt.Errorf("error setting up network profile: %v", err)
+		}
+
+		masterURI := os.Getenv("MASTER_URI")
+		if masterURI == "" {
+			masterURI = "10.0.0.1"
+		}
+
+		clusterCIDR := os.Getenv("CLUSTER_CIDR")
+		if clusterCIDR == "" {
+			clusterCIDR = "10.240.0.0/16"
+		}
+
+		p.kubeProxyExtension, err = getKubeProxyExtension(serviceAccountSecretMountPath, masterURI, clusterCIDR)
+		if err != nil {
+			return nil, fmt.Errorf("error creating kube proxy extension: %v", err)
+		}
+
+		p.kubeDNSIP = "10.0.0.10"
+		if kubeDNSIP := os.Getenv("KUBE_DNS_IP"); kubeDNSIP != "" {
+			p.kubeDNSIP = kubeDNSIP
+		}
+	}
+
 	return &p, err
+}
+
+func (p *ACIProvider) setupNetworkProfile(auth *client.Authentication) error {
+	c, err := network.NewClient(auth)
+	if err != nil {
+		return fmt.Errorf("error creating azure networking client: %v", err)
+	}
+
+	createSubnet := true
+	subnet, err := c.GetSubnet(p.vnetResourceGroup, p.vnetName, p.subnetName)
+	if err != nil && !network.IsNotFound(err) {
+		return fmt.Errorf("error while looking up subnet: %v", err)
+	}
+	if network.IsNotFound(err) && p.subnetCIDR == "" {
+		return fmt.Errorf("subnet '%s' is not found in vnet '%s' in resource group '%s' and subnet CIDR is not specified", p.subnetName, p.vnetName, p.vnetResourceGroup)
+	}
+	if err == nil {
+		if p.subnetCIDR == "" {
+			p.subnetCIDR = subnet.Properties.AddressPrefix
+		}
+		if p.subnetCIDR != subnet.Properties.AddressPrefix {
+			return fmt.Errorf("found subnet '%s' using different CIDR: '%s'. desired: '%s'", p.subnetName, subnet.Properties.AddressPrefix, p.subnetCIDR)
+		}
+		for _, d := range subnet.Properties.Delegations {
+			if d.Properties.ServiceName == subnetDelegationService {
+				createSubnet = false
+				break
+			}
+		}
+	}
+
+	if createSubnet {
+		if subnet == nil {
+			subnet = &network.Subnet{Name: p.subnetName}
+		}
+		populateSubnet(subnet, p.subnetCIDR)
+		subnet, err = c.CreateOrUpdateSubnet(p.vnetResourceGroup, p.vnetName, subnet)
+		if err != nil {
+			return fmt.Errorf("error creating subnet: %v", err)
+		}
+	}
+
+	profile, err := c.GetProfile(p.resourceGroup, p.nodeName)
+	if err != nil && !network.IsNotFound(err) {
+		return fmt.Errorf("error while looking up network profile: %v", err)
+	}
+	if err == nil {
+		for _, config := range profile.Properties.ContainerNetworkInterfaceConfigurations {
+			for _, ipConfig := range config.Properties.IPConfigurations {
+				if ipConfig.Properties.Subnet.ID == subnet.ID {
+					p.networkProfile = profile.ID
+					return nil
+				}
+			}
+		}
+		return fmt.Errorf("found existing network profile but the profile is not linked to the subnet: %v, %v", profile, err)
+	}
+
+	// at this point, profile should be nil
+	profile = &network.Profile{
+		Name: p.nodeName,
+		Location: p.region,
+		Type: networkProfileType,
+	}
+
+	populateNetworkProfile(profile, subnet)
+	profile, err = c.CreateOrUpdateProfile(p.resourceGroup, profile)
+	if err != nil {
+		return err
+	}
+
+	p.networkProfile = profile.ID
+	return nil
+}
+
+func populateSubnet(s *network.Subnet, cidr string) {
+	if s.Properties == nil {
+		s.Properties = &network.SubnetProperties{
+			AddressPrefix: cidr,
+		}
+	}
+
+	s.Properties.Delegations = append(s.Properties.Delegations, network.Delegation{
+		Name: "aciDelegation",
+		Properties: network.DelegationProperties{
+			ServiceName: subnetDelegationService,
+			Actions:     []string{subnetsAction},
+		},
+	})
+}
+
+func populateNetworkProfile(p *network.Profile, subnet *network.Subnet) {
+	p.Properties.ContainerNetworkInterfaceConfigurations = append(p.Properties.ContainerNetworkInterfaceConfigurations, network.InterfaceConfiguration{
+		Name: "eth0",
+		Properties: network.InterfaceConfigurationProperties{
+			IPConfigurations: []network.IPConfiguration{
+				{
+					Name: "ipconfigprofile1",
+					Properties: network.IPConfigurationProperties{
+						Subnet: network.ID{
+							ID: subnet.ID,
+						},
+					},
+				},
+			},
+		},
+	})
+}
+
+func getKubeProxyExtension(secretPath, masterURI, clusterCIDR string) (*aci.Extension, error) {
+	ca, err := ioutil.ReadFile(secretPath + "/ca.crt")
+	if err != nil {
+		return nil, fmt.Errorf("failed to read ca.crt file: %v", err)
+	}
+
+	var token []byte
+	token, err = ioutil.ReadFile(secretPath + "/token")
+	if err != nil {
+		return nil, fmt.Errorf("failed to read token file: %v", err)
+	}
+
+	name := "virtual-kubelet"
+
+	config := clientcmdv1.Config{
+		APIVersion: "v1",
+		Kind:       "Config",
+		Clusters:   []clientcmdv1.NamedCluster{
+			clientcmdv1.NamedCluster{
+				Name:    name,
+				Cluster: clientcmdv1.Cluster{
+					Server:                   masterURI,
+					CertificateAuthorityData: ca,
+				},
+			},
+		},
+		AuthInfos:  []clientcmdv1.NamedAuthInfo{
+			clientcmdv1.NamedAuthInfo{
+				Name:     name,
+				AuthInfo: clientcmdv1.AuthInfo{
+					Token: string(token),
+				},
+			},
+		},
+		Contexts:   []clientcmdv1.NamedContext{
+			clientcmdv1.NamedContext{
+				Name: name,
+				Context: clientcmdv1.Context{
+					Cluster:  name,
+					AuthInfo: name,
+				},
+			},
+		},
+		CurrentContext: name,
+	}
+
+	b := new(bytes.Buffer)
+	if err := json.NewEncoder(b).Encode(config); err != nil {
+		return nil, fmt.Errorf("failed to encode the kubeconfig: %v", err)
+	}
+
+	extension := aci.Extension{
+		Name:   "kube-proxy",
+		Properties: &aci.ExtensionProperties{
+			Type:    aci.ExtensionTypeKubeProxy,
+			Version: aci.ExtensionVersion1_0,
+			Settings:          map[string]string{
+				aci.KubeProxyExtensionSettingClusterCIDR: clusterCIDR,
+				aci.KubeProxyExtensionSettingKubeVersion: aci.KubeProxyExtensionKubeVersion,
+			},
+			ProtectedSettings: map[string]string{
+				aci.KubeProxyExtensionSettingKubeConfig: base64.StdEncoding.EncodeToString(b.Bytes()),
+			},
+		},
+	}
+
+	return &extension, nil
 }
 
 // CreatePod accepts a Pod definition and creates
 // an ACI deployment
-func (p *ACIProvider) CreatePod(pod *v1.Pod) error {
+func (p *ACIProvider) CreatePod(ctx context.Context, pod *v1.Pod) error {
 	var containerGroup aci.ContainerGroup
 	containerGroup.Location = p.region
 	containerGroup.RestartPolicy = aci.ContainerGroupRestartPolicy(pod.Spec.RestartPolicy)
@@ -258,7 +517,7 @@ func (p *ACIProvider) CreatePod(pod *v1.Pod) error {
 	containerGroup.ContainerGroupProperties.Containers = containers
 	containerGroup.ContainerGroupProperties.Volumes = volumes
 	containerGroup.ContainerGroupProperties.ImageRegistryCredentials = creds
-	containerGroup.ContainerGroupProperties.Diagnostics = p.diagnostics
+	containerGroup.ContainerGroupProperties.Diagnostics = p.getDiagnostics(pod)
 
 	filterServiceAccountSecretVolume(p.operatingSystem, &containerGroup)
 
@@ -277,7 +536,7 @@ func (p *ACIProvider) CreatePod(pod *v1.Pod) error {
 			})
 		}
 	}
-	if len(ports) > 0 {
+	if len(ports) > 0 && p.subnetName == "" {
 		containerGroup.ContainerGroupProperties.IPAddress = &aci.IPAddress{
 			Ports: ports,
 			Type:  "Public",
@@ -299,8 +558,10 @@ func (p *ACIProvider) CreatePod(pod *v1.Pod) error {
 		"CreationTimestamp": podCreationTimestamp,
 	}
 
-	// TODO(BJK) containergrouprestartpolicy??
+	p.amendVnetResources(&containerGroup, pod)
+
 	_, err = p.aciClient.CreateContainerGroup(
+		ctx,
 		p.resourceGroup,
 		containerGroupName(pod),
 		containerGroup,
@@ -309,24 +570,134 @@ func (p *ACIProvider) CreatePod(pod *v1.Pod) error {
 	return err
 }
 
+func (p *ACIProvider) amendVnetResources(containerGroup *aci.ContainerGroup, pod *v1.Pod) {
+	if p.networkProfile == "" {
+		return
+	}
+
+	containerGroup.NetworkProfile = &aci.NetworkProfileDefinition{ID: p.networkProfile}
+
+	containerGroup.ContainerGroupProperties.Extensions = []*aci.Extension{p.kubeProxyExtension}
+	containerGroup.ContainerGroupProperties.DNSConfig = p.getDNSConfig(pod.Spec.DNSPolicy, pod.Spec.DNSConfig)
+}
+
+func (p *ACIProvider) getDNSConfig(dnsPolicy v1.DNSPolicy, dnsConfig *v1.PodDNSConfig) *aci.DNSConfig {
+	nameServers := make([]string, 0)
+
+	if dnsPolicy == v1.DNSClusterFirst || dnsPolicy == v1.DNSClusterFirstWithHostNet {
+		nameServers = append(nameServers, p.kubeDNSIP)
+	}
+
+	searchDomains := []string{}
+	options := []string{}
+
+	if dnsConfig != nil {
+		nameServers = omitDuplicates(append(nameServers, dnsConfig.Nameservers...))
+		searchDomains = omitDuplicates(dnsConfig.Searches)
+
+		for _, option := range dnsConfig.Options {
+			op := option.Name
+			if option.Value != nil && *(option.Value) != "" {
+				op = op + ":" + *(option.Value)
+			}
+			options = append(options, op)
+		}
+	}
+
+	if len(nameServers) == 0 {
+		return nil
+	}
+
+	result := aci.DNSConfig{
+		NameServers:   formDNSNameserversFitsLimits(nameServers),
+		SearchDomains: formDNSSearchFitsLimits(searchDomains),
+		Options:       strings.Join(options, " "),
+	}
+
+	return &result
+}
+
+func omitDuplicates(strs []string) []string {
+	uniqueStrs := make(map[string]bool)
+
+	var ret []string
+	for _, str := range strs {
+		if !uniqueStrs[str] {
+			ret = append(ret, str)
+			uniqueStrs[str] = true
+		}
+	}
+	return ret
+}
+
+func formDNSNameserversFitsLimits(nameservers []string) []string {
+	if len(nameservers) > maxDNSNameservers {
+		nameservers = nameservers[:maxDNSNameservers]
+		msg := fmt.Sprintf("Nameserver limits were exceeded, some nameservers have been omitted, the applied nameserver line is: %s", strings.Join(nameservers, ";"))
+		log.G(context.TODO()).WithField("method", "formDNSNameserversFitsLimits").Warn(msg)
+	}
+	return nameservers
+}
+
+func formDNSSearchFitsLimits(searches []string) string {
+	limitsExceeded := false
+
+	if len(searches) > maxDNSSearchPaths {
+		searches = searches[:maxDNSSearchPaths]
+		limitsExceeded = true
+	}
+
+	if resolvSearchLineStrLen := len(strings.Join(searches, " ")); resolvSearchLineStrLen > maxDNSSearchListChars {
+		cutDomainsNum := 0
+		cutDomainsLen := 0
+		for i := len(searches) - 1; i >= 0; i-- {
+			cutDomainsLen += len(searches[i]) + 1
+			cutDomainsNum++
+
+			if (resolvSearchLineStrLen - cutDomainsLen) <= maxDNSSearchListChars {
+				break
+			}
+		}
+
+		searches = searches[:(len(searches) - cutDomainsNum)]
+		limitsExceeded = true
+	}
+
+	if limitsExceeded {
+		msg := fmt.Sprintf("Search Line limits were exceeded, some search paths have been omitted, the applied search line is: %s", strings.Join(searches, ";"))
+		log.G(context.TODO()).WithField("method", "formDNSSearchFitsLimits").Warn(msg)
+	}
+
+	return strings.Join(searches, " ")
+}
+
+func (p *ACIProvider) getDiagnostics(pod *v1.Pod) *aci.ContainerGroupDiagnostics {
+	if p.diagnostics != nil && p.diagnostics.LogAnalytics != nil && p.diagnostics.LogAnalytics.LogType == aci.LogAnlyticsLogTypeContainerInsights {
+		d := *p.diagnostics
+		d.LogAnalytics.Metadata[aci.LogAnalyticsMetadataKeyPodUUID] = string(pod.ObjectMeta.UID)
+		return &d
+	}
+	return p.diagnostics
+}
+
 func containerGroupName(pod *v1.Pod) string {
 	return fmt.Sprintf("%s-%s", pod.Namespace, pod.Name)
 }
 
 // UpdatePod is a noop, ACI currently does not support live updates of a pod.
-func (p *ACIProvider) UpdatePod(pod *v1.Pod) error {
+func (p *ACIProvider) UpdatePod(ctx context.Context, pod *v1.Pod) error {
 	return nil
 }
 
 // DeletePod deletes the specified pod out of ACI.
-func (p *ACIProvider) DeletePod(pod *v1.Pod) error {
-	return p.aciClient.DeleteContainerGroup(p.resourceGroup, fmt.Sprintf("%s-%s", pod.Namespace, pod.Name))
+func (p *ACIProvider) DeletePod(ctx context.Context, pod *v1.Pod) error {
+	return p.aciClient.DeleteContainerGroup(ctx, p.resourceGroup, fmt.Sprintf("%s-%s", pod.Namespace, pod.Name))
 }
 
 // GetPod returns a pod by name that is running inside ACI
 // returns nil if a pod by that name is not found.
-func (p *ACIProvider) GetPod(namespace, name string) (*v1.Pod, error) {
-	cg, err, status := p.aciClient.GetContainerGroup(p.resourceGroup, fmt.Sprintf("%s-%s", namespace, name))
+func (p *ACIProvider) GetPod(ctx context.Context, namespace, name string) (*v1.Pod, error) {
+	cg, err, status := p.aciClient.GetContainerGroup(ctx, p.resourceGroup, fmt.Sprintf("%s-%s", namespace, name))
 	if err != nil {
 		if *status == http.StatusNotFound {
 			return nil, nil
@@ -342,9 +713,9 @@ func (p *ACIProvider) GetPod(namespace, name string) (*v1.Pod, error) {
 }
 
 // GetContainerLogs returns the logs of a pod by name that is running inside ACI.
-func (p *ACIProvider) GetContainerLogs(namespace, podName, containerName string, tail int) (string, error) {
+func (p *ACIProvider) GetContainerLogs(ctx context.Context, namespace, podName, containerName string, tail int) (string, error) {
 	logContent := ""
-	cg, err, _ := p.aciClient.GetContainerGroup(p.resourceGroup, fmt.Sprintf("%s-%s", namespace, podName))
+	cg, err, _ := p.aciClient.GetContainerGroup(ctx, p.resourceGroup, fmt.Sprintf("%s-%s", namespace, podName))
 	if err != nil {
 		return logContent, err
 	}
@@ -355,9 +726,9 @@ func (p *ACIProvider) GetContainerLogs(namespace, podName, containerName string,
 	// get logs from cg
 	retry := 10
 	for i := 0; i < retry; i++ {
-		cLogs, err := p.aciClient.GetContainerLogs(p.resourceGroup, cg.Name, containerName, tail)
+		cLogs, err := p.aciClient.GetContainerLogs(ctx, p.resourceGroup, cg.Name, containerName, tail)
 		if err != nil {
-			log.G(context.TODO()).WithField("method", "GetContainerLogs").WithError(err).Debug("Error getting container logs, retrying")
+			log.G(ctx).WithField("method", "GetContainerLogs").WithError(err).Debug("Error getting container logs, retrying")
 			time.Sleep(5000 * time.Millisecond)
 		} else {
 			logContent = cLogs.Content
@@ -368,7 +739,7 @@ func (p *ACIProvider) GetContainerLogs(namespace, podName, containerName string,
 	return logContent, err
 }
 
-// Get full pod name as defined in the provider context
+// GetPodFullName as defined in the provider context
 func (p *ACIProvider) GetPodFullName(namespace string, pod string) string {
 	return fmt.Sprintf("%s-%s", namespace, pod)
 }
@@ -384,7 +755,7 @@ func (p *ACIProvider) ExecInContainer(name string, uid types.UID, container stri
 		defer errstream.Close()
 	}
 
-	cg, err, _ := p.aciClient.GetContainerGroup(p.resourceGroup, name)
+	cg, err, _ := p.aciClient.GetContainerGroup(context.TODO(), p.resourceGroup, name)
 	if err != nil {
 		return err
 	}
@@ -452,8 +823,8 @@ func (p *ACIProvider) ExecInContainer(name string, uid types.UID, container stri
 
 // GetPodStatus returns the status of a pod by name that is running inside ACI
 // returns nil if a pod by that name is not found.
-func (p *ACIProvider) GetPodStatus(namespace, name string) (*v1.PodStatus, error) {
-	pod, err := p.GetPod(namespace, name)
+func (p *ACIProvider) GetPodStatus(ctx context.Context, namespace, name string) (*v1.PodStatus, error) {
+	pod, err := p.GetPod(ctx, namespace, name)
 	if err != nil {
 		return nil, err
 	}
@@ -466,8 +837,8 @@ func (p *ACIProvider) GetPodStatus(namespace, name string) (*v1.PodStatus, error
 }
 
 // GetPods returns a list of all pods known to be running within ACI.
-func (p *ACIProvider) GetPods() ([]*v1.Pod, error) {
-	cgs, err := p.aciClient.ListContainerGroups(p.resourceGroup)
+func (p *ACIProvider) GetPods(ctx context.Context) ([]*v1.Pod, error) {
+	cgs, err := p.aciClient.ListContainerGroups(ctx, p.resourceGroup)
 	if err != nil {
 		return nil, err
 	}
@@ -495,7 +866,7 @@ func (p *ACIProvider) GetPods() ([]*v1.Pod, error) {
 }
 
 // Capacity returns a resource list containing the capacity limits set for ACI.
-func (p *ACIProvider) Capacity() v1.ResourceList {
+func (p *ACIProvider) Capacity(ctx context.Context) v1.ResourceList {
 	return v1.ResourceList{
 		"cpu":    resource.MustParse(p.cpu),
 		"memory": resource.MustParse(p.memory),
@@ -505,7 +876,7 @@ func (p *ACIProvider) Capacity() v1.ResourceList {
 
 // NodeConditions returns a list of conditions (Ready, OutOfDisk, etc), for updates to the node status
 // within Kubernetes.
-func (p *ACIProvider) NodeConditions() []v1.NodeCondition {
+func (p *ACIProvider) NodeConditions(ctx context.Context) []v1.NodeCondition {
 	// TODO: Make these dynamic and augment with custom ACI specific conditions of interest
 	return []v1.NodeCondition{
 		{
@@ -553,7 +924,7 @@ func (p *ACIProvider) NodeConditions() []v1.NodeCondition {
 
 // NodeAddresses returns a list of addresses for the node status
 // within Kubernetes.
-func (p *ACIProvider) NodeAddresses() []v1.NodeAddress {
+func (p *ACIProvider) NodeAddresses(ctx context.Context) []v1.NodeAddress {
 	// TODO: Make these dynamic and augment with custom ACI specific conditions of interest
 	return []v1.NodeAddress{
 		{
@@ -565,7 +936,7 @@ func (p *ACIProvider) NodeAddresses() []v1.NodeAddress {
 
 // NodeDaemonEndpoints returns NodeDaemonEndpoints for the node status
 // within Kubernetes.
-func (p *ACIProvider) NodeDaemonEndpoints() *v1.NodeDaemonEndpoints {
+func (p *ACIProvider) NodeDaemonEndpoints(ctx context.Context) *v1.NodeDaemonEndpoints {
 	return &v1.NodeDaemonEndpoints{
 		KubeletEndpoint: v1.DaemonEndpoint{
 			Port: p.daemonEndpointPort,
@@ -974,7 +1345,7 @@ func containerGroupToPod(cg *aci.ContainerGroup) (*v1.Pod, error) {
 			RestartCount:         c.InstanceView.RestartCount,
 			Image:                c.Image,
 			ImageID:              "",
-			ContainerID:          "",
+			ContainerID:          getContainerID(cg.ID, c.Name),
 		}
 
 		// Add to containerStatuses
@@ -1016,6 +1387,19 @@ func containerGroupToPod(cg *aci.ContainerGroup) (*v1.Pod, error) {
 	}
 
 	return &p, nil
+}
+
+func getContainerID(cgID, containerName string) string {
+	if cgID == "" {
+		return ""
+	}
+
+	containerResourceID := fmt.Sprintf("%s/containers/%s", cgID, containerName)
+
+	h := sha256.New()
+	h.Write([]byte(strings.ToUpper(containerResourceID)))
+	hashBytes := h.Sum(nil)
+	return fmt.Sprintf("aci://%s", hex.EncodeToString(hashBytes))
 }
 
 func aciStateToPodPhase(state string) v1.PodPhase {
