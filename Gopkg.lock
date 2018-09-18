@@ -85,6 +85,24 @@
   version = "v1.0.5"
 
 [[projects]]
+  digest = "1:5e9ea5618cb3451ce312505a48a563e95ce26c9ef498cd0a8833255e5e7f5c61"
+  name = "github.com/aliyun/alibaba-cloud-sdk-go"
+  packages = [
+    "sdk",
+    "sdk/auth",
+    "sdk/auth/credentials",
+    "sdk/auth/signers",
+    "sdk/endpoints",
+    "sdk/errors",
+    "sdk/requests",
+    "sdk/responses",
+    "sdk/utils",
+  ]
+  pruneopts = "NUT"
+  revision = "cad214d7d71fba7883fcf3b7e550ba782c15b400"
+  version = "1.27.7"
+
+[[projects]]
   digest = "1:5a23cd3a5496a0b2da7e3b348d14e77b11a210738c398200d7d6f04ea8cf3bd8"
   name = "github.com/asaskevich/govalidator"
   packages = ["."]
@@ -1352,6 +1370,7 @@
   input-imports = [
     "github.com/Azure/azure-sdk-for-go/profiles/preview/preview/servicefabricmesh/mgmt/servicefabricmesh",
     "github.com/Azure/azure-sdk-for-go/services/batch/2017-09-01.6.0/batch",
+    "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2018-05-01/network",
     "github.com/Azure/go-autorest/autorest",
     "github.com/Azure/go-autorest/autorest/adal",
     "github.com/Azure/go-autorest/autorest/azure",
@@ -1359,6 +1378,10 @@
     "github.com/Azure/go-autorest/autorest/to",
     "github.com/BurntSushi/toml",
     "github.com/Sirupsen/logrus",
+    "github.com/aliyun/alibaba-cloud-sdk-go/sdk",
+    "github.com/aliyun/alibaba-cloud-sdk-go/sdk/auth",
+    "github.com/aliyun/alibaba-cloud-sdk-go/sdk/requests",
+    "github.com/aliyun/alibaba-cloud-sdk-go/sdk/responses",
     "github.com/aws/aws-sdk-go/aws",
     "github.com/aws/aws-sdk-go/aws/session",
     "github.com/aws/aws-sdk-go/service/cloudwatchlogs",
@@ -1432,6 +1455,7 @@
     "k8s.io/client-go/kubernetes/fake",
     "k8s.io/client-go/rest",
     "k8s.io/client-go/tools/clientcmd",
+    "k8s.io/client-go/tools/clientcmd/api/v1",
     "k8s.io/client-go/tools/remotecommand",
     "k8s.io/kubernetes/pkg/kubelet/apis/cri/runtime/v1alpha2",
     "k8s.io/kubernetes/pkg/kubelet/apis/stats/v1alpha1",
