@@ -275,6 +275,10 @@ func initConfig() {
 	userTraceConfig.Tags["provider"] = provider
 	userTraceConfig.Tags["nodeName"] = nodeName
 	for _, e := range userTraceExporters {
+		if e == "zpages" {
+			go setupZpages()
+			continue
+		}
 		exporter, err := GetTracingExporter(e, userTraceConfig)
 		if err != nil {
 			log.L.WithError(err).WithField("exporter", e).Fatal("Cannot initialize exporter")

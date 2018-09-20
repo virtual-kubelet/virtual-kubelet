@@ -1,8 +1,14 @@
 package cmd
 
 import (
+	"context"
+	"net/http"
+	"os"
+
 	"github.com/pkg/errors"
+	"github.com/virtual-kubelet/virtual-kubelet/log"
 	"go.opencensus.io/trace"
+	"go.opencensus.io/zpages"
 )
 
 var (
@@ -48,4 +54,15 @@ func AvailableTraceExporters() []string {
 		out = append(out, k)
 	}
 	return out
+}
+
+func setupZpages() {
+	ctx := context.TODO()
+	p := os.Getenv("ZPAGES_PORT")
+	if p == "" {
+		log.G(ctx).Error("Missing ZPAGES_PORT env var, cannot setup zpages endpoint")
+	}
+	mux := http.NewServeMux()
+	zpages.Handle(mux, "/debug")
+	http.ListenAndServe(p, mux)
 }
