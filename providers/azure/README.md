@@ -279,15 +279,13 @@ To verify that virtual kubelet has started, run:
   Set the following variables for your VNet range and two subnet ranges within that VNet. The following ranges are recommended for those just trying out the connector with VNet. 
 
   **Bash**
-    ```cli
-    export VNET_RANGE=10.8.0.0/8
+    export VNET_RANGE=10.8.0.0/8 
     export CLUSTER_SUBNET_RANGE=10.240.0.0/16
     export ACI_SUBNET_RANGE=10.241.0.0/16
     export VNET_NAME=myAKSVNet
     export CLUSTER_SUBNET_NAME=myAKSSubnet
     export ACI_SUBNET_NAME=myACISubnet
     export AKS_CLUSTER_RG=myresourcegroup
-    ```
   
   Run the following command to create a virtual network within Azure, and a subnet within that VNet. The subnet will be dedicated to the nodes in the AKS cluster.
 
