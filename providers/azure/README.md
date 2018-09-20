@@ -10,6 +10,7 @@ This document details configuring the Virtual Kubelet ACI provider.
 * [Prerequiste](#prerequisite)
 * [Quick set-up with the ACI Connector](#quick-set-up-with-the-aci-connector)
 * [Manual set-up](#manual-set-up)
+* [Create a cluster with a Virtual Network](#create-an-AKS-cluster-with-VNet)
 * [Validate the Virtual Kubelet ACI provider](#validate-the-virtual-kubelet-aci-provider)
 * [Schedule a pod in ACI](#schedule-a-pod-in-aci)
 * [Upgrade the ACI Connector ](#upgrade-the-aci-connector)
@@ -193,14 +194,15 @@ resources on your account on behalf of Kubernetes.
 Run these commands to deploy the virtual kubelet which connects your Kubernetes cluster to Azure Container Instances.
 
 ```cli
-export VK_RELEASE=virtual-kubelet-0.2.0
+export AKS_VK_RELEASE=virtual-kubelet-0.1.7
+export VK_RElEASE=virtual-kubelet-0.3.0
 ```
 
 If your cluster is an AKS cluster:
 ```cli
 RELEASE_NAME=virtual-kubelet
 NODE_NAME=virtual-kubelet
-CHART_URL=https://github.com/virtual-kubelet/virtual-kubelet/raw/master/charts/$VK_RELEASE.tgz
+CHART_URL=https://github.com/virtual-kubelet/virtual-kubelet/raw/master/charts/$AKS_VK_RELEASE.tgz
 
 curl https://raw.githubusercontent.com/virtual-kubelet/virtual-kubelet/master/scripts/createCertAndKey.sh > createCertAndKey.sh
 chmod +x createCertAndKey.sh
@@ -272,7 +274,55 @@ To verify that virtual kubelet has started, run:
 ```cli
   kubectl --namespace=default get pods -l "app=virtual-kubelet-virtual-kubelet"
 ```
+##  Create an AKS cluster with VNet
 
+  Set the following variables for your VNet range and two subnet ranges within that VNet. The following ranges are recommended for those just trying out the connector with VNet. 
+
+  **Bash**
+    ```cli
+    export VNET_RANGE=10.8.0.0/8
+    export CLUSTER_SUBNET_RANGE=10.240.0.0/16
+    export ACI_SUBNET_RANGE=10.241.0.0/16
+    export VNET_NAME=myAKSVNet
+    export CLUSTER_SUBNET_NAME=myAKSSubnet
+    export ACI_SUBNET_NAME=myACISubnet
+    export AKS_CLUSTER_RG=myresourcegroup
+    ```
+  
+  Run the following command to create a virtual network within Azure, and a subnet within that VNet. The subnet will be dedicated to the nodes in the AKS cluster.
+
+    ```cli
+    az network vnet create \
+    --resource-group $AKS_CLUSTER_RG \
+    --name $VNET_NAME \
+    --address-prefixes $VNET_RANGE \
+    --subnet-name $CLUSTER_SUBNET_NAME \
+    --subnet-prefix $CLUSTER_SUBNET_RANGE
+    ```
+
+Create a subnet that will be delegated to just resources within ACI,note that this needs to be an empty subnet, but within the same VNet that you already created. 
+
+```cli
+az network vnet subnet create \
+    --resource-group $AKS_CLUSTER_RG \
+    --vnet-name $VNET_NAME \
+    --name $ACI_SUBNET_NAME \
+    --address-prefix $ACI_SUBNET_RANGE
+```
+
+Manually deploy the Virtual Kubelet node as the instructions say in the [Manual set-up](#deployment-of-the-aci-provider-in-your-cluster)section but when installing the Helm chart use these updated settings. 
+
+```cli
+helm install "$CHART_URL" --name "$RELEASE_NAME" \
+  --set provider=azure \
+  --set providers.azure.targetAKS=true \
+  --set providers.azure.tenantId=$AZURE_TENANT_ID \
+  --set providers.azure.subscriptionId=$AZURE_SUBSCRIPTION_ID \
+  --set providers.azure.clientId=$AZURE_CLIENT_ID \
+  --set providers.azure.aciVnetSubnetName=$ACI_SUBNET_NAME
+  --set apiserverCert=$cert \
+  --set apiserverKey=$key
+```
 ## Validate the Virtual Kubelet ACI provider
 
 To validate that the Virtual Kubelet has been installed, return a list of Kubernetes nodes using the [kubectl get nodes][kubectl-get] command. You should see a node that matches the name given to the ACI connector.
