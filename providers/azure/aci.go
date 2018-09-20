@@ -372,9 +372,9 @@ func (p *ACIProvider) setupNetworkProfile(auth *client.Authentication) error {
 
 	// at this point, profile should be nil
 	profile = &network.Profile{
-		Name: p.nodeName,
+		Name:     p.nodeName,
 		Location: p.region,
-		Type: networkProfileType,
+		Type:     networkProfileType,
 	}
 
 	populateNetworkProfile(profile, subnet)
@@ -438,24 +438,24 @@ func getKubeProxyExtension(secretPath, masterURI, clusterCIDR string) (*aci.Exte
 	config := clientcmdv1.Config{
 		APIVersion: "v1",
 		Kind:       "Config",
-		Clusters:   []clientcmdv1.NamedCluster{
+		Clusters: []clientcmdv1.NamedCluster{
 			clientcmdv1.NamedCluster{
-				Name:    name,
+				Name: name,
 				Cluster: clientcmdv1.Cluster{
-					Server:                   masterURI,
+					Server: masterURI,
 					CertificateAuthorityData: ca,
 				},
 			},
 		},
-		AuthInfos:  []clientcmdv1.NamedAuthInfo{
+		AuthInfos: []clientcmdv1.NamedAuthInfo{
 			clientcmdv1.NamedAuthInfo{
-				Name:     name,
+				Name: name,
 				AuthInfo: clientcmdv1.AuthInfo{
 					Token: string(token),
 				},
 			},
 		},
-		Contexts:   []clientcmdv1.NamedContext{
+		Contexts: []clientcmdv1.NamedContext{
 			clientcmdv1.NamedContext{
 				Name: name,
 				Context: clientcmdv1.Context{
@@ -473,11 +473,11 @@ func getKubeProxyExtension(secretPath, masterURI, clusterCIDR string) (*aci.Exte
 	}
 
 	extension := aci.Extension{
-		Name:   "kube-proxy",
+		Name: "kube-proxy",
 		Properties: &aci.ExtensionProperties{
 			Type:    aci.ExtensionTypeKubeProxy,
 			Version: aci.ExtensionVersion1_0,
-			Settings:          map[string]string{
+			Settings: map[string]string{
 				aci.KubeProxyExtensionSettingClusterCIDR: clusterCIDR,
 				aci.KubeProxyExtensionSettingKubeVersion: aci.KubeProxyExtensionKubeVersion,
 			},
@@ -699,7 +699,7 @@ func (p *ACIProvider) DeletePod(ctx context.Context, pod *v1.Pod) error {
 func (p *ACIProvider) GetPod(ctx context.Context, namespace, name string) (*v1.Pod, error) {
 	cg, err, status := p.aciClient.GetContainerGroup(ctx, p.resourceGroup, fmt.Sprintf("%s-%s", namespace, name))
 	if err != nil {
-		if *status == http.StatusNotFound {
+		if status != nil && *status == http.StatusNotFound {
 			return nil, nil
 		}
 		return nil, err
