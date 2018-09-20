@@ -4,6 +4,10 @@ import (
 	"fmt"
 	"net/http"
 
+	"go.opencensus.io/plugin/ochttp/propagation/b3"
+
+	"go.opencensus.io/plugin/ochttp"
+
 	azure "github.com/virtual-kubelet/virtual-kubelet/providers/azure/client"
 )
 
@@ -39,6 +43,12 @@ func NewClient(auth *azure.Authentication) (*Client, error) {
 	client, err := azure.NewClient(auth, baseURI, userAgent)
 	if err != nil {
 		return nil, fmt.Errorf("Creating Azure client failed: %v", err)
+	}
+	hc := client.HTTPClient
+	hc.Transport = &ochttp.Transport{
+		Base:           hc.Transport,
+		Propagation:    &b3.HTTPFormat{},
+		NewClientTrace: ochttp.NewSpanAnnotatingClientTrace,
 	}
 
 	return &Client{hc: client.HTTPClient, auth: auth}, nil

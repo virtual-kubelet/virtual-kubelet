@@ -10,6 +10,8 @@ import (
 	"github.com/virtual-kubelet/virtual-kubelet/log"
 	"github.com/virtual-kubelet/virtual-kubelet/providers"
 	"github.com/virtual-kubelet/virtual-kubelet/vkubelet/api"
+	"go.opencensus.io/plugin/ochttp"
+	"go.opencensus.io/plugin/ochttp/propagation/b3"
 )
 
 // PodHandler creates an http handler for interacting with pods/containers.
@@ -28,14 +30,19 @@ func PodHandler(p providers.Provider) http.Handler {
 func MetricsSummaryHandler(p providers.Provider) http.Handler {
 	r := mux.NewRouter()
 
+	const summaryRoute = "/stats/summary"
+	var h http.HandlerFunc
+
 	mp, ok := p.(providers.PodMetricsProvider)
 	if !ok {
-		r.HandleFunc("/stats/summary", NotImplemented).Methods("GET")
-		r.HandleFunc("/stats/summary/", NotImplemented).Methods("GET")
+		h = NotImplemented
 	} else {
-		r.HandleFunc("/stats/summary", api.PodMetricsHandlerFunc(mp)).Methods("GET")
-		r.HandleFunc("/stats/summary/", api.PodMetricsHandlerFunc(mp)).Methods("GET")
+		h = api.PodMetricsHandlerFunc(mp)
 	}
+
+	r.Handle(summaryRoute, ochttp.WithRouteTag(h, "PodStatsSummaryHandler")).Methods("GET")
+	r.Handle(summaryRoute+"/", ochttp.WithRouteTag(h, "PodStatsSummaryHandler")).Methods("GET")
+
 	r.NotFoundHandler = http.HandlerFunc(NotFound)
 	return r
 }
@@ -54,22 +61,27 @@ func MetricsServerStart(p providers.Provider, l net.Listener) {
 	}
 }
 
-func instrumentRequest(r *http.Request) context.Context {
+func instrumentRequest(r *http.Request) *http.Request {
 	ctx := r.Context()
 	logger := log.G(ctx).WithFields(logrus.Fields{
 		"uri":  r.RequestURI,
 		"vars": mux.Vars(r),
 	})
-	return log.WithLogger(ctx, logger)
+	ctx = log.WithLogger(ctx, logger)
+
+	return r.WithContext(ctx)
 }
 
 // InstrumentHandler wraps an http.Handler and injects instrumentation into the request context.
 func InstrumentHandler(h http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-		ctx := instrumentRequest(req)
-		req = req.WithContext(ctx)
+	instrumented := http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		req = instrumentRequest(req)
 		h.ServeHTTP(w, req)
 	})
+	return &ochttp.Handler{
+		Handler:     instrumented,
+		Propagation: &b3.HTTPFormat{},
+	}
 }
 
 // NotFound provides a handler for cases where the requested endpoint doesn't exist
