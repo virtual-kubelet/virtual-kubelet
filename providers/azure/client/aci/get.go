@@ -42,7 +42,7 @@ func (c *Client) GetContainerGroup(ctx context.Context, resourceGroup, container
 	// Send the request.
 	resp, err := c.hc.Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("Sending get container group request failed: %v", err), &resp.StatusCode
+		return nil, fmt.Errorf("Sending get container group request failed: %v", err), nil
 	}
 	defer resp.Body.Close()
 
