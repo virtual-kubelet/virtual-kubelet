@@ -30,10 +30,17 @@ providers:
     ## `aciResourceGroup` and `aciRegion` are required only for non-AKS deployments
     aciResourceGroup: 
     aciRegion: 
+    masterUri: 
     loganalytics:
       enabled: false
       workspaceID: 
       workspaceKey: 
+    vnet:
+      enabled: false
+      subnetName: 
+      subnetCidr: 
+      clusterCidr: 
+      kubeDnsIp: 
 
 ## Install Default RBAC roles and bindings
 rbac:

@@ -66,6 +66,21 @@ spec:
         - name: ACI_REGION
           value: {{ required "aciRegion is required" .aciRegion }}
 {{- end }}
+{{- if .vnet.enabled }}
+        - name: ACI_SUBNET_NAME
+          value: {{ required "subnetName is required" .vnet.subnetName }}
+        - name: ACI_SUBNET_CIDR
+          value: {{ .vnet.subnetCIDR }}
+        - name: MASTER_URI
+          value: {{ required "masterUri is required" .masterUri }}
+        - name: CLUSTER_CIDR
+          value: {{ required "clusterCIDR is required" .vnet.clusterCIDR }}
+        - name: KUBE_DNS_IP
+          value: {{ required "kubeDnsIP is required" .vnet.kubeDnsIP }}
+{{- else }}
+        - name: MASTER_URI
+          value: {{ .masterUri }}
+{{- end }}          
 {{- end }}
 {{- end }}
         volumeMounts:
