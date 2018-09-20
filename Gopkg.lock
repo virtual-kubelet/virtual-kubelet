@@ -2,13 +2,13 @@
 
 
 [[projects]]
-  digest = "1:ef14b1839bd43a923896a762b31d000c12f0d21506cde7251d9342bb6acb4c05"
+  digest = "1:6453651bd5fc38b3a07d133c295a881c1bce87d4be4ccefe61eee26d22d6b15c"
   name = "github.com/Azure/azure-sdk-for-go"
   packages = [
     "profiles/preview/preview/servicefabricmesh/mgmt/servicefabricmesh",
     "services/batch/2017-09-01.6.0/batch",
-    "services/preview/servicefabricmesh/mgmt/2018-07-01-preview/servicefabricmesh",
     "services/network/mgmt/2018-05-01/network",
+    "services/preview/servicefabricmesh/mgmt/2018-07-01-preview/servicefabricmesh",
     "version",
   ]
   pruneopts = "NUT"
@@ -150,6 +150,17 @@
   packages = ["."]
   pruneopts = "NUT"
   revision = "a41693b7b7afb422c7ecb1028458ab27da047bbb"
+
+[[projects]]
+  digest = "1:7393d591b1707b6bd40171878d13aada2f7fa921cd0a500406d65fd3966ca2f4"
+  name = "github.com/cpuguy83/strongerrors"
+  packages = [
+    ".",
+    "status",
+  ]
+  pruneopts = "NUT"
+  revision = "d3f3ceac8165d8532efb6aa406399545de78d967"
+  version = "v0.2.0"
 
 [[projects]]
   digest = "1:a2c1d0e43bd3baaa071d1b9ed72c27d78169b2b269f71c105ac4ba34b1be4a39"
@@ -1352,6 +1363,7 @@
   input-imports = [
     "github.com/Azure/azure-sdk-for-go/profiles/preview/preview/servicefabricmesh/mgmt/servicefabricmesh",
     "github.com/Azure/azure-sdk-for-go/services/batch/2017-09-01.6.0/batch",
+    "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2018-05-01/network",
     "github.com/Azure/go-autorest/autorest",
     "github.com/Azure/go-autorest/autorest/adal",
     "github.com/Azure/go-autorest/autorest/azure",
@@ -1368,6 +1380,8 @@
     "github.com/aws/aws-sdk-go/service/ecs/ecsiface",
     "github.com/aws/aws-sdk-go/service/iam",
     "github.com/cenkalti/backoff",
+    "github.com/cpuguy83/strongerrors",
+    "github.com/cpuguy83/strongerrors/status",
     "github.com/dimchansky/utfbom",
     "github.com/docker/docker/api/types/strslice",
     "github.com/docker/go-connections/nat",
@@ -1432,6 +1446,7 @@
     "k8s.io/client-go/kubernetes/fake",
     "k8s.io/client-go/rest",
     "k8s.io/client-go/tools/clientcmd",
+    "k8s.io/client-go/tools/clientcmd/api/v1",
     "k8s.io/client-go/tools/remotecommand",
     "k8s.io/kubernetes/pkg/kubelet/apis/cri/runtime/v1alpha2",
     "k8s.io/kubernetes/pkg/kubelet/apis/stats/v1alpha1",

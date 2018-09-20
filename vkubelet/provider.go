@@ -57,7 +57,7 @@ type Provider interface {
 	OperatingSystem() string
 }
 
-// MetricsProvider is an optional interface that providers can implement to expose pod stats
-type MetricsProvider interface {
+// PodMetricsProvider is an optional interface that providers can implement to expose pod stats
+type PodMetricsProvider interface {
 	GetStatsSummary(context.Context) (*stats.Summary, error)
 }
