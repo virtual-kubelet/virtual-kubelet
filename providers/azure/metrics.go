@@ -5,6 +5,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/cpuguy83/strongerrors/status/ocstatus"
 	"github.com/pkg/errors"
 	"github.com/virtual-kubelet/virtual-kubelet/providers/azure/client/aci"
 	"go.opencensus.io/trace"
@@ -88,7 +89,7 @@ func (p *ACIProvider) GetStatsSummary(ctx context.Context) (summary *stats.Summa
 				Types:        []aci.MetricType{aci.MetricTypeCPUUsage, aci.MetricTypeMemoryUsage},
 			})
 			if err != nil {
-				span.SetStatus(trace.Status{Code: trace.StatusCodeUnknown, Message: err.Error()})
+				span.SetStatus(ocstatus.FromError(err))
 				return errors.Wrapf(err, "error fetching cpu/mem stats for container group %s", cgName)
 			}
 			span.Annotate(nil, "Got system stats")
@@ -100,7 +101,7 @@ func (p *ACIProvider) GetStatsSummary(ctx context.Context) (summary *stats.Summa
 				Types:        []aci.MetricType{aci.MetricTyperNetworkBytesRecievedPerSecond, aci.MetricTyperNetworkBytesTransmittedPerSecond},
 			})
 			if err != nil {
-				span.SetStatus(trace.Status{Code: trace.StatusCodeUnknown, Message: err.Error()})
+				span.SetStatus(ocstatus.FromError(err))
 				return errors.Wrapf(err, "error fetching network stats for container group %s", cgName)
 			}
 			span.Annotate(nil, "Got network stats")

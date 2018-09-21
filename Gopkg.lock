@@ -179,15 +179,16 @@
   revision = "a41693b7b7afb422c7ecb1028458ab27da047bbb"
 
 [[projects]]
-  digest = "1:7393d591b1707b6bd40171878d13aada2f7fa921cd0a500406d65fd3966ca2f4"
+  digest = "1:62e5b997b5ada9b5f71e759c3474f2a0de8de1b21473bab9e4f98c5aa69c05eb"
   name = "github.com/cpuguy83/strongerrors"
   packages = [
     ".",
     "status",
+    "status/ocstatus",
   ]
   pruneopts = "NUT"
-  revision = "d3f3ceac8165d8532efb6aa406399545de78d967"
-  version = "v0.2.0"
+  revision = "05f877ca1e627f0a1e01902ba78c63f1ef7db5a3"
+  version = "v0.2.1"
 
 [[projects]]
   digest = "1:a2c1d0e43bd3baaa071d1b9ed72c27d78169b2b269f71c105ac4ba34b1be4a39"
@@ -1451,6 +1452,7 @@
     "github.com/cenkalti/backoff",
     "github.com/cpuguy83/strongerrors",
     "github.com/cpuguy83/strongerrors/status",
+    "github.com/cpuguy83/strongerrors/status/ocstatus",
     "github.com/dimchansky/utfbom",
     "github.com/docker/docker/api/types/strslice",
     "github.com/docker/go-connections/nat",
