@@ -10,7 +10,7 @@ This document details configuring the Virtual Kubelet ACI provider.
 * [Prerequiste](#prerequisite)
 * [Quick set-up with the ACI Connector](#quick-set-up-with-the-aci-connector)
 * [Manual set-up](#manual-set-up)
-* [Create a cluster with a Virtual Network](#create-an-AKS-cluster-with-VNet)
+* [Create a cluster with a Virtual Network](#create-an-aks-cluster-with-vnet)
 * [Validate the Virtual Kubelet ACI provider](#validate-the-virtual-kubelet-aci-provider)
 * [Schedule a pod in ACI](#schedule-a-pod-in-aci)
 * [Upgrade the ACI Connector ](#upgrade-the-aci-connector)
