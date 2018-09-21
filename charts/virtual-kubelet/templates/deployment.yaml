@@ -70,13 +70,13 @@ spec:
         - name: ACI_SUBNET_NAME
           value: {{ required "subnetName is required" .vnet.subnetName }}
         - name: ACI_SUBNET_CIDR
-          value: {{ .vnet.subnetCIDR }}
+          value: {{ .vnet.subnetCidr }}
         - name: MASTER_URI
           value: {{ required "masterUri is required" .masterUri }}
         - name: CLUSTER_CIDR
-          value: {{ required "clusterCIDR is required" .vnet.clusterCIDR }}
+          value: {{ required "clusterCidr is required" .vnet.clusterCidr }}
         - name: KUBE_DNS_IP
-          value: {{ required "kubeDnsIP is required" .vnet.kubeDnsIP }}
+          value: {{ required "kubeDnsIp is required" .vnet.kubeDnsIp }}
 {{- else }}
         - name: MASTER_URI
           value: {{ .masterUri }}
