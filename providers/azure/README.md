@@ -485,7 +485,7 @@ If the AKS cluster was configured with a virtual network, then the output will l
 
 ```console
 NAME                            READY     STATUS    RESTARTS   AGE       IP           NODE
-aci-helloworld-9b55975f-bnmfl   1/1       Running   0          4m        10.241.0.4   virtual-node-aci-linux
+aci-helloworld-9b55975f-bnmfl   1/1       Running   0          4m        10.241.0.4   virtual-kubelet
 ```
 
 To validate that the container is running in an Azure Container Instance, use the [az container list][az-container-list] Azure CLI command.
