@@ -33,8 +33,9 @@ providers:
     masterUri: 
     loganalytics:
       enabled: false
-      workspaceID: 
+      workspaceId: 
       workspaceKey: 
+      clusterResourceId: 
     vnet:
       enabled: false
       subnetName: 

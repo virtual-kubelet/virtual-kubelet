@@ -39,6 +39,8 @@ spec:
 {{- if .loganalytics.enabled }}
         - name: LOG_ANALYTICS_AUTH_LOCATION
           value: /etc/virtual-kubelet/loganalytics.json
+        - name: CLUSTER_RESOURCE_ID
+          value:  {{ .loganalytics.clusterResourceId }}
 {{- end }}
 {{- if .targetAKS }}
         - name: ACS_CREDENTIAL_LOCATION
