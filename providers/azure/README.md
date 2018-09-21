@@ -380,7 +380,7 @@ az aks create \
 
 ### Deploy Virtual Kubelet
 
-Manually deploy the Virtual Kubelet node as the instructions say in the [Manual set-up](#deployment-of-the-aci-provider-in-your-cluster)section but when installing the Helm chart use these updated settings. 
+Manually deploy the Virtual Kubelet, the following env. variables have already been set earlier. You do need to pass through the subnet you created for ACI earlier, otherwise the container instances will not be able to participate with the other pods within the cluster subnet. 
 
 ```cli
 RELEASE_NAME=virtual-kubelet
@@ -480,6 +480,12 @@ Notice that the `helloworld` pod is running on the `virtual-kubelet` node.
 NAME                                            READY     STATUS    RESTARTS   AGE       IP             NODE
 aci-helloworld-2559879000-8vmjw                 1/1       Running   0          39s       52.179.3.180   virtual-kubelet
 
+```
+If the AKS cluster was configured with a virtual network, then the output will look like the following. The container instance will get a private ip rather than a public one. 
+
+```console
+NAME                            READY     STATUS    RESTARTS   AGE       IP           NODE
+aci-helloworld-9b55975f-bnmfl   1/1       Running   0          4m        10.241.0.4   virtual-node-aci-linux
 ```
 
 To validate that the container is running in an Azure Container Instance, use the [az container list][az-container-list] Azure CLI command.
