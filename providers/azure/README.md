@@ -414,7 +414,7 @@ Output:
 
 ```console
 NAME                                        STATUS    ROLES     AGE       VERSION
-virtual-kubelet-myconnector-linux           Ready     <none>    2m        v1.8.3
+virtual-kubelet-virtual-kubelet             Ready     <none>    2m        v1.8.3
 aks-nodepool1-39289454-0                    Ready     agent     22h       v1.7.7
 aks-nodepool1-39289454-1                    Ready     agent     22h       v1.7.7
 aks-nodepool1-39289454-2                    Ready     agent     22h       v1.7.7
@@ -456,9 +456,13 @@ spec:
     effect: NoSchedule
 ```
 
-Notice that Virtual-Kubelet nodes are tainted by default to avoid unexpected pods running on them, i.e. kube-proxy, other virtual-kubelet pods, etc. To schedule a pod to them, you need to add the tolerations to your pod spec:
+Notice that Virtual-Kubelet nodes are tainted by default to avoid unexpected pods running on them, i.e. kube-proxy, other virtual-kubelet pods, etc. To schedule a pod to them, you need to add the toleration to the pod spec and a node selector:
 
 ```
+  nodeSelector:
+    kubernetes.io/role: agent
+    beta.kubernetes.io/os: linux
+    type: virtual-kubelet
   tolerations:
   - key: virtual-kubelet.io/provider
     operator: Exists
@@ -561,7 +565,7 @@ If you've installed Virtual Kubelet with the Azure cli so you're using the ACI C
 Run the following command to upgrade your ACI Connector. 
 
 ```cli
-az aks upgrade-connector --resource-group <aks cluster rg> --name <aks cluster name> --connector-name myconnector --os-type linux
+az aks upgrade-connector --resource-group <aks cluster rg> --name <aks cluster name> --connector-name virtual-kubelet --os-type linux
 ```
 
 ## Remove the Virtual Kubelet
@@ -574,7 +578,7 @@ helm delete virtual-kubelet --purge
 If you used the ACI Connector installation then use the following command to remove the the ACI Connector from your cluster.
 
 ```cli
-az aks remove-connector --resource-group <aks cluster rg> --name <aks cluster name> --connector-name myconnector --os-type linux
+az aks remove-connector --resource-group <aks cluster rg> --name <aks cluster name> --connector-name virtual-kubelet --os-type linux
 ```
 
 <!-- LINKS -->
