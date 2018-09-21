@@ -422,7 +422,7 @@ aks-nodepool1-39289454-2                    Ready     agent     22h       v1.7.7
 
 ## Schedule a pod in ACI
 
-Create a file named `virtual-kubelet-test.yaml` and copy in the following YAML. Replace the `nodeName` value with the name given to the virtual kubelet node.
+Create a file named `virtual-kubelet-test.yaml` and copy in the following YAML.
 
 ```yaml
 apiVersion: v1
@@ -445,6 +445,10 @@ spec:
     - containerPort: 443
       name: https
   dnsPolicy: ClusterFirst
+  nodeSelector:
+    kubernetes.io/role: agent
+    beta.kubernetes.io/os: linux
+    type: virtual-kubelet
   tolerations:
   - key: virtual-kubelet.io/provider
     operator: Exists
