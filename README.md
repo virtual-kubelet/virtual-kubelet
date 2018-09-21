@@ -52,7 +52,7 @@ a `virtual-kubelet` node.
 ## Current Features
 
 - create, delete and update pods
-- container logs, and metrics 
+- container logs, exec, and metrics 
 - get pod, pods and pod status
 - capacity 
 - node addresses, node capacity, node daemon endpoints
