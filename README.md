@@ -99,7 +99,7 @@ leveraging the portable Kubernetes API.
 Each provider may have its own configuration file, and required environmental variables.
 
 Providers must provide the following functionality to be considered a supported integration with Virtual Kubelet.
-1. Provides the back-end plumbing necessary to support the lifecycle management of pods, containers and supporting resources in the context of Kubernete.
+1. Provides the back-end plumbing necessary to support the lifecycle management of pods, containers and supporting resources in the context of Kubernetes.
 2. Conforms to the current API provided by Virtual Kubelet.
 3. Does not have access to the Kubernetes API Server and has a well-defined callback mechanism for getting data like secrets or configmaps.
 
