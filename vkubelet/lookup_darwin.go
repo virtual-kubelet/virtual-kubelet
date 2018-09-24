@@ -14,6 +14,7 @@ import (
 )
 
 // Compile time proof that our implementations meet the Provider interface.
+var _ Provider = (*alicloud.ECIProvider)(nil)
 var _ Provider = (*aws.FargateProvider)(nil)
 var _ Provider = (*azure.ACIProvider)(nil)
 var _ Provider = (*hypersh.HyperProvider)(nil)
@@ -25,6 +26,8 @@ var _ Provider = (*sfmesh.SFMeshProvider)(nil)
 
 func lookupProvider(provider, providerConfig string, rm *manager.ResourceManager, nodeName, operatingSystem, internalIP string, daemonEndpointPort int32) (Provider, error) {
 	switch provider {
+	case "alicloud":
+		return alicloud.NewECIProvider(providerConfig, rm, nodeName, operatingSystem, internalIP, daemonEndpointPort)
 	case "aws":
 		return aws.NewFargateProvider(providerConfig, rm, nodeName, operatingSystem, internalIP, daemonEndpointPort)
 	case "azure":
