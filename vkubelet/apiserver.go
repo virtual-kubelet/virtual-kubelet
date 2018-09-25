@@ -9,11 +9,12 @@ import (
 	"github.com/Sirupsen/logrus"
 	"github.com/gorilla/mux"
 	"github.com/virtual-kubelet/virtual-kubelet/log"
+	"github.com/virtual-kubelet/virtual-kubelet/providers"
 	"github.com/virtual-kubelet/virtual-kubelet/vkubelet/api"
 )
 
 // KubeletServerStart starts the virtual kubelet HTTP server.
-func KubeletServerStart(p Provider) {
+func KubeletServerStart(p providers.Provider) {
 	certFilePath := os.Getenv("APISERVER_CERT_LOCATION")
 	keyFilePath := os.Getenv("APISERVER_KEY_LOCATION")
 	port := os.Getenv("KUBELET_PORT")
@@ -31,10 +32,10 @@ func KubeletServerStart(p Provider) {
 
 // MetricsServerStart starts an HTTP server on the provided addr for serving the kubelset summary stats API.
 // TLS is never enabled on this endpoint.
-func MetricsServerStart(p Provider, addr string) {
+func MetricsServerStart(p providers.Provider, addr string) {
 	r := mux.NewRouter()
 
-	mp, ok := p.(PodMetricsProvider)
+	mp, ok := p.(providers.PodMetricsProvider)
 	if !ok {
 		r.HandleFunc("/stats/summary", NotImplemented).Methods("GET")
 		r.HandleFunc("/stats/summary/", NotImplemented).Methods("GET")

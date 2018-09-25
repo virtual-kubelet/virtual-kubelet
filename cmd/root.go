@@ -18,6 +18,7 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"github.com/Sirupsen/logrus"
@@ -25,9 +26,16 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"github.com/virtual-kubelet/virtual-kubelet/log"
+	"github.com/virtual-kubelet/virtual-kubelet/manager"
 	"github.com/virtual-kubelet/virtual-kubelet/providers"
+	"github.com/virtual-kubelet/virtual-kubelet/providers/register"
 	vkubelet "github.com/virtual-kubelet/virtual-kubelet/vkubelet"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/client-go/kubernetes"
+)
+
+const (
+	defaultDaemonPort = "10250"
 )
 
 var kubeletConfig string
@@ -41,6 +49,10 @@ var taintKey string
 var disableTaint bool
 var logLevel string
 var metricsAddr string
+var taint *corev1.Taint
+var k8sClient *kubernetes.Clientset
+var p providers.Provider
+var rm *manager.ResourceManager
 
 // RootCmd represents the base command when called without any subcommands
 var RootCmd = &cobra.Command{
@@ -50,11 +62,20 @@ var RootCmd = &cobra.Command{
 backend implementation allowing users to create kubernetes nodes without running the kubelet.
 This allows users to schedule kubernetes workloads on nodes that aren't running Kubernetes.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		f, err := vkubelet.New(nodeName, operatingSystem, kubeNamespace, kubeConfig, provider, providerConfig, taintKey, disableTaint, metricsAddr)
+		ctx := context.Background()
+		f, err := vkubelet.New(ctx, vkubelet.Config{
+			Client:          k8sClient,
+			Namespace:       kubeNamespace,
+			NodeName:        nodeName,
+			Taint:           taint,
+			MetricsAddr:     metricsAddr,
+			Provider:        p,
+			ResourceManager: rm,
+		})
 		if err != nil {
 			log.L.WithError(err).Fatal("Error initializing virtual kubelet")
 		}
-		if err := f.Run(context.Background()); err != nil {
+		if err := f.Run(ctx); err != nil {
 			log.L.Fatal(err)
 		}
 	},
@@ -155,4 +176,41 @@ func initConfig() {
 	})
 	logger.Level = level
 	log.L = logger
+
+	if !disableTaint {
+		taint, err = getTaint(taintKey, provider)
+		if err != nil {
+			logger.WithError(err).Fatal("Error setting up desired kubernetes node taint")
+		}
+	}
+
+	k8sClient, err = newClient(kubeConfig)
+	if err != nil {
+		logger.WithError(err).Fatal("Error creating kubernetes client")
+	}
+
+	rm, err = manager.NewResourceManager(k8sClient)
+	if err != nil {
+		logger.WithError(err).Fatal("Error initializing resource manager")
+	}
+
+	daemonPortEnv := getEnv("KUBELET_PORT", defaultDaemonPort)
+	daemonPort, err := strconv.ParseInt(daemonPortEnv, 10, 32)
+	if err != nil {
+		logger.WithError(err).WithField("value", daemonPortEnv).Fatal("Invalid value from KUBELET_PORT in environment")
+	}
+
+	initConfig := register.InitConfig{
+		ConfigPath:      providerConfig,
+		NodeName:        nodeName,
+		OperatingSystem: operatingSystem,
+		ResourceManager: rm,
+		DaemonPort:      int32(daemonPort),
+		InternalIP:      os.Getenv("VKUBELET_POD_IP"),
+	}
+
+	p, err = register.GetProvider(provider, initConfig)
+	if err != nil {
+		logger.WithError(err).Fatal("Error initializing provider")
+	}
 }

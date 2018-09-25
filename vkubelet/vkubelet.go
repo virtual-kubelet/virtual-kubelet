@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
-	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -13,14 +12,13 @@ import (
 	pkgerrors "github.com/pkg/errors"
 	"github.com/virtual-kubelet/virtual-kubelet/log"
 	"github.com/virtual-kubelet/virtual-kubelet/manager"
+	"github.com/virtual-kubelet/virtual-kubelet/providers"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
-	"k8s.io/client-go/tools/clientcmd"
 )
 
 const (
@@ -32,119 +30,44 @@ type Server struct {
 	nodeName        string
 	namespace       string
 	k8sClient       *kubernetes.Clientset
-	taint           corev1.Taint
-	disableTaint    bool
-	provider        Provider
+	taint           *corev1.Taint
+	provider        providers.Provider
 	podWatcher      watch.Interface
 	resourceManager *manager.ResourceManager
 }
 
-func getEnv(key, defaultValue string) string {
-	value, found := os.LookupEnv(key)
-	if found {
-		return value
-	}
-	return defaultValue
+// Config is used to configure a new server.
+type Config struct {
+	Client          *kubernetes.Clientset
+	MetricsAddr     string
+	Namespace       string
+	NodeName        string
+	Provider        providers.Provider
+	ResourceManager *manager.ResourceManager
+	Taint           *corev1.Taint
 }
 
 // New creates a new virtual-kubelet server.
-func New(nodeName, operatingSystem, namespace, kubeConfig, provider, providerConfig, taintKey string, disableTaint bool, metricsAddr string) (*Server, error) {
-	var config *rest.Config
-
-	// Check if the kubeConfig file exists.
-	if _, err := os.Stat(kubeConfig); !os.IsNotExist(err) {
-		// Get the kubeconfig from the filepath.
-		config, err = clientcmd.BuildConfigFromFlags("", kubeConfig)
-		if err != nil {
-			return nil, err
-		}
-	} else {
-		// Set to in-cluster config.
-		config, err = rest.InClusterConfig()
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	if masterURI := os.Getenv("MASTER_URI"); masterURI != "" {
-		config.Host = masterURI
-	}
-
-	clientset, err := kubernetes.NewForConfig(config)
-	if err != nil {
-		return nil, err
-	}
-
-	rm, err := manager.NewResourceManager(clientset)
-	if err != nil {
-		return nil, pkgerrors.Wrap(err, "error creating resource manager")
-	}
-
-	daemonEndpointPortEnv := os.Getenv("KUBELET_PORT")
-	if daemonEndpointPortEnv == "" {
-		daemonEndpointPortEnv = "10250"
-	}
-	i64value, err := strconv.ParseInt(daemonEndpointPortEnv, 10, 32)
-	daemonEndpointPort := int32(i64value)
-
-	internalIP := os.Getenv("VKUBELET_POD_IP")
-
-	var defaultTaintKey string
-	var defaultTaintValue string
-	if taintKey != "" {
-		defaultTaintKey = taintKey
-		defaultTaintValue = ""
-	} else {
-		defaultTaintKey = "virtual-kubelet.io/provider"
-		defaultTaintValue = provider
-	}
-	vkTaintKey := getEnv("VKUBELET_TAINT_KEY", defaultTaintKey)
-	vkTaintValue := getEnv("VKUBELET_TAINT_VALUE", defaultTaintValue)
-	vkTaintEffectEnv := getEnv("VKUBELET_TAINT_EFFECT", "NoSchedule")
-	var vkTaintEffect corev1.TaintEffect
-	switch vkTaintEffectEnv {
-	case "NoSchedule":
-		vkTaintEffect = corev1.TaintEffectNoSchedule
-	case "NoExecute":
-		vkTaintEffect = corev1.TaintEffectNoExecute
-	case "PreferNoSchedule":
-		vkTaintEffect = corev1.TaintEffectPreferNoSchedule
-	default:
-		return nil, pkgerrors.Errorf("taint effect %q is not supported", vkTaintEffectEnv)
-	}
-
-	taint := corev1.Taint{
-		Key:    vkTaintKey,
-		Value:  vkTaintValue,
-		Effect: vkTaintEffect,
-	}
-
-	p, err := lookupProvider(provider, providerConfig, rm, nodeName, operatingSystem, internalIP, daemonEndpointPort)
-	if err != nil {
-		return nil, err
-	}
-
+func New(ctx context.Context, cfg Config) (*Server, error) {
 	s := &Server{
-		namespace:       namespace,
-		nodeName:        nodeName,
-		taint:           taint,
-		disableTaint:    disableTaint,
-		k8sClient:       clientset,
-		resourceManager: rm,
-		provider:        p,
+		namespace:       cfg.Namespace,
+		nodeName:        cfg.NodeName,
+		taint:           cfg.Taint,
+		k8sClient:       cfg.Client,
+		resourceManager: cfg.ResourceManager,
+		provider:        cfg.Provider,
 	}
 
-	ctx := context.TODO()
 	ctx = log.WithLogger(ctx, log.G(ctx))
 
-	if err = s.registerNode(ctx); err != nil {
+	if err := s.registerNode(ctx); err != nil {
 		return s, err
 	}
 
-	go KubeletServerStart(p)
+	go KubeletServerStart(cfg.Provider)
 
-	if metricsAddr != "" {
-		go MetricsServerStart(p, metricsAddr)
+	if cfg.MetricsAddr != "" {
+		go MetricsServerStart(cfg.Provider, cfg.MetricsAddr)
 	} else {
 		log.G(ctx).Info("Skipping metrics server startup since no address was provided")
 	}
@@ -165,8 +88,8 @@ func New(nodeName, operatingSystem, namespace, kubeConfig, provider, providerCon
 func (s *Server) registerNode(ctx context.Context) error {
 	taints := make([]corev1.Taint, 0)
 
-	if !s.disableTaint {
-		taints = append(taints, s.taint)
+	if s.taint != nil {
+		taints = append(taints, *s.taint)
 	}
 
 	node := &corev1.Node{
@@ -350,10 +273,10 @@ func (s *Server) reconcile(ctx context.Context) {
 		}
 
 		if providerPod == nil &&
-		   pod.DeletionTimestamp == nil &&
-		   pod.Status.Phase != corev1.PodSucceeded &&
-		   pod.Status.Phase != corev1.PodFailed &&
-		   pod.Status.Reason != PodStatusReason_ProviderFailed {
+			pod.DeletionTimestamp == nil &&
+			pod.Status.Phase != corev1.PodSucceeded &&
+			pod.Status.Phase != corev1.PodFailed &&
+			pod.Status.Reason != PodStatusReason_ProviderFailed {
 			logger.Debug("Creating pod")
 			if err := s.createPod(ctx, pod); err != nil {
 				logger.WithError(err).Error("Error creating pod")
@@ -436,8 +359,8 @@ func (s *Server) updatePodStatuses(ctx context.Context) {
 	pods := s.resourceManager.GetPods()
 	for _, pod := range pods {
 		if pod.Status.Phase == corev1.PodSucceeded ||
-		   pod.Status.Phase == corev1.PodFailed ||
-		   pod.Status.Reason == PodStatusReason_ProviderFailed {
+			pod.Status.Phase == corev1.PodFailed ||
+			pod.Status.Reason == PodStatusReason_ProviderFailed {
 			continue
 		}
 
