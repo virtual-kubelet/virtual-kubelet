@@ -16,13 +16,16 @@ package cmd
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
 
 	"github.com/Sirupsen/logrus"
+	"github.com/cpuguy83/strongerrors"
 	homedir "github.com/mitchellh/go-homedir"
+	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"github.com/virtual-kubelet/virtual-kubelet/log"
@@ -53,6 +56,7 @@ var taint *corev1.Taint
 var k8sClient *kubernetes.Clientset
 var p providers.Provider
 var rm *manager.ResourceManager
+var apiConfig vkubelet.APIConfig
 
 // RootCmd represents the base command when called without any subcommands
 var RootCmd = &cobra.Command{
@@ -71,6 +75,7 @@ This allows users to schedule kubernetes workloads on nodes that aren't running 
 			MetricsAddr:     metricsAddr,
 			Provider:        p,
 			ResourceManager: rm,
+			APIConfig:       apiConfig,
 		})
 		if err != nil {
 			log.L.WithError(err).Fatal("Error initializing virtual kubelet")
@@ -213,4 +218,24 @@ func initConfig() {
 	if err != nil {
 		logger.WithError(err).Fatal("Error initializing provider")
 	}
+
+	apiConfig, err = getAPIConfig()
+	if err != nil {
+		logger.WithError(err).Fatal("Error reading API config")
+	}
+}
+
+func getAPIConfig() (vkubelet.APIConfig, error) {
+	config := vkubelet.APIConfig{
+		CertPath: os.Getenv("APISERVER_CERT_LOCATION"),
+		KeyPath:  os.Getenv("APISERVER_KEY_LOCATION"),
+	}
+
+	port, err := strconv.Atoi(os.Getenv("KUBELET_PORT"))
+	if err != nil {
+		return vkubelet.APIConfig{}, strongerrors.InvalidArgument(errors.Wrap(err, "error parsing KUBELET_PORT variable"))
+	}
+	config.Addr = fmt.Sprintf(":%d", port)
+
+	return config, nil
 }

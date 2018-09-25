@@ -3,6 +3,7 @@ package vkubelet
 import (
 	"context"
 	"fmt"
+	"net"
 	"os"
 	"os/signal"
 	"strings"
@@ -38,6 +39,7 @@ type Server struct {
 
 // Config is used to configure a new server.
 type Config struct {
+	APIConfig       APIConfig
 	Client          *kubernetes.Clientset
 	MetricsAddr     string
 	Namespace       string
@@ -47,9 +49,15 @@ type Config struct {
 	Taint           *corev1.Taint
 }
 
+type APIConfig struct {
+	CertPath string
+	KeyPath  string
+	Addr     string
+}
+
 // New creates a new virtual-kubelet server.
-func New(ctx context.Context, cfg Config) (*Server, error) {
-	s := &Server{
+func New(ctx context.Context, cfg Config) (s *Server, retErr error) {
+	s = &Server{
 		namespace:       cfg.Namespace,
 		nodeName:        cfg.NodeName,
 		taint:           cfg.Taint,
@@ -60,16 +68,34 @@ func New(ctx context.Context, cfg Config) (*Server, error) {
 
 	ctx = log.WithLogger(ctx, log.G(ctx))
 
-	if err := s.registerNode(ctx); err != nil {
-		return s, err
+	apiL, err := net.Listen("tcp", cfg.APIConfig.Addr)
+	if err != nil {
+		return nil, pkgerrors.Wrap(err, "error setting up API listener")
 	}
-
-	go KubeletServerStart(cfg.Provider)
+	defer func() {
+		if retErr != nil {
+			apiL.Close()
+		}
+	}()
+	go KubeletServerStart(cfg.Provider, apiL, cfg.APIConfig.CertPath, cfg.APIConfig.KeyPath)
 
 	if cfg.MetricsAddr != "" {
-		go MetricsServerStart(cfg.Provider, cfg.MetricsAddr)
+		metricsL, err := net.Listen("tcp", cfg.MetricsAddr)
+		if err != nil {
+			return nil, pkgerrors.Wrap(err, "error setting up metrics listener")
+		}
+		defer func() {
+			if retErr != nil {
+				metricsL.Close()
+			}
+		}()
+		go MetricsServerStart(cfg.Provider, metricsL)
 	} else {
 		log.G(ctx).Info("Skipping metrics server startup since no address was provided")
+	}
+
+	if err := s.registerNode(ctx); err != nil {
+		return s, err
 	}
 
 	tick := time.Tick(5 * time.Second)
