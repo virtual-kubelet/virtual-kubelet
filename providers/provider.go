@@ -1,4 +1,4 @@
-package vkubelet
+package providers
 
 import (
 	"context"

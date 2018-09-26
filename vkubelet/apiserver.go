@@ -2,39 +2,33 @@ package vkubelet
 
 import (
 	"context"
-	"fmt"
+	"net"
 	"net/http"
-	"os"
 
 	"github.com/Sirupsen/logrus"
 	"github.com/gorilla/mux"
 	"github.com/virtual-kubelet/virtual-kubelet/log"
+	"github.com/virtual-kubelet/virtual-kubelet/providers"
 	"github.com/virtual-kubelet/virtual-kubelet/vkubelet/api"
 )
 
-// KubeletServerStart starts the virtual kubelet HTTP server.
-func KubeletServerStart(p Provider) {
-	certFilePath := os.Getenv("APISERVER_CERT_LOCATION")
-	keyFilePath := os.Getenv("APISERVER_KEY_LOCATION")
-	port := os.Getenv("KUBELET_PORT")
-	addr := fmt.Sprintf(":%s", port)
-
+// PodHandler creates an http handler for interacting with pods/containers.
+func PodHandler(p providers.Provider) http.Handler {
 	r := mux.NewRouter()
 	r.HandleFunc("/containerLogs/{namespace}/{pod}/{container}", api.PodLogsHandlerFunc(p)).Methods("GET")
 	r.HandleFunc("/exec/{namespace}/{pod}/{container}", api.PodExecHandlerFunc(p)).Methods("POST")
 	r.NotFoundHandler = http.HandlerFunc(NotFound)
-
-	if err := http.ListenAndServeTLS(addr, certFilePath, keyFilePath, InstrumentHandler(r)); err != nil {
-		log.G(context.TODO()).WithError(err).Error("error setting up http server")
-	}
+	return r
 }
 
-// MetricsServerStart starts an HTTP server on the provided addr for serving the kubelset summary stats API.
-// TLS is never enabled on this endpoint.
-func MetricsServerStart(p Provider, addr string) {
+// MetricsSummaryHandler creates an http handler for serving pod metrics.
+//
+// If the passed in provider does not implement providers.PodMetricsProvider,
+// it will create handlers that just serves http.StatusNotImplemented
+func MetricsSummaryHandler(p providers.Provider) http.Handler {
 	r := mux.NewRouter()
 
-	mp, ok := p.(PodMetricsProvider)
+	mp, ok := p.(providers.PodMetricsProvider)
 	if !ok {
 		r.HandleFunc("/stats/summary", NotImplemented).Methods("GET")
 		r.HandleFunc("/stats/summary/", NotImplemented).Methods("GET")
@@ -43,7 +37,19 @@ func MetricsServerStart(p Provider, addr string) {
 		r.HandleFunc("/stats/summary/", api.PodMetricsHandlerFunc(mp)).Methods("GET")
 	}
 	r.NotFoundHandler = http.HandlerFunc(NotFound)
-	if err := http.ListenAndServe(addr, InstrumentHandler(r)); err != nil {
+	return r
+}
+
+// KubeletServerStart starts the virtual kubelet HTTP server.
+func KubeletServerStart(p providers.Provider, l net.Listener, cert, key string) {
+	if err := http.ServeTLS(l, InstrumentHandler(PodHandler(p)), cert, key); err != nil {
+		log.G(context.TODO()).WithError(err).Error("error setting up http server")
+	}
+}
+
+// MetricsServerStart starts an HTTP server on the provided addr for serving the kubelset summary stats API.
+func MetricsServerStart(p providers.Provider, l net.Listener) {
+	if err := http.Serve(l, InstrumentHandler(MetricsSummaryHandler(p))); err != nil {
 		log.G(context.TODO()).WithError(err).Error("Error starting http server")
 	}
 }
