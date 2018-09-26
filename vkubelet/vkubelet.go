@@ -349,7 +349,11 @@ func (s *Server) reconcile(ctx context.Context) {
 			}
 		}
 
-		if pod.DeletionTimestamp == nil && pod.Status.Phase != corev1.PodFailed && providerPod == nil {
+		if providerPod == nil &&
+		   pod.DeletionTimestamp == nil &&
+		   pod.Status.Phase != corev1.PodSucceeded &&
+		   pod.Status.Phase != corev1.PodFailed &&
+		   pod.Status.Reason != PodStatusReason_ProviderFailed {
 			logger.Debug("Creating pod")
 			if err := s.createPod(ctx, pod); err != nil {
 				logger.WithError(err).Error("Error creating pod")
@@ -378,8 +382,13 @@ func (s *Server) createPod(ctx context.Context, pod *corev1.Pod) error {
 	logger := log.G(ctx).WithField("pod", pod.Name)
 
 	if origErr := s.provider.CreatePod(ctx, pod); origErr != nil {
+		podPhase := corev1.PodPending
+		if pod.Spec.RestartPolicy == corev1.RestartPolicyNever {
+			podPhase = corev1.PodFailed
+		}
+
 		pod.ResourceVersion = "" // Blank out resource version to prevent object has been modified error
-		pod.Status.Phase = corev1.PodFailed
+		pod.Status.Phase = podPhase
 		pod.Status.Reason = PodStatusReason_ProviderFailed
 		pod.Status.Message = origErr.Error()
 
@@ -426,7 +435,9 @@ func (s *Server) updatePodStatuses(ctx context.Context) {
 	// Update all the pods with the provider status.
 	pods := s.resourceManager.GetPods()
 	for _, pod := range pods {
-		if pod.Status.Phase == corev1.PodSucceeded || (pod.Status.Phase == corev1.PodFailed && pod.Status.Reason == PodStatusReason_ProviderFailed) {
+		if pod.Status.Phase == corev1.PodSucceeded ||
+		   pod.Status.Phase == corev1.PodFailed ||
+		   pod.Status.Reason == PodStatusReason_ProviderFailed {
 			continue
 		}
 
