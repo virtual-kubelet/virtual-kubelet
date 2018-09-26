@@ -2,7 +2,7 @@
 
 <img src="eci.svg" width="200" height="200" />
 
-Alibaba Cloud ECI(Elastic Container Service) is a service that allow you run containers without having to manage servers or clusters.
+Alibaba Cloud ECI(Elastic Container Instance) is a service that allow you run containers without having to manage servers or clusters.
 
 You can find more infomation via [alibaba cloud ECI web portal](https://www.aliyun.com/product/eci)
 
