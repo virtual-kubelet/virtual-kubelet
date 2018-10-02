@@ -2,6 +2,15 @@
 
 
 [[projects]]
+  branch = "master"
+  digest = "1:e95de5c830369d6592224de57a31cd87a2ba1cec2abaf050d06a63ee8f7babd8"
+  name = "git.apache.org/thrift.git"
+  packages = ["lib/go/thrift"]
+  pruneopts = "NUT"
+  revision = "12f8b14fff9888dbfe6f5d6c64dc462254922a31"
+  source = "github.com/apache/thrift"
+
+[[projects]]
   digest = "1:6453651bd5fc38b3a07d133c295a881c1bce87d4be4ccefe61eee26d22d6b15c"
   name = "github.com/Azure/azure-sdk-for-go"
   packages = [
@@ -170,15 +179,16 @@
   revision = "a41693b7b7afb422c7ecb1028458ab27da047bbb"
 
 [[projects]]
-  digest = "1:7393d591b1707b6bd40171878d13aada2f7fa921cd0a500406d65fd3966ca2f4"
+  digest = "1:62e5b997b5ada9b5f71e759c3474f2a0de8de1b21473bab9e4f98c5aa69c05eb"
   name = "github.com/cpuguy83/strongerrors"
   packages = [
     ".",
     "status",
+    "status/ocstatus",
   ]
   pruneopts = "NUT"
-  revision = "d3f3ceac8165d8532efb6aa406399545de78d967"
-  version = "v0.2.0"
+  revision = "05f877ca1e627f0a1e01902ba78c63f1ef7db5a3"
+  version = "v0.2.1"
 
 [[projects]]
   digest = "1:a2c1d0e43bd3baaa071d1b9ed72c27d78169b2b269f71c105ac4ba34b1be4a39"
@@ -1022,6 +1032,33 @@
   revision = "0c8571ac0ce161a5feb57375a9cdf148c98c0f70"
 
 [[projects]]
+  digest = "1:a3cb0432171318ddfe4c7cc40c6edf94cb6a61859ffa5cec27f4d5162dfc4db7"
+  name = "go.opencensus.io"
+  packages = [
+    ".",
+    "exporter/jaeger",
+    "exporter/jaeger/internal/gen-go/jaeger",
+    "internal",
+    "internal/tagencoding",
+    "plugin/ocgrpc",
+    "plugin/ochttp",
+    "plugin/ochttp/propagation/b3",
+    "stats",
+    "stats/internal",
+    "stats/view",
+    "tag",
+    "trace",
+    "trace/internal",
+    "trace/propagation",
+    "trace/tracestate",
+    "zpages",
+    "zpages/internal",
+  ]
+  pruneopts = "NUT"
+  revision = "79993219becaa7e29e3b60cb67f5b8e82dee11d6"
+  version = "v0.17.0"
+
+[[projects]]
   branch = "master"
   digest = "1:d345f6b7b1ec549e057045cee458cafd2618ba6f25bd22d9bd356785078b534a"
   name = "golang.org/x/crypto"
@@ -1058,9 +1095,12 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:39ebcc2b11457b703ae9ee2e8cca0f68df21969c6102cb3b705f76cca0ea0239"
+  digest = "1:c313aef534e493304f3666fbd24dca5932ebf776a82b7a40f961c9355794a1b1"
   name = "golang.org/x/sync"
-  packages = ["errgroup"]
+  packages = [
+    "errgroup",
+    "semaphore",
+  ]
   pruneopts = "NUT"
   revision = "1d60e4601c6fd243af51cc01ddf169918a5407ca"
 
@@ -1106,6 +1146,14 @@
   packages = ["rate"]
   pruneopts = "NUT"
   revision = "fbb02b2291d28baffd63558aa44b4b56f178d650"
+
+[[projects]]
+  branch = "master"
+  digest = "1:938b0c4e4e71e191c52c959ae60ab4d814b4402e5d53a6db6ceec06cd2150058"
+  name = "google.golang.org/api"
+  packages = ["support/bundler"]
+  pruneopts = "NUT"
+  revision = "19ff8768a5c0b8e46ea281065664787eefc24121"
 
 [[projects]]
   branch = "master"
@@ -1404,6 +1452,7 @@
     "github.com/cenkalti/backoff",
     "github.com/cpuguy83/strongerrors",
     "github.com/cpuguy83/strongerrors/status",
+    "github.com/cpuguy83/strongerrors/status/ocstatus",
     "github.com/dimchansky/utfbom",
     "github.com/docker/docker/api/types/strslice",
     "github.com/docker/go-connections/nat",
@@ -1451,6 +1500,11 @@
     "github.com/vmware/vic/pkg/retry",
     "github.com/vmware/vic/pkg/trace",
     "github.com/vmware/vic/pkg/vsphere/sys",
+    "go.opencensus.io/exporter/jaeger",
+    "go.opencensus.io/plugin/ochttp",
+    "go.opencensus.io/plugin/ochttp/propagation/b3",
+    "go.opencensus.io/trace",
+    "go.opencensus.io/zpages",
     "golang.org/x/net/context",
     "golang.org/x/sync/errgroup",
     "google.golang.org/grpc",

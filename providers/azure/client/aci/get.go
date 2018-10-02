@@ -53,7 +53,7 @@ func (c *Client) GetContainerGroup(ctx context.Context, resourceGroup, container
 
 	// Decode the body from the response.
 	if resp.Body == nil {
-		return nil, errors.New("Create container group returned an empty body in the response"), &resp.StatusCode
+		return nil, errors.New("Get container group returned an empty body in the response"), &resp.StatusCode
 	}
 	var cg ContainerGroup
 	if err := json.NewDecoder(resp.Body).Decode(&cg); err != nil {

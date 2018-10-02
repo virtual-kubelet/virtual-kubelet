@@ -79,6 +79,9 @@
   name = "k8s.io/client-go"
   version = "7.0.0"
 
+[[constraint]]
+  name = "github.com/cpuguy83/strongerrors"
+  version = "0.2.1"
 
 # These are required for HyperHQ
 [[override]]
