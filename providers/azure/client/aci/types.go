@@ -94,12 +94,21 @@ type ContainerGroupProperties struct {
 	Volumes                  []Volume                             `json:"volumes,omitempty"`
 	InstanceView             ContainerGroupPropertiesInstanceView `json:"instanceView,omitempty"`
 	Diagnostics              *ContainerGroupDiagnostics           `json:"diagnostics,omitempty"`
+	NetworkProfile           *NetworkProfileDefinition            `json:"networkProfile,omitempty"`
+	Extensions               []*Extension                         `json:"extensions,omitempty"`
+	DNSConfig                *DNSConfig                           `json:"dnsConfig,omitempty"`
 }
 
 // ContainerGroupPropertiesInstanceView is the instance view of the container group. Only valid in response.
 type ContainerGroupPropertiesInstanceView struct {
 	Events []Event `json:"events,omitempty"`
 	State  string  `json:"state,omitempty"`
+}
+
+// NetworkProfileDefinition is the network profile definition. ID should be of the form
+// /subscriptions/{subscriptionId} or /providers/{resourceProviderNamespace}/
+type NetworkProfileDefinition struct {
+	ID string `json:"id,omitempty"`
 }
 
 // ContainerGroupListResult is the container group list response that contains the container group properties.
@@ -294,7 +303,7 @@ type ExecRequest struct {
 	TerminalSize TerminalSize `json:"terminalSize,omitempty"`
 }
 
-// ExecRequest is a request for Launch Exec API response for ACI.
+// ExecResponse is a request for Launch Exec API response for ACI.
 type ExecResponse struct {
 	WebSocketUri string `json:"webSocketUri,omitempty"`
 	Password     string `json:"password,omitempty"`
@@ -331,8 +340,10 @@ type ContainerGroupDiagnostics struct {
 
 // LogAnalyticsWorkspace defines details for a Log Analytics workspace
 type LogAnalyticsWorkspace struct {
-	WorkspaceID  string `json:"workspaceID,omitempty"`
-	WorkspaceKey string `json:"workspaceKey,omitempty"`
+	WorkspaceID  string              `json:"workspaceID,omitempty"`
+	WorkspaceKey string              `json:"workspaceKey,omitempty"`
+	LogType      LogAnalyticsLogType `json:"logType,omitempty"`
+	Metadata     map[string]string   `json:"metadata,omitempty"`
 }
 
 // ContainerGroupMetricsResult stores all the results for a container group metrics request.
@@ -415,4 +426,65 @@ const (
 	AggregationTypeCount   AggregationType = "count"
 	AggregationTypeAverage AggregationType = "average"
 	AggregationTypeTotal   AggregationType = "total"
+)
+
+// Extension is the container group extension
+type Extension struct {
+	Name       string               `json:"name"`
+	Properties *ExtensionProperties `json:"properties"`
+}
+
+// ExtensionProperties is the properties for extension
+type ExtensionProperties struct {
+	Type              ExtensionType     `json:"extensionType"`
+	Version           ExtensionVersion  `json:"version"`
+	Settings          map[string]string `json:"settings,omitempty"`
+	ProtectedSettings map[string]string `json:"protectedSettings,omitempty"`
+}
+
+// ExtensionType is an enum type for defining supported extension types
+type ExtensionType string
+
+// Supported extension types
+const (
+	ExtensionTypeKubeProxy ExtensionType = "kube-proxy"
+)
+
+// ExtensionVersion is an enum type for defining supported extension versions
+type ExtensionVersion string
+
+// Supported extension version
+const (
+	ExtensionVersion1_0 ExtensionVersion = "1.0"
+)
+
+// Supported kube-proxy extension constants
+const (
+	KubeProxyExtensionSettingClusterCIDR string = "clusterCidr"
+	KubeProxyExtensionSettingKubeVersion string = "kubeVersion"
+	KubeProxyExtensionSettingKubeConfig  string = "kubeConfig"
+	KubeProxyExtensionKubeVersion        string = "v1.9.10"
+)
+
+// DNSConfig is the DNS config for container group
+type DNSConfig struct {
+	NameServers   []string `json:"nameServers"`
+	SearchDomains string   `json:"searchDomains,omitempty"`
+	Options       string   `json:"options,omitempty"`
+}
+
+// LogAnalyticsLogType is an enum type for defining supported log analytics log types
+type LogAnalyticsLogType string
+
+// Supported log analytics log types
+const (
+	LogAnlyticsLogTypeContainerInsights LogAnalyticsLogType = "ContainerInsights"
+	LogAnlyticsLogTypeContainerInstance LogAnalyticsLogType = "ContainerInstance"
+)
+
+// Supported log analytics metadata keys
+const (
+	LogAnalyticsMetadataKeyPodUUID           string = "pod-uuid"
+	LogAnalyticsMetadataKeyNodeName          string = "node-name"
+	LogAnalyticsMetadataKeyClusterResourceID string = "cluster-resource-id"
 )

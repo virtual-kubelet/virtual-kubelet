@@ -19,6 +19,7 @@ The best description is "Kubernetes API on top, programmable back."
 * [How It Works](#how-it-works)
 * [Usage](#usage)
 * [Providers](#providers)
+    + [Alibaba Cloud ECI Provider](#alibaba-cloud-eci-provider)
     + [Azure Container Instances Provider](#azure-container-instances-provider)
 	+ [Azure Batch GPU Provider](./providers/azurebatch/README.md)
     + [AWS Fargate Provider](#aws-fargate-provider)
@@ -99,10 +100,22 @@ leveraging the portable Kubernetes API.
 Each provider may have its own configuration file, and required environmental variables.
 
 Providers must provide the following functionality to be considered a supported integration with Virtual Kubelet.
-1. Provides the back-end plumbing necessary to support the lifecycle management of pods, containers and supporting resources in the context of Kubernete.
+1. Provides the back-end plumbing necessary to support the lifecycle management of pods, containers and supporting resources in the context of Kubernetes.
 2. Conforms to the current API provided by Virtual Kubelet.
 3. Does not have access to the Kubernetes API Server and has a well-defined callback mechanism for getting data like secrets or configmaps.
 
+
+### Alibaba Cloud ECI Provider
+
+Alibaba Cloud ECI(Elastic Container Instance) is a service that allow you run containers without having to manage servers or clusters.
+
+You can find more details in the [Alibaba Cloud ECI provider documentation](./providers/alicloud/README.md).
+
+#### Configuration File
+
+The alibaba ECI provider will read configuration file specified by the `--provider-config` flag.
+
+The example configure file is `providers/alicloud/eci.toml`.
 
 ### Azure Container Instances Provider
 

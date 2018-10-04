@@ -16,18 +16,30 @@ package cmd
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"github.com/Sirupsen/logrus"
+	"github.com/cpuguy83/strongerrors"
 	homedir "github.com/mitchellh/go-homedir"
+	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"github.com/virtual-kubelet/virtual-kubelet/log"
+	"github.com/virtual-kubelet/virtual-kubelet/manager"
 	"github.com/virtual-kubelet/virtual-kubelet/providers"
+	"github.com/virtual-kubelet/virtual-kubelet/providers/register"
 	vkubelet "github.com/virtual-kubelet/virtual-kubelet/vkubelet"
+	"go.opencensus.io/trace"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/client-go/kubernetes"
+)
+
+const (
+	defaultDaemonPort = "10250"
 )
 
 var kubeletConfig string
@@ -41,6 +53,15 @@ var taintKey string
 var disableTaint bool
 var logLevel string
 var metricsAddr string
+var taint *corev1.Taint
+var k8sClient *kubernetes.Clientset
+var p providers.Provider
+var rm *manager.ResourceManager
+var apiConfig vkubelet.APIConfig
+
+var userTraceExporters []string
+var userTraceConfig = TracingExporterOptions{Tags: make(map[string]string)}
+var traceSampler string
 
 // RootCmd represents the base command when called without any subcommands
 var RootCmd = &cobra.Command{
@@ -50,11 +71,21 @@ var RootCmd = &cobra.Command{
 backend implementation allowing users to create kubernetes nodes without running the kubelet.
 This allows users to schedule kubernetes workloads on nodes that aren't running Kubernetes.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		f, err := vkubelet.New(nodeName, operatingSystem, kubeNamespace, kubeConfig, provider, providerConfig, taintKey, disableTaint, metricsAddr)
+		ctx := context.Background()
+		f, err := vkubelet.New(ctx, vkubelet.Config{
+			Client:          k8sClient,
+			Namespace:       kubeNamespace,
+			NodeName:        nodeName,
+			Taint:           taint,
+			MetricsAddr:     metricsAddr,
+			Provider:        p,
+			ResourceManager: rm,
+			APIConfig:       apiConfig,
+		})
 		if err != nil {
-			log.L.WithError(err).Fatal("Error initializing vritual kubelet")
+			log.L.WithError(err).Fatal("Error initializing virtual kubelet")
 		}
-		if err := f.Run(context.Background()); err != nil {
+		if err := f.Run(ctx); err != nil {
 			log.L.Fatal(err)
 		}
 	},
@@ -66,6 +97,38 @@ func Execute() {
 	if err := RootCmd.Execute(); err != nil {
 		log.GetLogger(context.TODO()).WithError(err).Fatal("Error executing root command")
 	}
+}
+
+type mapVar map[string]string
+
+func (mv mapVar) String() string {
+	var s string
+	for k, v := range mv {
+		if s == "" {
+			s = fmt.Sprintf("%s=%v", k, v)
+		} else {
+			s += fmt.Sprintf(", %s=%v", k, v)
+		}
+	}
+	return s
+}
+
+func (mv mapVar) Set(s string) error {
+	split := strings.SplitN(s, "=", 2)
+	if len(split) != 2 {
+		return errors.Errorf("invalid format, must be `key=value`: %s", s)
+	}
+
+	_, ok := mv[split[0]]
+	if ok {
+		return errors.Errorf("duplicate key: %s", split[0])
+	}
+	mv[split[0]] = split[1]
+	return nil
+}
+
+func (mv mapVar) Type() string {
+	return "map"
 }
 
 func init() {
@@ -93,6 +156,11 @@ func init() {
 	RootCmd.PersistentFlags().StringVar(&taintKey, "taint", "", "Set node taint key")
 	RootCmd.PersistentFlags().MarkDeprecated("taint", "Taint key should now be configured using the VK_TAINT_KEY environment variable")
 	RootCmd.PersistentFlags().StringVar(&logLevel, "log-level", "info", `set the log level, e.g. "trace", debug", "info", "warn", "error"`)
+
+	RootCmd.PersistentFlags().StringSliceVar(&userTraceExporters, "trace-exporter", nil, fmt.Sprintf("sets the tracing exporter to use, available exporters: %s", AvailableTraceExporters()))
+	RootCmd.PersistentFlags().StringVar(&userTraceConfig.ServiceName, "trace-service-name", "virtual-kubelet", "sets the name of the service used to register with the trace exporter")
+	RootCmd.PersistentFlags().Var(mapVar(userTraceConfig.Tags), "trace-tag", "add tags to include with traces in key=value form")
+	RootCmd.PersistentFlags().StringVar(&traceSampler, "trace-sample-rate", "", "set probability of tracing samples")
 
 	// Cobra also supports local flags, which will only run
 	// when this action is called directly.
@@ -155,4 +223,108 @@ func initConfig() {
 	})
 	logger.Level = level
 	log.L = logger
+
+	if !disableTaint {
+		taint, err = getTaint(taintKey, provider)
+		if err != nil {
+			logger.WithError(err).Fatal("Error setting up desired kubernetes node taint")
+		}
+	}
+
+	k8sClient, err = newClient(kubeConfig)
+	if err != nil {
+		logger.WithError(err).Fatal("Error creating kubernetes client")
+	}
+
+	rm, err = manager.NewResourceManager(k8sClient)
+	if err != nil {
+		logger.WithError(err).Fatal("Error initializing resource manager")
+	}
+
+	daemonPortEnv := getEnv("KUBELET_PORT", defaultDaemonPort)
+	daemonPort, err := strconv.ParseInt(daemonPortEnv, 10, 32)
+	if err != nil {
+		logger.WithError(err).WithField("value", daemonPortEnv).Fatal("Invalid value from KUBELET_PORT in environment")
+	}
+
+	initConfig := register.InitConfig{
+		ConfigPath:      providerConfig,
+		NodeName:        nodeName,
+		OperatingSystem: operatingSystem,
+		ResourceManager: rm,
+		DaemonPort:      int32(daemonPort),
+		InternalIP:      os.Getenv("VKUBELET_POD_IP"),
+	}
+
+	p, err = register.GetProvider(provider, initConfig)
+	if err != nil {
+		logger.WithError(err).Fatal("Error initializing provider")
+	}
+
+	apiConfig, err = getAPIConfig()
+	if err != nil {
+		logger.WithError(err).Fatal("Error reading API config")
+	}
+
+	for k := range userTraceConfig.Tags {
+		if reservedTagNames[k] {
+			logger.WithField("tag", k).Fatal("must not use a reserved tag key")
+		}
+	}
+	userTraceConfig.Tags["operatingSystem"] = operatingSystem
+	userTraceConfig.Tags["provider"] = provider
+	userTraceConfig.Tags["nodeName"] = nodeName
+	for _, e := range userTraceExporters {
+		if e == "zpages" {
+			go setupZpages()
+			continue
+		}
+		exporter, err := GetTracingExporter(e, userTraceConfig)
+		if err != nil {
+			log.L.WithError(err).WithField("exporter", e).Fatal("Cannot initialize exporter")
+		}
+		trace.RegisterExporter(exporter)
+	}
+	if len(userTraceExporters) > 0 {
+		var s trace.Sampler
+		switch strings.ToLower(traceSampler) {
+		case "":
+		case "always":
+			s = trace.AlwaysSample()
+		case "never":
+			s = trace.NeverSample()
+		default:
+			rate, err := strconv.Atoi(traceSampler)
+			if err != nil {
+				logger.WithError(err).WithField("rate", traceSampler).Fatal("unsupported trace sample rate, supported values: always, never, or number 0-100")
+			}
+			if rate < 0 || rate > 100 {
+				logger.WithField("rate", traceSampler).Fatal("trace sample rate must not be less than zero or greater than 100")
+			}
+			s = trace.ProbabilitySampler(float64(rate) / 100)
+		}
+
+		if s != nil {
+			trace.ApplyConfig(
+				trace.Config{
+					DefaultSampler: s,
+				},
+			)
+		}
+	}
+}
+
+func getAPIConfig() (vkubelet.APIConfig, error) {
+	config := vkubelet.APIConfig{
+		CertPath: os.Getenv("APISERVER_CERT_LOCATION"),
+		KeyPath:  os.Getenv("APISERVER_KEY_LOCATION"),
+	}
+
+	port, err := strconv.Atoi(os.Getenv("KUBELET_PORT"))
+	if err != nil {
+		return vkubelet.APIConfig{}, strongerrors.InvalidArgument(errors.Wrap(err, "error parsing KUBELET_PORT variable"))
+	}
+	config.Addr = fmt.Sprintf(":%d", port)
+
+	return config, nil
 }
