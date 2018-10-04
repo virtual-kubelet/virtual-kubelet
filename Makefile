@@ -3,6 +3,7 @@ DOCKER_IMAGE := virtual-kubelet
 exec := $(DOCKER_IMAGE)
 github_repo := virtual-kubelet/virtual-kubelet
 binary := virtual-kubelet
+build_tags := "netgo osusergo $(VK_BUILD_TAGS)"
 
 # comment this line out for quieter things
 #V := 1 # When V is set, print commands and build progress.
@@ -17,12 +18,12 @@ all: test build
 # safebuild builds inside a docker container with no clingons from your $GOPATH
 safebuild:
 	@echo "Building..."
-	$Q docker build -t $(DOCKER_IMAGE):$(VERSION) .
+	$Q docker build --build-arg BUILD_TAGS=$(tags) -t $(DOCKER_IMAGE):$(VERSION) .
 
 .PHONY: build
 build: authors
 	@echo "Building..."
-	$Q CGO_ENABLED=0 go build -a -tags netgo -ldflags '-extldflags "-static"' -o bin/$(binary) $(if $V,-v) $(VERSION_FLAGS) $(IMPORT_PATH)
+	$Q CGO_ENABLED=0 go build -a --tags $(build_tags) -ldflags '-extldflags "-static"' -o bin/$(binary) $(if $V,-v) $(VERSION_FLAGS) $(IMPORT_PATH)
 
 .PHONY: tags
 tags:
@@ -52,7 +53,7 @@ deps: setup
 
 docker:
 	@echo "Docker Build..."
-	$Q docker build -t $(DOCKER_IMAGE) .
+	$Q docker build --build-arg BUILD_TAGS="$(VK_BUILD_TAGS)" -t $(DOCKER_IMAGE) .
 
 clean:
 	@echo "Clean..."
