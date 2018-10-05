@@ -14,6 +14,7 @@ func init() {
 	RegisterTracingExporter("jaeger", NewJaegerExporter)
 }
 
+// NewJaegerExporter creates a new opencensus tracing exporter.
 func NewJaegerExporter(opts TracingExporterOptions) (trace.Exporter, error) {
 	jOpts := jaeger.Options{
 		Endpoint:      os.Getenv("JAEGER_ENDPOINT"),
