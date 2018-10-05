@@ -18,9 +18,11 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"os/signal"
 	"path/filepath"
 	"strconv"
 	"strings"
+	"syscall"
 
 	"github.com/Sirupsen/logrus"
 	"github.com/cpuguy83/strongerrors"
@@ -71,7 +73,8 @@ var RootCmd = &cobra.Command{
 backend implementation allowing users to create kubernetes nodes without running the kubelet.
 This allows users to schedule kubernetes workloads on nodes that aren't running Kubernetes.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		ctx := context.Background()
+		ctx, cancel := context.WithCancel(context.Background())
+
 		f, err := vkubelet.New(ctx, vkubelet.Config{
 			Client:          k8sClient,
 			Namespace:       kubeNamespace,
@@ -85,7 +88,16 @@ This allows users to schedule kubernetes workloads on nodes that aren't running 
 		if err != nil {
 			log.L.WithError(err).Fatal("Error initializing virtual kubelet")
 		}
-		if err := f.Run(ctx); err != nil {
+
+		sig := make(chan os.Signal, 1)
+		signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM)
+		go func() {
+			<-sig
+			cancel()
+			f.Stop()
+		}()
+
+		if err := f.Run(ctx); err != nil && errors.Cause(err) != context.Canceled {
 			log.L.Fatal(err)
 		}
 	},

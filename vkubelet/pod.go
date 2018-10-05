@@ -4,11 +4,13 @@ import (
 	"context"
 	"fmt"
 
+	pkgerrors "github.com/pkg/errors"
 	"github.com/virtual-kubelet/virtual-kubelet/log"
 	"go.opencensus.io/trace"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/watch"
 )
 
 func addPodAttributes(span *trace.Span, pod *corev1.Pod) {
@@ -71,7 +73,7 @@ func (s *Server) deletePod(ctx context.Context, pod *corev1.Pod) error {
 	}
 	span.Annotate(nil, "Deleted pod from provider")
 
-	logger := log.G(ctx).WithField("pod", pod.Name)
+	logger := log.G(ctx).WithField("pod", pod.Name).WithField("namespace", pod.Namespace)
 	if !errors.IsNotFound(delErr) {
 		var grace int64
 		if err := s.k8sClient.CoreV1().Pods(pod.Namespace).Delete(pod.Name, &metav1.DeleteOptions{GracePeriodSeconds: &grace}); err != nil && errors.IsNotFound(err) {
@@ -119,6 +121,46 @@ func (s *Server) updatePodStatuses(ctx context.Context) {
 		if status != nil {
 			pod.Status = *status
 			s.k8sClient.CoreV1().Pods(pod.Namespace).UpdateStatus(pod)
+		}
+	}
+}
+
+// watchForPodEvent waits for pod changes from kubernetes and updates the details accordingly in the local state.
+// This returns after a single pod event.
+func (s *Server) watchForPodEvent(ctx context.Context) error {
+	for {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case ev, ok := <-s.podWatcher.ResultChan():
+			if !ok {
+				select {
+				case <-ctx.Done():
+					return ctx.Err()
+				default:
+				}
+				return pkgerrors.New("pod watcher connection is closed unexpectedly")
+			}
+
+			ctx, span := trace.StartSpan(ctx, "updateLocalPod")
+			defer span.End()
+			span.AddAttributes(trace.StringAttribute("PodEventType", string(ev.Type)))
+
+			log.G(ctx).WithField("type", ev.Type).Debug("Pod watcher event is received")
+			reconcile := false
+			switch ev.Type {
+			case watch.Added:
+				reconcile = s.resourceManager.UpdatePod(ev.Object.(*corev1.Pod))
+			case watch.Modified:
+				reconcile = s.resourceManager.UpdatePod(ev.Object.(*corev1.Pod))
+			case watch.Deleted:
+				reconcile = s.resourceManager.DeletePod(ev.Object.(*corev1.Pod))
+			}
+
+			if reconcile {
+				span.Annotate(nil, "reconciling")
+				s.reconcile(ctx)
+			}
 		}
 	}
 }

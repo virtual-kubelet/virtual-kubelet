@@ -3,9 +3,6 @@ package vkubelet
 import (
 	"context"
 	"net"
-	"os"
-	"os/signal"
-	"syscall"
 	"time"
 
 	pkgerrors "github.com/pkg/errors"
@@ -114,18 +111,13 @@ func New(ctx context.Context, cfg Config) (s *Server, retErr error) {
 // Run starts the server, registers it with Kubernetes and begins watching/reconciling the cluster.
 // Run will block until Stop is called or a SIGINT or SIGTERM signal is received.
 func (s *Server) Run(ctx context.Context) error {
-	shouldStop := false
-
-	sig := make(chan os.Signal, 1)
-	signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM)
-	go func() {
-		<-sig
-		shouldStop = true
-		s.Stop()
-	}()
-
 	for {
-		ctx, span := trace.StartSpan(ctx, "syncDesiredState")
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		default:
+		}
+
 		opts := metav1.ListOptions{
 			FieldSelector: fields.OneTermEqualSelector("spec.nodeName", s.nodeName).String(),
 		}
@@ -143,40 +135,19 @@ func (s *Server) Run(ctx context.Context) error {
 			return pkgerrors.Wrap(err, "failed to watch pods")
 		}
 
-	loop:
-		for {
-			select {
-			case ev, ok := <-s.podWatcher.ResultChan():
-				if !ok {
-					if shouldStop {
-						log.G(ctx).Info("Pod watcher is stopped")
-						return nil
-					}
 
-					log.G(ctx).Error("Pod watcher connection is closed unexpectedly")
-					break loop
-				}
-
-				log.G(ctx).WithField("type", ev.Type).Debug("Pod watcher event is received")
-				reconcile := false
-				switch ev.Type {
-				case watch.Added:
-					reconcile = s.resourceManager.UpdatePod(ev.Object.(*corev1.Pod))
-				case watch.Modified:
-					reconcile = s.resourceManager.UpdatePod(ev.Object.(*corev1.Pod))
-				case watch.Deleted:
-					reconcile = s.resourceManager.DeletePod(ev.Object.(*corev1.Pod))
-				}
-
-				if reconcile {
-					s.reconcile(ctx)
-				}
+		if err := s.watchForPodEvent(ctx); err != nil {
+			if pkgerrors.Cause(err) == context.Canceled {
+				return err
 			}
+			log.G(ctx).Error(err)
+			break
 		}
 
 		time.Sleep(5 * time.Second)
 	}
 
+	return nil
 }
 
 // Stop shutsdown the server.
