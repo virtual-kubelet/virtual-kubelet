@@ -3,13 +3,13 @@ FROM golang:alpine as builder
 ENV PATH /go/bin:/usr/local/go/bin:$PATH
 ENV GOPATH /go
 
-RUN	apk add --no-cache \
+RUN apk add --no-cache \
 	ca-certificates \
 	--virtual .build-deps \
-		git \
-		gcc \
-		libc-dev \
-		libgcc \
+	git \
+	gcc \
+	libc-dev \
+	libgcc \
         make
 
 COPY . /go/src/github.com/virtual-kubelet/virtual-kubelet
