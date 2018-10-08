@@ -544,6 +544,17 @@
   version = "v1.2.0"
 
 [[projects]]
+  digest = "1:b42cde0e1f3c816dd57f57f7bbcf05ca40263ad96f168714c130c611fc0856a6"
+  name = "github.com/hashicorp/golang-lru"
+  packages = [
+    ".",
+    "simplelru",
+  ]
+  pruneopts = "NUT"
+  revision = "20f1fb78b0740ba8c3cb143a61e86ba5c8669768"
+  version = "v0.5.0"
+
+[[projects]]
   branch = "master"
   digest = "1:11c6c696067d3127ecf332b10f89394d386d9083f82baf71f40f2da31841a009"
   name = "github.com/hashicorp/hcl"
@@ -1250,7 +1261,7 @@
   revision = "53d615ae3f440f957cb9989d989d597f047262d9"
 
 [[projects]]
-  digest = "1:f5b6bbd4b22601bca980c6210b177ca44b1144ae32ca1eed9040c695f6d024f4"
+  digest = "1:0e044cbe506c2a2b258eeac61ff578d138aa73700bbc0058624023ee82504a59"
   name = "k8s.io/apimachinery"
   packages = [
     "pkg/api/errors",
@@ -1274,7 +1285,9 @@
     "pkg/runtime/serializer/versioning",
     "pkg/selection",
     "pkg/types",
+    "pkg/util/cache",
     "pkg/util/clock",
+    "pkg/util/diff",
     "pkg/util/errors",
     "pkg/util/framer",
     "pkg/util/httpstream",
@@ -1311,7 +1324,7 @@
   revision = "25e79651c7e569b0ebcd97affc0fe7f1ffcbee94"
 
 [[projects]]
-  digest = "1:a3d8bae8c73834e07b5142c928f247b6e7ad6db1e5ee5553dce74a8863b7b5fb"
+  digest = "1:d898509b58eb4c7d0c0f4d7abe4f116b1ca7efe20da86b5d97f92a02c5b75a96"
   name = "k8s.io/client-go"
   packages = [
     "discovery",
@@ -1383,20 +1396,24 @@
     "rest/watch",
     "testing",
     "tools/auth",
+    "tools/cache",
     "tools/clientcmd",
     "tools/clientcmd/api",
     "tools/clientcmd/api/latest",
     "tools/clientcmd/api/v1",
     "tools/metrics",
+    "tools/pager",
     "tools/reference",
     "tools/remotecommand",
     "transport",
     "transport/spdy",
+    "util/buffer",
     "util/cert",
     "util/exec",
     "util/flowcontrol",
     "util/homedir",
     "util/integer",
+    "util/retry",
   ]
   pruneopts = "NUT"
   revision = "23781f4d6632d88e869066eaebb743857aa1ef9b"
@@ -1521,6 +1538,7 @@
     "k8s.io/client-go/kubernetes",
     "k8s.io/client-go/kubernetes/fake",
     "k8s.io/client-go/rest",
+    "k8s.io/client-go/tools/cache",
     "k8s.io/client-go/tools/clientcmd",
     "k8s.io/client-go/tools/clientcmd/api/v1",
     "k8s.io/client-go/tools/remotecommand",
