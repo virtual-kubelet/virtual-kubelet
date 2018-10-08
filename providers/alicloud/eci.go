@@ -214,11 +214,13 @@ func (p *ECIProvider) CreatePod(ctx context.Context, pod *v1.Pod) error {
 	request.SecurityGroupId = p.secureGroup
 	request.VSwitchId = p.vSwitch
 	request.ContainerGroupName = ContainerGroupName
+	msg := fmt.Sprintf("CreateContainerGroup request %+v", request)
+	log.G(ctx).WithField("Method", "CreatePod").Info(msg)
 	response, err := p.eciClient.CreateContainerGroup(request)
 	if err != nil {
 		return err
 	}
-	msg := fmt.Sprintf("CreateContainerGroup successed. %s, %s, %s", response.RequestId, response.ContainerGroupId, ContainerGroupName)
+	msg = fmt.Sprintf("CreateContainerGroup successed. %s, %s, %s", response.RequestId, response.ContainerGroupId, ContainerGroupName)
 	log.G(ctx).WithField("Method", "CreatePod").Info(msg)
 	return nil
 }
