@@ -19,8 +19,10 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/tools/cache"
 )
 
 const (
@@ -165,77 +167,66 @@ func (s *Server) registerNode(ctx context.Context) error {
 
 // Run starts the server, registers it with Kubernetes and begins watching/reconciling the cluster.
 // Run will block until Stop is called or a SIGINT or SIGTERM signal is received.
-func (s *Server) Run(ctx context.Context) error {
-	shouldStop := false
+func (s *Server) Run(ctx context.Context) {
+	var controller cache.Controller
+	_, controller = cache.NewInformer(
+
+		&cache.ListWatch{
+
+			ListFunc: func(options metav1.ListOptions) (runtime.Object, error) {
+				opts := metav1.ListOptions{
+					FieldSelector: fields.OneTermEqualSelector("spec.nodeName", s.nodeName).String(),
+				}
+
+				if controller != nil {
+					opts.ResourceVersion = controller.LastSyncResourceVersion()
+				}
+
+				return s.k8sClient.Core().Pods(s.namespace).List(opts)
+			},
+
+			WatchFunc: func(options metav1.ListOptions) (watch.Interface, error) {
+				opts := metav1.ListOptions{
+					FieldSelector: fields.OneTermEqualSelector("spec.nodeName", s.nodeName).String(),
+				}
+
+				if controller != nil {
+					opts.ResourceVersion = controller.LastSyncResourceVersion()
+				}
+
+				return s.k8sClient.Core().Pods(s.namespace).Watch(opts)
+			},
+		},
+
+		&corev1.Pod{},
+
+		2*time.Minute,
+
+		cache.ResourceEventHandlerFuncs{
+			AddFunc:    func(obj interface{}) {
+				s.onAddPod(ctx, obj)
+			},
+			UpdateFunc: func(oldObj, newObj interface{}) {
+				s.onUpdatePod(ctx, oldObj, newObj)
+			},
+			DeleteFunc: func(obj interface{}) {
+				s.onDeletePod(ctx, obj)
+			},
+		},
+	)
+
+	var stopCh chan struct{}
 
 	sig := make(chan os.Signal, 1)
 	signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM)
 	go func() {
 		<-sig
-		shouldStop = true
-		s.Stop()
+		log.G(ctx).Info("Stop pod cache controller.")
+		close(stopCh)
 	}()
 
-	for {
-		opts := metav1.ListOptions{
-			FieldSelector: fields.OneTermEqualSelector("spec.nodeName", s.nodeName).String(),
-		}
-
-		pods, err := s.k8sClient.CoreV1().Pods(s.namespace).List(opts)
-		if err != nil {
-			return pkgerrors.Wrap(err, "error getting pod list")
-		}
-		s.resourceManager.SetPods(pods)
-		s.reconcile(ctx)
-
-		opts.ResourceVersion = pods.ResourceVersion
-		s.podWatcher, err = s.k8sClient.CoreV1().Pods(s.namespace).Watch(opts)
-		if err != nil {
-			return pkgerrors.Wrap(err, "failed to watch pods")
-		}
-
-	loop:
-		for {
-			select {
-			case ev, ok := <-s.podWatcher.ResultChan():
-				if !ok {
-					if shouldStop {
-						log.G(ctx).Info("Pod watcher is stopped")
-						return nil
-					}
-
-					log.G(ctx).Error("Pod watcher connection is closed unexpectedly")
-					break loop
-				}
-
-				log.G(ctx).WithField("type", ev.Type).Debug("Pod watcher event is received")
-				reconcile := false
-				switch ev.Type {
-				case watch.Added:
-					reconcile = s.resourceManager.UpdatePod(ev.Object.(*corev1.Pod))
-				case watch.Modified:
-					reconcile = s.resourceManager.UpdatePod(ev.Object.(*corev1.Pod))
-				case watch.Deleted:
-					reconcile = s.resourceManager.DeletePod(ev.Object.(*corev1.Pod))
-				}
-
-				if reconcile {
-					s.reconcile(ctx)
-				}
-			}
-		}
-
-		time.Sleep(5 * time.Second)
-	}
-
-}
-
-// Stop shutsdown the server.
-// It does not shutdown pods assigned to the virtual node.
-func (s *Server) Stop() {
-	if s.podWatcher != nil {
-		s.podWatcher.Stop()
-	}
+	log.G(ctx).Info("Start to run pod cache controller.")
+	controller.Run(stopCh)
 }
 
 type taintsStringer []corev1.Taint
@@ -423,6 +414,48 @@ func addPodAttributes(span *trace.Span, pod *corev1.Pod) {
 		trace.StringAttribute("namespace", pod.Namespace),
 		trace.StringAttribute("name", pod.Name),
 	)
+}
+
+func (s *Server) onAddPod(ctx context.Context, obj interface{}) {
+	pod := obj.(*corev1.Pod)
+
+	logger := log.G(ctx).WithField("method", "onAddPod")
+	if pod == nil {
+		logger.Errorf("obj is not a valid pod: %v", obj)
+		return
+	}
+
+	logger.Infof("Pod '%s' is added", pod.GetName())
+}
+
+func (s *Server) onUpdatePod(ctx context.Context, old, new interface{}) {
+	oldPod := old.(*corev1.Pod)
+	newPod := new.(*corev1.Pod)
+
+	logger := log.G(ctx).WithField("method", "onUpdatePod")
+	if oldPod == nil {
+		logger.Errorf("obj is not a valid pod: %v", old)
+		return
+	}
+
+	if newPod == nil {
+		logger.Errorf("obj is not a valid pod: %v", new)
+		return
+	}
+
+	logger.Infof("Pod '%s' is updated to '%s'", oldPod.GetName(), newPod.GetName())
+}
+
+func (s *Server) onDeletePod(ctx context.Context, obj interface{}) {
+	pod := obj.(*corev1.Pod)
+
+	logger := log.G(ctx).WithField("method", "onDeletePod")
+	if pod == nil {
+		logger.Errorf("obj is not a valid pod: %v", obj)
+		return
+	}
+
+	logger.Infof("Pod '%s' is deleted", pod.GetName())
 }
 
 func (s *Server) createPod(ctx context.Context, pod *corev1.Pod) error {
