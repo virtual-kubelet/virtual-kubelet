@@ -36,8 +36,9 @@ type Server struct {
 	k8sClient       *kubernetes.Clientset
 	taint           *corev1.Taint
 	provider        providers.Provider
-	podWatcher      watch.Interface
 	resourceManager *manager.ResourceManager
+	podCreationCh   chan *corev1.Pod
+	podDeletionCh   chan *corev1.Pod
 }
 
 // Config is used to configure a new server.
@@ -67,6 +68,8 @@ func New(ctx context.Context, cfg Config) (s *Server, retErr error) {
 		k8sClient:       cfg.Client,
 		resourceManager: cfg.ResourceManager,
 		provider:        cfg.Provider,
+		podCreationCh:   make(chan *corev1.Pod, 1024),
+		podDeletionCh:   make(chan *corev1.Pod, 1024),
 	}
 
 	ctx = log.WithLogger(ctx, log.G(ctx))
@@ -168,6 +171,11 @@ func (s *Server) registerNode(ctx context.Context) error {
 // Run starts the server, registers it with Kubernetes and begins watching/reconciling the cluster.
 // Run will block until Stop is called or a SIGINT or SIGTERM signal is received.
 func (s *Server) Run(ctx context.Context) {
+	for i := 0; i < 10; i++ {
+		go s.startPodCreator(ctx, i)
+		go s.startPodTerminator(ctx, i)
+	}
+
 	var controller cache.Controller
 	_, controller = cache.NewInformer(
 
@@ -200,14 +208,14 @@ func (s *Server) Run(ctx context.Context) {
 
 		&corev1.Pod{},
 
-		2*time.Minute,
+		1*time.Minute,
 
 		cache.ResourceEventHandlerFuncs{
 			AddFunc:    func(obj interface{}) {
 				s.onAddPod(ctx, obj)
 			},
 			UpdateFunc: func(oldObj, newObj interface{}) {
-				s.onUpdatePod(ctx, oldObj, newObj)
+				s.onUpdatePod(ctx, newObj)
 			},
 			DeleteFunc: func(obj interface{}) {
 				s.onDeletePod(ctx, obj)
@@ -215,7 +223,7 @@ func (s *Server) Run(ctx context.Context) {
 		},
 	)
 
-	var stopCh chan struct{}
+	stopCh := make(chan struct{})
 
 	sig := make(chan os.Signal, 1)
 	signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM)
@@ -421,29 +429,45 @@ func (s *Server) onAddPod(ctx context.Context, obj interface{}) {
 
 	logger := log.G(ctx).WithField("method", "onAddPod")
 	if pod == nil {
-		logger.Errorf("obj is not a valid pod: %v", obj)
+		logger.Error("obj is not a valid pod:", obj)
 		return
 	}
 
-	logger.Infof("Pod '%s' is added", pod.GetName())
+	if !s.resourceManager.UpdatePod(pod) {
+		logger.Infof("Pod '%s/%s' is already added", pod.GetNamespace(), pod.GetName())
+		return
+	}
+
+	if pod.DeletionTimestamp != nil {
+		logger.Infof("Deleting pod '%s/%s'", pod.GetNamespace(), pod.GetName())
+		s.podDeletionCh <- pod
+	} else {
+		logger.Infof("Adding pod '%s/%s'", pod.GetNamespace(), pod.GetName())
+		s.podCreationCh <- pod
+	}
 }
 
-func (s *Server) onUpdatePod(ctx context.Context, old, new interface{}) {
-	oldPod := old.(*corev1.Pod)
-	newPod := new.(*corev1.Pod)
+func (s *Server) onUpdatePod(ctx context.Context, obj interface{}) {
+	pod := obj.(*corev1.Pod)
 
 	logger := log.G(ctx).WithField("method", "onUpdatePod")
-	if oldPod == nil {
-		logger.Errorf("obj is not a valid pod: %v", old)
+	if pod == nil {
+		logger.Error("obj is not a valid pod:", obj)
 		return
 	}
 
-	if newPod == nil {
-		logger.Errorf("obj is not a valid pod: %v", new)
+	if !s.resourceManager.UpdatePod(pod) {
+		logger.Infof("Pod '%s/%s' is already updated", pod.GetNamespace(), pod.GetName())
 		return
 	}
 
-	logger.Infof("Pod '%s' is updated to '%s'", oldPod.GetName(), newPod.GetName())
+	if pod.DeletionTimestamp != nil {
+		logger.Infof("Deleting pod '%s/%s'", pod.GetNamespace(), pod.GetName())
+		s.podDeletionCh <- pod
+	} else {
+		logger.Infof("Adding pod '%s/%s'", pod.GetNamespace(), pod.GetName())
+		s.podCreationCh <- pod
+	}
 }
 
 func (s *Server) onDeletePod(ctx context.Context, obj interface{}) {
@@ -455,7 +479,37 @@ func (s *Server) onDeletePod(ctx context.Context, obj interface{}) {
 		return
 	}
 
-	logger.Infof("Pod '%s' is deleted", pod.GetName())
+	if !s.resourceManager.DeletePod(pod) {
+		logger.Infof("Pod '%s/%s' is already deleted", pod.GetNamespace(), pod.GetName())
+		return
+	}
+
+	logger.Infof("Deleting pod '%s/%s'", pod.GetNamespace(), pod.GetName())
+	s.podDeletionCh <- pod
+}
+
+func (s *Server) startPodCreator(ctx context.Context, id int) {
+	logger := log.G(ctx).WithField("podCreator", id)
+	logger.Info("Start pod creator")
+
+	for p := range s.podCreationCh {
+		logger.Infof("Creating pod '%s/%s' ", p.GetNamespace(), p.GetName())
+		if err := s.createPod(ctx, p); err != nil {
+			logger.WithError(err).Errorf("Failed to create pod '%s/%s'", p.GetNamespace(), p.GetName())
+		}
+	}
+}
+
+func (s *Server) startPodTerminator(ctx context.Context, id int) {
+	logger := log.G(ctx).WithField("podTerminator", id)
+	logger.Info("Start pod terminator")
+
+	for p := range s.podDeletionCh {
+		logger.Infof("Deleting pod '%s/%s' ", p.GetNamespace(), p.GetName())
+		if err := s.deletePod(ctx, p); err != nil {
+			logger.WithError(err).Errorf("Failed to delete pod '%s/%s'", p.GetNamespace(), p.GetName())
+		}
+	}
 }
 
 func (s *Server) createPod(ctx context.Context, pod *corev1.Pod) error {
@@ -468,7 +522,7 @@ func (s *Server) createPod(ctx context.Context, pod *corev1.Pod) error {
 		return err
 	}
 
-	logger := log.G(ctx).WithField("pod", pod.Name)
+	logger := log.G(ctx).WithField("pod", pod.GetName()).WithField("namespace", pod.GetNamespace())
 
 	if origErr := s.provider.CreatePod(ctx, pod); origErr != nil {
 		podPhase := corev1.PodPending
