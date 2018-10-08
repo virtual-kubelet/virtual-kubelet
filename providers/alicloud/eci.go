@@ -652,6 +652,32 @@ func (p *ECIProvider) getVolumes(pod *v1.Pod) ([]eci.Volume, error) {
 			continue
 		}
 
+		if v.Secret != nil {
+			ConfigFileToPaths := make([]eci.ConfigFileToPath, 0)
+			secret, err := p.resourceManager.GetSecret(v.Secret.SecretName, pod.Namespace)
+			if v.Secret.Optional != nil && !*v.Secret.Optional && k8serr.IsNotFound(err) {
+				return nil, fmt.Errorf("Secret %s is required by Pod %s and does not exist", v.Secret.SecretName, pod.Name)
+			}
+			if secret == nil {
+				continue
+			}
+			for k, v := range secret.Data {
+				var b bytes.Buffer
+				enc := base64.NewEncoder(base64.StdEncoding, &b)
+				enc.Write(v)
+				ConfigFileToPaths = append(ConfigFileToPaths, eci.ConfigFileToPath{Path: k, Content: b.String()})
+			}
+
+			if len(ConfigFileToPaths) != 0 {
+				volumes = append(volumes, eci.Volume{
+					Type:                              eci.VOL_TYPE_CONFIGFILEVOLUME,
+					Name:                              v.Name,
+					ConfigFileVolumeConfigFileToPaths: ConfigFileToPaths,
+				})
+			}
+			continue
+		}
+
 		// If we've made it this far we have found a volume type that isn't supported
 		return nil, fmt.Errorf("Pod %s requires volume %s which is of an unsupported type\n", pod.Name, v.Name)
 	}
