@@ -26,7 +26,7 @@ import (
 )
 
 const (
-	PodStatusReason_ProviderFailed = "ProviderFailed"
+	podStatusReasonProviderFailed = "ProviderFailed"
 )
 
 // Server masquarades itself as a kubelet and allows for the virtual node to be backed by non-vm/node providers.
@@ -52,6 +52,7 @@ type Config struct {
 	Taint           *corev1.Taint
 }
 
+// APIConfig is used to configure the API server of the virtual kubelet.
 type APIConfig struct {
 	CertPath string
 	KeyPath  string
@@ -301,118 +302,6 @@ func (s *Server) updateNode(ctx context.Context) {
 	}
 }
 
-// reconcile is the main reconciliation loop that compares differences between Kubernetes and
-// the active provider and reconciles the differences.
-func (s *Server) reconcile(ctx context.Context) {
-	ctx, span := trace.StartSpan(ctx, "reconcile")
-	defer span.End()
-
-	logger := log.G(ctx)
-	logger.Debug("Start reconcile")
-	defer logger.Debug("End reconcile")
-
-	providerPods, err := s.provider.GetPods(ctx)
-	if err != nil {
-		logger.WithError(err).Error("Error getting pod list from provider")
-		return
-	}
-
-	var deletePods []*corev1.Pod
-	for _, pod := range providerPods {
-		// Delete pods that don't exist in Kubernetes
-		if p := s.resourceManager.GetPod(pod.Namespace, pod.Name); p == nil || p.DeletionTimestamp != nil {
-			deletePods = append(deletePods, pod)
-		}
-	}
-	span.Annotate(nil, "Got provider pods")
-
-	var failedDeleteCount int64
-	for _, pod := range deletePods {
-		logger := logger.WithField("pod", pod.Name)
-		logger.Debug("Deleting pod '%s'\n", pod.Name)
-		if err := s.deletePod(ctx, pod); err != nil {
-			logger.WithError(err).Error("Error deleting pod")
-			failedDeleteCount++
-			continue
-		}
-	}
-	span.Annotate(
-		[]trace.Attribute{
-			trace.Int64Attribute("expected_delete_pods_count", int64(len(deletePods))),
-			trace.Int64Attribute("failed_delete_pods_count", failedDeleteCount),
-		},
-		"Cleaned up stale provider pods",
-	)
-
-	pods := s.resourceManager.GetPods()
-
-	var createPods []*corev1.Pod
-	cleanupPods := deletePods[:0]
-
-	for _, pod := range pods {
-		var providerPod *corev1.Pod
-		for _, p := range providerPods {
-			if p.Namespace == pod.Namespace && p.Name == pod.Name {
-				providerPod = p
-				break
-			}
-		}
-
-		// Delete pod if DeletionTimestamp is set
-		if pod.DeletionTimestamp != nil {
-			cleanupPods = append(cleanupPods, pod)
-			continue
-		}
-
-		if providerPod == nil &&
-			pod.DeletionTimestamp == nil &&
-			pod.Status.Phase != corev1.PodSucceeded &&
-			pod.Status.Phase != corev1.PodFailed &&
-			pod.Status.Reason != PodStatusReason_ProviderFailed {
-			createPods = append(createPods, pod)
-		}
-	}
-
-	var failedCreateCount int64
-	for _, pod := range createPods {
-		logger := logger.WithField("pod", pod.Name)
-		logger.Debug("Creating pod")
-		if err := s.createPod(ctx, pod); err != nil {
-			failedCreateCount++
-			logger.WithError(err).Error("Error creating pod")
-			continue
-		}
-	}
-	span.Annotate(
-		[]trace.Attribute{
-			trace.Int64Attribute("expected_created_pods", int64(len(createPods))),
-			trace.Int64Attribute("failed_pod_creates", failedCreateCount),
-		},
-		"Created pods in provider",
-	)
-
-	var failedCleanupCount int64
-	for _, pod := range cleanupPods {
-		logger := logger.WithField("pod", pod.Name)
-		log.Trace(logger, "Pod pending deletion")
-		var err error
-		if err = s.deletePod(ctx, pod); err != nil {
-			logger.WithError(err).Error("Error deleting pod")
-			failedCleanupCount++
-			continue
-		}
-		log.Trace(logger, "Pod deletion complete")
-	}
-
-	span.Annotate(
-		[]trace.Attribute{
-			trace.Int64Attribute("expected_cleaned_up_pods", int64(len(cleanupPods))),
-			trace.Int64Attribute("cleaned_up_pod_failures", failedCleanupCount),
-		},
-		"Cleaned up provider pods marked for deletion",
-	)
-}
-
 func addPodAttributes(span *trace.Span, pod *corev1.Pod) {
 	span.AddAttributes(
 		trace.StringAttribute("uid", string(pod.UID)),
@@ -508,7 +397,7 @@ func (s *Server) createPod(ctx context.Context, pod *corev1.Pod) error {
 
 		pod.ResourceVersion = "" // Blank out resource version to prevent object has been modified error
 		pod.Status.Phase = podPhase
-		pod.Status.Reason = PodStatusReason_ProviderFailed
+		pod.Status.Reason = podStatusReasonProviderFailed
 		pod.Status.Message = origErr.Error()
 
 		_, err := s.k8sClient.CoreV1().Pods(pod.Namespace).UpdateStatus(pod)
@@ -540,10 +429,10 @@ func (s *Server) deletePod(ctx context.Context, pod *corev1.Pod) error {
 	}
 	span.Annotate(nil, "Deleted pod from provider")
 
-	logger := log.G(ctx).WithField("pod", pod.Name)
+	logger := log.G(ctx).WithField("pod", pod.GetName()).WithField("namespace", pod.GetNamespace())
 	if !errors.IsNotFound(delErr) {
 		var grace int64
-		if err := s.k8sClient.CoreV1().Pods(pod.Namespace).Delete(pod.Name, &metav1.DeleteOptions{GracePeriodSeconds: &grace}); err != nil && errors.IsNotFound(err) {
+		if err := s.k8sClient.CoreV1().Pods(pod.GetNamespace()).Delete(pod.GetName(), &metav1.DeleteOptions{GracePeriodSeconds: &grace}); err != nil && errors.IsNotFound(err) {
 			if errors.IsNotFound(err) {
 				span.Annotate(nil, "Pod does not exist in k8s, nothing to delete")
 				return nil
@@ -574,13 +463,13 @@ func (s *Server) updatePodStatuses(ctx context.Context) {
 	for _, pod := range pods {
 		if pod.Status.Phase == corev1.PodSucceeded ||
 			pod.Status.Phase == corev1.PodFailed ||
-			pod.Status.Reason == PodStatusReason_ProviderFailed {
+			pod.Status.Reason == podStatusReasonProviderFailed {
 			continue
 		}
 
 		status, err := s.provider.GetPodStatus(ctx, pod.Namespace, pod.Name)
 		if err != nil {
-			log.G(ctx).WithField("pod", pod.Name).Error("Error retrieving pod status")
+			log.G(ctx).WithField("pod", pod.GetName()).WithField("namespace", pod.GetNamespace()).Error("Error retrieving pod status")
 			return
 		}
 
