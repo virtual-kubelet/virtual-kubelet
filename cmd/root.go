@@ -215,13 +215,14 @@ func initConfig() {
 		log.G(context.TODO()).WithField("logLevel", logLevel).Fatal("log level is not supported")
 	}
 
+	logrus.SetLevel(level)
+
 	logger := log.L.WithFields(logrus.Fields{
 		"provider":        provider,
 		"operatingSystem": operatingSystem,
 		"node":            nodeName,
 		"namespace":       kubeNamespace,
 	})
-	logger.Level = level
 	log.L = logger
 
 	if !disableTaint {
