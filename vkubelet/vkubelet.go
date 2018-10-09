@@ -37,8 +37,7 @@ type Server struct {
 	taint           *corev1.Taint
 	provider        providers.Provider
 	resourceManager *manager.ResourceManager
-	podCreationCh   chan *corev1.Pod
-	podDeletionCh   chan *corev1.Pod
+	podCh           chan *corev1.Pod
 }
 
 // Config is used to configure a new server.
@@ -68,8 +67,7 @@ func New(ctx context.Context, cfg Config) (s *Server, retErr error) {
 		k8sClient:       cfg.Client,
 		resourceManager: cfg.ResourceManager,
 		provider:        cfg.Provider,
-		podCreationCh:   make(chan *corev1.Pod, 1024),
-		podDeletionCh:   make(chan *corev1.Pod, 1024),
+		podCh:           make(chan *corev1.Pod, 1024),
 	}
 
 	ctx = log.WithLogger(ctx, log.G(ctx))
@@ -172,8 +170,7 @@ func (s *Server) registerNode(ctx context.Context) error {
 // Run will block until Stop is called or a SIGINT or SIGTERM signal is received.
 func (s *Server) Run(ctx context.Context) {
 	for i := 0; i < 10; i++ {
-		go s.startPodCreator(ctx, i)
-		go s.startPodTerminator(ctx, i)
+		go s.startPodSynchronizer(ctx, i)
 	}
 
 	var controller cache.Controller
@@ -433,17 +430,10 @@ func (s *Server) onAddPod(ctx context.Context, obj interface{}) {
 		return
 	}
 
-	if !s.resourceManager.UpdatePod(pod) {
-		logger.Infof("Pod '%s/%s' is already added", pod.GetNamespace(), pod.GetName())
-		return
-	}
+	logger.Debugf("Receive added pod '%s/%s' ", pod.GetNamespace(), pod.GetName())
 
-	if pod.DeletionTimestamp != nil {
-		logger.Infof("Deleting pod '%s/%s'", pod.GetNamespace(), pod.GetName())
-		s.podDeletionCh <- pod
-	} else {
-		logger.Infof("Adding pod '%s/%s'", pod.GetNamespace(), pod.GetName())
-		s.podCreationCh <- pod
+	if s.resourceManager.UpdatePod(pod) {
+		s.podCh <- pod
 	}
 }
 
@@ -456,17 +446,10 @@ func (s *Server) onUpdatePod(ctx context.Context, obj interface{}) {
 		return
 	}
 
-	if !s.resourceManager.UpdatePod(pod) {
-		logger.Infof("Pod '%s/%s' is already updated", pod.GetNamespace(), pod.GetName())
-		return
-	}
+	logger.Debugf("Receive updated pod '%s/%s' ", pod.GetNamespace(), pod.GetName())
 
-	if pod.DeletionTimestamp != nil {
-		logger.Infof("Deleting pod '%s/%s'", pod.GetNamespace(), pod.GetName())
-		s.podDeletionCh <- pod
-	} else {
-		logger.Infof("Adding pod '%s/%s'", pod.GetNamespace(), pod.GetName())
-		s.podCreationCh <- pod
+	if s.resourceManager.UpdatePod(pod) {
+		s.podCh <- pod
 	}
 }
 
@@ -479,35 +462,28 @@ func (s *Server) onDeletePod(ctx context.Context, obj interface{}) {
 		return
 	}
 
-	if !s.resourceManager.DeletePod(pod) {
-		logger.Infof("Pod '%s/%s' is already deleted", pod.GetNamespace(), pod.GetName())
-		return
-	}
+	logger.Debugf("Receive deleted pod '%s/%s' ", pod.GetNamespace(), pod.GetName())
 
-	logger.Infof("Deleting pod '%s/%s'", pod.GetNamespace(), pod.GetName())
-	s.podDeletionCh <- pod
-}
-
-func (s *Server) startPodCreator(ctx context.Context, id int) {
-	logger := log.G(ctx).WithField("podCreator", id)
-	logger.Info("Start pod creator")
-
-	for p := range s.podCreationCh {
-		logger.Infof("Creating pod '%s/%s' ", p.GetNamespace(), p.GetName())
-		if err := s.createPod(ctx, p); err != nil {
-			logger.WithError(err).Errorf("Failed to create pod '%s/%s'", p.GetNamespace(), p.GetName())
-		}
+	if s.resourceManager.DeletePod(pod) {
+		s.podCh <- pod
 	}
 }
 
-func (s *Server) startPodTerminator(ctx context.Context, id int) {
-	logger := log.G(ctx).WithField("podTerminator", id)
-	logger.Info("Start pod terminator")
+func (s *Server) startPodSynchronizer(ctx context.Context, id int) {
+	logger := log.G(ctx).WithField("podSynchronizer", id)
+	logger.Debug("Start pod synchronizer")
 
-	for p := range s.podDeletionCh {
-		logger.Infof("Deleting pod '%s/%s' ", p.GetNamespace(), p.GetName())
-		if err := s.deletePod(ctx, p); err != nil {
-			logger.WithError(err).Errorf("Failed to delete pod '%s/%s'", p.GetNamespace(), p.GetName())
+	for p := range s.podCh {
+		if p.DeletionTimestamp != nil {
+			logger.Infof("Deleting pod '%s/%s'", p.GetNamespace(), p.GetName())
+			if err := s.deletePod(ctx, p); err != nil {
+				logger.WithError(err).Errorf("Failed to delete pod '%s/%s'", p.GetNamespace(), p.GetName())
+			}
+		} else {
+			logger.Infof("Creating pod '%s/%s' ", p.GetNamespace(), p.GetName())
+			if err := s.createPod(ctx, p); err != nil {
+				logger.WithError(err).Errorf("Failed to create pod '%s/%s'", p.GetNamespace(), p.GetName())
+			}
 		}
 	}
 }
