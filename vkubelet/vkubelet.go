@@ -170,9 +170,20 @@ func (s *Server) registerNode(ctx context.Context) error {
 // Run starts the server, registers it with Kubernetes and begins watching/reconciling the cluster.
 // Run will block until Stop is called or a SIGINT or SIGTERM signal is received.
 func (s *Server) Run(ctx context.Context) {
-	for i := 0; i < 10; i++ {
-		go s.startPodSynchronizer(ctx, i)
+	opts := metav1.ListOptions{
+		FieldSelector: fields.OneTermEqualSelector("spec.nodeName", s.nodeName).String(),
 	}
+
+	pods, err := s.k8sClient.CoreV1().Pods(s.namespace).List(opts)
+	if err != nil {
+		log.G(ctx).WithError(err).Error("Unable to get all pods")
+		return
+	}
+
+	s.resourceManager.SetPods(pods)
+	s.reconcile(ctx)
+
+	opts.ResourceVersion = pods.ResourceVersion
 
 	var controller cache.Controller
 	_, controller = cache.NewInformer(
@@ -180,10 +191,6 @@ func (s *Server) Run(ctx context.Context) {
 		&cache.ListWatch{
 
 			ListFunc: func(options metav1.ListOptions) (runtime.Object, error) {
-				opts := metav1.ListOptions{
-					FieldSelector: fields.OneTermEqualSelector("spec.nodeName", s.nodeName).String(),
-				}
-
 				if controller != nil {
 					opts.ResourceVersion = controller.LastSyncResourceVersion()
 				}
@@ -192,10 +199,6 @@ func (s *Server) Run(ctx context.Context) {
 			},
 
 			WatchFunc: func(options metav1.ListOptions) (watch.Interface, error) {
-				opts := metav1.ListOptions{
-					FieldSelector: fields.OneTermEqualSelector("spec.nodeName", s.nodeName).String(),
-				}
-
 				if controller != nil {
 					opts.ResourceVersion = controller.LastSyncResourceVersion()
 				}
@@ -230,6 +233,10 @@ func (s *Server) Run(ctx context.Context) {
 		log.G(ctx).Info("Stop pod cache controller.")
 		close(stopCh)
 	}()
+
+	for i := 0; i < 10; i++ {
+		go s.startPodSynchronizer(ctx, i)
+	}
 
 	log.G(ctx).Info("Start to run pod cache controller.")
 	controller.Run(stopCh)
@@ -302,6 +309,118 @@ func (s *Server) updateNode(ctx context.Context) {
 	}
 }
 
+// reconcile is the main reconciliation loop that compares differences between Kubernetes and
+// the active provider and reconciles the differences.
+func (s *Server) reconcile(ctx context.Context) {
+	ctx, span := trace.StartSpan(ctx, "reconcile")
+	defer span.End()
+
+	logger := log.G(ctx)
+	logger.Debug("Start reconcile")
+	defer logger.Debug("End reconcile")
+
+	providerPods, err := s.provider.GetPods(ctx)
+	if err != nil {
+		logger.WithError(err).Error("Error getting pod list from provider")
+		return
+	}
+
+	var deletePods []*corev1.Pod
+	for _, pod := range providerPods {
+		// Delete pods that don't exist in Kubernetes
+		if p := s.resourceManager.GetPod(pod.Namespace, pod.Name); p == nil || p.DeletionTimestamp != nil {
+			deletePods = append(deletePods, pod)
+		}
+	}
+	span.Annotate(nil, "Got provider pods")
+
+	var failedDeleteCount int64
+	for _, pod := range deletePods {
+		logger := logger.WithField("pod", pod.Name)
+		logger.Debug("Deleting pod '%s'\n", pod.Name)
+		if err := s.deletePod(ctx, pod); err != nil {
+			logger.WithError(err).Error("Error deleting pod")
+			failedDeleteCount++
+			continue
+		}
+	}
+	span.Annotate(
+		[]trace.Attribute{
+			trace.Int64Attribute("expected_delete_pods_count", int64(len(deletePods))),
+			trace.Int64Attribute("failed_delete_pods_count", failedDeleteCount),
+		},
+		"Cleaned up stale provider pods",
+	)
+
+	pods := s.resourceManager.GetPods()
+
+	var createPods []*corev1.Pod
+	cleanupPods := deletePods[:0]
+
+	for _, pod := range pods {
+		var providerPod *corev1.Pod
+		for _, p := range providerPods {
+			if p.Namespace == pod.Namespace && p.Name == pod.Name {
+				providerPod = p
+				break
+			}
+		}
+
+		// Delete pod if DeletionTimestamp is set
+		if pod.DeletionTimestamp != nil {
+			cleanupPods = append(cleanupPods, pod)
+			continue
+		}
+
+		if providerPod == nil &&
+			pod.DeletionTimestamp == nil &&
+			pod.Status.Phase != corev1.PodSucceeded &&
+			pod.Status.Phase != corev1.PodFailed &&
+			pod.Status.Reason != podStatusReasonProviderFailed {
+			createPods = append(createPods, pod)
+		}
+	}
+
+	var failedCreateCount int64
+	for _, pod := range createPods {
+		logger := logger.WithField("pod", pod.Name)
+		logger.Debug("Creating pod")
+		if err := s.createPod(ctx, pod); err != nil {
+			failedCreateCount++
+			logger.WithError(err).Error("Error creating pod")
+			continue
+		}
+	}
+	span.Annotate(
+		[]trace.Attribute{
+			trace.Int64Attribute("expected_created_pods", int64(len(createPods))),
+			trace.Int64Attribute("failed_pod_creates", failedCreateCount),
+		},
+		"Created pods in provider",
+	)
+
+	var failedCleanupCount int64
+	for _, pod := range cleanupPods {
+		logger := logger.WithField("pod", pod.Name)
+		log.Trace(logger, "Pod pending deletion")
+		var err error
+		if err = s.deletePod(ctx, pod); err != nil {
+			logger.WithError(err).Error("Error deleting pod")
+			failedCleanupCount++
+			continue
+		}
+		log.Trace(logger, "Pod deletion complete")
+	}
+
+	span.Annotate(
+		[]trace.Attribute{
+			trace.Int64Attribute("expected_cleaned_up_pods", int64(len(cleanupPods))),
+			trace.Int64Attribute("cleaned_up_pod_failures", failedCleanupCount),
+		},
+		"Cleaned up provider pods marked for deletion",
+	)
+}
+
 func addPodAttributes(span *trace.Span, pod *corev1.Pod) {
 	span.AddAttributes(
 		trace.StringAttribute("uid", string(pod.UID)),
@@ -362,16 +481,16 @@ func (s *Server) startPodSynchronizer(ctx context.Context, id int) {
 	logger := log.G(ctx).WithField("podSynchronizer", id)
 	logger.Debug("Start pod synchronizer")
 
-	for p := range s.podCh {
-		if p.DeletionTimestamp != nil {
-			logger.Infof("Deleting pod '%s/%s'", p.GetNamespace(), p.GetName())
-			if err := s.deletePod(ctx, p); err != nil {
-				logger.WithError(err).Errorf("Failed to delete pod '%s/%s'", p.GetNamespace(), p.GetName())
+	for pod := range s.podCh {
+		if pod.DeletionTimestamp != nil {
+			logger.Infof("Deleting pod '%s/%s'", pod.GetNamespace(), pod.GetName())
+			if err := s.deletePod(ctx, pod); err != nil {
+				logger.WithError(err).Errorf("Failed to delete pod '%s/%s'", pod.GetNamespace(), pod.GetName())
 			}
 		} else {
-			logger.Infof("Creating pod '%s/%s' ", p.GetNamespace(), p.GetName())
-			if err := s.createPod(ctx, p); err != nil {
-				logger.WithError(err).Errorf("Failed to create pod '%s/%s'", p.GetNamespace(), p.GetName())
+			logger.Infof("Creating pod '%s/%s' ", pod.GetNamespace(), pod.GetName())
+			if err := s.createPod(ctx, pod); err != nil {
+				logger.WithError(err).Errorf("Failed to create pod '%s/%s'", pod.GetNamespace(), pod.GetName())
 			}
 		}
 	}
