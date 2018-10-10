@@ -1505,11 +1505,16 @@ func aciContainerStateToContainerState(cs aci.ContainerState) v1.ContainerState 
 		}
 	}
 
+	state := cs.State
+	if state == "" {
+		state = "Creating"
+	}
+
 	// Handle the case where the container is pending.
 	// Which should be all other aci states.
 	return v1.ContainerState{
 		Waiting: &v1.ContainerStateWaiting{
-			Reason:  cs.State,
+			Reason:  state,
 			Message: cs.DetailStatus,
 		},
 	}
