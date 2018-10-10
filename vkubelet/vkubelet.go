@@ -454,7 +454,7 @@ func (s *Server) onUpdatePod(ctx context.Context, obj interface{}) {
 		return
 	}
 
-	logger.Debugf("Receive updated pod '%s/%s' ", pod.GetNamespace(), pod.GetName())
+	logger.Debugf("Receive updated pod '%s/%s'", pod.GetNamespace(), pod.GetName())
 
 	if s.resourceManager.UpdatePod(pod) {
 		s.podCh <- pod
@@ -470,7 +470,7 @@ func (s *Server) onDeletePod(ctx context.Context, obj interface{}) {
 		return
 	}
 
-	logger.Debugf("Receive deleted pod '%s/%s' ", pod.GetNamespace(), pod.GetName())
+	logger.Debugf("Receive deleted pod '%s/%s'", pod.GetNamespace(), pod.GetName())
 
 	if s.resourceManager.DeletePod(pod) {
 		s.podCh <- pod
@@ -488,7 +488,7 @@ func (s *Server) startPodSynchronizer(ctx context.Context, id int) {
 				logger.WithError(err).Errorf("Failed to delete pod '%s/%s'", pod.GetNamespace(), pod.GetName())
 			}
 		} else {
-			logger.Infof("Creating pod '%s/%s' ", pod.GetNamespace(), pod.GetName())
+			logger.Infof("Creating pod '%s/%s'", pod.GetNamespace(), pod.GetName())
 			if err := s.createPod(ctx, pod); err != nil {
 				logger.WithError(err).Errorf("Failed to create pod '%s/%s'", pod.GetNamespace(), pod.GetName())
 			}
