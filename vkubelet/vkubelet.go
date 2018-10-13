@@ -115,9 +115,7 @@ func New(ctx context.Context, cfg Config) (s *Server, retErr error) {
 // Run starts the server, registers it with Kubernetes and begins watching/reconciling the cluster.
 // Run will block until Stop is called or a SIGINT or SIGTERM signal is received.
 func (s *Server) Run(ctx context.Context) error {
-	opts := metav1.ListOptions{
-		FieldSelector: fields.OneTermEqualSelector("spec.nodeName", s.nodeName).String(),
-	}
+
 
 		if err := s.watchForPodEvent(ctx); err != nil {
 			if pkgerrors.Cause(err) == context.Canceled {
