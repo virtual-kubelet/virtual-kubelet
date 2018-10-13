@@ -11,18 +11,18 @@
   source = "github.com/apache/thrift"
 
 [[projects]]
-  digest = "1:6453651bd5fc38b3a07d133c295a881c1bce87d4be4ccefe61eee26d22d6b15c"
+  digest = "1:c456e3cf993b0d01022ea6202c60aa9500bfef3e956a516c3a74c6a2cb6d4c09"
   name = "github.com/Azure/azure-sdk-for-go"
   packages = [
     "profiles/preview/preview/servicefabricmesh/mgmt/servicefabricmesh",
     "services/batch/2017-09-01.6.0/batch",
-    "services/network/mgmt/2018-05-01/network",
+    "services/network/mgmt/2018-08-01/network",
     "services/preview/servicefabricmesh/mgmt/2018-07-01-preview/servicefabricmesh",
     "version",
   ]
   pruneopts = "NUT"
-  revision = "4e8cbbfb1aeab140cd0fa97fd16b64ee18c3ca6a"
-  version = "v19.1.0"
+  revision = "6d20bdbae88c06c36d72eb512295417693bfdf4e"
+  version = "v21.1.0"
 
 [[projects]]
   branch = "master"
@@ -36,7 +36,7 @@
   revision = "d6e3b3328b783f23731bc4d058875b0371ff8109"
 
 [[projects]]
-  digest = "1:79ff3484367adc1fc269f409a12cb2e877159e45708ac4cf4ae48dd44f29436b"
+  digest = "1:f5ebea42286dc1adc789f62e7718426505370cf64b9c8a17775952037b1e2c87"
   name = "github.com/Azure/go-autorest"
   packages = [
     "autorest",
@@ -50,8 +50,8 @@
     "version",
   ]
   pruneopts = "NUT"
-  revision = "dd94e014aaf16d1df746762e392aa201c1b4c461"
-  version = "v10.15.0"
+  revision = "9bc4033dd347c7f416fca46b2f42a043dc1fbdf6"
+  version = "v10.15.5"
 
 [[projects]]
   digest = "1:167b6f65a6656de568092189ae791253939f076df60231fdd64588ac703892a1"
@@ -1505,7 +1505,7 @@
   input-imports = [
     "github.com/Azure/azure-sdk-for-go/profiles/preview/preview/servicefabricmesh/mgmt/servicefabricmesh",
     "github.com/Azure/azure-sdk-for-go/services/batch/2017-09-01.6.0/batch",
-    "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2018-05-01/network",
+    "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2018-08-01/network",
     "github.com/Azure/go-autorest/autorest",
     "github.com/Azure/go-autorest/autorest/adal",
     "github.com/Azure/go-autorest/autorest/azure",
