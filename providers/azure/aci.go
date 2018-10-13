@@ -45,7 +45,6 @@ const (
 
 	subnetsAction           = "Microsoft.Network/virtualNetworks/subnets/action"
 	subnetDelegationService = "Microsoft.ContainerInstance/containerGroups"
-	networkProfileType      = "Microsoft.Network/networkProfiles"
 )
 
 // DNS configuration settings
@@ -331,24 +330,42 @@ func (p *ACIProvider) setupNetworkProfile(auth *client.Authentication) error {
 	}
 	if err == nil {
 		if p.subnetCIDR == "" {
-			p.subnetCIDR = subnet.Properties.AddressPrefix
+			p.subnetCIDR = *subnet.SubnetPropertiesFormat.AddressPrefix
 		}
-		if p.subnetCIDR != subnet.Properties.AddressPrefix {
-			return fmt.Errorf("found subnet '%s' using different CIDR: '%s'. desired: '%s'", p.subnetName, subnet.Properties.AddressPrefix, p.subnetCIDR)
+		if p.subnetCIDR != *subnet.SubnetPropertiesFormat.AddressPrefix {
+			return fmt.Errorf("found subnet '%s' using different CIDR: '%s'. desired: '%s'", p.subnetName, *subnet.SubnetPropertiesFormat.AddressPrefix, p.subnetCIDR)
 		}
-		for _, d := range subnet.Properties.Delegations {
-			if d.Properties.ServiceName == subnetDelegationService {
-				createSubnet = false
-				break
+		if subnet.SubnetPropertiesFormat.NetworkSecurityGroup != nil {
+			return fmt.Errorf("unable to delegate subnet '%s' to Azure Container Instance since it references the network security group '%s'.", p.subnetName, *subnet.SubnetPropertiesFormat.NetworkSecurityGroup.ID)
+		}
+		if subnet.SubnetPropertiesFormat.RouteTable != nil {
+                        return fmt.Errorf("unable to delegate subnet '%s' to Azure Container Instance since it references the route table '%s'.", p.subnetName, *subnet.SubnetPropertiesFormat.RouteTable.ID)
+                }
+		if subnet.SubnetPropertiesFormat.ServiceAssociationLinks != nil {
+			for _, l := range *subnet.SubnetPropertiesFormat.ServiceAssociationLinks {
+				if l.ServiceAssociationLinkPropertiesFormat != nil && *l.ServiceAssociationLinkPropertiesFormat.LinkedResourceType == subnetDelegationService {
+					createSubnet = false
+					break
+				}
+
+				return fmt.Errorf("unable to delegate subnet '%s' to Azure Container Instance as it is used by other Azure resource: '%v'.", p.subnetName, l)
+			}
+		} else {
+			if subnet.SubnetPropertiesFormat.IPConfigurationProfiles != nil && len(*subnet.SubnetPropertiesFormat.IPConfigurationProfiles) != 0 {
+				return fmt.Errorf("unable to delegate subnet '%s' to Azure Container Instance as its IP configuration profiles is not empty.", p.subnetName)
+			}
+
+			for _, d := range *subnet.SubnetPropertiesFormat.Delegations {
+				if d.ServiceDelegationPropertiesFormat != nil && *d.ServiceDelegationPropertiesFormat.ServiceName == subnetDelegationService {
+					createSubnet = false
+					break
+				}
 			}
 		}
 	}
 
 	if createSubnet {
-		if subnet == nil {
-			subnet = &network.Subnet{Name: p.subnetName}
-		}
-		populateSubnet(subnet, p.subnetCIDR)
+		subnet = network.NewSubnetWithContainerInstanceDelegation(p.subnetName, p.subnetCIDR)
 		subnet, err = c.CreateOrUpdateSubnet(p.vnetResourceGroup, p.vnetName, subnet)
 		if err != nil {
 			return fmt.Errorf("error creating subnet: %v", err)
@@ -360,66 +377,25 @@ func (p *ACIProvider) setupNetworkProfile(auth *client.Authentication) error {
 		return fmt.Errorf("error while looking up network profile: %v", err)
 	}
 	if err == nil {
-		for _, config := range profile.Properties.ContainerNetworkInterfaceConfigurations {
-			for _, ipConfig := range config.Properties.IPConfigurations {
-				if ipConfig.Properties.Subnet.ID == subnet.ID {
-					p.networkProfile = profile.ID
+		for _, config := range *profile.ProfilePropertiesFormat.ContainerNetworkInterfaceConfigurations {
+			for _, ipConfig := range *config.ContainerNetworkInterfaceConfigurationPropertiesFormat.IPConfigurations {
+				if *ipConfig.IPConfigurationProfilePropertiesFormat.Subnet.ID == *subnet.ID {
+					p.networkProfile = *profile.ID
 					return nil
 				}
 			}
 		}
-		return fmt.Errorf("found existing network profile but the profile is not linked to the subnet: %v, %v", profile, err)
 	}
 
 	// at this point, profile should be nil
-	profile = &network.Profile{
-		Name:     p.nodeName,
-		Location: p.region,
-		Type:     networkProfileType,
-	}
-
-	populateNetworkProfile(profile, subnet)
+	profile = network.NewNetworkProfile(p.nodeName, p.region, *subnet.ID)
 	profile, err = c.CreateOrUpdateProfile(p.resourceGroup, profile)
 	if err != nil {
 		return err
 	}
 
-	p.networkProfile = profile.ID
+	p.networkProfile = *profile.ID
 	return nil
-}
-
-func populateSubnet(s *network.Subnet, cidr string) {
-	if s.Properties == nil {
-		s.Properties = &network.SubnetProperties{
-			AddressPrefix: cidr,
-		}
-	}
-
-	s.Properties.Delegations = append(s.Properties.Delegations, network.Delegation{
-		Name: "aciDelegation",
-		Properties: network.DelegationProperties{
-			ServiceName: subnetDelegationService,
-			Actions:     []string{subnetsAction},
-		},
-	})
-}
-
-func populateNetworkProfile(p *network.Profile, subnet *network.Subnet) {
-	p.Properties.ContainerNetworkInterfaceConfigurations = append(p.Properties.ContainerNetworkInterfaceConfigurations, network.InterfaceConfiguration{
-		Name: "eth0",
-		Properties: network.InterfaceConfigurationProperties{
-			IPConfigurations: []network.IPConfiguration{
-				{
-					Name: "ipconfigprofile1",
-					Properties: network.IPConfigurationProperties{
-						Subnet: network.ID{
-							ID: subnet.ID,
-						},
-					},
-				},
-			},
-		},
-	})
 }
 
 func getKubeProxyExtension(secretPath, masterURI, clusterCIDR string) (*aci.Extension, error) {
