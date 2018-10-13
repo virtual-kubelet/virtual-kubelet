@@ -253,20 +253,21 @@ func (s *Server) watchForPodEvent(ctx context.Context) error {
 	var controller cache.Controller
 	_, controller = cache.NewInformer(
 
-	&cache.ListWatch{
+		&cache.ListWatch{
 
-		ListFunc: func(options metav1.ListOptions) (runtime.Object, error) {
-			if controller != nil {
-				opts.ResourceVersion = controller.LastSyncResourceVersion()
-			}
+			ListFunc: func(options metav1.ListOptions) (runtime.Object, error) {
+				if controller != nil {
+					opts.ResourceVersion = controller.LastSyncResourceVersion()
+				}
 
-			return s.k8sClient.Core().Pods(s.namespace).List(opts)
-		},
+				return s.k8sClient.Core().Pods(s.namespace).List(opts)
+			},
 
-		WatchFunc: func(options metav1.ListOptions) (watch.Interface, error) {
-			if controller != nil {
-				opts.ResourceVersion = controller.LastSyncResourceVersion()
-			}
+			WatchFunc: func(options metav1.ListOptions) (watch.Interface, error) {
+				if controller != nil {
+					opts.ResourceVersion = controller.LastSyncResourceVersion()
+				}
+			},
 		},
 
 		&corev1.Pod{},
