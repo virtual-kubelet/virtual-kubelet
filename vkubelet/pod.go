@@ -17,6 +17,11 @@ import (
 	"k8s.io/client-go/tools/cache"
 )
 
+const (
+	defaultPodSynchronizerPoolSize = 10
+	cacheSyncIntervalInMinutes     = 1
+)
+
 func addPodAttributes(span *trace.Span, pod *corev1.Pod) {
 	span.AddAttributes(
 		trace.StringAttribute("uid", string(pod.UID)),
@@ -97,9 +102,6 @@ func (s *Server) startPodSynchronizer(ctx context.Context, id int) {
 
 	for {
 		select {
-		case <-ctx.Done():
-			logger.Info("context is done.")
-			return
 		case pod, ok := <-s.podCh:
 			if !ok {
 				logger.Info("pod channel is closed.")
@@ -278,7 +280,7 @@ func (s *Server) watchForPodEvent(ctx context.Context) error {
 
 		&corev1.Pod{},
 
-		1*time.Minute,
+		cacheSyncIntervalInMinutes*time.Minute,
 
 		cache.ResourceEventHandlerFuncs{
 			AddFunc:    func(obj interface{}) {
@@ -293,7 +295,7 @@ func (s *Server) watchForPodEvent(ctx context.Context) error {
 		},
 	)
 
-	for i := 0; i < 10; i++ {
+	for i := 0; i < defaultPodSynchronizerPoolSize; i++ {
 		go s.startPodSynchronizer(ctx, i)
 	}
 
