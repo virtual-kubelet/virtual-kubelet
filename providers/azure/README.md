@@ -5,6 +5,7 @@ Azure Container Instances (ACI) provide a hosted environment for running contain
 The Azure Container Instances provider for the Virtual Kubelet configures an ACI instance as a node in any Kubernetes cluster. When using the Virtual Kubelet ACI provider, pods can be scheduled on an ACI instance as if the ACI instance is a standard Kubernetes node. This configuration allows you to take advantage of both the capabilities of Kubernetes and the management value and cost benefit of ACI.
 
 This document details configuring the Virtual Kubelet ACI provider.
+
 #### Table of Contents
 
 * [Prerequiste](#prerequisite)
@@ -15,6 +16,7 @@ This document details configuring the Virtual Kubelet ACI provider.
 * [Schedule a pod in ACI](#schedule-a-pod-in-aci)
 * [Upgrade the ACI Connector ](#upgrade-the-aci-connector)
 * [Remove the Virtual Kubelet](#remove-the-virtual-kubelet)
+
 ## Prerequisite
 
 This guide assumes that you have a Kubernetes cluster up and running (can be `minikube`) and that `kubectl` is already configured to talk to it.
@@ -194,28 +196,19 @@ resources on your account on behalf of Kubernetes.
 Run these commands to deploy the virtual kubelet which connects your Kubernetes cluster to Azure Container Instances.
 
 ```cli
-export AKS_VK_RELEASE=virtual-kubelet-0.1.7
-export VK_RElEASE=virtual-kubelet-0.3.0
+export AKS_VK_RELEASE=virtual-kubelet-for-aks-latest
+export VK_RElEASE=virtual-kubelet-latest
 ```
 
 If your cluster is an AKS cluster:
 ```cli
 RELEASE_NAME=virtual-kubelet
 NODE_NAME=virtual-kubelet
-CHART_URL=https://github.com/virtual-kubelet/virtual-kubelet/raw/master/charts/$AKS_VK_RELEASE.tgz
-
-curl https://raw.githubusercontent.com/virtual-kubelet/virtual-kubelet/master/scripts/createCertAndKey.sh > createCertAndKey.sh
-chmod +x createCertAndKey.sh
-. ./createCertAndKey.sh
+CHART_URL=https://github.com/virtual-kubelet/virtual-kubelet/raw/master/charts/$VK_RELEASE.tgz
 
 helm install "$CHART_URL" --name "$RELEASE_NAME" \
   --set provider=azure \
   --set providers.azure.targetAKS=true \
-  --set providers.azure.tenantId=$AZURE_TENANT_ID \
-  --set providers.azure.subscriptionId=$AZURE_SUBSCRIPTION_ID \
-  --set providers.azure.clientId=$AZURE_CLIENT_ID \
-  --set apiserverCert=$cert \
-  --set apiserverKey=$key
 ```
 
 For any other type of Kubernetes cluster:
@@ -224,16 +217,10 @@ RELEASE_NAME=virtual-kubelet
 NODE_NAME=virtual-kubelet
 CHART_URL=https://github.com/virtual-kubelet/virtual-kubelet/raw/master/charts/$VK_RELEASE.tgz
 
-curl https://raw.githubusercontent.com/virtual-kubelet/virtual-kubelet/master/scripts/createCertAndKey.sh > createCertAndKey.sh
-chmod +x createCertAndKey.sh
-. ./createCertAndKey.sh
-
 helm install "$CHART_URL" --name "$RELEASE_NAME" \
   --set provider=azure \
   --set rbac.install=true \
   --set providers.azure.targetAKS=false \
-  --set providers.azure.tenantId=$AZURE_TENANT_ID \
-  --set providers.azure.subscriptionId=$AZURE_SUBSCRIPTION_ID \
   --set providers.azure.clientId=$AZURE_CLIENT_ID \
   --set providers.azure.clientKey=$AZURE_CLIENT_SECRET \
   --set providers.azure.aciResourceGroup=$AZURE_RG \
@@ -291,6 +278,7 @@ To verify that virtual kubelet has started, run:
     export CLUSTER_SUBNET_NAME=myAKSSubnet 
     export ACI_SUBNET_NAME=myACISubnet 
     export AKS_CLUSTER_RG=myresourcegroup 
+    export KUBE_DNS_IP=10.0.0.10
   ```
   Run the following command to create a virtual network within Azure, and a subnet within that VNet. The subnet will be dedicated to the nodes in the AKS cluster.
 
@@ -318,7 +306,7 @@ az network vnet subnet create \
 Create an Azure Active Directory service principal to allow AKS to interact with other Azure resources. You can use a pre-created service principal too. 
 
 ```cli
-az ad sp create-for-rbac --skip-assignment
+az ad sp create-for-rbac -n "virtual-kubelet-sp" --skip-assignment
 ```
 
 The output should look similar to the following. 
@@ -328,7 +316,7 @@ The output should look similar to the following.
   "appId": "bef76eb3-d743-4a97-9534-03e9388811fc",
   "displayName": "azure-cli-2018-08-29-22-29-29",
   "name": "http://azure-cli-2018-08-29-22-29-29",
-  "password": "1d257915-8714-4ce7-a7fb-0e5a5411df7f",
+  "password": "1d257915-8714-4ce7-xxxxxxxxxxxxx",
   "tenant": "72f988bf-86f1-41af-91ab-2d7cd011db48"
 }
 ```
@@ -349,7 +337,7 @@ az network vnet show --resource-group $AKS_CLUSTER_RG --name $VNET_NAME --query 
 Grant access to the AKS cluster to use the virtual network by creating a role and assigning it. 
 
 ```cli
-az role assignment create --assignee $AZURE_CLIENT_ID --scope <vnetId> --role Contributor
+az role assignment create --assignee $AZURE_CLIENT_ID --scope <vnetId> --role NetworkContributor
 ```
 
 ### Create an AKS cluster with a virtual network
@@ -359,9 +347,9 @@ Grab the id of the cluster subnet you created earlier with the following command
 ```cli
 az network vnet subnet show --resource-group $AKS_CLUSTER_RG --vnet-name $VNET_NAME --name $CLUSTER_SUBNET_NAME --query id -o tsv
 ```
-Save the output in the following enviorment variable. 
+Save the entire output starting witn "/subscriptions/..." in the following enviorment variable. 
 ```cli 
-export VNET_SUBNET_ID=<subnet-id>
+export VNET_SUBNET_ID=<subnet-resource>
 ```
 Use the following command to create an AKS cluster with the virtual network you've already created. Use the enviorment variables from the service principal output, 
 ```cli
@@ -371,7 +359,7 @@ az aks create \
     --node-count 1 \
     --network-plugin azure \
     --service-cidr 10.0.0.0/16 \
-    --dns-service-ip 10.0.0.10 \
+    --dns-service-ip $KUBE_DNS_IP \
     --docker-bridge-address 172.17.0.1/16 \
     --vnet-subnet-id $VNET_SUBNET_ID \
     --service-principal $AZURE_CLIENT_ID \
@@ -385,11 +373,7 @@ Manually deploy the Virtual Kubelet, the following env. variables have already b
 ```cli
 RELEASE_NAME=virtual-kubelet
 NODE_NAME=virtual-kubelet
-CHART_URL=https://github.com/virtual-kubelet/virtual-kubelet/raw/master/charts/$AKS_VK_RELEASE.tgz
-
-curl https://raw.githubusercontent.com/virtual-kubelet/virtual-kubelet/master/scripts/createCertAndKey.sh > createCertAndKey.sh
-chmod +x createCertAndKey.sh
-. ./createCertAndKey.sh
+CHART_URL=https://github.com/virtual-kubelet/virtual-kubelet/raw/master/charts/$VK_RELEASE.tgz
 
 helm install "$CHART_URL" --name "$RELEASE_NAME" \
   --set provider=azure \
@@ -397,10 +381,9 @@ helm install "$CHART_URL" --name "$RELEASE_NAME" \
   --set providers.azure.tenantId=$AZURE_TENANT_ID \
   --set providers.azure.subscriptionId=$AZURE_SUBSCRIPTION_ID \
   --set providers.azure.clientId=$AZURE_CLIENT_ID \
-  --set providers.azure.aciVnetSubnetName=$ACI_SUBNET_NAME
-  --set apiserverCert=$cert \
-  --set apiserverKey=$key
-```
+  --set providers.azure.aciVnetSubnetName=$ACI_SUBNET_NAME \
+  --set providers.azure.kubeDnsIp=$KUBE_DNS_IP
+  ```
 
 ## Validate the Virtual Kubelet ACI provider
 
