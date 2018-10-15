@@ -3,6 +3,7 @@ package vkubelet
 import (
 	"context"
 	"fmt"
+	"time"
 
 	pkgerrors "github.com/pkg/errors"
 	"github.com/virtual-kubelet/virtual-kubelet/log"
@@ -10,7 +11,10 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/fields"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/watch"
+	"k8s.io/client-go/tools/cache"
 )
 
 func addPodAttributes(span *trace.Span, pod *corev1.Pod) {
@@ -134,7 +138,7 @@ func (s *Server) createPod(ctx context.Context, pod *corev1.Pod) error {
 	defer span.End()
 	addPodAttributes(span, pod)
 
-	if err := s.populateSecretsAndConfigMapsInEnv(pod); err != nil {
+	if err := s.populateEnvironmentVariables(pod); err != nil {
 		span.SetStatus(trace.Status{Code: trace.StatusCodeInvalidArgument, Message: err.Error()})
 		return err
 	}
@@ -267,6 +271,8 @@ func (s *Server) watchForPodEvent(ctx context.Context) error {
 				if controller != nil {
 					opts.ResourceVersion = controller.LastSyncResourceVersion()
 				}
+
+				return s.k8sClient.Core().Pods(s.namespace).Watch(opts)
 			},
 		},
 

@@ -11,12 +11,7 @@ import (
 	"github.com/virtual-kubelet/virtual-kubelet/providers"
 	"go.opencensus.io/trace"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/fields"
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/tools/cache"
 )
 
 const (
@@ -115,15 +110,12 @@ func New(ctx context.Context, cfg Config) (s *Server, retErr error) {
 // Run starts the server, registers it with Kubernetes and begins watching/reconciling the cluster.
 // Run will block until Stop is called or a SIGINT or SIGTERM signal is received.
 func (s *Server) Run(ctx context.Context) error {
-
-
-		if err := s.watchForPodEvent(ctx); err != nil {
-			if pkgerrors.Cause(err) == context.Canceled {
-				return err
-			}
-			log.G(ctx).Error(err)
-			break
+	if err := s.watchForPodEvent(ctx); err != nil {
+		if pkgerrors.Cause(err) == context.Canceled {
+			return err
 		}
+		log.G(ctx).Error(err)
+	}
 
 	return nil
 }
