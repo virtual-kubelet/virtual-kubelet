@@ -3,6 +3,8 @@ package network
 import (
 	"path"
 	"testing"
+
+	"github.com/Azure/azure-sdk-for-go/services/network/mgmt/2018-08-01/network"
 )
 
 func TestGetProfileNotFound(t *testing.T) {
@@ -23,42 +25,14 @@ func TestCreateGetProfile(t *testing.T) {
 	c := newTestClient(t)
 	ensureVnet(t, t.Name())
 
-	subnet := &Subnet{
-		Name: t.Name(),
-		Properties: &SubnetProperties{
-			AddressPrefix: "10.0.0.0/24",
-		},
-	}
+	subnet := NewSubnetWithContainerInstanceDelegation(t.Name(), "10.0.0.0/24")
 
 	subnet, err := c.CreateOrUpdateSubnet(resourceGroup, t.Name(), subnet)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	p := &Profile{
-		Name:     t.Name(),
-		Type:     "Microsoft.Network/networkProfiles",
-		Location: location,
-		Properties: ProfileProperties{
-			ContainerNetworkInterfaceConfigurations: []InterfaceConfiguration{
-				{
-					Name: "eth0",
-					Properties: InterfaceConfigurationProperties{
-						IPConfigurations: []IPConfiguration{
-							{
-								Name: "ipconfigprofile1",
-								Properties: IPConfigurationProperties{
-									Subnet: ID{
-										ID: subnet.ID,
-									},
-								},
-							},
-						},
-					},
-				},
-			},
-		},
-	}
+	p := NewNetworkProfile(t.Name(), location, *subnet.ID)
 
 	p1, err := c.CreateOrUpdateProfile(resourceGroup, p)
 	if err != nil {
@@ -67,23 +41,27 @@ func TestCreateGetProfile(t *testing.T) {
 	if p1 == nil {
 		t.Fatal("create profile should return profile")
 	}
-	if p1.ID == "" {
+	if p1.ID == nil || *p1.ID == "" {
 		t.Fatal("create profile should return profile.ID")
 	}
 
-	var p2 *Profile
-	p2, err = c.GetProfile(resourceGroup, p.Name)
+	var p2 *network.Profile
+	p2, err = c.GetProfile(resourceGroup, *p.Name)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	if len(p2.Properties.ContainerNetworkInterfaceConfigurations) != 1 {
-		t.Fatalf("got unexpected profile properties: %+v", p2.Properties)
+	if len(*p2.ProfilePropertiesFormat.ContainerNetworkInterfaceConfigurations) != 1 {
+		t.Fatalf("got unexpected profile properties: %+v", *p2.ProfilePropertiesFormat)
 	}
-	if len(p2.Properties.ContainerNetworkInterfaceConfigurations[0].Properties.IPConfigurations) != 1 {
-		t.Fatalf("got unexpected profile IP configuration: %+v", p2.Properties.ContainerNetworkInterfaceConfigurations[0].Properties.IPConfigurations)
+
+	containterNetworkInterfaceConfiguration := (*p2.ProfilePropertiesFormat.ContainerNetworkInterfaceConfigurations)[0]
+	if len(*containterNetworkInterfaceConfiguration.ContainerNetworkInterfaceConfigurationPropertiesFormat.IPConfigurations) != 1 {
+		t.Fatalf("got unexpected profile IP configuration: %+v", *containterNetworkInterfaceConfiguration.ContainerNetworkInterfaceConfigurationPropertiesFormat.IPConfigurations)
 	}
-	if p2.Properties.ContainerNetworkInterfaceConfigurations[0].Properties.IPConfigurations[0].Properties.Subnet.ID != subnet.ID {
+
+	ipConfiguration := (*containterNetworkInterfaceConfiguration.ContainerNetworkInterfaceConfigurationPropertiesFormat.IPConfigurations)[0]
+	if *ipConfiguration.IPConfigurationProfilePropertiesFormat.Subnet.ID != *subnet.ID {
 		t.Fatal("got unexpected subnet")
 	}
 
@@ -92,12 +70,12 @@ func TestCreateGetProfile(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if len(subnet.Properties.IPConfigurationProfiles) != 1 {
-		t.Fatalf("got unexpected subnet IP configuration profiles: %+v", subnet.Properties.IPConfigurationProfiles)
+	if len(*subnet.SubnetPropertiesFormat.IPConfigurationProfiles) != 1 {
+		t.Fatalf("got unexpected subnet IP configuration profiles: %+v", *subnet.SubnetPropertiesFormat.IPConfigurationProfiles)
 	}
 
-	expected := path.Join(p2.ID, "containerNetworkInterfaceConfigurations/eth0/ipConfigurations/ipconfigprofile1")
-	if subnet.Properties.IPConfigurationProfiles[0].ID != expected {
-		t.Fatalf("got unexpected profile, expected:\n\t%s, got:\n\t%s", expected, subnet.Properties.IPConfigurationProfiles[0].ID)
+	expected := path.Join(*p2.ID, "containerNetworkInterfaceConfigurations/eth0/ipConfigurations/ipconfigprofile1")
+	if *(*subnet.SubnetPropertiesFormat.IPConfigurationProfiles)[0].ID != expected {
+		t.Fatalf("got unexpected profile, expected:\n\t%s, got:\n\t%s", expected, *(*subnet.SubnetPropertiesFormat.IPConfigurationProfiles)[0].ID)
 	}
 }
