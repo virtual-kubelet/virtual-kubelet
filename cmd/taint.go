@@ -11,7 +11,7 @@ import (
 
 // Default taint values
 const (
-	DefaultTaintEffect = corev1.TaintEffectPreferNoSchedule
+	DefaultTaintEffect = corev1.TaintEffectNoSchedule
 	DefaultTaintKey    = "virtual-kubelet.io/provider"
 )
 
