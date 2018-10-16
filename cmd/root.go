@@ -61,7 +61,7 @@ var k8sClient *kubernetes.Clientset
 var p providers.Provider
 var rm *manager.ResourceManager
 var apiConfig vkubelet.APIConfig
-var podSyncPoolSize int
+var podSyncWorkers int
 
 var userTraceExporters []string
 var userTraceConfig = TracingExporterOptions{Tags: make(map[string]string)}
@@ -86,7 +86,7 @@ This allows users to schedule kubernetes workloads on nodes that aren't running 
 			Provider:        p,
 			ResourceManager: rm,
 			APIConfig:       apiConfig,
-			PodSyncPoolSize: podSyncPoolSize,
+			PodSyncWorkers:  podSyncWorkers,
 		})
 		if err != nil {
 			log.L.WithError(err).Fatal("Error initializing virtual kubelet")
@@ -171,6 +171,7 @@ func init() {
 	RootCmd.PersistentFlags().StringVar(&taintKey, "taint", "", "Set node taint key")
 	RootCmd.PersistentFlags().MarkDeprecated("taint", "Taint key should now be configured using the VK_TAINT_KEY environment variable")
 	RootCmd.PersistentFlags().StringVar(&logLevel, "log-level", "info", `set the log level, e.g. "trace", debug", "info", "warn", "error"`)
+	RootCmd.PersistentFlags().IntVar(&podSyncWorkers, "pod-sync-workers", 10, `set the number of pod synchronization workers. default is 10.`)
 
 	RootCmd.PersistentFlags().StringSliceVar(&userTraceExporters, "trace-exporter", nil, fmt.Sprintf("sets the tracing exporter to use, available exporters: %s", AvailableTraceExporters()))
 	RootCmd.PersistentFlags().StringVar(&userTraceConfig.ServiceName, "trace-service-name", "virtual-kubelet", "sets the name of the service used to register with the trace exporter")
@@ -282,6 +283,10 @@ func initConfig() {
 		logger.WithError(err).Fatal("Error reading API config")
 	}
 
+	if podSyncWorkers <= 0 {
+		logger.Fatal("The number of pod synchronization workers should not be negative")
+	}
+
 	for k := range userTraceConfig.Tags {
 		if reservedTagNames[k] {
 			logger.WithField("tag", k).Fatal("must not use a reserved tag key")
@@ -328,28 +333,6 @@ func initConfig() {
 			)
 		}
 	}
-
-	podSyncPoolSize = getPodSyncPoolSize(logger)
-}
-
-func getPodSyncPoolSize(logger *logrus.Entry) int {
-	poolSizeEnv := os.Getenv("POD_SYNC_POOL_SIZE")
-	if poolSizeEnv == "" {
-		logger.Debugf("POD_SYNC_POOL_SIZE is not set. Use default value: %d", defaultPodSyncPoolSize)
-		return defaultPodSyncPoolSize
-	}
-
-	poolSize, err := strconv.Atoi(poolSizeEnv)
-	if err != nil {
-		logger.Errorf("POD_SYNC_POOL_SIZE (%s) is not an integer. Use default value: %d", poolSizeEnv, defaultPodSyncPoolSize)
-		return defaultPodSyncPoolSize
-	}
-	if poolSize <= 0 {
-		logger.Errorf("POD_SYNC_POOL_SIZE (%s) is not valid. Use default value: %d", poolSizeEnv, defaultPodSyncPoolSize)
-		return defaultPodSyncPoolSize
-	}
-
-	return poolSize
 }
 
 func getAPIConfig() (vkubelet.APIConfig, error) {

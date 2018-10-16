@@ -287,7 +287,7 @@ func (s *Server) watchForPodEvent(ctx context.Context) error {
 		},
 	)
 
-	for i := 0; i < s.podSyncPoolSize; i++ {
+	for i := 0; i < s.podSyncWorkers; i++ {
 		go s.startPodSynchronizer(ctx, i)
 	}
 

@@ -26,7 +26,7 @@ type Server struct {
 	taint           *corev1.Taint
 	provider        providers.Provider
 	resourceManager *manager.ResourceManager
-	podSyncPoolSize int
+	podSyncWorkers  int
 	podCh           chan *podNotification
 }
 
@@ -40,7 +40,7 @@ type Config struct {
 	Provider        providers.Provider
 	ResourceManager *manager.ResourceManager
 	Taint           *corev1.Taint
-	PodSyncPoolSize int
+	PodSyncWorkers  int
 }
 
 // APIConfig is used to configure the API server of the virtual kubelet.
@@ -64,8 +64,8 @@ func New(ctx context.Context, cfg Config) (s *Server, retErr error) {
 		k8sClient:       cfg.Client,
 		resourceManager: cfg.ResourceManager,
 		provider:        cfg.Provider,
-		podSyncPoolSize: cfg.PodSyncPoolSize,
-		podCh:           make(chan *podNotification, 1024),
+		podSyncWorkers:  cfg.PodSyncWorkers,
+		podCh:           make(chan *podNotification, cfg.PodSyncWorkers),
 	}
 
 	ctx = log.WithLogger(ctx, log.G(ctx))
