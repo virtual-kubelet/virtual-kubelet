@@ -351,10 +351,6 @@ func (p *ACIProvider) setupNetworkProfile(auth *client.Authentication) error {
 				return fmt.Errorf("unable to delegate subnet '%s' to Azure Container Instance as it is used by other Azure resource: '%v'.", p.subnetName, l)
 			}
 		} else {
-			if subnet.SubnetPropertiesFormat.IPConfigurationProfiles != nil && len(*subnet.SubnetPropertiesFormat.IPConfigurationProfiles) != 0 {
-				return fmt.Errorf("unable to delegate subnet '%s' to Azure Container Instance as its IP configuration profiles is not empty.", p.subnetName)
-			}
-
 			for _, d := range *subnet.SubnetPropertiesFormat.Delegations {
 				if d.ServiceDelegationPropertiesFormat != nil && *d.ServiceDelegationPropertiesFormat.ServiceName == subnetDelegationService {
 					createSubnet = false
