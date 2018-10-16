@@ -17,11 +17,6 @@ import (
 	"k8s.io/client-go/tools/cache"
 )
 
-const (
-	defaultPodSynchronizerPoolSize = 10
-	cacheSyncIntervalInMinutes     = 1
-)
-
 func addPodAttributes(span *trace.Span, pod *corev1.Pod) {
 	span.AddAttributes(
 		trace.StringAttribute("uid", string(pod.UID)),
@@ -49,7 +44,7 @@ func (s *Server) onAddPod(ctx context.Context, obj interface{}) {
 
 	if s.resourceManager.UpdatePod(pod) {
 		span.Annotate(nil, "Add pod to synchronizer channel.")
-		s.podCh <- pod
+		s.podCh <- &podNotification{pod: pod, ctx: ctx}
 	}
 }
 
@@ -72,7 +67,7 @@ func (s *Server) onUpdatePod(ctx context.Context, obj interface{}) {
 
 	if s.resourceManager.UpdatePod(pod) {
 		span.Annotate(nil, "Add pod to synchronizer channel.")
-		s.podCh <- pod
+		s.podCh <- &podNotification{pod: pod, ctx: ctx}
 	}
 }
 
@@ -95,7 +90,7 @@ func (s *Server) onDeletePod(ctx context.Context, obj interface{}) {
 
 	if s.resourceManager.DeletePod(pod) {
 		span.Annotate(nil, "Add pod to synchronizer channel.")
-		s.podCh <- pod
+		s.podCh <- &podNotification{pod: pod, ctx: ctx}
 	}
 }
 
@@ -103,17 +98,11 @@ func (s *Server) startPodSynchronizer(ctx context.Context, id int) {
 	logger := log.G(ctx).WithField("method", "startPodSynchronizer").WithField("podSynchronizer", id)
 	logger.Debug("Start pod synchronizer")
 
-	for {
-		select {
-		case pod, ok := <-s.podCh:
-			if !ok {
-				logger.Info("pod channel is closed.")
-				return
-			}
-
-			s.syncPod(ctx, pod)
-		}
+	for event := range s.podCh {
+		s.syncPod(event.ctx, event.pod)
 	}
+
+	logger.Info("pod channel is closed.")
 }
 
 func (s *Server) syncPod(ctx context.Context, pod *corev1.Pod) {
@@ -283,7 +272,7 @@ func (s *Server) watchForPodEvent(ctx context.Context) error {
 
 		&corev1.Pod{},
 
-		cacheSyncIntervalInMinutes*time.Minute,
+		time.Minute,
 
 		cache.ResourceEventHandlerFuncs{
 			AddFunc:    func(obj interface{}) {
@@ -298,7 +287,7 @@ func (s *Server) watchForPodEvent(ctx context.Context) error {
 		},
 	)
 
-	for i := 0; i < defaultPodSynchronizerPoolSize; i++ {
+	for i := 0; i < s.podSyncPoolSize; i++ {
 		go s.startPodSynchronizer(ctx, i)
 	}
 

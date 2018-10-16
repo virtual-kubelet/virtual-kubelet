@@ -41,7 +41,8 @@ import (
 )
 
 const (
-	defaultDaemonPort = "10250"
+	defaultDaemonPort      = "10250"
+	defaultPodSyncPoolSize = 10
 )
 
 var kubeletConfig string
@@ -60,6 +61,7 @@ var k8sClient *kubernetes.Clientset
 var p providers.Provider
 var rm *manager.ResourceManager
 var apiConfig vkubelet.APIConfig
+var podSyncPoolSize int
 
 var userTraceExporters []string
 var userTraceConfig = TracingExporterOptions{Tags: make(map[string]string)}
@@ -84,6 +86,7 @@ This allows users to schedule kubernetes workloads on nodes that aren't running 
 			Provider:        p,
 			ResourceManager: rm,
 			APIConfig:       apiConfig,
+			PodSyncPoolSize: podSyncPoolSize,
 		})
 		if err != nil {
 			log.L.WithError(err).Fatal("Error initializing virtual kubelet")
@@ -325,6 +328,28 @@ func initConfig() {
 			)
 		}
 	}
+
+	podSyncPoolSize = getPodSyncPoolSize(logger)
+}
+
+func getPodSyncPoolSize(logger *logrus.Entry) int {
+	poolSizeEnv := os.Getenv("POD_SYNC_POOL_SIZE")
+	if poolSizeEnv == "" {
+		logger.Debugf("POD_SYNC_POOL_SIZE is not set. Use default value: %d", defaultPodSyncPoolSize)
+		return defaultPodSyncPoolSize
+	}
+
+	poolSize, err := strconv.Atoi(poolSizeEnv)
+	if err != nil {
+		logger.Errorf("POD_SYNC_POOL_SIZE (%s) is not an integer. Use default value: %d", poolSizeEnv, defaultPodSyncPoolSize)
+		return defaultPodSyncPoolSize
+	}
+	if poolSize <= 0 {
+		logger.Errorf("POD_SYNC_POOL_SIZE (%s) is not valid. Use default value: %d", poolSizeEnv, defaultPodSyncPoolSize)
+		return defaultPodSyncPoolSize
+	}
+
+	return poolSize
 }
 
 func getAPIConfig() (vkubelet.APIConfig, error) {
