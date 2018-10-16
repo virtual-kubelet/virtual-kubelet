@@ -301,7 +301,7 @@ az network vnet subnet create \
     --address-prefix $ACI_SUBNET_RANGE
 ```
 
-### Create a service principal
+### Create a service principal (OPTIONAL)
 
 Create an Azure Active Directory service principal to allow AKS to interact with other Azure resources. You can use a pre-created service principal too. 
 
@@ -328,6 +328,11 @@ export AZURE_CLIENT_ID=<AppId>
 export AZURE_CLIENT_SECRET=<Password>
 ```
 
+These values can be integrated into the `az aks create` as a field ` --service-principal $AZURE_CLIENT_ID \`.
+
+### Integrating Azure VNet Resource
+
+If you want to integrate an already created Azure VNet resource with your AKS cluster than follow these steps. 
 Grab the virtual network resource id with the following command:
 
 ```cli
@@ -347,11 +352,15 @@ Grab the id of the cluster subnet you created earlier with the following command
 ```cli
 az network vnet subnet show --resource-group $AKS_CLUSTER_RG --vnet-name $VNET_NAME --name $CLUSTER_SUBNET_NAME --query id -o tsv
 ```
+
 Save the entire output starting witn "/subscriptions/..." in the following enviorment variable. 
+
 ```cli 
 export VNET_SUBNET_ID=<subnet-resource>
 ```
-Use the following command to create an AKS cluster with the virtual network you've already created. Use the enviorment variables from the service principal output, 
+
+Use the following command to create an AKS cluster with the virtual network you've already created. 
+
 ```cli
 az aks create \
     --resource-group myResourceGroup \
@@ -362,7 +371,6 @@ az aks create \
     --dns-service-ip $KUBE_DNS_IP \
     --docker-bridge-address 172.17.0.1/16 \
     --vnet-subnet-id $VNET_SUBNET_ID \
-    --service-principal $AZURE_CLIENT_ID \
     --client-secret $AZURE_CLIENT_SECRET
 ```
 
@@ -378,11 +386,11 @@ CHART_URL=https://github.com/virtual-kubelet/virtual-kubelet/raw/master/charts/$
 helm install "$CHART_URL" --name "$RELEASE_NAME" \
   --set provider=azure \
   --set providers.azure.targetAKS=true \
-  --set providers.azure.tenantId=$AZURE_TENANT_ID \
-  --set providers.azure.subscriptionId=$AZURE_SUBSCRIPTION_ID \
-  --set providers.azure.clientId=$AZURE_CLIENT_ID \
-  --set providers.azure.aciVnetSubnetName=$ACI_SUBNET_NAME \
-  --set providers.azure.kubeDnsIp=$KUBE_DNS_IP
+  --set providers.azure.vnet.enabled=true \
+  --set providers.azure.vnet.subnetName=$ACI_SUBNET_NAME \
+  --set providers.azure.vent.subnetCidr=$ACI_SUBNET_RANGE \
+  --set providers.azure.vnet.clusterCidr=$CLUSTER_SUBNET_RANGE \
+  --set providers.azure.vnet.kubeDnsIp=$KUBE_DNS_IP
   ```
 
 ## Validate the Virtual Kubelet ACI provider
