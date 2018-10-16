@@ -368,7 +368,9 @@ func (p *ACIProvider) setupNetworkProfile(auth *client.Authentication) error {
 		}
 	}
 
-	profile, err := c.GetProfile(p.resourceGroup, p.nodeName)
+	networkProfileName := getNetworkProfileName(*subnet.ID)
+
+	profile, err := c.GetProfile(p.resourceGroup, networkProfileName)
 	if err != nil && !network.IsNotFound(err) {
 		return fmt.Errorf("error while looking up network profile: %v", err)
 	}
@@ -384,7 +386,7 @@ func (p *ACIProvider) setupNetworkProfile(auth *client.Authentication) error {
 	}
 
 	// at this point, profile should be nil
-	profile = network.NewNetworkProfile(p.nodeName, p.region, *subnet.ID)
+	profile = network.NewNetworkProfile(networkProfileName, p.region, *subnet.ID)
 	profile, err = c.CreateOrUpdateProfile(p.resourceGroup, profile)
 	if err != nil {
 		return err
@@ -392,6 +394,13 @@ func (p *ACIProvider) setupNetworkProfile(auth *client.Authentication) error {
 
 	p.networkProfile = *profile.ID
 	return nil
+}
+
+func getNetworkProfileName(subnetID string) string {
+	h := sha256.New()
+	h.Write([]byte(strings.ToUpper(subnetID)))
+	hashBytes := h.Sum(nil)
+	return fmt.Sprintf("vk-%s", hex.EncodeToString(hashBytes))
 }
 
 func getKubeProxyExtension(secretPath, masterURI, clusterCIDR string) (*aci.Extension, error) {
