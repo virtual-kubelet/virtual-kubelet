@@ -302,7 +302,7 @@ func (p *FargateProvider) NodeConditions(ctx context.Context) []corev1.NodeCondi
 			Message:            lastTransitionMessage,
 		},
 		{
-			Type:               corev1.NodeKubeletConfigOk,
+			Type:               "KubeletConfigOk",
 			Status:             corev1.ConditionTrue,
 			LastHeartbeatTime:  lastHeartbeatTime,
 			LastTransitionTime: lastTransitionTime,

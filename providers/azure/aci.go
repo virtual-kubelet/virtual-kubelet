@@ -26,6 +26,7 @@ import (
 	client "github.com/virtual-kubelet/virtual-kubelet/providers/azure/client"
 	"github.com/virtual-kubelet/virtual-kubelet/providers/azure/client/aci"
 	"github.com/virtual-kubelet/virtual-kubelet/providers/azure/client/network"
+	"go.opencensus.io/trace"
 	"k8s.io/api/core/v1"
 	k8serr "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -44,7 +45,6 @@ const (
 
 	subnetsAction           = "Microsoft.Network/virtualNetworks/subnets/action"
 	subnetDelegationService = "Microsoft.ContainerInstance/containerGroups"
-	networkProfileType      = "Microsoft.Network/networkProfiles"
 )
 
 // DNS configuration settings
@@ -330,95 +330,77 @@ func (p *ACIProvider) setupNetworkProfile(auth *client.Authentication) error {
 	}
 	if err == nil {
 		if p.subnetCIDR == "" {
-			p.subnetCIDR = subnet.Properties.AddressPrefix
+			p.subnetCIDR = *subnet.SubnetPropertiesFormat.AddressPrefix
 		}
-		if p.subnetCIDR != subnet.Properties.AddressPrefix {
-			return fmt.Errorf("found subnet '%s' using different CIDR: '%s'. desired: '%s'", p.subnetName, subnet.Properties.AddressPrefix, p.subnetCIDR)
+		if p.subnetCIDR != *subnet.SubnetPropertiesFormat.AddressPrefix {
+			return fmt.Errorf("found subnet '%s' using different CIDR: '%s'. desired: '%s'", p.subnetName, *subnet.SubnetPropertiesFormat.AddressPrefix, p.subnetCIDR)
 		}
-		for _, d := range subnet.Properties.Delegations {
-			if d.Properties.ServiceName == subnetDelegationService {
-				createSubnet = false
-				break
+		if subnet.SubnetPropertiesFormat.NetworkSecurityGroup != nil {
+			return fmt.Errorf("unable to delegate subnet '%s' to Azure Container Instance since it references the network security group '%s'.", p.subnetName, *subnet.SubnetPropertiesFormat.NetworkSecurityGroup.ID)
+		}
+		if subnet.SubnetPropertiesFormat.RouteTable != nil {
+                        return fmt.Errorf("unable to delegate subnet '%s' to Azure Container Instance since it references the route table '%s'.", p.subnetName, *subnet.SubnetPropertiesFormat.RouteTable.ID)
+                }
+		if subnet.SubnetPropertiesFormat.ServiceAssociationLinks != nil {
+			for _, l := range *subnet.SubnetPropertiesFormat.ServiceAssociationLinks {
+				if l.ServiceAssociationLinkPropertiesFormat != nil && *l.ServiceAssociationLinkPropertiesFormat.LinkedResourceType == subnetDelegationService {
+					createSubnet = false
+					break
+				}
+
+				return fmt.Errorf("unable to delegate subnet '%s' to Azure Container Instance as it is used by other Azure resource: '%v'.", p.subnetName, l)
+			}
+		} else {
+			for _, d := range *subnet.SubnetPropertiesFormat.Delegations {
+				if d.ServiceDelegationPropertiesFormat != nil && *d.ServiceDelegationPropertiesFormat.ServiceName == subnetDelegationService {
+					createSubnet = false
+					break
+				}
 			}
 		}
 	}
 
 	if createSubnet {
-		if subnet == nil {
-			subnet = &network.Subnet{Name: p.subnetName}
-		}
-		populateSubnet(subnet, p.subnetCIDR)
+		subnet = network.NewSubnetWithContainerInstanceDelegation(p.subnetName, p.subnetCIDR)
 		subnet, err = c.CreateOrUpdateSubnet(p.vnetResourceGroup, p.vnetName, subnet)
 		if err != nil {
 			return fmt.Errorf("error creating subnet: %v", err)
 		}
 	}
 
-	profile, err := c.GetProfile(p.resourceGroup, p.nodeName)
+	networkProfileName := getNetworkProfileName(*subnet.ID)
+
+	profile, err := c.GetProfile(p.resourceGroup, networkProfileName)
 	if err != nil && !network.IsNotFound(err) {
 		return fmt.Errorf("error while looking up network profile: %v", err)
 	}
 	if err == nil {
-		for _, config := range profile.Properties.ContainerNetworkInterfaceConfigurations {
-			for _, ipConfig := range config.Properties.IPConfigurations {
-				if ipConfig.Properties.Subnet.ID == subnet.ID {
-					p.networkProfile = profile.ID
+		for _, config := range *profile.ProfilePropertiesFormat.ContainerNetworkInterfaceConfigurations {
+			for _, ipConfig := range *config.ContainerNetworkInterfaceConfigurationPropertiesFormat.IPConfigurations {
+				if *ipConfig.IPConfigurationProfilePropertiesFormat.Subnet.ID == *subnet.ID {
+					p.networkProfile = *profile.ID
 					return nil
 				}
 			}
 		}
-		return fmt.Errorf("found existing network profile but the profile is not linked to the subnet: %v, %v", profile, err)
 	}
 
 	// at this point, profile should be nil
-	profile = &network.Profile{
-		Name: p.nodeName,
-		Location: p.region,
-		Type: networkProfileType,
-	}
-
-	populateNetworkProfile(profile, subnet)
+	profile = network.NewNetworkProfile(networkProfileName, p.region, *subnet.ID)
 	profile, err = c.CreateOrUpdateProfile(p.resourceGroup, profile)
 	if err != nil {
 		return err
 	}
 
-	p.networkProfile = profile.ID
+	p.networkProfile = *profile.ID
 	return nil
 }
 
-func populateSubnet(s *network.Subnet, cidr string) {
-	if s.Properties == nil {
-		s.Properties = &network.SubnetProperties{
-			AddressPrefix: cidr,
-		}
-	}
-
-	s.Properties.Delegations = append(s.Properties.Delegations, network.Delegation{
-		Name: "aciDelegation",
-		Properties: network.DelegationProperties{
-			ServiceName: subnetDelegationService,
-			Actions:     []string{subnetsAction},
-		},
-	})
-}
-
-func populateNetworkProfile(p *network.Profile, subnet *network.Subnet) {
-	p.Properties.ContainerNetworkInterfaceConfigurations = append(p.Properties.ContainerNetworkInterfaceConfigurations, network.InterfaceConfiguration{
-		Name: "eth0",
-		Properties: network.InterfaceConfigurationProperties{
-			IPConfigurations: []network.IPConfiguration{
-				{
-					Name: "ipconfigprofile1",
-					Properties: network.IPConfigurationProperties{
-						Subnet: network.ID{
-							ID: subnet.ID,
-						},
-					},
-				},
-			},
-		},
-	})
+func getNetworkProfileName(subnetID string) string {
+	h := sha256.New()
+	h.Write([]byte(strings.ToUpper(subnetID)))
+	hashBytes := h.Sum(nil)
+	return fmt.Sprintf("vk-%s", hex.EncodeToString(hashBytes))
 }
 
 func getKubeProxyExtension(secretPath, masterURI, clusterCIDR string) (*aci.Extension, error) {
@@ -438,24 +420,24 @@ func getKubeProxyExtension(secretPath, masterURI, clusterCIDR string) (*aci.Exte
 	config := clientcmdv1.Config{
 		APIVersion: "v1",
 		Kind:       "Config",
-		Clusters:   []clientcmdv1.NamedCluster{
+		Clusters: []clientcmdv1.NamedCluster{
 			clientcmdv1.NamedCluster{
-				Name:    name,
+				Name: name,
 				Cluster: clientcmdv1.Cluster{
-					Server:                   masterURI,
+					Server: masterURI,
 					CertificateAuthorityData: ca,
 				},
 			},
 		},
-		AuthInfos:  []clientcmdv1.NamedAuthInfo{
+		AuthInfos: []clientcmdv1.NamedAuthInfo{
 			clientcmdv1.NamedAuthInfo{
-				Name:     name,
+				Name: name,
 				AuthInfo: clientcmdv1.AuthInfo{
 					Token: string(token),
 				},
 			},
 		},
-		Contexts:   []clientcmdv1.NamedContext{
+		Contexts: []clientcmdv1.NamedContext{
 			clientcmdv1.NamedContext{
 				Name: name,
 				Context: clientcmdv1.Context{
@@ -473,11 +455,11 @@ func getKubeProxyExtension(secretPath, masterURI, clusterCIDR string) (*aci.Exte
 	}
 
 	extension := aci.Extension{
-		Name:   "kube-proxy",
+		Name: "kube-proxy",
 		Properties: &aci.ExtensionProperties{
 			Type:    aci.ExtensionTypeKubeProxy,
 			Version: aci.ExtensionVersion1_0,
-			Settings:          map[string]string{
+			Settings: map[string]string{
 				aci.KubeProxyExtensionSettingClusterCIDR: clusterCIDR,
 				aci.KubeProxyExtensionSettingKubeVersion: aci.KubeProxyExtensionKubeVersion,
 			},
@@ -490,9 +472,20 @@ func getKubeProxyExtension(secretPath, masterURI, clusterCIDR string) (*aci.Exte
 	return &extension, nil
 }
 
+func addAzureAttributes(span *trace.Span, p *ACIProvider) {
+	span.AddAttributes(
+		trace.StringAttribute("azure.resourceGroup", p.resourceGroup),
+		trace.StringAttribute("azure.region", p.region),
+	)
+}
+
 // CreatePod accepts a Pod definition and creates
 // an ACI deployment
 func (p *ACIProvider) CreatePod(ctx context.Context, pod *v1.Pod) error {
+	ctx, span := trace.StartSpan(ctx, "aci.CreatePod")
+	defer span.End()
+	addAzureAttributes(span, p)
+
 	var containerGroup aci.ContainerGroup
 	containerGroup.Location = p.region
 	containerGroup.RestartPolicy = aci.ContainerGroupRestartPolicy(pod.Spec.RestartPolicy)
@@ -691,15 +684,23 @@ func (p *ACIProvider) UpdatePod(ctx context.Context, pod *v1.Pod) error {
 
 // DeletePod deletes the specified pod out of ACI.
 func (p *ACIProvider) DeletePod(ctx context.Context, pod *v1.Pod) error {
+	ctx, span := trace.StartSpan(ctx, "aci.DeletePod")
+	defer span.End()
+	addAzureAttributes(span, p)
+
 	return p.aciClient.DeleteContainerGroup(ctx, p.resourceGroup, fmt.Sprintf("%s-%s", pod.Namespace, pod.Name))
 }
 
 // GetPod returns a pod by name that is running inside ACI
 // returns nil if a pod by that name is not found.
 func (p *ACIProvider) GetPod(ctx context.Context, namespace, name string) (*v1.Pod, error) {
+	ctx, span := trace.StartSpan(ctx, "aci.GetPod")
+	defer span.End()
+	addAzureAttributes(span, p)
+
 	cg, err, status := p.aciClient.GetContainerGroup(ctx, p.resourceGroup, fmt.Sprintf("%s-%s", namespace, name))
 	if err != nil {
-		if *status == http.StatusNotFound {
+		if status != nil && *status == http.StatusNotFound {
 			return nil, nil
 		}
 		return nil, err
@@ -714,6 +715,10 @@ func (p *ACIProvider) GetPod(ctx context.Context, namespace, name string) (*v1.P
 
 // GetContainerLogs returns the logs of a pod by name that is running inside ACI.
 func (p *ACIProvider) GetContainerLogs(ctx context.Context, namespace, podName, containerName string, tail int) (string, error) {
+	ctx, span := trace.StartSpan(ctx, "aci.GetContainerLogs")
+	defer span.End()
+	addAzureAttributes(span, p)
+
 	logContent := ""
 	cg, err, _ := p.aciClient.GetContainerGroup(ctx, p.resourceGroup, fmt.Sprintf("%s-%s", namespace, podName))
 	if err != nil {
@@ -725,17 +730,18 @@ func (p *ACIProvider) GetContainerLogs(ctx context.Context, namespace, podName, 
 	}
 	// get logs from cg
 	retry := 10
-	for i := 0; i < retry; i++ {
+	var retries int
+	for retries = 0; retries < retry; retries++ {
 		cLogs, err := p.aciClient.GetContainerLogs(ctx, p.resourceGroup, cg.Name, containerName, tail)
 		if err != nil {
 			log.G(ctx).WithField("method", "GetContainerLogs").WithError(err).Debug("Error getting container logs, retrying")
+			span.Annotate(nil, "Error getting container logs, retrying")
 			time.Sleep(5000 * time.Millisecond)
 		} else {
 			logContent = cLogs.Content
 			break
 		}
 	}
-
 	return logContent, err
 }
 
@@ -824,6 +830,10 @@ func (p *ACIProvider) ExecInContainer(name string, uid types.UID, container stri
 // GetPodStatus returns the status of a pod by name that is running inside ACI
 // returns nil if a pod by that name is not found.
 func (p *ACIProvider) GetPodStatus(ctx context.Context, namespace, name string) (*v1.PodStatus, error) {
+	ctx, span := trace.StartSpan(ctx, "aci.GetPodStatus")
+	defer span.End()
+	addAzureAttributes(span, p)
+
 	pod, err := p.GetPod(ctx, namespace, name)
 	if err != nil {
 		return nil, err
@@ -838,6 +848,10 @@ func (p *ACIProvider) GetPodStatus(ctx context.Context, namespace, name string) 
 
 // GetPods returns a list of all pods known to be running within ACI.
 func (p *ACIProvider) GetPods(ctx context.Context) ([]*v1.Pod, error) {
+	ctx, span := trace.StartSpan(ctx, "aci.GetPods")
+	defer span.End()
+	addAzureAttributes(span, p)
+
 	cgs, err := p.aciClient.ListContainerGroups(ctx, p.resourceGroup)
 	if err != nil {
 		return nil, err
@@ -1472,11 +1486,16 @@ func aciContainerStateToContainerState(cs aci.ContainerState) v1.ContainerState 
 		}
 	}
 
+	state := cs.State
+	if state == "" {
+		state = "Creating"
+	}
+
 	// Handle the case where the container is pending.
 	// Which should be all other aci states.
 	return v1.ContainerState{
 		Waiting: &v1.ContainerStateWaiting{
-			Reason:  cs.State,
+			Reason:  state,
 			Message: cs.DetailStatus,
 		},
 	}
