@@ -86,16 +86,14 @@ func (rm *ResourceManager) SetPods(pods *v1.PodList) {
 	rm.Lock()
 	defer rm.Unlock()
 
-	rm.pods = make(map[string]*v1.Pod, len(pods.Items))
-	rm.configMapRef = make(map[string]int64, 0)
-	rm.secretRef = make(map[string]int64, 0)
-	rm.configMaps = make(map[string]*v1.ConfigMap, len(pods.Items))
-	rm.secrets = make(map[string]*v1.Secret, len(pods.Items))
-
 	for k, p := range pods.Items {
-		rm.pods[rm.getStoreKey(p.Namespace, p.Name)] = &pods.Items[k]
-
-		rm.incrementRefCounters(&p)
+		podKey := rm.getStoreKey(p.Namespace, p.Name)
+		if p.DeletionTimestamp != nil {
+			rm.deletingPods[podKey] = &pods.Items[k]
+		} else {
+			rm.pods[podKey] = &pods.Items[k]
+			rm.incrementRefCounters(&p)
+		}
 	}
 }
 
@@ -173,8 +171,11 @@ func (rm *ResourceManager) GetPods() []*v1.Pod {
 	rm.RLock()
 	defer rm.RUnlock()
 
-	pods := make([]*v1.Pod, 0, len(rm.pods))
+	pods := make([]*v1.Pod, 0, len(rm.pods)+len(rm.deletingPods))
 	for _, p := range rm.pods {
+		pods = append(pods, p)
+	}
+	for _, p := range rm.deletingPods {
 		pods = append(pods, p)
 	}
 

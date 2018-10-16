@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/Azure/azure-sdk-for-go/services/network/mgmt/2018-05-01/network"
+	"github.com/Azure/azure-sdk-for-go/services/network/mgmt/2018-08-01/network"
 	"github.com/Azure/go-autorest/autorest/azure/auth"
 	azure "github.com/virtual-kubelet/virtual-kubelet/providers/azure/client"
 	"github.com/virtual-kubelet/virtual-kubelet/providers/azure/client/api"

@@ -72,7 +72,7 @@ func (c *Client) GetContainerGroupMetrics(ctx context.Context, resourceGroup, co
 		return nil, errors.Wrap(err, "expanding URL with parameters failed")
 	}
 
-	// SEnd the request.
+	// Send the request.
 	resp, err := c.hc.Do(req)
 	if err != nil {
 		return nil, errors.Wrap(err, "sending get container group metrics request failed")

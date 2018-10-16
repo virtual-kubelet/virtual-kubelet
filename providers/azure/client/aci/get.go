@@ -42,7 +42,7 @@ func (c *Client) GetContainerGroup(ctx context.Context, resourceGroup, container
 	// Send the request.
 	resp, err := c.hc.Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("Sending get container group request failed: %v", err), &resp.StatusCode
+		return nil, fmt.Errorf("Sending get container group request failed: %v", err), nil
 	}
 	defer resp.Body.Close()
 
@@ -53,7 +53,7 @@ func (c *Client) GetContainerGroup(ctx context.Context, resourceGroup, container
 
 	// Decode the body from the response.
 	if resp.Body == nil {
-		return nil, errors.New("Create container group returned an empty body in the response"), &resp.StatusCode
+		return nil, errors.New("Get container group returned an empty body in the response"), &resp.StatusCode
 	}
 	var cg ContainerGroup
 	if err := json.NewDecoder(resp.Body).Decode(&cg); err != nil {

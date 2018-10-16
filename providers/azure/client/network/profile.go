@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/url"
 
+	"github.com/Azure/azure-sdk-for-go/services/network/mgmt/2018-08-01/network"
 	"github.com/pkg/errors"
 	"github.com/virtual-kubelet/virtual-kubelet/providers/azure/client/api"
 )
@@ -14,50 +15,40 @@ const (
 	profilePath = "subscriptions/{{.subscriptionId}}/resourcegroups/{{.resourceGroupName}}/providers/Microsoft.Network/networkProfiles/{{.profileName}}"
 )
 
-// Profile represents an Azure network profile
-type Profile struct {
-	Name       string
-	ID         string
-	ETag       string `json:"etag"`
-	Type       string
-	Location   string
-	Properties ProfileProperties
-}
+var (
+	defaultNicName      = "eth0"
+	defaultIPConfigName = "ipconfigprofile1"
+)
 
-// ProfileProperties stores the properties for network profiles
-type ProfileProperties struct {
-	ContainerNetworkInterfaceConfigurations []InterfaceConfiguration
-}
+// NewNetworkProfile creates a new instance of network profile
+func NewNetworkProfile(name, location, subnetID string ) *network.Profile {
+	p := network.Profile{
+		Name:     &name,
+		Location: &location,
+		ProfilePropertiesFormat: &network.ProfilePropertiesFormat{
+			ContainerNetworkInterfaceConfigurations: &[]network.ContainerNetworkInterfaceConfiguration{
+				network.ContainerNetworkInterfaceConfiguration{
+					Name: &defaultNicName,
+					ContainerNetworkInterfaceConfigurationPropertiesFormat: &network.ContainerNetworkInterfaceConfigurationPropertiesFormat{
+						IPConfigurations: &[]network.IPConfigurationProfile{
+							network.IPConfigurationProfile{
+								Name: &defaultIPConfigName,
+								IPConfigurationProfilePropertiesFormat: &network.IPConfigurationProfilePropertiesFormat{
+									Subnet: &network.Subnet{ID: &subnetID},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
 
-// InterfaceConfiguration is a configuration for a network interface
-type InterfaceConfiguration struct {
-	Name       string
-	Properties InterfaceConfigurationProperties
-}
-
-// InterfaceConfigurationProperties is the properties for a network interface configuration
-type InterfaceConfigurationProperties struct {
-	IPConfigurations []IPConfiguration
-}
-
-// IPConfiguration stores the configuration for an IP on a network profile
-type IPConfiguration struct {
-	Name       string
-	Properties IPConfigurationProperties
-}
-
-// IPConfigurationProperties stores the subnet for an IP configuration
-type IPConfigurationProperties struct {
-	Subnet ID
-}
-
-// ID is a generic struct for objets with an ID
-type ID struct {
-	ID string
+	return &p
 }
 
 // GetProfile gets the network profile with the provided name
-func (c *Client) GetProfile(resourceGroup, name string) (*Profile, error) {
+func (c *Client) GetProfile(resourceGroup, name string) (*network.Profile, error) {
 	urlParams := url.Values{
 		"api-version": []string{apiVersion},
 	}
@@ -97,7 +88,7 @@ func (c *Client) GetProfile(resourceGroup, name string) (*Profile, error) {
 	if resp.Body == nil {
 		return nil, errors.New("get network profile returned an empty body in the response")
 	}
-	var p Profile
+	var p network.Profile
 	if err := json.NewDecoder(resp.Body).Decode(&p); err != nil {
 		return nil, errors.Wrap(err, "decoding get network profile response body failed")
 	}
@@ -105,7 +96,7 @@ func (c *Client) GetProfile(resourceGroup, name string) (*Profile, error) {
 }
 
 // CreateOrUpdateProfile creates or updates an Azure network profile
-func (c *Client) CreateOrUpdateProfile(resourceGroup string, p *Profile) (*Profile, error) {
+func (c *Client) CreateOrUpdateProfile(resourceGroup string, p *network.Profile) (*network.Profile, error) {
 	urlParams := url.Values{
 		"api-version": []string{apiVersion},
 	}
@@ -129,7 +120,7 @@ func (c *Client) CreateOrUpdateProfile(resourceGroup string, p *Profile) (*Profi
 	if err := api.ExpandURL(req.URL, map[string]string{
 		"subscriptionId":    c.auth.SubscriptionID,
 		"resourceGroupName": resourceGroup,
-		"profileName":       p.Name,
+		"profileName":       *p.Name,
 	}); err != nil {
 		return nil, errors.Wrap(err, "expanding URL with parameters failed")
 	}
@@ -151,7 +142,7 @@ func (c *Client) CreateOrUpdateProfile(resourceGroup string, p *Profile) (*Profi
                 return nil, errors.New("create network profile returned an empty body in the response")
         }
 
-        var profile Profile
+        var profile network.Profile
         if err := json.NewDecoder(resp.Body).Decode(&profile); err != nil {
                 return nil, errors.Wrap(err, "decoding create network profile response body failed")
         }
