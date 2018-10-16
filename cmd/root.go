@@ -42,7 +42,6 @@ import (
 
 const (
 	defaultDaemonPort      = "10250"
-	defaultPodSyncPoolSize = 10
 )
 
 var kubeletConfig string
