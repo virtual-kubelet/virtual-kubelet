@@ -39,7 +39,7 @@ func TestMain(m *testing.M) {
 	subscriptionID = auth.SubscriptionID
 
 	// Check if the resource group exists and create it if not.
-	rgCli, err := resourcegroups.NewClient(auth)
+	rgCli, err := resourcegroups.NewClient(auth, []string{})
 	if err != nil {
 		log.Fatalf("creating new resourcegroups client failed: %v", err)
 	}
@@ -82,7 +82,7 @@ func TestNewClient(t *testing.T) {
 		log.Fatalf("Failed to load Azure authentication file: %v", err)
 	}
 
-	c, err := NewClient(auth)
+	c, err := NewClient(auth, []string{"unit-test"})
 	if err != nil {
 		t.Fatal(err)
 	}

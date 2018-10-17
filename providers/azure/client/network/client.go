@@ -11,9 +11,9 @@ import (
 )
 
 const (
-	baseURI    = "https://management.azure.com"
-	userAgent  = "virtual-kubelet/azure-arm-networking/2018-07-01"
-	apiVersion = "2018-07-01"
+	baseURI          = "https://management.azure.com"
+	defaultUserAgent = "virtual-kubelet/azure-arm-network/2018-08-01"
+	apiVersion       = "2018-08-01"
 )
 
 // Client is a client for interacting with Azure networking
@@ -25,10 +25,12 @@ type Client struct {
 }
 
 // NewClient creates a new client for interacting with azure networking
-func NewClient(azAuth *azure.Authentication) (*Client, error) {
+func NewClient(azAuth *azure.Authentication, userAgent []string) (*Client, error) {
 	if azAuth == nil {
 		return nil, fmt.Errorf("Authentication is not supplied for the Azure client")
 	}
+
+	userAgent = append(userAgent, defaultUserAgent)
 
 	client, err := azure.NewClient(azAuth, baseURI, userAgent)
 	if err != nil {

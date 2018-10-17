@@ -196,7 +196,7 @@ func NewACIProvider(config string, rm *manager.ResourceManager, nodeName, operat
 		azAuth.SubscriptionID = subscriptionID
 	}
 
-	p.aciClient, err = aci.NewClient(azAuth)
+	p.aciClient, err = aci.NewClient(azAuth, nil)
 	if err != nil {
 		return nil, err
 	}
