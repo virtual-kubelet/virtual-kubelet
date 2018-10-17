@@ -123,7 +123,7 @@ First let's identify your Azure subscription and save it for use later on in the
 
 ## Quick set-up with the ACI Connector
 
-The Azure cli can be used to install the ACI provider. We like to say Azure's provider or implementation for Virtual Kubelet is the ACI Connector. 
+The Azure cli can be used to install the ACI provider. We like to say Azure's provider or implementation for Virtual Kubelet is the ACI Connector. Please note that this command has no Virtual Networking support. 
 For this section Virtual Kubelet's specific ACI provider will be referenced as the the ACI Connector. 
 If you continue with this section you can skip sections below up to "Schedule a pod in ACI", as we use Azure Container Service (AKS) to easily deploy and install the connector, thus it is assumed 
 that you've created an [AKS cluster](https://docs.microsoft.com/en-us/azure/aks/kubernetes-walkthrough). 
@@ -167,10 +167,10 @@ az group create --name aci-group --location "$ACI_REGION"
 export AZURE_RG=aci-group
 ```
 
-### Create a service principal (OPTIONAL)
+### Create a service principal 
 
 This creates an identity for the Virtual Kubelet ACI provider to use when provisioning
-resources on your account on behalf of Kubernetes.
+resources on your account on behalf of Kubernetes. This step is optional if you are provisoning Virtual Kubelet on AKS.
 
 1. Create a service principal with RBAC enabled for the quickstart:
     ```cli
@@ -221,10 +221,12 @@ helm install "$CHART_URL" --name "$RELEASE_NAME" \
   --set provider=azure \
   --set rbac.install=true \
   --set providers.azure.targetAKS=false \
-  --set providers.azure.clientId=$AZURE_CLIENT_ID \
-  --set providers.azure.clientKey=$AZURE_CLIENT_SECRET \
   --set providers.azure.aciResourceGroup=$AZURE_RG \
   --set providers.azure.aciRegion=$ACI_REGION \
+  --set providers.azure.tenantId=$AZURE_TENANT_ID \
+  --set providers.azure.subscriptionId=$AZURE_SUBSCRIPTION_ID \
+  --set providers.azure.clientID=$AZURE_CLIENT_ID \
+  --set providers.azure.clientKey=$AZURE_CLIENT_SECRET
 ```
 
 If your cluster has RBAC enabled set ```rbac.install=true```
@@ -374,13 +376,16 @@ az aks create \
 
 ### Deploy Virtual Kubelet
 
-Manually deploy the Virtual Kubelet, the following env. variables have already been set earlier. You do need to pass through the subnet you created for ACI earlier, otherwise the container instances will not be able to participate with the other pods within the cluster subnet. We are assuming you are deploying Virtual Kubelet onto a cluster that isn't AKS.
+Manually deploy the Virtual Kubelet, the following env. variables have already been set earlier. You do need to pass through the subnet you created for ACI earlier, otherwise the container instances will not be able to participate with the other pods within the cluster subnet. 
 
 ```cli
 RELEASE_NAME=virtual-kubelet
 NODE_NAME=virtual-kubelet
 CHART_URL=https://github.com/virtual-kubelet/virtual-kubelet/raw/master/charts/$VK_RELEASE.tgz
+```
 
+If your cluster is an AKS cluster: 
+```cli
 helm install "$CHART_URL" --name "$RELEASE_NAME" \
   --set provider=azure \
   --set providers.azure.targetAKS=true \
@@ -388,6 +393,17 @@ helm install "$CHART_URL" --name "$RELEASE_NAME" \
   --set providers.azure.vnet.subnetName=$ACI_SUBNET_NAME \
   --set providers.azure.vent.subnetCidr=$ACI_SUBNET_RANGE \
   --set providers.azure.vnet.clusterCidr=$CLUSTER_SUBNET_RANGE \
+  --set providers.azure.vnet.kubeDnsIp=$KUBE_DNS_IP \
+```
+
+For any other type of cluster: 
+```cli
+helm install "$CHART_URL" --name "$RELEASE_NAME" \
+  --set provider=azure \
+  --set providers.azure.targetAKS=false \
+  --set providers.azure.vnet.enabled=true \
+  --set providers.azure.vnet.subnetName=$ACI_SUBNET_NAME \
+  --set providers.azure.vent.subnetCidr=$ACI_SUBNET_RANGE \
   --set providers.azure.vnet.kubeDnsIp=$KUBE_DNS_IP \
   --set providers.azure.tenantId=$AZURE_TENANT_ID \
   --set providers.azure.subscriptionId=$AZURE_SUBSCRIPTION_ID \
