@@ -13,7 +13,7 @@ import (
 )
 
 var (
-	location      = "eastus2euap"
+	location      = "westus"
 	resourceGroup = "virtual-kubelet-tests"
 	testAuth      *azure.Authentication
 )

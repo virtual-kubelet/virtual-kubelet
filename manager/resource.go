@@ -113,8 +113,8 @@ func (rm *ResourceManager) UpdatePod(p *v1.Pod) bool {
 			return true
 		}
 
-		if _, ok := rm.deletingPods[podKey]; ok {
-			return false
+		if _, ok := rm.deletingPods[podKey]; !ok {
+			return true
 		}
 
 		return false

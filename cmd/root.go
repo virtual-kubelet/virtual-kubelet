@@ -41,7 +41,7 @@ import (
 )
 
 const (
-	defaultDaemonPort = "10250"
+	defaultDaemonPort      = "10250"
 )
 
 var kubeletConfig string
@@ -60,6 +60,7 @@ var k8sClient *kubernetes.Clientset
 var p providers.Provider
 var rm *manager.ResourceManager
 var apiConfig vkubelet.APIConfig
+var podSyncWorkers int
 
 var userTraceExporters []string
 var userTraceConfig = TracingExporterOptions{Tags: make(map[string]string)}
@@ -84,6 +85,7 @@ This allows users to schedule kubernetes workloads on nodes that aren't running 
 			Provider:        p,
 			ResourceManager: rm,
 			APIConfig:       apiConfig,
+			PodSyncWorkers:  podSyncWorkers,
 		})
 		if err != nil {
 			log.L.WithError(err).Fatal("Error initializing virtual kubelet")
@@ -93,8 +95,8 @@ This allows users to schedule kubernetes workloads on nodes that aren't running 
 		signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM)
 		go func() {
 			<-sig
-			cancel()
 			f.Stop()
+			cancel()
 		}()
 
 		if err := f.Run(ctx); err != nil && errors.Cause(err) != context.Canceled {
@@ -168,6 +170,7 @@ func init() {
 	RootCmd.PersistentFlags().StringVar(&taintKey, "taint", "", "Set node taint key")
 	RootCmd.PersistentFlags().MarkDeprecated("taint", "Taint key should now be configured using the VK_TAINT_KEY environment variable")
 	RootCmd.PersistentFlags().StringVar(&logLevel, "log-level", "info", `set the log level, e.g. "trace", debug", "info", "warn", "error"`)
+	RootCmd.PersistentFlags().IntVar(&podSyncWorkers, "pod-sync-workers", 10, `set the number of pod synchronization workers. default is 10.`)
 
 	RootCmd.PersistentFlags().StringSliceVar(&userTraceExporters, "trace-exporter", nil, fmt.Sprintf("sets the tracing exporter to use, available exporters: %s", AvailableTraceExporters()))
 	RootCmd.PersistentFlags().StringVar(&userTraceConfig.ServiceName, "trace-service-name", "virtual-kubelet", "sets the name of the service used to register with the trace exporter")
@@ -277,6 +280,10 @@ func initConfig() {
 	apiConfig, err = getAPIConfig()
 	if err != nil {
 		logger.WithError(err).Fatal("Error reading API config")
+	}
+
+	if podSyncWorkers <= 0 {
+		logger.Fatal("The number of pod synchronization workers should not be negative")
 	}
 
 	for k := range userTraceConfig.Tags {
