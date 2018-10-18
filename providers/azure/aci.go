@@ -75,6 +75,7 @@ type ACIProvider struct {
 	networkProfile     string
 	kubeProxyExtension *aci.Extension
 	kubeDNSIP          string
+	extraUserAgent     string
 
 	metricsSync     sync.Mutex
 	metricsSyncTime time.Time
@@ -196,7 +197,9 @@ func NewACIProvider(config string, rm *manager.ResourceManager, nodeName, operat
 		azAuth.SubscriptionID = subscriptionID
 	}
 
-	p.aciClient, err = aci.NewClient(azAuth)
+	p.extraUserAgent = os.Getenv("ACI_EXTRA_USER_AGENT")
+
+	p.aciClient, err = aci.NewClient(azAuth, p.extraUserAgent)
 	if err != nil {
 		return nil, err
 	}
@@ -315,7 +318,7 @@ func NewACIProvider(config string, rm *manager.ResourceManager, nodeName, operat
 }
 
 func (p *ACIProvider) setupNetworkProfile(auth *client.Authentication) error {
-	c, err := network.NewClient(auth)
+	c, err := network.NewClient(auth, p.extraUserAgent)
 	if err != nil {
 		return fmt.Errorf("error creating azure networking client: %v", err)
 	}
