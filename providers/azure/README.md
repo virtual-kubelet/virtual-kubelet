@@ -420,7 +420,8 @@ helm install "$CHART_URL" --name "$RELEASE_NAME" \
   --set providers.azure.tenantId=$AZURE_TENANT_ID \
   --set providers.azure.subscriptionId=$AZURE_SUBSCRIPTION_ID \
   --set providers.azure.aciResourceGroup=$AZURE_RG \
-  --set providers.azure.aciRegion=$ACI_REGION 
+  --set providers.azure.aciRegion=$ACI_REGION \
+  --set providers.azure.masterUri=$MASTER_URI
   ```
 
 ## Validate the Virtual Kubelet ACI provider
