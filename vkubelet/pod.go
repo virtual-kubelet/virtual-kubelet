@@ -3,6 +3,7 @@ package vkubelet
 import (
 	"context"
 	"fmt"
+	"reflect"
 	"time"
 
 	pkgerrors "github.com/pkg/errors"
@@ -30,11 +31,10 @@ func (s *Server) onAddPod(ctx context.Context, obj interface{}) {
 	defer span.End()
 	logger := log.G(ctx).WithField("method", "onAddPod")
 
-	pod := obj.(*corev1.Pod)
-
-	if pod == nil {
-		span.SetStatus(trace.Status{Code: trace.StatusCodeInvalidArgument, Message: fmt.Sprintf("Unexpected object from event: %v", obj)})
-		logger.Errorf("obj is not a valid pod: %v", obj)
+	pod, ok := obj.(*corev1.Pod)
+	if !ok {
+		span.SetStatus(trace.Status{Code: trace.StatusCodeInvalidArgument, Message: fmt.Sprintf("Unexpected object from event: %s", reflect.TypeOf(obj))})
+		logger.Errorf("obj is not of a valid type: %s", reflect.TypeOf(obj))
 		return
 	}
 
@@ -53,11 +53,10 @@ func (s *Server) onUpdatePod(ctx context.Context, obj interface{}) {
 	defer span.End()
 	logger := log.G(ctx).WithField("method", "onUpdatePod")
 
-	pod := obj.(*corev1.Pod)
-
-	if pod == nil {
-		span.SetStatus(trace.Status{Code: trace.StatusCodeInvalidArgument, Message: fmt.Sprintf("Unexpected object from event: %v", obj)})
-		logger.Errorf("obj is not a valid pod: %v", obj)
+	pod, ok := obj.(*corev1.Pod)
+	if !ok {
+		span.SetStatus(trace.Status{Code: trace.StatusCodeInvalidArgument, Message: fmt.Sprintf("Unexpected object from event: %s", reflect.TypeOf(obj))})
+		logger.Errorf("obj is not of a valid type: %s", reflect.TypeOf(obj))
 		return
 	}
 
@@ -76,12 +75,20 @@ func (s *Server) onDeletePod(ctx context.Context, obj interface{}) {
 	defer span.End()
 	logger := log.G(ctx).WithField("method", "onDeletePod")
 
-	pod := obj.(*corev1.Pod)
+	pod, ok := obj.(*corev1.Pod)
+	if !ok {
+		delta, ok := obj.(cache.DeletedFinalStateUnknown)
+		if !ok {
+			span.SetStatus(trace.Status{Code: trace.StatusCodeInvalidArgument, Message: fmt.Sprintf("Unexpected object from event: %s", reflect.TypeOf(obj))})
+			logger.Errorf("obj is not of a valid type: %s", reflect.TypeOf(obj))
+			return
+		}
 
-	if pod == nil {
-		span.SetStatus(trace.Status{Code: trace.StatusCodeInvalidArgument, Message: fmt.Sprintf("Unexpected object from event: %v", obj)})
-		logger.Errorf("obj is not a valid pod: %v", obj)
-		return
+		if pod, ok = delta.Obj.(*corev1.Pod); !ok {
+			span.SetStatus(trace.Status{Code: trace.StatusCodeInvalidArgument, Message: fmt.Sprintf("Unexpected object from event: %s", reflect.TypeOf(obj))})
+			logger.Errorf("obj is not of a valid type: %s", reflect.TypeOf(obj))
+			return
+		}
 	}
 
 	addPodAttributes(span, pod)
