@@ -25,7 +25,7 @@ func TestNewClient(t *testing.T) {
 		t.Fatalf("Failed to load Azure authentication file: %v", err)
 	}
 
-	c, err := NewClient(auth)
+	c, err := NewClient(auth, "unit-test")
 	if err != nil {
 		t.Fatal(err)
 	}
