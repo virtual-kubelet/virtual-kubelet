@@ -25,14 +25,12 @@ type Client struct {
 }
 
 // NewClient creates a new client for interacting with azure networking
-func NewClient(azAuth *azure.Authentication, userAgent []string) (*Client, error) {
+func NewClient(azAuth *azure.Authentication, extraUserAgent string) (*Client, error) {
 	if azAuth == nil {
 		return nil, fmt.Errorf("Authentication is not supplied for the Azure client")
 	}
 
-	userAgent = append(userAgent, defaultUserAgent)
-
-	client, err := azure.NewClient(azAuth, baseURI, userAgent)
+	client, err := azure.NewClient(azAuth, baseURI, []string{defaultUserAgent, extraUserAgent})
 	if err != nil {
 		return nil, fmt.Errorf("Creating Azure client failed: %v", err)
 	}

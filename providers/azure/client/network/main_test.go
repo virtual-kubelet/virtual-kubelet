@@ -27,7 +27,7 @@ func TestMain(m *testing.M) {
 		os.Exit(1)
 	}
 
-	c, err := resourcegroups.NewClient(testAuth, []string{})
+	c, err := resourcegroups.NewClient(testAuth, "unit-test")
 	if err != nil {
 		os.Exit(1)
 	}
@@ -68,7 +68,7 @@ func newTestClient(t *testing.T) *Client {
 	if err := setupAuth(); err != nil {
 		t.Fatal(err)
 	}
-	c, err := NewClient(testAuth, []string{})
+	c, err := NewClient(testAuth, "unit-test")
 	if err != nil {
 		t.Fatal(err)
 	}

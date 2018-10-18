@@ -77,7 +77,7 @@ func (t userAgentTransport) RoundTrip(req *http.Request) (*http.Response, error)
 	}
 
 	// Add the user agent header.
-	newReq.Header["User-Agent"] = t.userAgent
+	newReq.Header["User-Agent"] = []string{strings.Join(t.userAgent, " ")}
 
 	// Add the content-type header.
 	newReq.Header["Content-Type"] = []string{"application/json"}
