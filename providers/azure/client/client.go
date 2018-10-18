@@ -52,9 +52,16 @@ func NewClient(auth *Authentication, baseURI string, userAgent []string) (*Clien
 
 	client.BearerAuthorizer = &BearerAuthorizer{tokenProvider: tp}
 
+	nonEmptyUserAgent := userAgent[:0]
+	for _, ua := range userAgent {
+		if ua != "" {
+			nonEmptyUserAgent = append(nonEmptyUserAgent, ua)
+		}
+	}
+
 	uat := userAgentTransport{
 		base:      http.DefaultTransport,
-		userAgent: userAgent,
+		userAgent: nonEmptyUserAgent,
 		client:    client,
 	}
 

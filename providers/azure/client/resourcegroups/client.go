@@ -31,7 +31,12 @@ func NewClient(auth *azure.Authentication, extraUserAgent string) (*Client, erro
 		return nil, fmt.Errorf("Authentication is not supplied for the Azure client")
 	}
 
-	client, err := azure.NewClient(auth, BaseURI, []string{defaultUserAgent, extraUserAgent})
+	userAgent := []string{defaultUserAgent}
+	if extraUserAgent != "" {
+		userAgent = append(userAgent, extraUserAgent)
+	}
+
+	client, err := azure.NewClient(auth, BaseURI, userAgent)
 	if err != nil {
 		return nil, fmt.Errorf("Creating Azure client failed: %v", err)
 	}
