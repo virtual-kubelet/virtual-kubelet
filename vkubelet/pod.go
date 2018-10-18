@@ -3,7 +3,6 @@ package vkubelet
 import (
 	"context"
 	"fmt"
-	"reflect"
 	"time"
 
 	pkgerrors "github.com/pkg/errors"
@@ -33,8 +32,8 @@ func (s *Server) onAddPod(ctx context.Context, obj interface{}) {
 
 	pod, ok := obj.(*corev1.Pod)
 	if !ok {
-		span.SetStatus(trace.Status{Code: trace.StatusCodeInvalidArgument, Message: fmt.Sprintf("Unexpected object from event: %s", reflect.TypeOf(obj))})
-		logger.Errorf("obj is not of a valid type: %s", reflect.TypeOf(obj))
+		span.SetStatus(trace.Status{Code: trace.StatusCodeInvalidArgument, Message: fmt.Sprintf("Unexpected object from event: %T", obj)})
+		logger.Errorf("obj is not of a valid type: %T", obj)
 		return
 	}
 
@@ -55,8 +54,8 @@ func (s *Server) onUpdatePod(ctx context.Context, obj interface{}) {
 
 	pod, ok := obj.(*corev1.Pod)
 	if !ok {
-		span.SetStatus(trace.Status{Code: trace.StatusCodeInvalidArgument, Message: fmt.Sprintf("Unexpected object from event: %s", reflect.TypeOf(obj))})
-		logger.Errorf("obj is not of a valid type: %s", reflect.TypeOf(obj))
+		span.SetStatus(trace.Status{Code: trace.StatusCodeInvalidArgument, Message: fmt.Sprintf("Unexpected object from event: %T", obj)})
+		logger.Errorf("obj is not of a valid type: %T", obj)
 		return
 	}
 
@@ -79,14 +78,14 @@ func (s *Server) onDeletePod(ctx context.Context, obj interface{}) {
 	if !ok {
 		delta, ok := obj.(cache.DeletedFinalStateUnknown)
 		if !ok {
-			span.SetStatus(trace.Status{Code: trace.StatusCodeInvalidArgument, Message: fmt.Sprintf("Unexpected object from event: %s", reflect.TypeOf(obj))})
-			logger.Errorf("obj is not of a valid type: %s", reflect.TypeOf(obj))
+			span.SetStatus(trace.Status{Code: trace.StatusCodeInvalidArgument, Message: fmt.Sprintf("Unexpected object from event: %T", obj)})
+			logger.Errorf("obj is not of a valid type: %T", obj)
 			return
 		}
 
 		if pod, ok = delta.Obj.(*corev1.Pod); !ok {
-			span.SetStatus(trace.Status{Code: trace.StatusCodeInvalidArgument, Message: fmt.Sprintf("Unexpected object from event: %s", reflect.TypeOf(obj))})
-			logger.Errorf("obj is not of a valid type: %s", reflect.TypeOf(obj))
+			span.SetStatus(trace.Status{Code: trace.StatusCodeInvalidArgument, Message: fmt.Sprintf("Unexpected object from event: %T", obj)})
+			logger.Errorf("obj is not of a valid type: %T", obj)
 			return
 		}
 	}
