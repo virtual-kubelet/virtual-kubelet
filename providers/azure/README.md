@@ -378,11 +378,15 @@ az aks create \
 
 Manually deploy the Virtual Kubelet, the following env. variables have already been set earlier. You do need to pass through the subnet you created for ACI earlier, otherwise the container instances will not be able to participate with the other pods within the cluster subnet. 
 
-Grab the public uri for your cluster and save the value.
+Grab the public master URI for your Kubernetes cluster and save the value.
+
 ```cli 
-kubectl get cluster-info
-export MASTER_URI= <public uri>
+kubectl cluster-info
+export MASTER_URI=<public uri>
 ```
+
+Set the following values for the helm chart. 
+
 ```cli
 RELEASE_NAME=virtual-kubelet
 NODE_NAME=virtual-kubelet
@@ -390,6 +394,7 @@ CHART_URL=https://github.com/virtual-kubelet/virtual-kubelet/raw/master/charts/$
 ```
 
 If your cluster is an AKS cluster: 
+
 ```cli
 helm install "$CHART_URL" --name "$RELEASE_NAME" \
   --set provider=azure \
@@ -399,10 +404,11 @@ helm install "$CHART_URL" --name "$RELEASE_NAME" \
   --set providers.azure.vent.subnetCidr=$ACI_SUBNET_RANGE \
   --set providers.azure.vnet.clusterCidr=$CLUSTER_SUBNET_RANGE \
   --set providers.azure.vnet.kubeDnsIp=$KUBE_DNS_IP 
-  --set providers.azure.master_Uri=$MASTER_URI
+  --set providers.azure.masterUri=$MASTER_URI
 ```
 
 For any other type of cluster: 
+
 ```cli
 helm install "$CHART_URL" --name "$RELEASE_NAME" \
   --set provider=azure \
@@ -415,14 +421,13 @@ helm install "$CHART_URL" --name "$RELEASE_NAME" \
   --set providers.azure.subscriptionId=$AZURE_SUBSCRIPTION_ID \
   --set providers.azure.aciResourceGroup=$AZURE_RG \
   --set providers.azure.aciRegion=$ACI_REGION 
-
   ```
 
 ## Validate the Virtual Kubelet ACI provider
 
 To validate that the Virtual Kubelet has been installed, return a list of Kubernetes nodes using the [kubectl get nodes][kubectl-get] command. You should see a node that matches the name given to the ACI connector.
 
-```cliria
+```cli
 kubectl get nodes
 ```
 
@@ -602,7 +607,7 @@ ERROR: logging before flag.Parse: E0914 00:02:01.546132       1 streamwatcher.go
 time="2018-09-14T00:02:01Z" level=error msg="Pod watcher connection is closed unexpectedly" namespace= node=virtual-kubelet-myconnector-linux operatingSystem=Linux provider=azure
 ```
 
-Then copy the master URL with cluster-info. 
+Then copy the master URI with cluster-info. 
 
 ```cli
 kubectl cluster-info
@@ -634,7 +639,7 @@ Edit the deployment.
 kubectl edit deploy virtual-kubelet-virtual-kubelet 
 ```
 
-Add the following name and value to the deployment in the enviorment section. Use your copied master URL. 
+Add the following name and value to the deployment in the enviorment section. Use your copied AKS master URI. 
 
 ```yaml
 --name: MASTER_URI
