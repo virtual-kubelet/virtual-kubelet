@@ -563,6 +563,17 @@
   revision = "9cad4c3443a7200dd6400aef47183728de563a38"
 
 [[projects]]
+  digest = "1:b42cde0e1f3c816dd57f57f7bbcf05ca40263ad96f168714c130c611fc0856a6"
+  name = "github.com/hashicorp/golang-lru"
+  packages = [
+    ".",
+    "simplelru",
+  ]
+  pruneopts = "NUT"
+  revision = "20f1fb78b0740ba8c3cb143a61e86ba5c8669768"
+  version = "v0.5.0"
+
+[[projects]]
   branch = "master"
   digest = "1:11c6c696067d3127ecf332b10f89394d386d9083f82baf71f40f2da31841a009"
   name = "github.com/hashicorp/hcl"
@@ -1307,7 +1318,7 @@
   revision = "a191abe0b71e00ce4cde58af8002aa4c1a8bb068"
 
 [[projects]]
-  digest = "1:89c2daeab55ca5e589ac4d204a73f85d8039d7ced4e0777b7d1fd7a8bbb1ebcb"
+  digest = "1:25fa6b0b4e21f5bdcedeb38e04ae5bc9f307a4f82cd8ebbeb7534cb5062cf409"
   name = "k8s.io/apimachinery"
   packages = [
     "pkg/api/errors",
@@ -1331,7 +1342,9 @@
     "pkg/runtime/serializer/versioning",
     "pkg/selection",
     "pkg/types",
+    "pkg/util/cache",
     "pkg/util/clock",
+    "pkg/util/diff",
     "pkg/util/errors",
     "pkg/util/framer",
     "pkg/util/httpstream",
@@ -1348,6 +1361,7 @@
     "pkg/util/uuid",
     "pkg/util/validation",
     "pkg/util/validation/field",
+    "pkg/util/wait",
     "pkg/util/yaml",
     "pkg/version",
     "pkg/watch",
@@ -1371,7 +1385,7 @@
   revision = "25e79651c7e569b0ebcd97affc0fe7f1ffcbee94"
 
 [[projects]]
-  digest = "1:cb9d2f2f4ed72cd0cd5071a0676a35e9e4b801e3a4cd17da621cb3121b7720fb"
+  digest = "1:57983b132a06bc5956ed950993abf7071610c00a738d8270a2f3d89d19daa019"
   name = "k8s.io/client-go"
   packages = [
     "discovery",
@@ -1450,21 +1464,25 @@
     "rest/watch",
     "testing",
     "tools/auth",
+    "tools/cache",
     "tools/clientcmd",
     "tools/clientcmd/api",
     "tools/clientcmd/api/latest",
     "tools/clientcmd/api/v1",
     "tools/metrics",
+    "tools/pager",
     "tools/reference",
     "tools/remotecommand",
     "transport",
     "transport/spdy",
+    "util/buffer",
     "util/cert",
     "util/connrotation",
     "util/exec",
     "util/flowcontrol",
     "util/homedir",
     "util/integer",
+    "util/retry",
   ]
   pruneopts = "NUT"
   revision = "1638f8970cefaa404ff3a62950f88b08292b2696"
@@ -1590,6 +1608,7 @@
     "k8s.io/apimachinery/pkg/api/resource",
     "k8s.io/apimachinery/pkg/apis/meta/v1",
     "k8s.io/apimachinery/pkg/fields",
+    "k8s.io/apimachinery/pkg/runtime",
     "k8s.io/apimachinery/pkg/types",
     "k8s.io/apimachinery/pkg/util/intstr",
     "k8s.io/apimachinery/pkg/util/uuid",
@@ -1597,6 +1616,7 @@
     "k8s.io/client-go/kubernetes",
     "k8s.io/client-go/kubernetes/fake",
     "k8s.io/client-go/rest",
+    "k8s.io/client-go/tools/cache",
     "k8s.io/client-go/tools/clientcmd",
     "k8s.io/client-go/tools/clientcmd/api/v1",
     "k8s.io/client-go/tools/remotecommand",

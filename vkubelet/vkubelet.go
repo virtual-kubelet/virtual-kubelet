@@ -11,14 +11,11 @@ import (
 	"github.com/virtual-kubelet/virtual-kubelet/providers"
 	"go.opencensus.io/trace"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/fields"
-	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/kubernetes"
 )
 
 const (
-	PodStatusReason_ProviderFailed = "ProviderFailed"
+	podStatusReasonProviderFailed = "ProviderFailed"
 )
 
 // Server masquarades itself as a kubelet and allows for the virtual node to be backed by non-vm/node providers.
@@ -28,8 +25,9 @@ type Server struct {
 	k8sClient       *kubernetes.Clientset
 	taint           *corev1.Taint
 	provider        providers.Provider
-	podWatcher      watch.Interface
 	resourceManager *manager.ResourceManager
+	podSyncWorkers  int
+	podCh           chan *podNotification
 }
 
 // Config is used to configure a new server.
@@ -42,12 +40,19 @@ type Config struct {
 	Provider        providers.Provider
 	ResourceManager *manager.ResourceManager
 	Taint           *corev1.Taint
+	PodSyncWorkers  int
 }
 
+// APIConfig is used to configure the API server of the virtual kubelet.
 type APIConfig struct {
 	CertPath string
 	KeyPath  string
 	Addr     string
+}
+
+type podNotification struct {
+	pod *corev1.Pod
+	ctx context.Context
 }
 
 // New creates a new virtual-kubelet server.
@@ -59,6 +64,8 @@ func New(ctx context.Context, cfg Config) (s *Server, retErr error) {
 		k8sClient:       cfg.Client,
 		resourceManager: cfg.ResourceManager,
 		provider:        cfg.Provider,
+		podSyncWorkers:  cfg.PodSyncWorkers,
+		podCh:           make(chan *podNotification, cfg.PodSyncWorkers),
 	}
 
 	ctx = log.WithLogger(ctx, log.G(ctx))
@@ -111,40 +118,11 @@ func New(ctx context.Context, cfg Config) (s *Server, retErr error) {
 // Run starts the server, registers it with Kubernetes and begins watching/reconciling the cluster.
 // Run will block until Stop is called or a SIGINT or SIGTERM signal is received.
 func (s *Server) Run(ctx context.Context) error {
-	for {
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		default:
+	if err := s.watchForPodEvent(ctx); err != nil {
+		if pkgerrors.Cause(err) == context.Canceled {
+			return err
 		}
-
-		opts := metav1.ListOptions{
-			FieldSelector: fields.OneTermEqualSelector("spec.nodeName", s.nodeName).String(),
-		}
-
-		pods, err := s.k8sClient.CoreV1().Pods(s.namespace).List(opts)
-		if err != nil {
-			return pkgerrors.Wrap(err, "error getting pod list")
-		}
-		s.resourceManager.SetPods(pods)
-		s.reconcile(ctx)
-
-		opts.ResourceVersion = pods.ResourceVersion
-		s.podWatcher, err = s.k8sClient.CoreV1().Pods(s.namespace).Watch(opts)
-		if err != nil {
-			return pkgerrors.Wrap(err, "failed to watch pods")
-		}
-
-
-		if err := s.watchForPodEvent(ctx); err != nil {
-			if pkgerrors.Cause(err) == context.Canceled {
-				return err
-			}
-			log.G(ctx).Error(err)
-			break
-		}
-
-		time.Sleep(5 * time.Second)
+		log.G(ctx).Error(err)
 	}
 
 	return nil
@@ -153,9 +131,7 @@ func (s *Server) Run(ctx context.Context) error {
 // Stop shutsdown the server.
 // It does not shutdown pods assigned to the virtual node.
 func (s *Server) Stop() {
-	if s.podWatcher != nil {
-		s.podWatcher.Stop()
-	}
+	close(s.podCh)
 }
 
 // reconcile is the main reconciliation loop that compares differences between Kubernetes and
@@ -225,7 +201,7 @@ func (s *Server) reconcile(ctx context.Context) {
 			pod.DeletionTimestamp == nil &&
 			pod.Status.Phase != corev1.PodSucceeded &&
 			pod.Status.Phase != corev1.PodFailed &&
-			pod.Status.Reason != PodStatusReason_ProviderFailed {
+			pod.Status.Reason != podStatusReasonProviderFailed {
 			createPods = append(createPods, pod)
 		}
 	}
