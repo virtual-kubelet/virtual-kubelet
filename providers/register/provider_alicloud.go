@@ -1,4 +1,4 @@
-// +build !no_alicooud_provider
+// +build !no_alicloud_provider
 
 package register
 
