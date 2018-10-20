@@ -17,6 +17,6 @@ package eci
 
 // Label is a nested struct in eci response
 type Tag struct {
-	Key   string `json:"Key" xml:"Key" position:"Query" name:"Key"`
-	Value string `json:"Value" xml:"Value" position:"Query" name:"Value"`
+	Key   string `name:"Key"`
+	Value string `name:"Value"`
 }

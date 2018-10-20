@@ -92,17 +92,17 @@ type CreateContainerGroupRequest struct {
 }
 
 type CreateContainer struct {
-	Name            string           `position:"Query" name:"Name"`
-	Image           string           `position:"Query" name:"Image"`
-	Memory          requests.Float   `position:"Query" name:"Memory"`
-	Cpu             requests.Float   `position:"Query" name:"Cpu"`
-	WorkingDir      string           `position:"Query" name:"WorkingDir"`
-	ImagePullPolicy string           `position:"Query" name:"ImagePullPolicy"`
-	Commands        []string         `position:"Query" name:"Command"  type:"Repeated"`
-	Args            []string         `position:"Query" name:"Arg"  type:"Repeated"`
-	VolumeMounts    []VolumeMount    `position:"Query" name:"VolumeMount"  type:"Repeated"`
-	Ports           []ContainerPort  `position:"Query" name:"Port"  type:"Repeated"`
-	EnvironmentVars []EnvironmentVar `position:"Query" name:"EnvironmentVar"  type:"Repeated"`
+	Name            string           `name:"Name"`
+	Image           string           `name:"Image"`
+	Memory          requests.Float   `name:"Memory"`
+	Cpu             requests.Float   `name:"Cpu"`
+	WorkingDir      string           `name:"WorkingDir"`
+	ImagePullPolicy string           `name:"ImagePullPolicy"`
+	Commands        []string         `name:"Command"  type:"Repeated"`
+	Args            []string         `name:"Arg"  type:"Repeated"`
+	VolumeMounts    []VolumeMount    `name:"VolumeMount"  type:"Repeated"`
+	Ports           []ContainerPort  `name:"Port"  type:"Repeated"`
+	EnvironmentVars []EnvironmentVar `name:"EnvironmentVar"  type:"Repeated"`
 }
 
 // CreateContainerGroupImageRegistryCredential is a repeated param struct in CreateContainerGroupRequest
@@ -115,8 +115,8 @@ type ImageRegistryCredential struct {
 // CreateContainerGroupResponse is the response struct for api CreateContainerGroup
 type CreateContainerGroupResponse struct {
 	*responses.BaseResponse
-	RequestId        string `json:"RequestId" xml:"RequestId"`
-	ContainerGroupId string `json:"ContainerGroupId" xml:"ContainerGroupId"`
+	RequestId        string
+	ContainerGroupId string
 }
 
 // CreateCreateContainerGroupRequest creates a request to invoke CreateContainerGroup API

@@ -646,9 +646,9 @@ func (p *ECIProvider) getVolumes(pod *v1.Pod) ([]eci.Volume, error) {
 
 			if len(ConfigFileToPaths) != 0 {
 				volumes = append(volumes, eci.Volume{
-					Type:                              eci.VOL_TYPE_CONFIGFILEVOLUME,
-					Name:                              v.Name,
-					ConfigFileVolumeConfigFileToPaths: ConfigFileToPaths,
+					Type:              eci.VOL_TYPE_CONFIGFILEVOLUME,
+					Name:              v.Name,
+					ConfigFileToPaths: ConfigFileToPaths,
 				})
 			}
 			continue
@@ -672,9 +672,9 @@ func (p *ECIProvider) getVolumes(pod *v1.Pod) ([]eci.Volume, error) {
 
 			if len(ConfigFileToPaths) != 0 {
 				volumes = append(volumes, eci.Volume{
-					Type:                              eci.VOL_TYPE_CONFIGFILEVOLUME,
-					Name:                              v.Name,
-					ConfigFileVolumeConfigFileToPaths: ConfigFileToPaths,
+					Type:              eci.VOL_TYPE_CONFIGFILEVOLUME,
+					Name:              v.Name,
+					ConfigFileToPaths: ConfigFileToPaths,
 				})
 			}
 			continue
