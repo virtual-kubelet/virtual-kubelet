@@ -178,7 +178,8 @@ func (p *ECIProvider) CreatePod(ctx context.Context, pod *v1.Pod) error {
 	request.RestartPolicy = string(pod.Spec.RestartPolicy)
 
 	// get containers
-	containers, err := p.getContainers(pod)
+	containers, err := p.getContainers(pod, false)
+	initContainers, err := p.getContainers(pod, true)
 	if err != nil {
 		return err
 	}
@@ -197,6 +198,7 @@ func (p *ECIProvider) CreatePod(ctx context.Context, pod *v1.Pod) error {
 
 	// assign all the things
 	request.Containers = containers
+	request.InitContainers = initContainers
 	request.Volumes = volumes
 	request.ImageRegistryCredentials = creds
 	CreationTimestamp := pod.CreationTimestamp.UTC().Format(podTagTimeFormat)
@@ -539,9 +541,13 @@ func readDockerConfigJSONSecret(secret *v1.Secret, ips []eci.ImageRegistryCreden
 	return ips, err
 }
 
-func (p *ECIProvider) getContainers(pod *v1.Pod) ([]eci.CreateContainer, error) {
-	containers := make([]eci.CreateContainer, 0, len(pod.Spec.Containers))
-	for _, container := range pod.Spec.Containers {
+func (p *ECIProvider) getContainers(pod *v1.Pod, init bool) ([]eci.CreateContainer, error) {
+	podContainers := pod.Spec.Containers
+	if init {
+		podContainers = pod.Spec.InitContainers
+	}
+	containers := make([]eci.CreateContainer, 0, len(podContainers))
+	for _, container := range podContainers {
 		c := eci.CreateContainer{
 			Name:     container.Name,
 			Image:    container.Image,

@@ -77,6 +77,7 @@ func (client *Client) CreateContainerGroupWithCallback(request *CreateContainerG
 type CreateContainerGroupRequest struct {
 	*requests.RpcRequest
 	Containers               []CreateContainer         `position:"Query" name:"Container"  type:"Repeated"`
+	InitContainers           []CreateContainer         `position:"Query" name:"InitContainer"  type:"Repeated"`
 	ResourceOwnerId          requests.Integer          `position:"Query" name:"ResourceOwnerId"`
 	SecurityGroupId          string                    `position:"Query" name:"SecurityGroupId"`
 	ImageRegistryCredentials []ImageRegistryCredential `position:"Query" name:"ImageRegistryCredential"  type:"Repeated"`
