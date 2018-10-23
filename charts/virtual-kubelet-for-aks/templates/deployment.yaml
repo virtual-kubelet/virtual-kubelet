@@ -41,6 +41,8 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: status.podIP
+        - name: ACI_EXTRA_USER_AGENT
+          value: {{ printf "helm-chart/aks/%s/%s" .Chart.Name .Chart.Version }}
         - name: ACI_SUBNET_NAME
           value: {{ .Values.env.aciVnetSubnetName }}
         - name: ACI_SUBNET_CIDR
