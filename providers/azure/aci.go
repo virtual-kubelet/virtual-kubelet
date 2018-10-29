@@ -65,6 +65,7 @@ type ACIProvider struct {
 	cpu                string
 	memory             string
 	pods               string
+	gpu                string
 	internalIP         string
 	daemonEndpointPort int32
 	diagnostics        *aci.ContainerGroupDiagnostics
@@ -268,6 +269,10 @@ func NewACIProvider(config string, rm *manager.ResourceManager, nodeName, operat
 
 	if podsQuota := os.Getenv("ACI_QUOTA_POD"); podsQuota != "" {
 		p.pods = podsQuota
+	}
+
+	if gpuQuota := os.Getenv("ACI_QUOTA_GPU"); gpuQuota != "" {
+		p.gpu = gpuQuota
 	}
 
 	p.operatingSystem = operatingSystem
@@ -884,11 +889,17 @@ func (p *ACIProvider) GetPods(ctx context.Context) ([]*v1.Pod, error) {
 
 // Capacity returns a resource list containing the capacity limits set for ACI.
 func (p *ACIProvider) Capacity(ctx context.Context) v1.ResourceList {
-	return v1.ResourceList{
-		"cpu":    resource.MustParse(p.cpu),
-		"memory": resource.MustParse(p.memory),
-		"pods":   resource.MustParse(p.pods),
+	resourceList := v1.ResourceList{
+		"cpu":            resource.MustParse(p.cpu),
+		"memory":         resource.MustParse(p.memory),
+		"pods":           resource.MustParse(p.pods),
 	}
+
+	if p.gpu != "" {
+		resourceList["nvidia.com/gpu"] = resource.MustParse(p.gpu)
+	}
+
+	return resourceList
 }
 
 // NodeConditions returns a list of conditions (Ready, OutOfDisk, etc), for updates to the node status

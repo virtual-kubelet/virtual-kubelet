@@ -488,3 +488,20 @@ const (
 	LogAnalyticsMetadataKeyNodeName          string = "node-name"
 	LogAnalyticsMetadataKeyClusterResourceID string = "cluster-resource-id"
 )
+
+// GpuSupportRegion is the GPU supported region for ACI RP
+type GpuSupportRegion struct {
+	Name       string `json:"name"`
+	DefaultSKU string `json:"defaultSku"`
+}
+
+// ResourceProviderMetadata is the ACI resource provider metadata
+type ResourceProviderMetadata struct {
+	VNetSupportRegions []string            `json:"vnetSupportRegions,omitempty"`
+	GpuSupportRegions  []*GpuSupportRegion `json:"gpuSupportRegions,omitempty"`
+}
+
+// ResourceProvider is the ACI resource provider
+type ResourceProvider struct {
+	Metadata *ResourceProviderMetadata `json:"metadata"`
+}
