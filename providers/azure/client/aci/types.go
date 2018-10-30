@@ -237,22 +237,35 @@ type Resource struct {
 	Tags     map[string]string `json:"tags,omitempty"`
 }
 
-// ResourceLimits is the resource limits.
-type ResourceLimits struct {
-	MemoryInGB float64 `json:"memoryInGB,omitempty"`
-	CPU        float64 `json:"cpu,omitempty"`
+// GPUSKU enumerates the values for GPU SKUs
+type GPUSKU string
+
+const (
+	// K80 specifies the K80 GPU SKU
+	K80  GPUSKU = "K80"
+	// P100 specifies the P100 GPU SKU
+	P100 GPUSKU = "P100"
+	// V100 specifies the V100 GPU SKU
+	V100 GPUSKU = "V100"
+)
+
+// GPUResource is the GPU resource for the container group.
+type GPUResource struct {
+	Count int    `json:"count"`
+	SKU   GPUSKU `json:"sku"`
 }
 
-// ResourceRequests is the resource requests.
-type ResourceRequests struct {
-	MemoryInGB float64 `json:"memoryInGB,omitempty"`
-	CPU        float64 `json:"cpu,omitempty"`
+// ComputeResources is the compute resource.
+type ComputeResources struct {
+	MemoryInGB float64      `json:"memoryInGB,omitempty"`
+	CPU        float64      `json:"cpu,omitempty"`
+	GPU        *GPUResource `json:"gpu,omitempty"`
 }
 
 // ResourceRequirements is the resource requirements.
 type ResourceRequirements struct {
-	Requests *ResourceRequests `json:"requests,omitempty"`
-	Limits   *ResourceLimits   `json:"limits,omitempty"`
+	Requests *ComputeResources `json:"requests,omitempty"`
+	Limits   *ComputeResources `json:"limits,omitempty"`
 }
 
 // Usage is a single usage result
@@ -489,19 +502,19 @@ const (
 	LogAnalyticsMetadataKeyClusterResourceID string = "cluster-resource-id"
 )
 
-// GpuSupportRegion is the GPU supported region for ACI RP
-type GpuSupportRegion struct {
-	Name       string `json:"name"`
-	DefaultSKU string `json:"defaultSku"`
+// GPUSupportRegion is the GPU supported region for ACI RP
+type GPUSupportRegion struct {
+	Name string   `json:"name"`
+	SKUs []GPUSKU `json:"skus"`
 }
 
 // ResourceProviderMetadata is the ACI resource provider metadata
 type ResourceProviderMetadata struct {
 	VNetSupportRegions []string            `json:"vnetSupportRegions,omitempty"`
-	GpuSupportRegions  []*GpuSupportRegion `json:"gpuSupportRegions,omitempty"`
+	GPUSupportRegions  []*GPUSupportRegion `json:"gpuSupportRegions,omitempty"`
 }
 
-// ResourceProvider is the ACI resource provider
-type ResourceProvider struct {
+// ResourceProviderManifest is the ACI resource provider manifest
+type ResourceProviderManifest struct {
 	Metadata *ResourceProviderMetadata `json:"metadata"`
 }

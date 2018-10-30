@@ -11,54 +11,67 @@ import (
 	"github.com/virtual-kubelet/virtual-kubelet/providers/azure/client/api"
 )
 
-// GetContainerGroup gets an Azure Container Instance in the provided
-// resource group with the given container group name.
-// From: https://docs.microsoft.com/en-us/rest/api/container-instances/containergroups/get
-func (c *Client) GetContainerGroup(ctx context.Context, resourceGroup, containerGroupName string) (*ContainerGroup, error, *int) {
+const (
+	resourceProviderURLPath    = "providers/Microsoft.ContainerInstance"
+	resourceProviderAPIVersion = "2018-02-01"
+)
+
+// GetResourceProviderMetadata gets the ACI resource provider metadata
+func (c *Client) GetResourceProviderMetadata(ctx context.Context) (*ResourceProviderMetadata, error) {
+	manifest, err := c.getResourceProviderManifest(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	if manifest == nil {
+		return nil, fmt.Errorf("The resource provider manifest is empty")
+	}
+
+	if manifest.Metadata == nil {
+		return nil, fmt.Errorf("The resource provider metadata is empty")
+	}
+
+	return manifest.Metadata, nil
+}
+
+func (c *Client) getResourceProviderManifest(ctx context.Context) (*ResourceProviderManifest, error) {
 	urlParams := url.Values{
-		"api-version": []string{apiVersion},
+		"api-version": []string{resourceProviderAPIVersion},
+		"$expand":     []string{"metadata"},
 	}
 
 	// Create the url.
-	uri := api.ResolveRelative(c.auth.ResourceManagerEndpoint, containerGroupURLPath)
+	uri := api.ResolveRelative("https://brazilus.management.azure.com", resourceProviderURLPath)
+	// uri := api.ResolveRelative(c.auth.ResourceManagerEndpoint, resourceProviderURLPath)
 	uri += "?" + url.Values(urlParams).Encode()
 
 	// Create the request.
 	req, err := http.NewRequest("GET", uri, nil)
 	if err != nil {
-		return nil, fmt.Errorf("Creating get container group uri request failed: %v", err), nil
+		return nil, fmt.Errorf("Creating get resource provider manifest request failed: %v", err)
 	}
 	req = req.WithContext(ctx)
-
-	// Add the parameters to the url.
-	if err := api.ExpandURL(req.URL, map[string]string{
-		"subscriptionId":     c.auth.SubscriptionID,
-		"resourceGroup":      resourceGroup,
-		"containerGroupName": containerGroupName,
-	}); err != nil {
-		return nil, fmt.Errorf("Expanding URL with parameters failed: %v", err), nil
-	}
 
 	// Send the request.
 	resp, err := c.hc.Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("Sending get container group request failed: %v", err), nil
+		return nil, fmt.Errorf("Sending get resource provider manifest request failed: %v", err)
 	}
 	defer resp.Body.Close()
 
 	// 200 (OK) is a success response.
 	if err := api.CheckResponse(resp); err != nil {
-		return nil, err, &resp.StatusCode
+		return nil, err
 	}
 
 	// Decode the body from the response.
 	if resp.Body == nil {
-		return nil, errors.New("Get container group returned an empty body in the response"), &resp.StatusCode
+		return nil, errors.New("Get resource provider manifest returned an empty body in the response")
 	}
-	var cg ContainerGroup
-	if err := json.NewDecoder(resp.Body).Decode(&cg); err != nil {
-		return nil, fmt.Errorf("Decoding get container group response body failed: %v", err), &resp.StatusCode
+	var manifest ResourceProviderManifest
+	if err := json.NewDecoder(resp.Body).Decode(&manifest); err != nil {
+		return nil, fmt.Errorf("Decoding get resource provider manifest response body failed: %v", err)
 	}
 
-	return &cg, nil, &resp.StatusCode
+	return &manifest, nil
 }
