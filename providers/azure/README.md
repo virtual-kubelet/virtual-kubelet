@@ -403,7 +403,7 @@ helm install "$CHART_URL" --name "$RELEASE_NAME" \
   --set providers.azure.vnet.subnetName=$ACI_SUBNET_NAME \
   --set providers.azure.vent.subnetCidr=$ACI_SUBNET_RANGE \
   --set providers.azure.vnet.clusterCidr=$CLUSTER_SUBNET_RANGE \
-  --set providers.azure.vnet.kubeDnsIp=$KUBE_DNS_IP 
+  --set providers.azure.vnet.kubeDnsIp=$KUBE_DNS_IP \
   --set providers.azure.masterUri=$MASTER_URI
 ```
 
