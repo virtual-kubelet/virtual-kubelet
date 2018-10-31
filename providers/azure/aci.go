@@ -54,6 +54,10 @@ const (
 	maxDNSSearchListChars = 256
 )
 
+const (
+	gpuResourceName v1.ResourceName = "nvidia.com/gpu"
+)
+
 // ACIProvider implements the virtual-kubelet provider interface and communicates with Azure's ACI APIs.
 type ACIProvider struct {
 	aciClient          *aci.Client
@@ -66,6 +70,7 @@ type ACIProvider struct {
 	memory             string
 	pods               string
 	gpu                string
+	gpuSKU             aci.GPUSKU
 	internalIP         string
 	daemonEndpointPort int32
 	diagnostics        *aci.ContainerGroupDiagnostics
@@ -254,25 +259,8 @@ func NewACIProvider(config string, rm *manager.ResourceManager, nodeName, operat
 		return nil, errors.New(unsupportedRegionMessage)
 	}
 
-	// Set sane defaults for Capacity in case config is not supplied
-	p.cpu = "800"
-	p.memory = "4Ti"
-	p.pods = "800"
-
-	if cpuQuota := os.Getenv("ACI_QUOTA_CPU"); cpuQuota != "" {
-		p.cpu = cpuQuota
-	}
-
-	if memoryQuota := os.Getenv("ACI_QUOTA_MEMORY"); memoryQuota != "" {
-		p.memory = memoryQuota
-	}
-
-	if podsQuota := os.Getenv("ACI_QUOTA_POD"); podsQuota != "" {
-		p.pods = podsQuota
-	}
-
-	if gpuQuota := os.Getenv("ACI_QUOTA_GPU"); gpuQuota != "" {
-		p.gpu = gpuQuota
+	if err := p.setupCapacity(context.TODO()); err != nil {
+		return nil, err
 	}
 
 	p.operatingSystem = operatingSystem
@@ -322,6 +310,55 @@ func NewACIProvider(config string, rm *manager.ResourceManager, nodeName, operat
 	return &p, err
 }
 
+func (p *ACIProvider) setupCapacity(ctx context.Context) error {
+	ctx, span := trace.StartSpan(ctx, "setupCapacity")
+	defer span.End()
+	logger := log.G(ctx).WithField("method", "setupCapacity")
+
+	// Set sane defaults for Capacity in case config is not supplied
+	p.cpu = "800"
+	p.memory = "4Ti"
+	p.pods = "800"
+
+	if cpuQuota := os.Getenv("ACI_QUOTA_CPU"); cpuQuota != "" {
+		p.cpu = cpuQuota
+	}
+
+	if memoryQuota := os.Getenv("ACI_QUOTA_MEMORY"); memoryQuota != "" {
+		p.memory = memoryQuota
+	}
+
+	if podsQuota := os.Getenv("ACI_QUOTA_POD"); podsQuota != "" {
+		p.pods = podsQuota
+	}
+
+	metadata, err := p.aciClient.GetResourceProviderMetadata(ctx)
+
+	if err != nil {
+		msg := "Unable to fetch the ACI metadata"
+		span.SetStatus(trace.Status{Code: trace.StatusCodeInvalidArgument, Message: msg})
+		logger.WithError(err).Error(msg)
+		return err
+	}
+
+	if metadata == nil || metadata.GPURegionalSKUs == nil {
+		logger.Warn("ACI GPU capacity is not enabled. GPU capacity will be disabled")
+		return nil
+	}
+
+	for _, regionalSKU := range metadata.GPURegionalSKUs {
+		if strings.EqualFold(regionalSKU.Location, p.region) && len(regionalSKU.SKUs) != 0 {
+			p.gpu = "100"
+			if gpu := os.Getenv("ACI_QUOTA_GPU"); gpu != "" {
+				p.gpu = gpu
+			}
+			p.gpuSKU = regionalSKU.SKUs[0]
+		}
+	}
+
+	return nil
+}
+
 func (p *ACIProvider) setupNetworkProfile(auth *client.Authentication) error {
 	c, err := network.NewClient(auth, p.extraUserAgent)
 	if err != nil {
@@ -344,10 +381,10 @@ func (p *ACIProvider) setupNetworkProfile(auth *client.Authentication) error {
 			return fmt.Errorf("found subnet '%s' using different CIDR: '%s'. desired: '%s'", p.subnetName, *subnet.SubnetPropertiesFormat.AddressPrefix, p.subnetCIDR)
 		}
 		if subnet.SubnetPropertiesFormat.NetworkSecurityGroup != nil {
-			return fmt.Errorf("unable to delegate subnet '%s' to Azure Container Instance since it references the network security group '%s'.", p.subnetName, *subnet.SubnetPropertiesFormat.NetworkSecurityGroup.ID)
+			return fmt.Errorf("unable to delegate subnet '%s' to Azure Container Instance since it references the network security group '%s'", p.subnetName, *subnet.SubnetPropertiesFormat.NetworkSecurityGroup.ID)
 		}
 		if subnet.SubnetPropertiesFormat.RouteTable != nil {
-                        return fmt.Errorf("unable to delegate subnet '%s' to Azure Container Instance since it references the route table '%s'.", p.subnetName, *subnet.SubnetPropertiesFormat.RouteTable.ID)
+                        return fmt.Errorf("unable to delegate subnet '%s' to Azure Container Instance since it references the route table '%s'", p.subnetName, *subnet.SubnetPropertiesFormat.RouteTable.ID)
                 }
 		if subnet.SubnetPropertiesFormat.ServiceAssociationLinks != nil {
 			for _, l := range *subnet.SubnetPropertiesFormat.ServiceAssociationLinks {
@@ -356,7 +393,7 @@ func (p *ACIProvider) setupNetworkProfile(auth *client.Authentication) error {
 					break
 				}
 
-				return fmt.Errorf("unable to delegate subnet '%s' to Azure Container Instance as it is used by other Azure resource: '%v'.", p.subnetName, l)
+				return fmt.Errorf("unable to delegate subnet '%s' to Azure Container Instance as it is used by other Azure resource: '%v'", p.subnetName, l)
 			}
 		} else {
 			for _, d := range *subnet.SubnetPropertiesFormat.Delegations {
@@ -706,7 +743,7 @@ func (p *ACIProvider) GetPod(ctx context.Context, namespace, name string) (*v1.P
 	defer span.End()
 	addAzureAttributes(span, p)
 
-	cg, err, status := p.aciClient.GetContainerGroup(ctx, p.resourceGroup, fmt.Sprintf("%s-%s", namespace, name))
+	cg, status, err := p.aciClient.GetContainerGroup(ctx, p.resourceGroup, fmt.Sprintf("%s-%s", namespace, name))
 	if err != nil {
 		if status != nil && *status == http.StatusNotFound {
 			return nil, nil
@@ -728,7 +765,7 @@ func (p *ACIProvider) GetContainerLogs(ctx context.Context, namespace, podName, 
 	addAzureAttributes(span, p)
 
 	logContent := ""
-	cg, err, _ := p.aciClient.GetContainerGroup(ctx, p.resourceGroup, fmt.Sprintf("%s-%s", namespace, podName))
+	cg, _, err := p.aciClient.GetContainerGroup(ctx, p.resourceGroup, fmt.Sprintf("%s-%s", namespace, podName))
 	if err != nil {
 		return logContent, err
 	}
@@ -769,7 +806,7 @@ func (p *ACIProvider) ExecInContainer(name string, uid types.UID, container stri
 		defer errstream.Close()
 	}
 
-	cg, err, _ := p.aciClient.GetContainerGroup(context.TODO(), p.resourceGroup, name)
+	cg, _, err := p.aciClient.GetContainerGroup(context.TODO(), p.resourceGroup, name)
 	if err != nil {
 		return err
 	}
@@ -789,10 +826,10 @@ func (p *ACIProvider) ExecInContainer(name string, uid types.UID, container stri
 		return err
 	}
 
-	wsUri := xcrsp.WebSocketUri
+	wsURI := xcrsp.WebSocketURI
 	password := xcrsp.Password
 
-	c, _, _ := websocket.DefaultDialer.Dial(wsUri, nil)
+	c, _, _ := websocket.DefaultDialer.Dial(wsURI, nil)
 	c.WriteMessage(websocket.TextMessage, []byte(password)) // Websocket password needs to be sent before WS terminal is active
 
 	// Cleanup on exit
@@ -890,13 +927,13 @@ func (p *ACIProvider) GetPods(ctx context.Context) ([]*v1.Pod, error) {
 // Capacity returns a resource list containing the capacity limits set for ACI.
 func (p *ACIProvider) Capacity(ctx context.Context) v1.ResourceList {
 	resourceList := v1.ResourceList{
-		"cpu":            resource.MustParse(p.cpu),
-		"memory":         resource.MustParse(p.memory),
-		"pods":           resource.MustParse(p.pods),
+		v1.ResourceCPU:    resource.MustParse(p.cpu),
+		v1.ResourceMemory: resource.MustParse(p.memory),
+		v1.ResourcePods:   resource.MustParse(p.pods),
 	}
 
 	if p.gpu != "" {
-		resourceList["nvidia.com/gpu"] = resource.MustParse(p.gpu)
+		resourceList[gpuResourceName] = resource.MustParse(p.gpu)
 	}
 
 	return resourceList
@@ -1119,7 +1156,7 @@ func (p *ACIProvider) getContainers(pod *v1.Pod) ([]aci.Container, error) {
 		}
 
 		c.Resources = aci.ResourceRequirements{
-			Requests: &aci.ResourceRequests{
+			Requests: &aci.ComputeResources{
 				CPU:        cpuRequest,
 				MemoryInGB: memoryRequest,
 			},
@@ -1136,7 +1173,7 @@ func (p *ACIProvider) getContainers(pod *v1.Pod) ([]aci.Container, error) {
 				memoryLimit = float64(container.Resources.Limits.Memory().Value()) / 1000000000.00
 			}
 
-			c.Resources.Limits = &aci.ResourceLimits{
+			c.Resources.Limits = &aci.ComputeResources{
 				CPU:        cpuLimit,
 				MemoryInGB: memoryLimit,
 			}

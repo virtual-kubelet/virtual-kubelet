@@ -318,7 +318,7 @@ type ExecRequest struct {
 
 // ExecResponse is a request for Launch Exec API response for ACI.
 type ExecResponse struct {
-	WebSocketUri string `json:"webSocketUri,omitempty"`
+	WebSocketURI string `json:"webSocketUri,omitempty"`
 	Password     string `json:"password,omitempty"`
 }
 
@@ -502,16 +502,16 @@ const (
 	LogAnalyticsMetadataKeyClusterResourceID string = "cluster-resource-id"
 )
 
-// GPUSupportRegion is the GPU supported region for ACI RP
-type GPUSupportRegion struct {
-	Name string   `json:"name"`
-	SKUs []GPUSKU `json:"skus"`
+// GPURegionalSKU is the ACI GPU regional SKU
+type GPURegionalSKU struct {
+	Location string   `json:"location"`
+	SKUs     []GPUSKU `json:"skus"`
 }
 
 // ResourceProviderMetadata is the ACI resource provider metadata
 type ResourceProviderMetadata struct {
-	VNetSupportRegions []string            `json:"vnetSupportRegions,omitempty"`
-	GPUSupportRegions  []*GPUSupportRegion `json:"gpuSupportRegions,omitempty"`
+	VNetSupportRegions []string          `json:"vnetSupportRegions,omitempty"`
+	GPURegionalSKUs    []*GPURegionalSKU `json:"gpuRegionalSkus,omitempty"`
 }
 
 // ResourceProviderManifest is the ACI resource provider manifest

@@ -15,21 +15,21 @@ func TestGetResourceProviderMetadata(t *testing.T) {
 		t.Fatal("VNet support regions should not be empty")
 	}
 
-	if metadata.GPUSupportRegions == nil || len(metadata.GPUSupportRegions) == 0 {
-		t.Fatal("GPU support regions should not be empty")
+	if metadata.GPURegionalSKUs == nil || len(metadata.GPURegionalSKUs) == 0 {
+		t.Fatal("GPU regional SKUs should not be empty")
 	}
 
-	for _, region := range metadata.GPUSupportRegions {
+	for _, region := range metadata.GPURegionalSKUs {
 		if region == nil {
 			t.Fatal("Unexpected nil region")
 		}
 
-		if region.Name == "" {
+		if region.Location == "" {
 			t.Fatal("Region name should not be empty")
 		}
 
 		if region.SKUs == nil || len(region.SKUs) == 0 {
-			t.Fatalf("Region '%s' SKUs is empty", region.Name)
+			t.Fatalf("Region '%s' SKUs is empty", region.Location)
 		}
 	}
 }

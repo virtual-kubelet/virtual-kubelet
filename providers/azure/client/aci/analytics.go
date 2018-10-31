@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 )
 
+// NewContainerGroupDiagnostics creates a container group diagnostics object
 func NewContainerGroupDiagnostics(logAnalyticsID, logAnalyticsKey string) (*ContainerGroupDiagnostics, error) {
 
 	if logAnalyticsID == "" || logAnalyticsKey == "" {
@@ -21,6 +22,7 @@ func NewContainerGroupDiagnostics(logAnalyticsID, logAnalyticsKey string) (*Cont
 	}, nil
 }
 
+// NewContainerGroupDiagnosticsFromFile creates a container group diagnostics object from the specified file
 func NewContainerGroupDiagnosticsFromFile(filepath string) (*ContainerGroupDiagnostics, error) {
 
 	analyticsdata, err := ioutil.ReadFile(filepath)

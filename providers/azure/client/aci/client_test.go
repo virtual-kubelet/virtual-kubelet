@@ -251,7 +251,7 @@ func TestCreateContainerGroupWithBadVNetFails(t *testing.T) {
 }
 
 func TestGetContainerGroup(t *testing.T) {
-	cg, err, _ := client.GetContainerGroup(context.Background(), resourceGroup, containerGroup)
+	cg, _, err := client.GetContainerGroup(context.Background(), resourceGroup, containerGroup)
 	if err != nil {
 		t.Fatal(err)
 	}

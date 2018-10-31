@@ -254,7 +254,7 @@ func TestGetPodsWithoutResourceRequestsLimits(t *testing.T) {
 								},
 							},
 							Resources: aci.ResourceRequirements{
-								Requests: &aci.ResourceRequests{
+								Requests: &aci.ComputeResources{
 									CPU:        0.99,
 									MemoryInGB: 1.5,
 								},
@@ -332,7 +332,7 @@ func TestGetPodWithoutResourceRequestsLimits(t *testing.T) {
 								},
 							},
 							Resources: aci.ResourceRequirements{
-								Requests: &aci.ResourceRequests{
+								Requests: &aci.ComputeResources{
 									CPU:        0.99,
 									MemoryInGB: 1.5,
 								},
@@ -405,7 +405,7 @@ func TestGetPodWithContainerID(t *testing.T) {
 								},
 							},
 							Resources: aci.ResourceRequirements{
-								Requests: &aci.ResourceRequests{
+								Requests: &aci.ComputeResources{
 									CPU:        0.99,
 									MemoryInGB: 1.5,
 								},
