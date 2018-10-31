@@ -251,7 +251,7 @@ const (
 
 // GPUResource is the GPU resource for the container group.
 type GPUResource struct {
-	Count int    `json:"count"`
+	Count int32  `json:"count"`
 	SKU   GPUSKU `json:"sku"`
 }
 

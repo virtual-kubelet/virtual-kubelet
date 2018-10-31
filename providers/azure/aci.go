@@ -41,7 +41,7 @@ const (
 	// The service account secret mount path.
 	serviceAccountSecretMountPath = "/var/run/secrets/kubernetes.io/serviceaccount"
 
-	virtualKubeletDNSNameLabel = "virtualkubelet.io/dnsnamelabel"
+	virtualKubeletDNSNameLabel      = "virtualkubelet.io/dnsnamelabel"
 
 	subnetsAction           = "Microsoft.Network/virtualNetworks/subnets/action"
 	subnetDelegationService = "Microsoft.ContainerInstance/containerGroups"
@@ -56,6 +56,7 @@ const (
 
 const (
 	gpuResourceName v1.ResourceName = "nvidia.com/gpu"
+	gpuTypeAnnotation               = "virtual-kubelet.io/gpu-type"
 )
 
 // ACIProvider implements the virtual-kubelet provider interface and communicates with Azure's ACI APIs.
@@ -70,7 +71,7 @@ type ACIProvider struct {
 	memory             string
 	pods               string
 	gpu                string
-	gpuSKU             aci.GPUSKU
+	gpuSKUs            []aci.GPUSKU
 	internalIP         string
 	daemonEndpointPort int32
 	diagnostics        *aci.ContainerGroupDiagnostics
@@ -352,7 +353,7 @@ func (p *ACIProvider) setupCapacity(ctx context.Context) error {
 			if gpu := os.Getenv("ACI_QUOTA_GPU"); gpu != "" {
 				p.gpu = gpu
 			}
-			p.gpuSKU = regionalSKU.SKUs[0]
+			p.gpuSKUs = regionalSKU.SKUs
 		}
 	}
 
@@ -1177,6 +1178,25 @@ func (p *ACIProvider) getContainers(pod *v1.Pod) ([]aci.Container, error) {
 				CPU:        cpuLimit,
 				MemoryInGB: memoryLimit,
 			}
+
+			if gpu, ok := container.Resources.Limits[gpuResourceName]; ok {
+				sku, err := p.getGPUSKU(pod)
+				if err != nil {
+					return nil, err
+				}
+
+				if gpu.Value() == 0 {
+					return nil, errors.New("GPU must be a integer number")
+				}
+
+				gpuResource := &aci.GPUResource{
+					Count: int32(gpu.Value()),
+					SKU:   sku,
+				}
+
+				c.Resources.Requests.GPU = gpuResource
+				c.Resources.Limits.GPU = gpuResource
+			}
 		}
 
 		if container.LivenessProbe != nil {
@@ -1198,6 +1218,24 @@ func (p *ACIProvider) getContainers(pod *v1.Pod) ([]aci.Container, error) {
 		containers = append(containers, c)
 	}
 	return containers, nil
+}
+
+func (p *ACIProvider) getGPUSKU(pod *v1.Pod) (aci.GPUSKU, error) {
+	if len(p.gpuSKUs) == 0 {
+		return "", fmt.Errorf("The pod requires GPU resource, but ACI doesn't provide GPU enabled container group in region %s", p.region)
+	}
+
+	if desiredSKU, ok := pod.Annotations[gpuTypeAnnotation]; ok {
+		for _, supportedSKU := range p.gpuSKUs {
+			if strings.EqualFold(string(desiredSKU), string(supportedSKU)) {
+				return supportedSKU, nil
+			}
+		}
+
+		return "", fmt.Errorf("The pod requires GPU SKU %s, but ACI only supports SKUs %v in region %s", desiredSKU, p.region, p.gpuSKUs)
+	}
+
+	return p.gpuSKUs[0], nil
 }
 
 func getProbe(probe *v1.Probe) (*aci.ContainerProbe, error) {
