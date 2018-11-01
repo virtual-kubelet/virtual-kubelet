@@ -53,11 +53,12 @@ a `virtual-kubelet` node.
 ## Current Features
 
 - create, delete and update pods
-- container logs
+- container logs, exec, and metrics 
 - get pod, pods and pod status
 - capacity 
 - node addresses, node capacity, node daemon endpoints
 - operating system
+- bring your own virtual network 
 
 
 ## Command-Line Usage
@@ -229,7 +230,7 @@ You can generate this file by following the instructions listed in the
 
 ### Missing Load Balancer IP addresses for services
 
-#### When Virtual Kubelet is installed on a cluster, you cannot create external-IPs for a Service
+#### Providers that do not support service discovery
 
 Kubernetes 1.9 introduces a new flag, `ServiceNodeExclusion`, for the control plane's Controller Manager. Enabling this flag in the Controller Manager's manifest allows Kubernetes to exclude Virtual Kubelet nodes from being added to Load Balancer pools, allowing you to create public facing services with external IPs without issue.
 
