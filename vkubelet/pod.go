@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/cpuguy83/strongerrors/status/ocstatus"
+
 	pkgerrors "github.com/pkg/errors"
 	"github.com/virtual-kubelet/virtual-kubelet/log"
 	"go.opencensus.io/trace"
@@ -19,9 +21,11 @@ import (
 
 func addPodAttributes(span *trace.Span, pod *corev1.Pod) {
 	span.AddAttributes(
-		trace.StringAttribute("uid", string(pod.UID)),
-		trace.StringAttribute("namespace", pod.Namespace),
-		trace.StringAttribute("name", pod.Name),
+		trace.StringAttribute("uid", string(pod.GetUID())),
+		trace.StringAttribute("namespace", pod.GetNamespace()),
+		trace.StringAttribute("name", pod.GetName()),
+		trace.StringAttribute("phase", string(pod.Status.Phase)),
+		trace.StringAttribute("reason", pod.Status.Reason),
 	)
 }
 
@@ -246,24 +250,65 @@ func (s *Server) updatePodStatuses(ctx context.Context) {
 		default:
 		}
 
-		if pod.Status.Phase == corev1.PodSucceeded ||
-			pod.Status.Phase == corev1.PodFailed ||
-			pod.Status.Reason == podStatusReasonProviderFailed {
-			continue
-		}
-
-		status, err := s.provider.GetPodStatus(ctx, pod.Namespace, pod.Name)
-		if err != nil {
-			log.G(ctx).WithField("pod", pod.GetName()).WithField("namespace", pod.GetNamespace()).Error("Error retrieving pod status")
-			return
-		}
-
-		// Update the pod's status
-		if status != nil {
-			pod.Status = *status
-			s.k8sClient.CoreV1().Pods(pod.Namespace).UpdateStatus(pod)
+		if err := s.updatePodStatus(ctx, pod); err != nil {
+			logger := log.G(ctx).WithField("pod", pod.GetName()).WithField("namespace", pod.GetNamespace()).WithField("status", pod.Status.Phase).WithField("reason", pod.Status.Reason)
+			logger.Error(err)
 		}
 	}
+}
+
+func (s *Server) updatePodStatus(ctx context.Context, pod *corev1.Pod) error {
+	ctx, span := trace.StartSpan(ctx, "updatePodStatus")
+	defer span.End()
+	addPodAttributes(span, pod)
+
+	if pod.Status.Phase == corev1.PodSucceeded ||
+		pod.Status.Phase == corev1.PodFailed ||
+		pod.Status.Reason == podStatusReasonProviderFailed {
+		return nil
+	}
+
+	status, err := s.provider.GetPodStatus(ctx, pod.Namespace, pod.Name)
+	if err != nil {
+		span.SetStatus(ocstatus.FromError(err))
+		return pkgerrors.Wrap(err, "error retreiving pod status")
+	}
+
+	// Update the pod's status
+	if status != nil {
+		pod.Status = *status
+	} else {
+		// Only change the status when the pod was already up
+		// Only doing so when the pod was successfully running makes sure we don't run into race conditions during pod creation.
+		if pod.Status.Phase == corev1.PodRunning || pod.ObjectMeta.CreationTimestamp.Add(time.Minute).Before(time.Now()) {
+			// Set the pod to failed, this makes sure if the underlying container implementation is gone that a new pod will be created.
+			pod.Status.Phase = corev1.PodFailed
+			pod.Status.Reason = "NotFound"
+			pod.Status.Message = "The pod status was not found and may have been deleted from the provider"
+			for i, c := range pod.Status.ContainerStatuses {
+				pod.Status.ContainerStatuses[i].State.Terminated = &corev1.ContainerStateTerminated{
+					ExitCode:    -137,
+					Reason:      "NotFound",
+					Message:     "Container was not found and was likely deleted",
+					FinishedAt:  metav1.NewTime(time.Now()),
+					StartedAt:   c.State.Running.StartedAt,
+					ContainerID: c.ContainerID,
+				}
+				pod.Status.ContainerStatuses[i].State.Running = nil
+			}
+		}
+	}
+
+	if _, err := s.k8sClient.CoreV1().Pods(pod.Namespace).UpdateStatus(pod); err != nil {
+		span.SetStatus(ocstatus.FromError(err))
+		return pkgerrors.Wrap(err, "error while updating pod status in kubernetes")
+	}
+
+	span.Annotate([]trace.Attribute{
+		trace.StringAttribute("new phase", string(pod.Status.Phase)),
+		trace.StringAttribute("new reason", pod.Status.Reason),
+	}, "updated pod status in kubernetes")
+	return nil
 }
 
 // watchForPodEvent waits for pod changes from kubernetes and updates the details accordingly in the local state.

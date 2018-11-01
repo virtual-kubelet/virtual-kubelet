@@ -160,8 +160,8 @@ func (s *Server) reconcile(ctx context.Context) {
 
 	var failedDeleteCount int64
 	for _, pod := range deletePods {
-		logger := logger.WithField("pod", pod.Name)
-		logger.Debug("Deleting pod '%s'\n", pod.Name)
+		logger := logger.WithField("pod", pod.GetName()).WithField("namespace", pod.GetNamespace())
+		logger.Debug("Deleting pod")
 		if err := s.deletePod(ctx, pod); err != nil {
 			logger.WithError(err).Error("Error deleting pod")
 			failedDeleteCount++
