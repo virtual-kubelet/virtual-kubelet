@@ -250,7 +250,7 @@ func (s *Server) watchForPodEvent(ctx context.Context) error {
 	}
 
 	s.resourceManager.SetPods(pods)
-	s.reconcile(ctx)
+	s.reconcile(ctx, false)
 
 	opts.ResourceVersion = pods.ResourceVersion
 

@@ -112,6 +112,14 @@ func New(ctx context.Context, cfg Config) (s *Server, retErr error) {
 		}
 	}()
 
+	reconcileTick := time.Tick(1 * time.Minute)
+
+	go func() {
+                for range reconcileTick {
+                        s.reconcile(ctx, true)
+                }
+	}()
+
 	return s, nil
 }
 
@@ -136,11 +144,11 @@ func (s *Server) Stop() {
 
 // reconcile is the main reconciliation loop that compares differences between Kubernetes and
 // the active provider and reconciles the differences.
-func (s *Server) reconcile(ctx context.Context) {
+func (s *Server) reconcile(ctx context.Context, clearStaleProviderPodsOnly bool) {
 	ctx, span := trace.StartSpan(ctx, "reconcile")
 	defer span.End()
 
-	logger := log.G(ctx)
+	logger := log.G(ctx).WithField("clearStaleProviderPodsOnly", clearStaleProviderPodsOnly)
 	logger.Debug("Start reconcile")
 	defer logger.Debug("End reconcile")
 
@@ -161,8 +169,8 @@ func (s *Server) reconcile(ctx context.Context) {
 
 	var failedDeleteCount int64
 	for _, pod := range deletePods {
-		logger := logger.WithField("pod", pod.Name)
-		logger.Debug("Deleting pod '%s'\n", pod.Name)
+		logger := logger.WithField("pod", pod.GetName()).WithField("namespace", pod.GetNamespace())
+		logger.Debug("Deleting pod")
 		if err := s.deletePod(ctx, pod); err != nil {
 			logger.WithError(err).Error("Error deleting pod")
 			failedDeleteCount++
@@ -206,23 +214,25 @@ func (s *Server) reconcile(ctx context.Context) {
 		}
 	}
 
-	var failedCreateCount int64
-	for _, pod := range createPods {
-		logger := logger.WithField("pod", pod.Name)
-		logger.Debug("Creating pod")
-		if err := s.createPod(ctx, pod); err != nil {
-			failedCreateCount++
-			logger.WithError(err).Error("Error creating pod")
-			continue
+	if !clearStaleProviderPodsOnly {
+		var failedCreateCount int64
+		for _, pod := range createPods {
+			logger := logger.WithField("pod", pod.Name)
+			logger.Debug("Creating pod")
+			if err := s.createPod(ctx, pod); err != nil {
+				failedCreateCount++
+				logger.WithError(err).Error("Error creating pod")
+				continue
+			}
 		}
+		span.Annotate(
+			[]trace.Attribute{
+				trace.Int64Attribute("expected_created_pods", int64(len(createPods))),
+				trace.Int64Attribute("failed_pod_creates", failedCreateCount),
+			},
+			"Created pods in provider",
+		)
 	}
-	span.Annotate(
-		[]trace.Attribute{
-			trace.Int64Attribute("expected_created_pods", int64(len(createPods))),
-			trace.Int64Attribute("failed_pod_creates", failedCreateCount),
-		},
-		"Created pods in provider",
-	)
 
 	var failedCleanupCount int64
 	for _, pod := range cleanupPods {
