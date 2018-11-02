@@ -139,7 +139,7 @@ func TestCreateContainerGroupWithoutResourceLimit(t *testing.T) {
 							},
 						},
 						Resources: ResourceRequirements{
-							Requests: &ResourceRequests{
+							Requests: &ComputeResources{
 								CPU:        1,
 								MemoryInGB: 1,
 							},
@@ -179,11 +179,11 @@ func TestCreateContainerGroup(t *testing.T) {
 							},
 						},
 						Resources: ResourceRequirements{
-							Requests: &ResourceRequests{
+							Requests: &ComputeResources{
 								CPU:        1,
 								MemoryInGB: 1,
 							},
-							Limits: &ResourceLimits{
+							Limits: &ComputeResources{
 								CPU:        1,
 								MemoryInGB: 1,
 							},
@@ -219,11 +219,11 @@ func TestCreateContainerGroupWithBadVNetFails(t *testing.T) {
 							},
 						},
 						Resources: ResourceRequirements{
-							Requests: &ResourceRequests{
+							Requests: &ComputeResources{
 								CPU:        1,
 								MemoryInGB: 1,
 							},
-							Limits: &ResourceLimits{
+							Limits: &ComputeResources{
 								CPU:        1,
 								MemoryInGB: 1,
 							},
@@ -251,7 +251,7 @@ func TestCreateContainerGroupWithBadVNetFails(t *testing.T) {
 }
 
 func TestGetContainerGroup(t *testing.T) {
-	cg, err, _ := client.GetContainerGroup(context.Background(), resourceGroup, containerGroup)
+	cg, _, err := client.GetContainerGroup(context.Background(), resourceGroup, containerGroup)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -292,11 +292,11 @@ func TestCreateContainerGroupWithLivenessProbe(t *testing.T) {
 							},
 						},
 						Resources: ResourceRequirements{
-							Requests: &ResourceRequests{
+							Requests: &ComputeResources{
 								CPU:        1,
 								MemoryInGB: 1,
 							},
-							Limits: &ResourceLimits{
+							Limits: &ComputeResources{
 								CPU:        1,
 								MemoryInGB: 1,
 							},
@@ -339,11 +339,11 @@ func TestCreateContainerGroupFailsWithLivenessProbeMissingPort(t *testing.T) {
 							},
 						},
 						Resources: ResourceRequirements{
-							Requests: &ResourceRequests{
+							Requests: &ComputeResources{
 								CPU:        1,
 								MemoryInGB: 1,
 							},
-							Limits: &ResourceLimits{
+							Limits: &ComputeResources{
 								CPU:        1,
 								MemoryInGB: 1,
 							},
@@ -383,11 +383,11 @@ func TestCreateContainerGroupWithReadinessProbe(t *testing.T) {
 							},
 						},
 						Resources: ResourceRequirements{
-							Requests: &ResourceRequests{
+							Requests: &ComputeResources{
 								CPU:        1,
 								MemoryInGB: 1,
 							},
-							Limits: &ResourceLimits{
+							Limits: &ComputeResources{
 								CPU:        1,
 								MemoryInGB: 1,
 							},
@@ -438,11 +438,11 @@ func TestCreateContainerGroupWithLogAnalytics(t *testing.T) {
 							},
 						},
 						Resources: ResourceRequirements{
-							Requests: &ResourceRequests{
+							Requests: &ComputeResources{
 								CPU:        1,
 								MemoryInGB: 1,
 							},
-							Limits: &ResourceLimits{
+							Limits: &ComputeResources{
 								CPU:        1,
 								MemoryInGB: 1,
 							},
@@ -483,11 +483,11 @@ func TestCreateContainerGroupWithInvalidLogAnalytics(t *testing.T) {
 							},
 						},
 						Resources: ResourceRequirements{
-							Requests: &ResourceRequests{
+							Requests: &ComputeResources{
 								CPU:        1,
 								MemoryInGB: 1,
 							},
-							Limits: &ResourceLimits{
+							Limits: &ComputeResources{
 								CPU:        1,
 								MemoryInGB: 1,
 							},
@@ -509,7 +509,7 @@ func TestCreateContainerGroupWithVNet(t *testing.T) {
 	uid := uuid.New()
 	containerGroupName := containerGroup + "-" + uid.String()[0:6]
 	fakeKubeConfig := base64.StdEncoding.EncodeToString([]byte(uid.String()))
-	networkProfileId := "/subscriptions/ae43b1e3-c35d-4c8c-bc0d-f148b4c52b78/resourceGroups/aci-connector/providers/Microsoft.Network/networkprofiles/aci-connector-network-profile-westus"
+	networkProfileID := "/subscriptions/ae43b1e3-c35d-4c8c-bc0d-f148b4c52b78/resourceGroups/aci-connector/providers/Microsoft.Network/networkprofiles/aci-connector-network-profile-westus"
 	diagnostics, err := NewContainerGroupDiagnosticsFromFile("../../../../loganalytics.json")
 	if err != nil {
 		t.Fatal(err)
@@ -534,11 +534,11 @@ func TestCreateContainerGroupWithVNet(t *testing.T) {
 							},
 						},
 						Resources: ResourceRequirements{
-							Requests: &ResourceRequests{
+							Requests: &ComputeResources{
 								CPU:        1,
 								MemoryInGB: 1,
 							},
-							Limits: &ResourceLimits{
+							Limits: &ComputeResources{
 								CPU:        1,
 								MemoryInGB: 1,
 							},
@@ -547,7 +547,7 @@ func TestCreateContainerGroupWithVNet(t *testing.T) {
 				},
 			},
 			NetworkProfile: &NetworkProfileDefinition{
-				ID: networkProfileId,
+				ID: networkProfileID,
 			},
 			Extensions: []*Extension{
 				&Extension{
@@ -569,6 +569,61 @@ func TestCreateContainerGroupWithVNet(t *testing.T) {
 				NameServers: []string{"1.1.1.1"},
 			},
 			Diagnostics: diagnostics,
+		},
+	})
+
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cg.Name != containerGroupName {
+		t.Fatalf("resource group name is %s, expected %s", cg.Name, containerGroupName)
+	}
+	if err := client.DeleteContainerGroup(context.Background(), resourceGroup, containerGroupName); err != nil {
+		t.Fatalf("Delete Container Group failed: %s", err.Error())
+	}
+}
+
+func TestCreateContainerGroupWithGPU(t *testing.T) {
+	uid := uuid.New()
+	containerGroupName := containerGroup + "-" + uid.String()[0:6]
+
+	cg, err := client.CreateContainerGroup(context.Background(), resourceGroup, containerGroupName, ContainerGroup{
+		Location: "eastus",
+		ContainerGroupProperties: ContainerGroupProperties{
+			OsType: Linux,
+			Containers: []Container{
+				{
+					Name: "nginx",
+					ContainerProperties: ContainerProperties{
+						Image:   "nginx",
+						Command: []string{"nginx", "-g", "daemon off;"},
+						Ports: []ContainerPort{
+							{
+								Protocol: ContainerNetworkProtocolTCP,
+								Port:     80,
+							},
+						},
+						Resources: ResourceRequirements{
+							Requests: &ComputeResources{
+								CPU:        1,
+								MemoryInGB: 1,
+								GPU: &GPUResource{
+									Count: 1,
+									SKU:   GPUSKU("K80"),
+								},
+							},
+							Limits: &ComputeResources{
+								CPU:        1,
+								MemoryInGB: 1,
+								GPU: &GPUResource{
+									Count: 1,
+									SKU:   GPUSKU("K80"),
+								},
+							},
+						},
+					},
+				},
+			},
 		},
 	})
 
