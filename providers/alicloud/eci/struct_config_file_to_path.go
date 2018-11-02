@@ -17,6 +17,6 @@ package eci
 
 // ConfigFileVolumeConfigFileToPath is a nested struct in eci response
 type ConfigFileToPath struct {
-	Content string `json:"Content" xml:"Content" position:"Query" name:"Content"`
-	Path    string `json:"Path" xml:"Path" position:"Query" name:"Path"`
+	Content string `name:"Content"`
+	Path    string `name:"Path"`
 }

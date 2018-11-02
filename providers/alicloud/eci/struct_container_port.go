@@ -21,6 +21,6 @@ import (
 
 // ContainerPort is a nested struct in eci response
 type ContainerPort struct {
-	Port     requests.Integer `json:"Port" xml:"Port" position:"Query" name:"Port"`
-	Protocol string           `json:"Protocol" xml:"Protocol" position:"Query" name:"Protocol"`
+	Port     requests.Integer `name:"Port"`
+	Protocol string           `name:"Protocol"`
 }
