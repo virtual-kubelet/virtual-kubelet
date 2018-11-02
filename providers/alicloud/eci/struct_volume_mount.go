@@ -19,7 +19,7 @@ import "github.com/aliyun/alibaba-cloud-sdk-go/sdk/requests"
 
 // VolumeMount is a nested struct in eci response
 type VolumeMount struct {
-	MountPath string           `json:"MountPath" xml:"MountPath" position:"Query" name:"MountPath"`
-	ReadOnly  requests.Boolean `json:"ReadOnly" xml:"ReadOnly" position:"Query" name:"ReadOnly"`
-	Name      string           `json:"Name" xml:"Name" position:"Query" name:"Name"`
+	MountPath string           `name:"MountPath"`
+	ReadOnly  requests.Boolean `name:"ReadOnly"`
+	Name      string           `name:"Name"`
 }
