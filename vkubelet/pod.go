@@ -118,11 +118,15 @@ func (s *Server) syncPod(ctx context.Context, pod *corev1.Pod) {
 
 	addPodAttributes(span, pod)
 
-	if pod.DeletionTimestamp != nil {
+	if pod.DeletionTimestamp != nil ||
+		s.resourceManager.GetPod(pod.GetNamespace(), pod.GetName()) == nil {
 		span.Annotate(nil, "Delete pod")
 		logger.Debugf("Deleting pod")
 		if err := s.deletePod(ctx, pod); err != nil {
 			logger.WithError(err).Error("Failed to delete pod")
+			time.AfterFunc(5*time.Second, func() {
+				s.podCh <- &podNotification{pod: pod, ctx: ctx}
+			})
 		}
 	} else {
 		span.Annotate(nil, "Create pod")
@@ -179,30 +183,28 @@ func (s *Server) deletePod(ctx context.Context, pod *corev1.Pod) error {
 	addPodAttributes(span, pod)
 
 	var delErr error
-	if delErr = s.provider.DeletePod(ctx, pod); delErr != nil && errors.IsNotFound(delErr) {
+	if delErr = s.provider.DeletePod(ctx, pod); delErr != nil && !errors.IsNotFound(delErr) {
 		span.SetStatus(trace.Status{Code: trace.StatusCodeUnknown, Message: delErr.Error()})
 		return delErr
 	}
 	span.Annotate(nil, "Deleted pod from provider")
 
 	logger := log.G(ctx).WithField("pod", pod.GetName()).WithField("namespace", pod.GetNamespace())
-	if !errors.IsNotFound(delErr) {
-		var grace int64
-		if err := s.k8sClient.CoreV1().Pods(pod.GetNamespace()).Delete(pod.GetName(), &metav1.DeleteOptions{GracePeriodSeconds: &grace}); err != nil && errors.IsNotFound(err) {
-			if errors.IsNotFound(err) {
-				span.Annotate(nil, "Pod does not exist in k8s, nothing to delete")
-				return nil
-			}
-
-			span.SetStatus(trace.Status{Code: trace.StatusCodeUnknown, Message: err.Error()})
-			return fmt.Errorf("Failed to delete kubernetes pod: %s", err)
+	var grace int64
+	if err := s.k8sClient.CoreV1().Pods(pod.GetNamespace()).Delete(pod.GetName(), &metav1.DeleteOptions{GracePeriodSeconds: &grace}); err != nil && errors.IsNotFound(err) {
+		if errors.IsNotFound(err) {
+			span.Annotate(nil, "Pod does not exist in k8s, nothing to delete")
+			return nil
 		}
-		span.Annotate(nil, "Deleted pod from k8s")
 
-		s.resourceManager.DeletePod(pod)
-		span.Annotate(nil, "Deleted pod from internal state")
-		logger.Info("Pod deleted")
+		span.SetStatus(trace.Status{Code: trace.StatusCodeUnknown, Message: err.Error()})
+		return fmt.Errorf("Failed to delete kubernetes pod: %s", err)
 	}
+	span.Annotate(nil, "Deleted pod from k8s")
+
+	s.resourceManager.DeletePod(pod)
+	span.Annotate(nil, "Deleted pod from internal state")
+	logger.Info("Pod deleted")
 
 	return nil
 }
