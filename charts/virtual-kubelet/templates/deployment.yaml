@@ -98,12 +98,23 @@ spec:
           mountPath: "/etc/acs/azure.json"
 {{- end }}
 {{- end }}
+{{- if eq .Values.provider "aws" }}
+{{- if .Values.providers.aws.targetFargate }}
+        - name: fargate-config
+          mountPath: "/etc/aws"
+{{- end }}
+{{- end }}
         command: ["virtual-kubelet"]
         args: [
 {{- if not .Values.taint.enabled }}
           "--disable-taint", "true",
 {{- end }}
           "--provider", "{{ required "provider is required" .Values.provider }}",
+          {{- if eq .Values.provider "aws" }}
+          {{- if .Values.providers.aws.targetFargate }}
+          "--provider-config", "/etc/aws/fargate.toml",
+          {{- end }}
+          {{- end }}
           "--namespace", "{{ .Values.monitoredNamespace }}",
           "--nodename", "{{ required "nodeName is required" .Values.nodeName }}",
           {{- if .Values.logLevel }}
@@ -121,6 +132,16 @@ spec:
         hostPath:
           path: /etc/kubernetes/azure.json
           type: File
+{{- end }}
+{{- end }}
+{{- if eq .Values.provider "aws" }}
+{{- if .Values.providers.aws.targetFargate }}
+      - name: fargate-config
+        configMap:
+          name: {{ template "vk.fullname" . }}
+          items:
+          - key: aws_fargate_toml
+            path: fargate.toml
 {{- end }}
 {{- end }}
       serviceAccountName: {{ if .Values.rbac.install }} "{{ template "vk.fullname" . }}" {{ end }}

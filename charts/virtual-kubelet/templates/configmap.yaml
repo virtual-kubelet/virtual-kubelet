@@ -1,0 +1,27 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ template "vk.fullname" . }}
+{{ include "vk.labels" . | indent 2 }}
+data:
+  {{- if eq .Values.provider "aws" }}
+  {{- with .Values.providers.aws }}
+  {{- if .targetFargate }}
+  aws_fargate_toml: |
+    Region = "{{ .region }}"
+    ClusterName = "{{ .clusterName }}"
+    Subnets = {{ template "vk.list_to_toml" .subnets }}
+    {{- if .securityGroups }}
+    SecurityGroups = {{ template "vk.list_to_toml" .securityGroups }}
+    {{- end }}
+    AssignPublicIPv4Address = {{ .assignPublicIPv4Address }}
+    ExecutionRoleArn = "{{ .executionRoleARN }}"
+    CloudWatchLogGroupName = "{{ .cloudWatchLogGroupName }}"
+    PlatformVersion = "{{ .platformVersion }}"
+    OperatingSystem = "{{ tpl .operatingSystem $ }}"
+    CPU = {{ .limits.cpu | quote }}
+    Memory = "{{ .limits.memory }}"
+    Pods = {{ .limits.pods | quote }}
+  {{- end }}
+  {{- end }}
+  {{- end }}

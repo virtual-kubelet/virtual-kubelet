@@ -27,3 +27,10 @@ labels:
   chartVersion: "{{ .Chart.Version }}"
   app: {{ template "vk.name" . }}
 {{- end -}}
+
+{{- define "vk.list_to_toml" -}}
+{{- $local := dict "first" true -}}
+{{- print "[" -}}
+{{- range $k, $v := . -}}{{- if not $local.first -}},{{- end -}}{{- $v | quote -}}{{- $_ := set $local "first" false -}}{{- end -}}
+{{- print "]" -}}
+{{- end -}}

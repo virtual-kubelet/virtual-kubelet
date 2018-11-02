@@ -4,7 +4,7 @@ image:
   pullPolicy: Always
 
 ## `provider` should be one of aws, azure, azurebatch, etc...
-provider: 
+provider: ""
 nodeName: "virtual-kubelet"
 nodeOsType: "Linux"
 monitoredNamespace: ""
@@ -42,7 +42,24 @@ providers:
       subnetCidr: 
       clusterCidr: 
       kubeDnsIp: 
-
+  aws:
+    targetFargate: true
+    region: us-east-1
+    clusterName: my-cluster
+    subnets:
+    - subnet-0123456789abcdef12
+    - subnet-0123456789abcdef13
+    - subnet-0123456789abcdef14
+    securityGroups: []
+    assignPublicIPv4Address: false
+    executionRoleARN: ""
+    cloudWatchLogGroupName: ""
+    platformVersion: "LATEST"
+    operatingSystem: "{{ .Values.nodeOsType }}"
+    limits:
+      cpu: 20
+      memory: "40Gi"
+      pods: 20
 ## Install Default RBAC roles and bindings
 rbac:
   install: true
