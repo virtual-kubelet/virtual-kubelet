@@ -32,3 +32,6 @@ rbac:
   apiVersion: v1beta1
   # Cluster role reference
   roleRef: cluster-admin
+
+
+podSyncWorkersCount: 1

@@ -63,7 +63,7 @@ spec:
         - name: acs-credential
           mountPath: "/etc/acs/azure.json"
         command: ["virtual-kubelet"]
-        args: ["--provider", "azure", "--namespace", {{ default "" .Values.env.monitoredNamespace | quote }}, "--nodename", {{ default "virtual-kubelet" .Values.env.nodeName | quote }} , "--os", {{ default "Linux" .Values.env.nodeOsType | quote }} ]
+        args: ["--provider", "azure", "--namespace", {{ default "" .Values.env.monitoredNamespace | quote }}, "--nodename", {{ default "virtual-kubelet" .Values.env.nodeName | quote }} , "--os", {{ default "Linux" .Values.env.nodeOsType | quote }},"--pod-sync-workers", "{{ required "podSyncWorkersCount is required" .Values.podSyncWorkersCount }}"]
       volumes:
       - name: credentials
         secret:

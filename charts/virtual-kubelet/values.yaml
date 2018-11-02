@@ -11,6 +11,7 @@ monitoredNamespace: ""
 apiserverCert: 
 apiserverKey: 
 logLevel: 
+podSyncWorkersCount: 1
 
 taint:
   enabled: true
