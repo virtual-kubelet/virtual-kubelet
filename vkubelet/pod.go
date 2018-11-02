@@ -105,7 +105,21 @@ func (s *Server) startPodSynchronizer(ctx context.Context, id int) {
 	logger.Debug("Start pod synchronizer")
 
 	for event := range s.podCh {
-		s.syncPod(event.ctx, event.pod)
+		logger := log.G(event.ctx).WithField("podSyncronizer", id)
+		ctx := log.WithLogger(event.ctx, logger)
+
+		lockCtx, cancel := context.WithTimeout(ctx, 60*time.Second)
+		if err := s.lock(lockCtx, event.pod); err != nil {
+			cancel()
+			if pkgerrors.Cause(err) != context.Canceled {
+				logger.WithError(err).Error("error acquiring lock for pod")
+			}
+			continue
+		}
+		cancel()
+
+		s.syncPod(ctx, event.pod)
+		s.unlock(event.pod)
 	}
 
 	logger.Info("pod channel is closed.")
@@ -114,6 +128,7 @@ func (s *Server) startPodSynchronizer(ctx context.Context, id int) {
 func (s *Server) syncPod(ctx context.Context, pod *corev1.Pod) {
 	ctx, span := trace.StartSpan(ctx, "syncPod")
 	defer span.End()
+
 	logger := log.G(ctx).WithField("pod", pod.GetName()).WithField("namespace", pod.GetNamespace())
 
 	addPodAttributes(span, pod)
@@ -281,7 +296,7 @@ func (s *Server) watchForPodEvent(ctx context.Context) error {
 		time.Minute,
 
 		cache.ResourceEventHandlerFuncs{
-			AddFunc:    func(obj interface{}) {
+			AddFunc: func(obj interface{}) {
 				s.onAddPod(ctx, obj)
 			},
 			UpdateFunc: func(oldObj, newObj interface{}) {

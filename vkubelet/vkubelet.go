@@ -3,6 +3,7 @@ package vkubelet
 import (
 	"context"
 	"net"
+	"path"
 	"time"
 
 	pkgerrors "github.com/pkg/errors"
@@ -28,6 +29,17 @@ type Server struct {
 	resourceManager *manager.ResourceManager
 	podSyncWorkers  int
 	podCh           chan *podNotification
+	podLocks        *NamedLock
+}
+
+func (s *Server) lock(ctx context.Context, pod *corev1.Pod) error {
+	key := path.Join(pod.GetNamespace(), pod.GetName())
+	return s.podLocks.Lock(ctx, key)
+}
+
+func (s *Server) unlock(pod *corev1.Pod) {
+	key := path.Join(pod.GetNamespace(), pod.GetName())
+	s.podLocks.Unlock(key)
 }
 
 // Config is used to configure a new server.
@@ -66,6 +78,7 @@ func New(ctx context.Context, cfg Config) (s *Server, retErr error) {
 		provider:        cfg.Provider,
 		podSyncWorkers:  cfg.PodSyncWorkers,
 		podCh:           make(chan *podNotification, cfg.PodSyncWorkers),
+		podLocks:        NewNamedLock(),
 	}
 
 	ctx = log.WithLogger(ctx, log.G(ctx))
