@@ -1432,10 +1432,18 @@ func containerGroupToPod(cg *aci.ContainerGroup) (*v1.Pod, error) {
 			},
 		}
 
+		if c.Resources.Requests.GPU != nil {
+			container.Resources.Requests[gpuResourceName] = resource.MustParse(fmt.Sprintf("%d", c.Resources.Requests.GPU.Count))
+		}
+
 		if c.Resources.Limits != nil {
 			container.Resources.Limits = v1.ResourceList{
 				v1.ResourceCPU:    resource.MustParse(fmt.Sprintf("%g", c.Resources.Limits.CPU)),
 				v1.ResourceMemory: resource.MustParse(fmt.Sprintf("%gG", c.Resources.Limits.MemoryInGB)),
+			}
+
+			if c.Resources.Limits.GPU != nil {
+				container.Resources.Limits[gpuResourceName] = resource.MustParse(fmt.Sprintf("%d", c.Resources.Requests.GPU.Count))
 			}
 		}
 

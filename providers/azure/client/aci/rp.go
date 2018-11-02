@@ -41,8 +41,7 @@ func (c *Client) getResourceProviderManifest(ctx context.Context) (*ResourceProv
 	}
 
 	// Create the url.
-	uri := api.ResolveRelative("https://brazilus.management.azure.com", resourceProviderURLPath)
-	// uri := api.ResolveRelative(c.auth.ResourceManagerEndpoint, resourceProviderURLPath)
+	uri := api.ResolveRelative(c.auth.ResourceManagerEndpoint, resourceProviderURLPath)
 	uri += "?" + url.Values(urlParams).Encode()
 
 	// Create the request.
