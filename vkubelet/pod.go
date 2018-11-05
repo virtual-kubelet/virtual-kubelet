@@ -43,7 +43,13 @@ func (s *Server) onAddPod(ctx context.Context, obj interface{}) {
 
 	if s.resourceManager.UpdatePod(pod) {
 		span.Annotate(nil, "Add pod to synchronizer channel.")
-		s.podCh <- &podNotification{pod: pod, ctx: ctx}
+		select {
+		case <-ctx.Done():
+			logger = logger.WithField("pod", pod.GetName()).WithField("namespace", pod.GetNamespace())
+			logger.WithError(ctx.Err()).Debug("Cancel send pod event due to cancelled context")
+			return
+		case s.podCh <- &podNotification{pod: pod, ctx: ctx}:
+		}
 	}
 }
 
@@ -65,7 +71,13 @@ func (s *Server) onUpdatePod(ctx context.Context, obj interface{}) {
 
 	if s.resourceManager.UpdatePod(pod) {
 		span.Annotate(nil, "Add pod to synchronizer channel.")
-		s.podCh <- &podNotification{pod: pod, ctx: ctx}
+		select {
+		case <-ctx.Done():
+			logger = logger.WithField("pod", pod.GetName()).WithField("namespace", pod.GetNamespace())
+			logger.WithError(ctx.Err()).Debug("Cancel send pod event due to cancelled context")
+			return
+		case s.podCh <- &podNotification{pod: pod, ctx: ctx}:
+		}
 	}
 }
 
@@ -96,7 +108,13 @@ func (s *Server) onDeletePod(ctx context.Context, obj interface{}) {
 
 	if s.resourceManager.DeletePod(pod) {
 		span.Annotate(nil, "Add pod to synchronizer channel.")
-		s.podCh <- &podNotification{pod: pod, ctx: ctx}
+		select {
+		case <-ctx.Done():
+			logger = logger.WithField("pod", pod.GetName()).WithField("namespace", pod.GetNamespace())
+			logger.WithError(ctx.Err()).Debug("Cancel send pod event due to cancelled context")
+			return
+		case s.podCh <- &podNotification{pod: pod, ctx: ctx}:
+		}
 	}
 }
 
@@ -104,11 +122,15 @@ func (s *Server) startPodSynchronizer(ctx context.Context, id int) {
 	logger := log.G(ctx).WithField("method", "startPodSynchronizer").WithField("podSynchronizer", id)
 	logger.Debug("Start pod synchronizer")
 
-	for event := range s.podCh {
-		s.syncPod(event.ctx, event.pod)
+	for {
+		select {
+		case <-ctx.Done():
+			logger.Info("Stop pod syncronizer")
+			return
+		case event := <-s.podCh:
+			s.syncPod(event.ctx, event.pod)
+		}
 	}
-
-	logger.Info("pod channel is closed.")
 }
 
 func (s *Server) syncPod(ctx context.Context, pod *corev1.Pod) {
@@ -219,6 +241,13 @@ func (s *Server) updatePodStatuses(ctx context.Context) {
 	span.AddAttributes(trace.Int64Attribute("nPods", int64(len(pods))))
 
 	for _, pod := range pods {
+		select {
+		case <-ctx.Done():
+			span.Annotate(nil, ctx.Err().Error())
+			return
+		default:
+		}
+
 		if pod.Status.Phase == corev1.PodSucceeded ||
 			pod.Status.Phase == corev1.PodFailed ||
 			pod.Status.Reason == podStatusReasonProviderFailed {
@@ -283,7 +312,7 @@ func (s *Server) watchForPodEvent(ctx context.Context) error {
 		time.Minute,
 
 		cache.ResourceEventHandlerFuncs{
-			AddFunc:    func(obj interface{}) {
+			AddFunc: func(obj interface{}) {
 				s.onAddPod(ctx, obj)
 			},
 			UpdateFunc: func(oldObj, newObj interface{}) {
