@@ -165,6 +165,9 @@ func (s *Server) reconcile(ctx context.Context) {
 		if err := s.deletePod(ctx, pod); err != nil {
 			logger.WithError(err).Error("Error deleting pod")
 			failedDeleteCount++
+			time.AfterFunc(5*time.Second, func(){
+				s.podCh <- &podNotification{pod: pod, ctx: ctx}
+			})
 			continue
 		}
 	}
@@ -231,6 +234,9 @@ func (s *Server) reconcile(ctx context.Context) {
 		if err = s.deletePod(ctx, pod); err != nil {
 			logger.WithError(err).Error("Error deleting pod")
 			failedCleanupCount++
+			time.AfterFunc(5*time.Second, func(){
+				s.podCh <- &podNotification{pod: pod, ctx: ctx}
+			})
 			continue
 		}
 		log.Trace(logger, "Pod deletion complete")
