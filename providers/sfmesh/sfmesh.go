@@ -462,7 +462,7 @@ func (p *SFMeshProvider) DeletePod(ctx context.Context, pod *v1.Pod) (err error)
 
 	_, err = p.appClient.Delete(ctx, p.resourceGroup, pod.Name)
 	if err != nil {
-		return err
+		return wrapError(err)
 	}
 
 	return nil

@@ -9,6 +9,7 @@ import (
 	"log"
 	"time"
 
+	"github.com/cpuguy83/strongerrors"
 	"github.com/virtual-kubelet/virtual-kubelet/providers"
 	"k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -131,6 +132,10 @@ func (p *MockProvider) DeletePod(ctx context.Context, pod *v1.Pod) (err error) {
 	key, err := buildKey(pod)
 	if err != nil {
 		return err
+	}
+
+	if _, exists := p.pods[key]; !exists {
+		return strongerrors.NotFound(fmt.Errorf("pod not found"))
 	}
 
 	delete(p.pods, key)

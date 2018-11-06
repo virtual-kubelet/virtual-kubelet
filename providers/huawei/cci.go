@@ -14,6 +14,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/cpuguy83/strongerrors"
 	"github.com/virtual-kubelet/virtual-kubelet/manager"
 	"github.com/virtual-kubelet/virtual-kubelet/providers/huawei/auth"
 	"k8s.io/api/core/v1"
@@ -237,8 +238,28 @@ func (p *CCIProvider) DeletePod(ctx context.Context, pod *v1.Pod) error {
 	if err = p.signRequest(r); err != nil {
 		return fmt.Errorf("Sign the request failed: %v", err)
 	}
-	_, err = p.client.HTTPClient.Do(r)
-	return err
+	resp, err := p.client.HTTPClient.Do(r)
+	if err != nil {
+		return err
+	}
+
+	return errorFromResponse(resp)
+}
+
+func errorFromResponse(resp *http.Response) error {
+	if resp.StatusCode < 400 {
+		return nil
+	}
+
+	body, _ := ioutil.ReadAll(io.LimitReader(resp.Body, 16*1024))
+	err := fmt.Errorf("error during http request, status=%d: %q", resp.StatusCode, string(body))
+
+	switch resp.StatusCode {
+	case http.StatusNotFound:
+		return strongerrors.NotFound(err)
+	default:
+		return err
+	}
 }
 
 // GetPod retrieves a pod by name from the huawei CCI provider.
