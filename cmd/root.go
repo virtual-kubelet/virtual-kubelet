@@ -41,7 +41,7 @@ import (
 )
 
 const (
-	defaultDaemonPort      = "10250"
+	defaultDaemonPort = "10250"
 )
 
 var kubeletConfig string
@@ -70,7 +70,7 @@ var traceSampler string
 var RootCmd = &cobra.Command{
 	Use:   "virtual-kubelet",
 	Short: "virtual-kubelet provides a virtual kubelet interface for your kubernetes cluster.",
-	Long: `virtual-kubelet implements the Kubelet interface with a pluggable 
+	Long: `virtual-kubelet implements the Kubelet interface with a pluggable
 backend implementation allowing users to create kubernetes nodes without running the kubelet.
 This allows users to schedule kubernetes workloads on nodes that aren't running Kubernetes.`,
 	Run: func(cmd *cobra.Command, args []string) {
@@ -95,7 +95,6 @@ This allows users to schedule kubernetes workloads on nodes that aren't running 
 		signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM)
 		go func() {
 			<-sig
-			f.Stop()
 			cancel()
 		}()
 
@@ -170,7 +169,7 @@ func init() {
 	RootCmd.PersistentFlags().StringVar(&taintKey, "taint", "", "Set node taint key")
 	RootCmd.PersistentFlags().MarkDeprecated("taint", "Taint key should now be configured using the VK_TAINT_KEY environment variable")
 	RootCmd.PersistentFlags().StringVar(&logLevel, "log-level", "info", `set the log level, e.g. "trace", debug", "info", "warn", "error"`)
-	RootCmd.PersistentFlags().IntVar(&podSyncWorkers, "pod-sync-workers", 10, `set the number of pod synchronization workers. default is 10.`)
+	RootCmd.PersistentFlags().IntVar(&podSyncWorkers, "pod-sync-workers", 1, `set the number of pod synchronization workers`)
 
 	RootCmd.PersistentFlags().StringSliceVar(&userTraceExporters, "trace-exporter", nil, fmt.Sprintf("sets the tracing exporter to use, available exporters: %s", AvailableTraceExporters()))
 	RootCmd.PersistentFlags().StringVar(&userTraceConfig.ServiceName, "trace-service-name", "virtual-kubelet", "sets the name of the service used to register with the trace exporter")

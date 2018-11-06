@@ -225,7 +225,7 @@ helm install "$CHART_URL" --name "$RELEASE_NAME" \
   --set providers.azure.aciRegion=$ACI_REGION \
   --set providers.azure.tenantId=$AZURE_TENANT_ID \
   --set providers.azure.subscriptionId=$AZURE_SUBSCRIPTION_ID \
-  --set providers.azure.clientID=$AZURE_CLIENT_ID \
+  --set providers.azure.clientId=$AZURE_CLIENT_ID \
   --set providers.azure.clientKey=$AZURE_CLIENT_SECRET
 ```
 
