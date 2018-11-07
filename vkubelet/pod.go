@@ -261,10 +261,14 @@ func (s *Server) updatePodStatus(ctx context.Context, pod *corev1.Pod) error {
 	ctx, span := trace.StartSpan(ctx, "updatePodStatus")
 	defer span.End()
 	addPodAttributes(span, pod)
+	logger := log.G(ctx).WithField("method", "updatePodStatus").WithField("namespace", pod.Namespace).WithField("pod", pod.Name)
+	logger.Debug("Start update pod status")
+	defer logger.Debug("End update pod status")
 
 	if pod.Status.Phase == corev1.PodSucceeded ||
 		pod.Status.Phase == corev1.PodFailed ||
 		pod.Status.Reason == podStatusReasonProviderFailed {
+		logger.Debug("Pod is in terminated state. Skip.")
 		return nil
 	}
 
@@ -280,21 +284,28 @@ func (s *Server) updatePodStatus(ctx context.Context, pod *corev1.Pod) error {
 	} else {
 		// Only change the status when the pod was already up
 		// Only doing so when the pod was successfully running makes sure we don't run into race conditions during pod creation.
-		if pod.Status.Phase == corev1.PodRunning || pod.ObjectMeta.CreationTimestamp.Add(time.Minute).Before(time.Now()) {
+		if pod.Status.Phase == corev1.PodRunning || pod.CreationTimestamp.Add(time.Minute).Before(time.Now()) {
+			logger.Error("Pod doesn't exist in the provider, and set pod phase to failed.")
 			// Set the pod to failed, this makes sure if the underlying container implementation is gone that a new pod will be created.
 			pod.Status.Phase = corev1.PodFailed
 			pod.Status.Reason = "NotFound"
 			pod.Status.Message = "The pod status was not found and may have been deleted from the provider"
 			for i, c := range pod.Status.ContainerStatuses {
+				startedAt := metav1.NewTime(time.Now())
+				if c.State.Running != nil {
+					startedAt = c.State.Running.StartedAt
+				}
+
 				pod.Status.ContainerStatuses[i].State.Terminated = &corev1.ContainerStateTerminated{
 					ExitCode:    -137,
 					Reason:      "NotFound",
 					Message:     "Container was not found and was likely deleted",
 					FinishedAt:  metav1.NewTime(time.Now()),
-					StartedAt:   c.State.Running.StartedAt,
+					StartedAt:   startedAt,
 					ContainerID: c.ContainerID,
 				}
 				pod.Status.ContainerStatuses[i].State.Running = nil
+				pod.Status.ContainerStatuses[i].State.Waiting = nil
 			}
 		}
 	}
