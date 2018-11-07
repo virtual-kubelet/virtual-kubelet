@@ -26,12 +26,12 @@ const (
 
 // MockProvider implements the virtual-kubelet provider interface and stores pods in memory.
 type MockProvider struct {
-	nodeName           string
-	operatingSystem    string
-	internalIP         string
-	daemonEndpointPort int32
-	pods               map[string]*v1.Pod
-	config             MockConfig
+	NodeName           string
+	OSType             string
+	InternalIP         string
+	DaemonEndpointPort int32
+	Pods               map[string]*v1.Pod
+	Config             MockConfig
 }
 
 // MockConfig contains a mock virtual-kubelet's configurable parameters.
@@ -49,12 +49,12 @@ func NewMockProvider(providerConfig, nodeName, operatingSystem string, internalI
 	}
 
 	provider := MockProvider{
-		nodeName:           nodeName,
-		operatingSystem:    operatingSystem,
-		internalIP:         internalIP,
-		daemonEndpointPort: daemonEndpointPort,
-		pods:               make(map[string]*v1.Pod),
-		config:             config,
+		NodeName:           nodeName,
+		OSType:             operatingSystem,
+		InternalIP:         internalIP,
+		DaemonEndpointPort: daemonEndpointPort,
+		Pods:               make(map[string]*v1.Pod),
+		Config:             config,
 	}
 	return &provider, nil
 }
@@ -105,7 +105,7 @@ func (p *MockProvider) CreatePod(ctx context.Context, pod *v1.Pod) error {
 		return err
 	}
 
-	p.pods[key] = pod
+	p.Pods[key] = pod
 
 	return nil
 }
@@ -119,7 +119,7 @@ func (p *MockProvider) UpdatePod(ctx context.Context, pod *v1.Pod) error {
 		return err
 	}
 
-	p.pods[key] = pod
+	p.Pods[key] = pod
 
 	return nil
 }
@@ -133,7 +133,7 @@ func (p *MockProvider) DeletePod(ctx context.Context, pod *v1.Pod) (err error) {
 		return err
 	}
 
-	delete(p.pods, key)
+	delete(p.Pods, key)
 
 	return nil
 }
@@ -147,7 +147,7 @@ func (p *MockProvider) GetPod(ctx context.Context, namespace, name string) (pod 
 		return nil, err
 	}
 
-	if pod, ok := p.pods[key]; ok {
+	if pod, ok := p.Pods[key]; ok {
 		return pod, nil
 	}
 
@@ -229,7 +229,7 @@ func (p *MockProvider) GetPods(ctx context.Context) ([]*v1.Pod, error) {
 
 	var pods []*v1.Pod
 
-	for _, pod := range p.pods {
+	for _, pod := range p.Pods {
 		pods = append(pods, pod)
 	}
 
@@ -239,9 +239,9 @@ func (p *MockProvider) GetPods(ctx context.Context) ([]*v1.Pod, error) {
 // Capacity returns a resource list containing the capacity limits.
 func (p *MockProvider) Capacity(ctx context.Context) v1.ResourceList {
 	return v1.ResourceList{
-		"cpu":    resource.MustParse(p.config.CPU),
-		"memory": resource.MustParse(p.config.Memory),
-		"pods":   resource.MustParse(p.config.Pods),
+		"cpu":    resource.MustParse(p.Config.CPU),
+		"memory": resource.MustParse(p.Config.Memory),
+		"pods":   resource.MustParse(p.Config.Pods),
 	}
 }
 
@@ -300,7 +300,7 @@ func (p *MockProvider) NodeAddresses(ctx context.Context) []v1.NodeAddress {
 	return []v1.NodeAddress{
 		{
 			Type:    "InternalIP",
-			Address: p.internalIP,
+			Address: p.InternalIP,
 		},
 	}
 }
@@ -310,7 +310,7 @@ func (p *MockProvider) NodeAddresses(ctx context.Context) []v1.NodeAddress {
 func (p *MockProvider) NodeDaemonEndpoints(ctx context.Context) *v1.NodeDaemonEndpoints {
 	return &v1.NodeDaemonEndpoints{
 		KubeletEndpoint: v1.DaemonEndpoint{
-			Port: p.daemonEndpointPort,
+			Port: p.DaemonEndpointPort,
 		},
 	}
 }
