@@ -55,6 +55,7 @@ func CheckResponse(res *http.Response) error {
 			if jerr.Error.StatusCode == 0 {
 				jerr.Error.StatusCode = res.StatusCode
 			}
+			jerr.Error.Header = res.Header
 			jerr.Error.Body = string(slurp)
 			jerr.Error.URL = res.Request.URL.String()
 			return jerr.Error

@@ -151,11 +151,13 @@ func (s *Server) syncPod(ctx context.Context, pod *corev1.Pod) {
 		span.Annotate(nil, "Delete pod")
 		logger.Debugf("Deleting pod")
 		if err := s.deletePod(ctx, pod); err != nil {
-			logger.WithError(err).Error("Failed to delete pod")
 			if retryAfter, yes := providers.IsRetryable(err); yes {
+				logger.Infof("Retryable err is received. Re-delete the pod after %v", retryAfter)
 				time.AfterFunc(retryAfter, func() {
 					s.podCh <- &podNotification{pod: pod, ctx: ctx}
 				})
+			} else {
+				logger.WithError(err).Error("Failed to delete pod")
 			}
 		}
 	} else {
@@ -163,11 +165,6 @@ func (s *Server) syncPod(ctx context.Context, pod *corev1.Pod) {
 		logger.Debugf("Creating pod")
 		if err := s.createPod(ctx, pod); err != nil {
 			logger.WithError(err).Errorf("Failed to create pod")
-			if retryAfter, yes := providers.IsRetryable(err); yes {
-				time.AfterFunc(retryAfter, func() {
-					s.podCh <- &podNotification{pod: pod, ctx: ctx}
-				})
-			}
 		}
 	}
 }
