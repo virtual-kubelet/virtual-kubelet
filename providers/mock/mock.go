@@ -134,11 +134,11 @@ func (p *MockProvider) DeletePod(ctx context.Context, pod *v1.Pod) (err error) {
 		return err
 	}
 
-	if _, exists := p.pods[key]; !exists {
+	if _, exists := p.Pods[key]; !exists {
 		return strongerrors.NotFound(fmt.Errorf("pod not found"))
 	}
 
-	delete(p.pods, key)
+	delete(p.Pods, key)
 
 	return nil
 }
