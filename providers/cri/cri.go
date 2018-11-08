@@ -15,6 +15,7 @@ import (
 	"time"
 
 	log "github.com/Sirupsen/logrus"
+	"github.com/cpuguy83/strongerrors"
 	"github.com/virtual-kubelet/virtual-kubelet/manager"
 	"github.com/virtual-kubelet/virtual-kubelet/providers"
 	"google.golang.org/grpc"
@@ -566,7 +567,7 @@ func (p *CRIProvider) DeletePod(ctx context.Context, pod *v1.Pod) error {
 
 	ps, ok := p.podStatus[pod.UID]
 	if !ok {
-		return fmt.Errorf("Pod %s not found", pod.UID)
+		return strongerrors.NotFound(fmt.Errorf("Pod %s not found", pod.UID))
 	}
 
 	// TODO: Check pod status for running state
@@ -598,7 +599,7 @@ func (p *CRIProvider) GetPod(ctx context.Context, namespace, name string) (*v1.P
 
 	pod := p.findPodByName(namespace, name)
 	if pod == nil {
-		return nil, fmt.Errorf("Pod %s in namespace %s could not be found on the node", name, namespace)
+		return nil, strongerrors.NotFound(fmt.Errorf("Pod %s in namespace %s could not be found on the node", name, namespace))
 	}
 
 	return createPodSpecFromCRI(pod, p.nodeName), nil
@@ -635,11 +636,11 @@ func (p *CRIProvider) GetContainerLogs(ctx context.Context, namespace, podName, 
 
 	pod := p.findPodByName(namespace, podName)
 	if pod == nil {
-		return "", fmt.Errorf("Pod %s in namespace %s not found", podName, namespace)
+		return "", strongerrors.NotFound(fmt.Errorf("Pod %s in namespace %s not found", podName, namespace))
 	}
 	container := pod.containers[containerName]
 	if container == nil {
-		return "", fmt.Errorf("Cannot find container %s in pod %s namespace %s", containerName, podName, namespace)
+		return "", strongerrors.NotFound(fmt.Errorf("Cannot find container %s in pod %s namespace %s", containerName, podName, namespace))
 	}
 
 	return readLogFile(container.LogPath, tail)
@@ -683,7 +684,7 @@ func (p *CRIProvider) GetPodStatus(ctx context.Context, namespace, name string) 
 
 	pod := p.findPodByName(namespace, name)
 	if pod == nil {
-		return nil, fmt.Errorf("Pod %s in namespace %s could not be found on the node", name, namespace)
+		return nil, strongerrors.NotFound(fmt.Errorf("Pod %s in namespace %s could not be found on the node", name, namespace))
 	}
 
 	return createPodStatusFromCRI(pod), nil

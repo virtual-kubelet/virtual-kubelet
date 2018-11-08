@@ -9,7 +9,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/virtual-kubelet/virtual-kubelet/log"
 	"io"
 	"os"
 	"strconv"
@@ -17,6 +16,8 @@ import (
 	"time"
 
 	"github.com/aliyun/alibaba-cloud-sdk-go/sdk/requests"
+	"github.com/cpuguy83/strongerrors"
+	"github.com/virtual-kubelet/virtual-kubelet/log"
 	"github.com/virtual-kubelet/virtual-kubelet/manager"
 	"github.com/virtual-kubelet/virtual-kubelet/providers/alicloud/eci"
 	"k8s.io/api/core/v1"
@@ -246,13 +247,13 @@ func (p *ECIProvider) DeletePod(ctx context.Context, pod *v1.Pod) error {
 		}
 	}
 	if eciId == "" {
-		return fmt.Errorf("DeletePod cann't find Pod %s-%s", pod.Namespace, pod.Name)
+		return strongerrors.NotFound(fmt.Errorf("DeletePod can't find Pod %s-%s", pod.Namespace, pod.Name))
 	}
 
 	request := eci.CreateDeleteContainerGroupRequest()
 	request.ContainerGroupId = eciId
 	_, err := p.eciClient.DeleteContainerGroup(request)
-	return err
+	return wrapError(err)
 }
 
 // GetPod returns a pod by name that is running inside ECI
@@ -280,7 +281,7 @@ func (p *ECIProvider) GetContainerLogs(ctx context.Context, namespace, podName, 
 		}
 	}
 	if eciId == "" {
-		return "", errors.New(fmt.Sprintf("GetContainerLogs cann't find Pod %s-%s", namespace, podName))
+		return "", errors.New(fmt.Sprintf("GetContainerLogs can't find Pod %s-%s", namespace, podName))
 	}
 
 	request := eci.CreateDescribeContainerLogRequest()
