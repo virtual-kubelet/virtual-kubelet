@@ -2,6 +2,14 @@
 
 
 [[projects]]
+  digest = "1:4e57b6877e2f13229a0a85def585352617e2a613863f41cb9c06543bc9b528cc"
+  name = "contrib.go.opencensus.io/exporter/ocagent"
+  packages = ["."]
+  pruneopts = "NUT"
+  revision = "7c99379c268784cc5f9eef1e54999232c084db47"
+  version = "v0.3.0"
+
+[[projects]]
   branch = "master"
   digest = "1:e95de5c830369d6592224de57a31cd87a2ba1cec2abaf050d06a63ee8f7babd8"
   name = "git.apache.org/thrift.git"
@@ -169,6 +177,18 @@
   pruneopts = "NUT"
   revision = "2ea60e5f094469f9e65adb9cd103795b73ae743e"
   version = "v2.0.0"
+
+[[projects]]
+  digest = "1:94a0e9062558cb8b417326a1939e9b9e8a66409615969d8b89d99f84a7ee3c1c"
+  name = "github.com/census-instrumentation/opencensus-proto"
+  packages = [
+    "gen-go/agent/common/v1",
+    "gen-go/agent/trace/v1",
+    "gen-go/trace/v1",
+  ]
+  pruneopts = "NUT"
+  revision = "24333298e36590ea0716598caacc8959fc393c48"
+  version = "v0.0.2"
 
 [[projects]]
   branch = "master"
@@ -478,7 +498,7 @@
   revision = "23def4e6c14b4da8ac2ed8007337bc5eb5007998"
 
 [[projects]]
-  digest = "1:03e14cff610a8a58b774e36bd337fa979482be86aab01be81fb8bbd6d0f07fc8"
+  digest = "1:782d86fa8e552302d3f9c3f2a5ef6482d1f28ac52a69b5e1e14d9b71c8c9dda3"
   name = "github.com/golang/protobuf"
   packages = [
     "proto",
@@ -486,6 +506,7 @@
     "ptypes/any",
     "ptypes/duration",
     "ptypes/timestamp",
+    "ptypes/wrappers",
   ]
   pruneopts = "NUT"
   revision = "b4deda0973fb4c70b50d226b1af49f3da59f5265"
@@ -1521,6 +1542,7 @@
   analyzer-name = "dep"
   analyzer-version = 1
   input-imports = [
+    "contrib.go.opencensus.io/exporter/ocagent",
     "github.com/Azure/azure-sdk-for-go/profiles/preview/preview/servicefabricmesh/mgmt/servicefabricmesh",
     "github.com/Azure/azure-sdk-for-go/services/batch/2017-09-01.6.0/batch",
     "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2018-08-01/network",

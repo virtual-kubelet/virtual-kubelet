@@ -342,8 +342,8 @@ func (p *ACIProvider) setupNetworkProfile(auth *client.Authentication) error {
 			return fmt.Errorf("unable to delegate subnet '%s' to Azure Container Instance since it references the network security group '%s'.", p.subnetName, *subnet.SubnetPropertiesFormat.NetworkSecurityGroup.ID)
 		}
 		if subnet.SubnetPropertiesFormat.RouteTable != nil {
-                        return fmt.Errorf("unable to delegate subnet '%s' to Azure Container Instance since it references the route table '%s'.", p.subnetName, *subnet.SubnetPropertiesFormat.RouteTable.ID)
-                }
+			return fmt.Errorf("unable to delegate subnet '%s' to Azure Container Instance since it references the route table '%s'.", p.subnetName, *subnet.SubnetPropertiesFormat.RouteTable.ID)
+		}
 		if subnet.SubnetPropertiesFormat.ServiceAssociationLinks != nil {
 			for _, l := range *subnet.SubnetPropertiesFormat.ServiceAssociationLinks {
 				if l.ServiceAssociationLinkPropertiesFormat != nil && *l.ServiceAssociationLinkPropertiesFormat.LinkedResourceType == subnetDelegationService {
@@ -427,7 +427,7 @@ func getKubeProxyExtension(secretPath, masterURI, clusterCIDR string) (*aci.Exte
 			clientcmdv1.NamedCluster{
 				Name: name,
 				Cluster: clientcmdv1.Cluster{
-					Server: masterURI,
+					Server:                   masterURI,
 					CertificateAuthorityData: ca,
 				},
 			},
@@ -691,7 +691,8 @@ func (p *ACIProvider) DeletePod(ctx context.Context, pod *v1.Pod) error {
 	defer span.End()
 	addAzureAttributes(span, p)
 
-	return p.aciClient.DeleteContainerGroup(ctx, p.resourceGroup, fmt.Sprintf("%s-%s", pod.Namespace, pod.Name))
+	err := p.aciClient.DeleteContainerGroup(ctx, p.resourceGroup, fmt.Sprintf("%s-%s", pod.Namespace, pod.Name))
+	return wrapError(err)
 }
 
 // GetPod returns a pod by name that is running inside ACI

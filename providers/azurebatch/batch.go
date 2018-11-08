@@ -227,7 +227,7 @@ func (p *Provider) DeletePod(ctx context.Context, pod *v1.Pod) error {
 	if err != nil {
 		log.Println(task)
 		log.Println(err)
-		return err
+		return wrapError(err)
 	}
 
 	log.Printf(fmt.Sprintf("Deleting task: %v", taskID))
