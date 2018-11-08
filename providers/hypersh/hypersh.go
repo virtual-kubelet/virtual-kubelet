@@ -10,6 +10,7 @@ import (
 	"runtime"
 	"time"
 
+	"github.com/cpuguy83/strongerrors"
 	"github.com/virtual-kubelet/virtual-kubelet/manager"
 	"github.com/virtual-kubelet/virtual-kubelet/providers"
 
@@ -268,6 +269,9 @@ func (p *HyperProvider) DeletePod(ctx context.Context, pod *v1.Pod) (err error) 
 	// Inspect hyper container
 	container, err = p.hyperClient.ContainerInspect(context.Background(), containerName)
 	if err != nil {
+		if hyper.IsErrContainerNotFound(err) {
+			return strongerrors.NotFound(err)
+		}
 		return err
 	}
 	// Check container label

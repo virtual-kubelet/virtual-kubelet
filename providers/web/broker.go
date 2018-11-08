@@ -29,6 +29,7 @@ import (
 	"time"
 
 	"github.com/cenkalti/backoff"
+	"github.com/cpuguy83/strongerrors"
 	"k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/remotecommand"
@@ -283,7 +284,12 @@ func (p *BrokerProvider) doRequest(method string, urlPath *url.URL, body []byte,
 
 	defer response.Body.Close()
 	if response.StatusCode < 200 || response.StatusCode > 299 {
-		return nil, errors.New(response.Status)
+		switch response.StatusCode {
+		case http.StatusNotFound:
+			return nil, strongerrors.NotFound(errors.New(response.Status))
+		default:
+			return nil, errors.New(response.Status)
+		}
 	}
 
 	// read response body if asked to

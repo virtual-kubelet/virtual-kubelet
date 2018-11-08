@@ -46,6 +46,7 @@ func CheckResponse(res *http.Response) error {
 	if res.StatusCode >= 200 && res.StatusCode <= 299 {
 		return nil
 	}
+
 	slurp, err := ioutil.ReadAll(res.Body)
 	if err == nil {
 		jerr := new(errorReply)
@@ -59,9 +60,10 @@ func CheckResponse(res *http.Response) error {
 			return jerr.Error
 		}
 	}
+
 	return &Error{
 		StatusCode: res.StatusCode,
-		Body:       string(slurp),
+		Body:       res.Status,
 		Header:     res.Header,
 	}
 }
