@@ -5,10 +5,12 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/cpuguy83/strongerrors"
 	"github.com/cpuguy83/strongerrors/status/ocstatus"
 
 	pkgerrors "github.com/pkg/errors"
 	"github.com/virtual-kubelet/virtual-kubelet/log"
+	"github.com/virtual-kubelet/virtual-kubelet/providers"
 	"go.opencensus.io/trace"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -150,15 +152,22 @@ func (s *Server) syncPod(ctx context.Context, pod *corev1.Pod) {
 		logger.Debugf("Deleting pod")
 		if err := s.deletePod(ctx, pod); err != nil {
 			logger.WithError(err).Error("Failed to delete pod")
-			time.AfterFunc(5*time.Second, func() {
-				s.podCh <- &podNotification{pod: pod, ctx: ctx}
-			})
+			if retryAfter, yes := providers.IsRetryable(err); yes {
+				time.AfterFunc(retryAfter, func() {
+					s.podCh <- &podNotification{pod: pod, ctx: ctx}
+				})
+			}
 		}
 	} else {
 		span.Annotate(nil, "Create pod")
 		logger.Debugf("Creating pod")
 		if err := s.createPod(ctx, pod); err != nil {
 			logger.WithError(err).Errorf("Failed to create pod")
+			if retryAfter, yes := providers.IsRetryable(err); yes {
+				time.AfterFunc(retryAfter, func() {
+					s.podCh <- &podNotification{pod: pod, ctx: ctx}
+				})
+			}
 		}
 	}
 }
@@ -209,7 +218,7 @@ func (s *Server) deletePod(ctx context.Context, pod *corev1.Pod) error {
 	addPodAttributes(span, pod)
 
 	var delErr error
-	if delErr = s.provider.DeletePod(ctx, pod); delErr != nil && !errors.IsNotFound(delErr) {
+	if delErr = s.provider.DeletePod(ctx, pod); delErr != nil && !strongerrors.IsNotFound(delErr) {
 		span.SetStatus(trace.Status{Code: trace.StatusCodeUnknown, Message: delErr.Error()})
 		return delErr
 	}

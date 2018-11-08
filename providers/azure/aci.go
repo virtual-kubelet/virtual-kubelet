@@ -563,7 +563,7 @@ func (p *ACIProvider) CreatePod(ctx context.Context, pod *v1.Pod) error {
 		containerGroup,
 	)
 
-	return err
+	return wrapError(err)
 }
 
 func (p *ACIProvider) amendVnetResources(containerGroup *aci.ContainerGroup, pod *v1.Pod) {
