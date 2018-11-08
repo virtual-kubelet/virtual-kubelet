@@ -95,7 +95,6 @@ This allows users to schedule kubernetes workloads on nodes that aren't running 
 		signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM)
 		go func() {
 			<-sig
-			f.Stop()
 			cancel()
 		}()
 

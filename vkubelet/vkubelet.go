@@ -104,11 +104,16 @@ func New(ctx context.Context, cfg Config) (s *Server, retErr error) {
 	tick := time.Tick(5 * time.Second)
 
 	go func() {
-		for range tick {
-			ctx, span := trace.StartSpan(ctx, "syncActualState")
-			s.updateNode(ctx)
-			s.updatePodStatuses(ctx)
-			span.End()
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-tick:
+				ctx, span := trace.StartSpan(ctx, "syncActualState")
+				s.updateNode(ctx)
+				s.updatePodStatuses(ctx)
+				span.End()
+			}
 		}
 	}()
 
@@ -126,12 +131,6 @@ func (s *Server) Run(ctx context.Context) error {
 	}
 
 	return nil
-}
-
-// Stop shutsdown the server.
-// It does not shutdown pods assigned to the virtual node.
-func (s *Server) Stop() {
-	close(s.podCh)
 }
 
 // reconcile is the main reconciliation loop that compares differences between Kubernetes and
@@ -161,8 +160,8 @@ func (s *Server) reconcile(ctx context.Context) {
 
 	var failedDeleteCount int64
 	for _, pod := range deletePods {
-		logger := logger.WithField("pod", pod.Name)
-		logger.Debug("Deleting pod '%s'\n", pod.Name)
+		logger := logger.WithField("pod", pod.GetName()).WithField("namespace", pod.GetNamespace())
+		logger.Debug("Deleting pod")
 		if err := s.deletePod(ctx, pod); err != nil {
 			logger.WithError(err).Error("Error deleting pod")
 			failedDeleteCount++
