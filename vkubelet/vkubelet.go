@@ -3,6 +3,8 @@ package vkubelet
 import (
 	"context"
 	"net"
+	"sync"
+	"sync/atomic"
 	"time"
 
 	pkgerrors "github.com/pkg/errors"
@@ -11,7 +13,12 @@ import (
 	"github.com/virtual-kubelet/virtual-kubelet/providers"
 	"go.opencensus.io/trace"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/fields"
+	"k8s.io/client-go/informers"
+	informersv1 "k8s.io/client-go/informers/core/v1"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/tools/cache"
 )
 
 const (
@@ -27,7 +34,7 @@ type Server struct {
 	provider        providers.Provider
 	resourceManager *manager.ResourceManager
 	podSyncWorkers  int
-	podCh           chan *podNotification
+	podInformer     informersv1.PodInformer
 }
 
 // Config is used to configure a new server.
@@ -41,6 +48,7 @@ type Config struct {
 	ResourceManager *manager.ResourceManager
 	Taint           *corev1.Taint
 	PodSyncWorkers  int
+	InformerFactory informers.SharedInformerFactory
 }
 
 // APIConfig is used to configure the API server of the virtual kubelet.
@@ -48,11 +56,6 @@ type APIConfig struct {
 	CertPath string
 	KeyPath  string
 	Addr     string
-}
-
-type podNotification struct {
-	pod *corev1.Pod
-	ctx context.Context
 }
 
 // New creates a new virtual-kubelet server.
@@ -65,8 +68,12 @@ func New(ctx context.Context, cfg Config) (s *Server, retErr error) {
 		resourceManager: cfg.ResourceManager,
 		provider:        cfg.Provider,
 		podSyncWorkers:  cfg.PodSyncWorkers,
-		podCh:           make(chan *podNotification, cfg.PodSyncWorkers),
 	}
+
+	filtered := informersv1.New(cfg.InformerFactory, cfg.Namespace, func(opts *metav1.ListOptions) {
+		opts.FieldSelector = fields.OneTermEqualSelector("spec.nodeName", cfg.NodeName).String()
+	})
+	s.podInformer = filtered.Pods()
 
 	ctx = log.WithLogger(ctx, log.G(ctx))
 
@@ -101,14 +108,32 @@ func New(ctx context.Context, cfg Config) (s *Server, retErr error) {
 		return s, err
 	}
 
-	tick := time.Tick(5 * time.Second)
+	return s, nil
+}
+
+// Run starts the server, registers it with Kubernetes and begins watching/reconciling the cluster.
+// Run will block until the passed in context is canceled.
+func (s *Server) Run(ctx context.Context) error {
+	logger := log.G(ctx).WithField("method", "Run")
+	logger.Debug("waiting for cache sync")
+
+	go s.podInformer.Informer().Run(ctx.Done())
+
+	if !cache.WaitForCacheSync(ctx.Done(), s.podInformer.Informer().HasSynced) {
+		return ctx.Err()
+	}
+
+	logger.Debug("reconciling provider pods")
+	s.reconcile(ctx)
 
 	go func() {
+		tick := time.NewTicker(5 * time.Second)
+		defer tick.Stop()
 		for {
 			select {
 			case <-ctx.Done():
 				return
-			case <-tick:
+			case <-tick.C:
 				ctx, span := trace.StartSpan(ctx, "syncActualState")
 				s.updateNode(ctx)
 				s.updatePodStatuses(ctx)
@@ -117,31 +142,32 @@ func New(ctx context.Context, cfg Config) (s *Server, retErr error) {
 		}
 	}()
 
-	return s, nil
-}
-
-// Run starts the server, registers it with Kubernetes and begins watching/reconciling the cluster.
-// Run will block until Stop is called or a SIGINT or SIGTERM signal is received.
-func (s *Server) Run(ctx context.Context) error {
-	if err := s.watchForPodEvent(ctx); err != nil {
-		if pkgerrors.Cause(err) == context.Canceled {
-			return err
+	go func() {
+		tick := time.NewTicker(time.Minute)
+		defer tick.Stop()
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-tick.C:
+				s.reconcile(ctx)
+			}
 		}
-		log.G(ctx).Error(err)
-	}
+	}()
 
-	return nil
+	return s.watchForPodEvent(ctx)
 }
 
-// reconcile is the main reconciliation loop that compares differences between Kubernetes and
-// the active provider and reconciles the differences.
+// reconcile ensures that pods that exist in the provider which don't exist in
+// kubernetes are cleaned up.
+// This catches leaked pods due to missed events as well as pre-existing pods on
+// startup that no longer exist in kubernetes.
 func (s *Server) reconcile(ctx context.Context) {
 	ctx, span := trace.StartSpan(ctx, "reconcile")
 	defer span.End()
 
-	logger := log.G(ctx)
-	logger.Debug("Start reconcile")
-	defer logger.Debug("End reconcile")
+	logger := log.G(ctx).WithField("caller", "reconcile")
+	ctx = log.WithLogger(ctx, logger)
 
 	providerPods, err := s.provider.GetPods(ctx)
 	if err != nil {
@@ -152,95 +178,53 @@ func (s *Server) reconcile(ctx context.Context) {
 	var deletePods []*corev1.Pod
 	for _, pod := range providerPods {
 		// Delete pods that don't exist in Kubernetes
-		if p := s.resourceManager.GetPod(pod.Namespace, pod.Name); p == nil || p.DeletionTimestamp != nil {
+		key, err := cache.MetaNamespaceKeyFunc(pod)
+		if err != nil {
+			logger.WithError(err).WithField("pod", pod.GetName()).WithField("namespace", pod.GetNamespace()).Error("error generating store key for pod")
+		}
+
+		p, err := s.podInformer.Lister().Pods(pod.GetNamespace()).Get(pod.GetName())
+		if err != nil {
+			log.G(ctx).WithError(err).WithField(key, "key").Debug("Error reading from pod cache")
+			continue
+		}
+
+		if p == nil || p.DeletionTimestamp != nil {
 			deletePods = append(deletePods, pod)
 		}
 	}
 	span.Annotate(nil, "Got provider pods")
 
+	sema := make(chan struct{}, s.podSyncWorkers)
+	var wg sync.WaitGroup
+
 	var failedDeleteCount int64
 	for _, pod := range deletePods {
-		logger := logger.WithField("pod", pod.GetName()).WithField("namespace", pod.GetNamespace())
-		logger.Debug("Deleting pod")
-		if err := s.deletePod(ctx, pod); err != nil {
-			logger.WithError(err).Error("Error deleting pod")
-			failedDeleteCount++
-			continue
-		}
+		wg.Add(1)
+		go func(pod *corev1.Pod) {
+			sema <- struct{}{}
+			defer func() {
+				wg.Done()
+				<-sema
+			}()
+
+			logger := logger.WithField("pod", pod.GetName()).WithField("namespace", pod.GetNamespace())
+			logger.Debug("Deleting pod")
+
+			if err := s.deletePod(ctx, pod); err != nil {
+				logger.WithError(err).Error("Error deleting pod")
+				atomic.AddInt64(&failedDeleteCount, 1)
+				return
+			}
+		}(pod)
 	}
+
+	wg.Wait()
 	span.Annotate(
 		[]trace.Attribute{
 			trace.Int64Attribute("expected_delete_pods_count", int64(len(deletePods))),
 			trace.Int64Attribute("failed_delete_pods_count", failedDeleteCount),
 		},
 		"Cleaned up stale provider pods",
-	)
-
-	pods := s.resourceManager.GetPods()
-
-	var createPods []*corev1.Pod
-	cleanupPods := deletePods[:0]
-
-	for _, pod := range pods {
-		var providerPod *corev1.Pod
-		for _, p := range providerPods {
-			if p.Namespace == pod.Namespace && p.Name == pod.Name {
-				providerPod = p
-				break
-			}
-		}
-
-		// Delete pod if DeletionTimestamp is set
-		if pod.DeletionTimestamp != nil {
-			cleanupPods = append(cleanupPods, pod)
-			continue
-		}
-
-		if providerPod == nil &&
-			pod.DeletionTimestamp == nil &&
-			pod.Status.Phase != corev1.PodSucceeded &&
-			pod.Status.Phase != corev1.PodFailed &&
-			pod.Status.Reason != podStatusReasonProviderFailed {
-			createPods = append(createPods, pod)
-		}
-	}
-
-	var failedCreateCount int64
-	for _, pod := range createPods {
-		logger := logger.WithField("pod", pod.Name)
-		logger.Debug("Creating pod")
-		if err := s.createPod(ctx, pod); err != nil {
-			failedCreateCount++
-			logger.WithError(err).Error("Error creating pod")
-			continue
-		}
-	}
-	span.Annotate(
-		[]trace.Attribute{
-			trace.Int64Attribute("expected_created_pods", int64(len(createPods))),
-			trace.Int64Attribute("failed_pod_creates", failedCreateCount),
-		},
-		"Created pods in provider",
-	)
-
-	var failedCleanupCount int64
-	for _, pod := range cleanupPods {
-		logger := logger.WithField("pod", pod.Name)
-		log.Trace(logger, "Pod pending deletion")
-		var err error
-		if err = s.deletePod(ctx, pod); err != nil {
-			logger.WithError(err).Error("Error deleting pod")
-			failedCleanupCount++
-			continue
-		}
-		log.Trace(logger, "Pod deletion complete")
-	}
-
-	span.Annotate(
-		[]trace.Attribute{
-			trace.Int64Attribute("expected_cleaned_up_pods", int64(len(cleanupPods))),
-			trace.Int64Attribute("cleaned_up_pod_failures", failedCleanupCount),
-		},
-		"Cleaned up provider pods marked for deletion",
 	)
 }

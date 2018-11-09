@@ -23,6 +23,7 @@ import (
 	"strconv"
 	"strings"
 	"syscall"
+	"time"
 
 	"github.com/Sirupsen/logrus"
 	"github.com/cpuguy83/strongerrors"
@@ -37,6 +38,7 @@ import (
 	vkubelet "github.com/virtual-kubelet/virtual-kubelet/vkubelet"
 	"go.opencensus.io/trace"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 )
 
@@ -61,6 +63,7 @@ var p providers.Provider
 var rm *manager.ResourceManager
 var apiConfig vkubelet.APIConfig
 var podSyncWorkers int
+var watchSyncInterval = 12 * time.Hour
 
 var userTraceExporters []string
 var userTraceConfig = TracingExporterOptions{Tags: make(map[string]string)}
@@ -76,6 +79,13 @@ This allows users to schedule kubernetes workloads on nodes that aren't running 
 	Run: func(cmd *cobra.Command, args []string) {
 		ctx, cancel := context.WithCancel(context.Background())
 
+		sig := make(chan os.Signal, 1)
+		signal.Notify(sig, os.Interrupt, syscall.SIGTERM)
+		go func() {
+			<-sig
+			cancel()
+		}()
+
 		f, err := vkubelet.New(ctx, vkubelet.Config{
 			Client:          k8sClient,
 			Namespace:       kubeNamespace,
@@ -86,17 +96,11 @@ This allows users to schedule kubernetes workloads on nodes that aren't running 
 			ResourceManager: rm,
 			APIConfig:       apiConfig,
 			PodSyncWorkers:  podSyncWorkers,
+			InformerFactory: informers.NewSharedInformerFactory(k8sClient, watchSyncInterval),
 		})
 		if err != nil {
 			log.L.WithError(err).Fatal("Error initializing virtual kubelet")
 		}
-
-		sig := make(chan os.Signal, 1)
-		signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM)
-		go func() {
-			<-sig
-			cancel()
-		}()
 
 		if err := f.Run(ctx); err != nil && errors.Cause(err) != context.Canceled {
 			log.L.Fatal(err)
@@ -170,6 +174,7 @@ func init() {
 	RootCmd.PersistentFlags().MarkDeprecated("taint", "Taint key should now be configured using the VK_TAINT_KEY environment variable")
 	RootCmd.PersistentFlags().StringVar(&logLevel, "log-level", "info", `set the log level, e.g. "trace", debug", "info", "warn", "error"`)
 	RootCmd.PersistentFlags().IntVar(&podSyncWorkers, "pod-sync-workers", 1, `set the number of pod synchronization workers`)
+	RootCmd.PersistentFlags().DurationVar(&watchSyncInterval, "watch-sync-interval", watchSyncInterval, "set the interval for a full watch resync to update local cache from kubernetes")
 
 	RootCmd.PersistentFlags().StringSliceVar(&userTraceExporters, "trace-exporter", nil, fmt.Sprintf("sets the tracing exporter to use, available exporters: %s", AvailableTraceExporters()))
 	RootCmd.PersistentFlags().StringVar(&userTraceConfig.ServiceName, "trace-service-name", "virtual-kubelet", "sets the name of the service used to register with the trace exporter")
