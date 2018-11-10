@@ -285,7 +285,7 @@ func (s *Server) updatePodStatus(ctx context.Context, pod *corev1.Pod) error {
 		// Only change the status when the pod was already up
 		// Only doing so when the pod was successfully running makes sure we don't run into race conditions during pod creation.
 		if pod.Status.Phase == corev1.PodRunning || pod.CreationTimestamp.Add(time.Minute).Before(time.Now()) {
-			logger.Error("Pod doesn't exist in the provider, and set pod phase to failed.")
+			logger.Warn("Pod doesn't exist in the provider. Set pod phase to failed.")
 			// Set the pod to failed, this makes sure if the underlying container implementation is gone that a new pod will be created.
 			pod.Status.Phase = corev1.PodFailed
 			pod.Status.Reason = "NotFound"
