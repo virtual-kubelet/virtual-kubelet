@@ -15,6 +15,7 @@ type providerConfig struct {
 	Pods            string
 	VSwitch         string
 	SecureGroup     string
+	ClusterName     string
 }
 
 func (p *ECIProvider) loadConfig(r io.Reader) error {
@@ -46,6 +47,10 @@ func (p *ECIProvider) loadConfig(r io.Reader) error {
 	p.operatingSystem = config.OperatingSystem
 	if p.operatingSystem == "" {
 		p.operatingSystem = providers.OperatingSystemLinux
+	}
+	p.clusterName = config.ClusterName
+	if p.clusterName == "" {
+		p.clusterName = "default"
 	}
 	return nil
 }
