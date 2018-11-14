@@ -1555,6 +1555,7 @@
     "github.com/Sirupsen/logrus",
     "github.com/aliyun/alibaba-cloud-sdk-go/sdk",
     "github.com/aliyun/alibaba-cloud-sdk-go/sdk/auth",
+    "github.com/aliyun/alibaba-cloud-sdk-go/sdk/errors",
     "github.com/aliyun/alibaba-cloud-sdk-go/sdk/requests",
     "github.com/aliyun/alibaba-cloud-sdk-go/sdk/responses",
     "github.com/aws/aws-sdk-go/aws",
