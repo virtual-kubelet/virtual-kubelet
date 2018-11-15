@@ -1,19 +1,17 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
-validate_dep() {
-	dep ensure || return $?
-	# only check the vendor dir since different dep versions can cause changes to Gopkg files
-	nChanges=$(git status --porcelain -u ./vendor | wc -l)
-	[ $nChanges -eq 0 ]
-}
+exit_code=0
 
+echo "==> Running dep check <=="
 
-validate_dep || {
-	ret=$?
-	echo '`dep ensure` was not run. Make sure dependency changes are committed to the repository.'
-	echo 'You may also need to check that all deps are pinned to a commit or tag instead of a branch or HEAD.'
-	echo 'Check Gopkg.toml and Gopkg.lock'
-	git status --porcelain -u
-	dep version
-	exit $ret
-}
+dep check || exit_code=1
+
+if [ $exit_code -ne 0 ]; then
+  echo '`dep ensure` was not run. Make sure dependency changes are committed to the repository.'
+  echo 'You may also need to check that all deps are pinned to a commit or tag instead of a branch or HEAD.'
+  echo 'Check Gopkg.toml and Gopkg.lock'
+else
+  echo "dep check passed."
+fi
+
+exit $exit_code
