@@ -784,7 +784,7 @@ func containerGroupToPod(cg *eci.ContainerGroup) (*v1.Pod, error) {
 			Message:           "",
 			Reason:            "",
 			HostIP:            "",
-			PodIP:             cg.InternetIp,
+			PodIP:             cg.IntranetIp,
 			StartTime:         &containerStartTime,
 			ContainerStatuses: containerStatuses,
 		},
