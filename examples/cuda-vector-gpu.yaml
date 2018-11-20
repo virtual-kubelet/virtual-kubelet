@@ -1,0 +1,25 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: nvidia-cuda
+  annotations:
+    virtual-kubelet.io/gpu-type: K80
+spec:
+  containers:
+  - image: k8s.gcr.io/cuda-vector-add:v0.1
+    name: gpu-pod
+    resources:
+      limits:
+        nvidia.com/gpu: 1
+        memory: 2.0G
+        cpu: 1
+    imagePullPolicy: Always
+  nodeSelector:
+    kubernetes.io/role: agent
+    beta.kubernetes.io/os: Linux
+    type: virtual-kubelet
+  tolerations:
+  - key: virtual-kubelet.io/provider
+    operator: Exists
+  - key: azure.com/aci
+effect: NoSchedule
