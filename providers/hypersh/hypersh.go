@@ -219,7 +219,7 @@ func (p *HyperProvider) CreatePod(ctx context.Context, pod *v1.Pod) error {
 	// Iterate over the containers to create and start them.
 	for k, ctr := range containers {
 		//one container in a Pod in hyper.sh currently
-		containerName := fmt.Sprintf("pod-%s-%s", pod.Name, pod.Spec.Containers[k].Name)
+		containerName := containerName(pod.Namespace, pod.Name)
 
 		if err = p.ensureImage(ctr.Image); err != nil {
 			return err
@@ -263,7 +263,7 @@ func (p *HyperProvider) UpdatePod(ctx context.Context, pod *v1.Pod) error {
 func (p *HyperProvider) DeletePod(ctx context.Context, pod *v1.Pod) (err error) {
 	log.Printf("receive DeletePod %q\n", pod.Name)
 	var (
-		containerName = fmt.Sprintf("pod-%s-%s", pod.Name, pod.Name)
+		containerName = containerName(pod.Namespace, pod.Name)
 		container     types.ContainerJSON
 	)
 	// Inspect hyper container
@@ -304,7 +304,7 @@ func (p *HyperProvider) DeletePod(ctx context.Context, pod *v1.Pod) (err error) 
 // returns nil if a pod by that name is not found.
 func (p *HyperProvider) GetPod(ctx context.Context, namespace, name string) (pod *v1.Pod, err error) {
 	var (
-		containerName = fmt.Sprintf("pod-%s-%s", name, name)
+		containerName = containerName(pod.Namespace, pod.Name)
 		container     types.ContainerJSON
 	)
 	// Inspect hyper container
@@ -454,4 +454,9 @@ func (p *HyperProvider) NodeDaemonEndpoints(ctx context.Context) *v1.NodeDaemonE
 // This is a noop to default to Linux for now.
 func (p *HyperProvider) OperatingSystem() string {
 	return providers.OperatingSystemLinux
+}
+
+// containerName returns the name used to create the container in Hyper.sh.
+func containerName(podNamespace, podName string) string {
+	return fmt.Sprintf("pod-%s-%s", podNamespace, podName)
 }
