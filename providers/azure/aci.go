@@ -1253,11 +1253,7 @@ func (p *ACIProvider) getVolumes(pod *v1.Pod) ([]aci.Volume, error) {
 			}
 
 			for k, v := range secret.Data {
-				var b bytes.Buffer
-				enc := base64.NewEncoder(base64.StdEncoding, &b)
-				enc.Write(v)
-
-				paths[k] = b.String()
+				paths[k] = base64.StdEncoding.EncodeToString(v)
 			}
 
 			if len(paths) != 0 {
@@ -1280,12 +1276,8 @@ func (p *ACIProvider) getVolumes(pod *v1.Pod) ([]aci.Volume, error) {
 				continue
 			}
 
-			for k, v := range configMap.Data {
-				var b bytes.Buffer
-				enc := base64.NewEncoder(base64.StdEncoding, &b)
-				enc.Write([]byte(v))
-
-				paths[k] = b.String()
+			for k, v := range configMap.BinaryData {
+				paths[k] = base64.StdEncoding.EncodeToString(v)
 			}
 
 			if len(paths) != 0 {
