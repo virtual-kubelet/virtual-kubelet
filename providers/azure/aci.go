@@ -997,7 +997,7 @@ func (p *ACIProvider) getImagePullSecrets(pod *v1.Pod) ([]aci.ImageRegistryCrede
 	return ips, nil
 }
 
-func convertAuthConfigToImageRegistryCredential(server string, authConfig AuthConfig) (*aci.ImageRegistryCredential, error) {
+func makeRegistryCredential(server string, authConfig AuthConfig) (*aci.ImageRegistryCredential, error) {
 	username := authConfig.Username
 	password := authConfig.Password
 
@@ -1044,7 +1044,7 @@ func readDockerCfgSecret(secret *v1.Secret, ips []aci.ImageRegistryCredential) (
 	}
 
 	for server := range authConfigs {
-		cred, err := convertAuthConfigToImageRegistryCredential(server, authConfigs[server])
+		cred, err := makeRegistryCredential(server, authConfigs[server])
 		if err != nil {
 			return ips, err
 		}
@@ -1076,7 +1076,7 @@ func readDockerConfigJSONSecret(secret *v1.Secret, ips []aci.ImageRegistryCreden
 	}
 
 	for server := range auths {
-		cred, err := convertAuthConfigToImageRegistryCredential(server, auths[server])
+		cred, err := makeRegistryCredential(server, auths[server])
 		if err != nil {
 			return ips, err
 		}

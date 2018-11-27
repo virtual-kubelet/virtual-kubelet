@@ -37,7 +37,8 @@ const (
 	fakeNodeName      = "vk"
 )
 
-func TestConvertAuthConfigToImageRegistryCredential(t *testing.T) {
+// Test make registry credential
+func TestMakeRegistryCredential(t *testing.T) {
 	server := "server-" + uuid.New().String()
 	username := "user-" + uuid.New().String()
 	password := "pass-" + uuid.New().String()
@@ -83,7 +84,7 @@ func TestConvertAuthConfigToImageRegistryCredential(t *testing.T) {
 
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			cred, err := convertAuthConfigToImageRegistryCredential(server, tc.authConfig)
+			cred, err := makeRegistryCredential(server, tc.authConfig)
 
 			if tc.shouldFail {
 				assert.NotNil(t, err, "convertion should fail")
