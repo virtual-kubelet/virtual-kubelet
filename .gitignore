@@ -21,7 +21,6 @@ bin/
 /dist
 /build
 /cover
-/test
 
 # Test credentials file
 credentials.json

@@ -118,6 +118,26 @@ skaffold.run:
 		-f $(PWD)/hack/skaffold/virtual-kubelet/skaffold.yml \
 		-p $(PROFILE)
 
+# e2e runs the end-to-end test suite against the Kubernetes cluster targeted by the current kubeconfig.
+# It is assumed that the virtual-kubelet node to be tested is running as a pod called NODE_NAME inside this Kubernetes cluster.
+# It is also assumed that this virtual-kubelet node has been started with the "--node-name" flag set to NODE_NAME.
+# Finally, running the e2e suite is not guaranteed to succeed against a provider other than "mock".
+.PHONY: e2e
+e2e: KUBECONFIG ?= $(HOME)/.kube/config
+e2e: NAMESPACE ?= default
+e2e: NODE_NAME ?= vkubelet-mock-0
+e2e: TAINT_KEY ?= virtual-kubelet.io/provider
+e2e: TAINT_VALUE ?= mock
+e2e: TAINT_EFFECT ?= NoSchedule
+e2e:
+	@go test -v -tags e2e $(PWD)/test/e2e \
+		-kubeconfig=$(KUBECONFIG) \
+		-namespace=$(NAMESPACE) \
+		-node-name=$(NODE_NAME) \
+		-taint-key=$(TAINT_KEY) \
+		-taint-value=$(TAINT_VALUE) \
+		-taint-effect=$(TAINT_EFFECT)
+
 ##### =====> Internals <===== #####
 
 .PHONY: setup
@@ -128,12 +148,6 @@ setup: clean
     fi
 	if ! grep "/cover" .gitignore > /dev/null 2>&1; then \
         echo "/cover" >> .gitignore; \
-    fi
-	if ! grep "/bin" .gitignore > /dev/null 2>&1; then \
-        echo "/bin" >> .gitignore; \
-    fi
-	if ! grep "/test" .gitignore > /dev/null 2>&1; then \
-        echo "/test" >> .gitignore; \
     fi
 	mkdir -p cover
 	mkdir -p bin

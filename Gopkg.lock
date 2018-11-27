@@ -1406,7 +1406,7 @@
   revision = "25e79651c7e569b0ebcd97affc0fe7f1ffcbee94"
 
 [[projects]]
-  digest = "1:57983b132a06bc5956ed950993abf7071610c00a738d8270a2f3d89d19daa019"
+  digest = "1:f3060ab1e0f3fea59d642658b0f5fbf353e22bbe96e94175c02075ba831f6f3c"
   name = "k8s.io/client-go"
   packages = [
     "discovery",
@@ -1494,6 +1494,7 @@
     "tools/pager",
     "tools/reference",
     "tools/remotecommand",
+    "tools/watch",
     "transport",
     "transport/spdy",
     "util/buffer",
@@ -1518,9 +1519,10 @@
   revision = "9dfdf9be683f61f82cda12362c44c784e0778b56"
 
 [[projects]]
-  digest = "1:8802ddb9cfe9b59a4c5388d5ab5f81e1cd59af1a7a7fb90162bdba838fa37ce2"
+  digest = "1:8e43e15194de65c9e9223df5488e3f400b76d33b68085a2e70b2c6ab84132d2c"
   name = "k8s.io/kubernetes"
   packages = [
+    "pkg/api/v1/pod",
     "pkg/apis/core",
     "pkg/kubelet/apis/cri/runtime/v1alpha2",
     "pkg/kubelet/apis/stats/v1alpha1",
@@ -1634,6 +1636,7 @@
     "k8s.io/apimachinery/pkg/runtime",
     "k8s.io/apimachinery/pkg/types",
     "k8s.io/apimachinery/pkg/util/intstr",
+    "k8s.io/apimachinery/pkg/util/net",
     "k8s.io/apimachinery/pkg/util/uuid",
     "k8s.io/apimachinery/pkg/watch",
     "k8s.io/client-go/kubernetes",
@@ -1643,6 +1646,8 @@
     "k8s.io/client-go/tools/clientcmd",
     "k8s.io/client-go/tools/clientcmd/api/v1",
     "k8s.io/client-go/tools/remotecommand",
+    "k8s.io/client-go/tools/watch",
+    "k8s.io/kubernetes/pkg/api/v1/pod",
     "k8s.io/kubernetes/pkg/kubelet/apis/cri/runtime/v1alpha2",
     "k8s.io/kubernetes/pkg/kubelet/apis/stats/v1alpha1",
     "k8s.io/kubernetes/pkg/kubelet/server/remotecommand",
