@@ -27,6 +27,8 @@ The best description is "Kubernetes API on top, programmable back."
     + [Service Fabric Mesh Provider](#service-fabric-mesh-provider)
     + [Adding a New Provider via the Provider Interface](#adding-a-new-provider-via-the-provider-interface)
 * [Testing](#testing)
+    + [Unit tests](#unit-tests)
+    + [End-to-end tests](#end-to-end-tests)
     + [Testing the Azure Provider Client](#testing-the-azure-provider-client)
 * [Known quirks and workarounds](#known-quirks-and-workarounds)
 * [Contributing](#contributing)
@@ -238,7 +240,28 @@ type PodMetricsProvider interface {
 
 ## Testing
 
+### Unit tests
+
 Running the unit tests locally is as simple as `make test`.
+
+### End-to-end tests
+
+Virtual Kubelet includes an end-to-end suite which is used to validate its implementation.
+To run the test suite, a Minikube cluster is currently required.
+To create a Minikube cluster, you can run the following command after [installing Minikube](https://github.com/kubernetes/minikube#installation):
+
+```console
+$ minikube start
+```
+
+The test suite requires Virtual Kubelet to be running as a pod inside the Kubernetes cluster.
+To make the deployment process easier, the build toolchain leverages on [`skaffold`](https://github.com/GoogleContainerTools/skaffold).
+To deploy Virtual Kubelet to the Kubernetes cluster pointed at by the current context and run the test suite, you can run the following command after [installing `skaffold`](https://github.com/GoogleContainerTools/skaffold#installation):
+
+```console
+$ make skaffold.run MODE=run
+$ make e2e
+```
 
 ### Testing the Azure Provider Client
 
