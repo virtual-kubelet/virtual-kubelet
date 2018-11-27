@@ -112,8 +112,9 @@ format: $(GOPATH)/bin/goimports
 .PHONY: skaffold.run
 skaffold.run: MODE ?= dev
 skaffold.run: PROFILE ?= local
+skaffold.run: VK_BUILD_TAGS ?= no_alicloud_provider no_aws_provider no_azure_provider no_azurebatch_provider no_cri_provider no_huawei_provider no_hyper_provider no_vic_provider no_web_provider
 skaffold.run:
-	@GOOS=linux GOARCH=amd64 $(MAKE) build
+	@GOOS=linux GOARCH=amd64 VK_BUILD_TAGS="$(VK_BUILD_TAGS)" $(MAKE) build
 	@skaffold $(MODE) \
 		-f $(PWD)/hack/skaffold/virtual-kubelet/skaffold.yml \
 		-p $(PROFILE)
@@ -130,7 +131,7 @@ e2e: TAINT_KEY ?= virtual-kubelet.io/provider
 e2e: TAINT_VALUE ?= mock
 e2e: TAINT_EFFECT ?= NoSchedule
 e2e:
-	@go test -v -tags e2e $(PWD)/test/e2e \
+	@cd $(PWD)/test/e2e && go test -v -tags e2e ./... \
 		-kubeconfig=$(KUBECONFIG) \
 		-namespace=$(NAMESPACE) \
 		-node-name=$(NODE_NAME) \
