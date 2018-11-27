@@ -1005,7 +1005,7 @@
 
 [[projects]]
   branch = "feature/wolfpack"
-  digest = "1:68a024f57bd12460c4a50d28f21066401fceaf741088252fea358815b8afc855"
+  digest = "1:79b933ce82b0a5da2678624d52d714deff91854904e8649889dc83be36907dc5"
   name = "github.com/vmware/vic"
   packages = [
     "lib/apiservers/engine/backends/cache",
@@ -1051,7 +1051,7 @@
     "pkg/vsphere/sys",
   ]
   pruneopts = "NUT"
-  revision = "0fd01769dd5f4077763f3426a830709a9e986f1e"
+  revision = "c7d40ac878b09c577c307bc5331c7dd39619ed7c"
 
 [[projects]]
   branch = "master"

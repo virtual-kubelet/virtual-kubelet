@@ -108,6 +108,16 @@ format: $(GOPATH)/bin/goimports
 	$Q find . -iname \*.go | grep -v \
         -e "^$$" $(addprefix -e ,$(IGNORED_PACKAGES)) | xargs goimports -w
 
+# skaffold.run deploys the virtual-kubelet to the Kubernetes cluster targeted by the current kubeconfig using skaffold.
+.PHONY: skaffold.run
+skaffold.run: MODE ?= dev
+skaffold.run: PROFILE ?= local
+skaffold.run:
+	@GOOS=linux GOARCH=amd64 $(MAKE) build
+	@skaffold $(MODE) \
+		-f $(PWD)/hack/skaffold/virtual-kubelet/skaffold.yml \
+		-p $(PROFILE)
+
 ##### =====> Internals <===== #####
 
 .PHONY: setup
