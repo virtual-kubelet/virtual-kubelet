@@ -997,6 +997,38 @@ func (p *ACIProvider) getImagePullSecrets(pod *v1.Pod) ([]aci.ImageRegistryCrede
 	return ips, nil
 }
 
+func convertAuthConfigToImageRegistryCredential(server string, authConfig AuthConfig) (*aci.ImageRegistryCredential, error) {
+	username := authConfig.Username
+	password := authConfig.Password
+
+	if username == "" {
+		if authConfig.Auth == "" {
+			return nil, fmt.Errorf("no username present in auth config for server: %s", server)
+		}
+
+		decoded, err := base64.StdEncoding.DecodeString(authConfig.Auth)
+		if err != nil {
+			return nil, fmt.Errorf("error decoding the auth for server: %s Error: %v", server, err)
+		}
+
+		parts := strings.Split(string(decoded), ":")
+		if len(parts) != 2 {
+			return nil, fmt.Errorf("malformed auth for server: %s", server)
+		}
+
+		username = parts[0]
+		password = parts[1]
+	}
+
+	cred := aci.ImageRegistryCredential{
+		Server:   server,
+		Username: username,
+		Password: password,
+	}
+
+	return &cred, nil
+}
+
 func readDockerCfgSecret(secret *v1.Secret, ips []aci.ImageRegistryCredential) ([]aci.ImageRegistryCredential, error) {
 	var err error
 	var authConfigs map[string]AuthConfig
@@ -1011,12 +1043,13 @@ func readDockerCfgSecret(secret *v1.Secret, ips []aci.ImageRegistryCredential) (
 		return ips, err
 	}
 
-	for server, authConfig := range authConfigs {
-		ips = append(ips, aci.ImageRegistryCredential{
-			Password: authConfig.Password,
-			Server:   server,
-			Username: authConfig.Username,
-		})
+	for server := range authConfigs {
+		cred, err := convertAuthConfigToImageRegistryCredential(server, authConfigs[server])
+		if err != nil {
+			return ips, err
+		}
+
+		ips = append(ips, *cred)
 	}
 
 	return ips, err
@@ -1038,17 +1071,17 @@ func readDockerConfigJSONSecret(secret *v1.Secret, ips []aci.ImageRegistryCreden
 	}
 
 	auths, ok := authConfigs["auths"]
-
 	if !ok {
 		return ips, fmt.Errorf("malformed dockerconfigjson in secret")
 	}
 
-	for server, authConfig := range auths {
-		ips = append(ips, aci.ImageRegistryCredential{
-			Password: authConfig.Password,
-			Server:   server,
-			Username: authConfig.Username,
-		})
+	for server := range auths {
+		cred, err := convertAuthConfigToImageRegistryCredential(server, auths[server])
+		if err != nil {
+			return ips, err
+		}
+
+		ips = append(ips, *cred)
 	}
 
 	return ips, err
