@@ -256,11 +256,39 @@ $ minikube start
 
 The test suite requires Virtual Kubelet to be running as a pod inside the Kubernetes cluster.
 To make the deployment process easier, the build toolchain leverages on [`skaffold`](https://github.com/GoogleContainerTools/skaffold).
-To deploy Virtual Kubelet to the Kubernetes cluster pointed at by the current context and run the test suite, you can run the following command after [installing `skaffold`](https://github.com/GoogleContainerTools/skaffold#installation):
+To deploy Virtual Kubelet to the Kubernetes cluster pointed at by the current context, you can run the following command after [installing `skaffold`](https://github.com/GoogleContainerTools/skaffold#installation):
 
 ```console
-$ make skaffold.run MODE=run
+$ make skaffold
+```
+
+By default, and since no value for `MODE` is being specified, this will run `skaffold` in [_development_ mode](https://github.com/GoogleContainerTools/skaffold#skaffold-dev).
+This will make `skaffold` watch `hack/skaffold/virtual-kubelet/Dockerfile` and its dependencies for changes and re-deploy the Virtual Kubelet when said changes happen.
+It will also make `skaffold` stream logs from the Virtual Kubelet pod.
+As an alternative, and if you are not concerned about continuous deployment and log streaming, you can run the following command instead:
+
+```console
+$ make skaffold MODE=run
+```
+
+This will deploy the Virtual Kubelet and return immediately.
+To run the end-to-end test suite, you can now run the following command:
+
+```console
 $ make e2e
+```
+
+When you're done testing, you can run the following command to cleanup the resources created by `skaffold`:
+
+```console
+$ make skaffold MODE=delete
+```
+
+Please note that this will not unregister the Virtual Kubelet as a node in the Kubernetes cluster.
+To do so, you must run:
+
+```console
+$ kubectl delete node vkubelet-mock-0
 ```
 
 ### Testing the Azure Provider Client

@@ -108,13 +108,20 @@ format: $(GOPATH)/bin/goimports
 	$Q find . -iname \*.go | grep -v \
         -e "^$$" $(addprefix -e ,$(IGNORED_PACKAGES)) | xargs goimports -w
 
-# skaffold.run deploys the virtual-kubelet to the Kubernetes cluster targeted by the current kubeconfig using skaffold.
-.PHONY: skaffold.run
-skaffold.run: MODE ?= dev
-skaffold.run: PROFILE ?= local
-skaffold.run: VK_BUILD_TAGS ?= no_alicloud_provider no_aws_provider no_azure_provider no_azurebatch_provider no_cri_provider no_huawei_provider no_hyper_provider no_vic_provider no_web_provider
-skaffold.run:
-	@GOOS=linux GOARCH=amd64 VK_BUILD_TAGS="$(VK_BUILD_TAGS)" $(MAKE) build
+# skaffold deploys the virtual-kubelet to the Kubernetes cluster targeted by the current kubeconfig using skaffold.
+# The current context (as indicated by "kubectl config current-context") must be one of "minikube" or "docker-for-desktop".
+# MODE must be set to one of "dev" (default), "delete" or "run", and is used as the skaffold command to be run.
+.PHONY: skaffold
+skaffold: MODE ?= dev
+skaffold: PROFILE := local
+skaffold: VK_BUILD_TAGS ?= no_alicloud_provider no_aws_provider no_azure_provider no_azurebatch_provider no_cri_provider no_huawei_provider no_hyper_provider no_vic_provider no_web_provider
+skaffold:
+	@if [[ ! "minikube,docker-for-desktop" =~ .*"$(kubectl_context)".* ]]; then \
+		echo current-context is [$(kubectl_context)]. Must be one of [minikube,docker-for-desktop]; false; \
+	fi
+	@if [[ ! "$(MODE)" == "delete" ]]; then \
+		GOOS=linux GOARCH=amd64 VK_BUILD_TAGS="$(VK_BUILD_TAGS)" $(MAKE) build; \
+	fi
 	@skaffold $(MODE) \
 		-f $(PWD)/hack/skaffold/virtual-kubelet/skaffold.yml \
 		-p $(PROFILE)
