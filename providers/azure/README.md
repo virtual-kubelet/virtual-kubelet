@@ -200,6 +200,13 @@ Run these commands to deploy the virtual kubelet which connects your Kubernetes 
 export VK_RElEASE=virtual-kubelet-latest
 ```
 
+Grab the public master URI for your Kubernetes cluster and save the value.
+
+```cli 
+kubectl cluster-info
+export MASTER_URI=<public uri>
+```
+
 If your cluster is an AKS cluster:
 ```cli
 RELEASE_NAME=virtual-kubelet
@@ -209,6 +216,7 @@ CHART_URL=https://github.com/virtual-kubelet/virtual-kubelet/raw/master/charts/$
 helm install "$CHART_URL" --name "$RELEASE_NAME" \
   --set provider=azure \
   --set providers.azure.targetAKS=true \
+  --set providers.azure.masterUri=$MASTER_URI
 ```
 
 For any other type of Kubernetes cluster:
@@ -226,10 +234,11 @@ helm install "$CHART_URL" --name "$RELEASE_NAME" \
   --set providers.azure.tenantId=$AZURE_TENANT_ID \
   --set providers.azure.subscriptionId=$AZURE_SUBSCRIPTION_ID \
   --set providers.azure.clientId=$AZURE_CLIENT_ID \
-  --set providers.azure.clientKey=$AZURE_CLIENT_SECRET
+  --set providers.azure.clientKey=$AZURE_CLIENT_SECRET \
+  --set providers.azure.masterUri=$MASTER_URI
 ```
 
-If your cluster has RBAC enabled set ```rbac.install=true```
+If your cluster has RBAC disabled set ```rbac.install=false```
 
 Output:
 
