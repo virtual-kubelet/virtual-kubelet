@@ -27,6 +27,8 @@ The best description is "Kubernetes API on top, programmable back."
     + [Service Fabric Mesh Provider](#service-fabric-mesh-provider)
     + [Adding a New Provider via the Provider Interface](#adding-a-new-provider-via-the-provider-interface)
 * [Testing](#testing)
+    + [Unit tests](#unit-tests)
+    + [End-to-end tests](#end-to-end-tests)
     + [Testing the Azure Provider Client](#testing-the-azure-provider-client)
 * [Known quirks and workarounds](#known-quirks-and-workarounds)
 * [Contributing](#contributing)
@@ -177,45 +179,128 @@ The structure we chose allows you to have all the power of the Kubernetes API
 on top with a pluggable interface.
 
 Create a new directory for your provider under `providers` and implement the
-following interface. Then add your new provider under the others in the
-[`vkubelet/provider.go`](vkubelet/provider.go) file.
+following interface. Then add register your provider in
+`providers/register/<provider_name>_provider.go`. Make sure to add a build tag so that
+your provider can be excluded from being built. The format for this build tag
+should be `no_<provider_name>_provider`. Also make sure your provdider has all
+neccessary platform build tags, e.g. "linux" if your provider only compiles on Linux.
 
 ```go
 // Provider contains the methods required to implement a virtual-kubelet provider.
 type Provider interface {
 	// CreatePod takes a Kubernetes Pod and deploys it within the provider.
-	CreatePod(pod *v1.Pod) error
+	CreatePod(ctx context.Context, pod *v1.Pod) error
 
 	// UpdatePod takes a Kubernetes Pod and updates it within the provider.
-	UpdatePod(pod *v1.Pod) error
+	UpdatePod(ctx context.Context, pod *v1.Pod) error
 
 	// DeletePod takes a Kubernetes Pod and deletes it from the provider.
-	DeletePod(pod *v1.Pod) error
+	DeletePod(ctx context.Context, pod *v1.Pod) error
 
 	// GetPod retrieves a pod by name from the provider (can be cached).
-	GetPod(namespace, name string) (*v1.Pod, error)
+	GetPod(ctx context.Context, namespace, name string) (*v1.Pod, error)
 
-	// GetPodStatus retrievesthe status of a pod by name from the provider.
-	GetPodStatus(namespace, name string) (*v1.PodStatus, error)
+	// GetContainerLogs retrieves the logs of a container by name from the provider.
+	GetContainerLogs(ctx context.Context, namespace, podName, containerName string, tail int) (string, error)
+
+	// ExecInContainer executes a command in a container in the pod, copying data
+	// between in/out/err and the container's stdin/stdout/stderr.
+	ExecInContainer(name string, uid types.UID, container string, cmd []string, in io.Reader, out, err io.WriteCloser, tty bool, resize <-chan remotecommand.TerminalSize, timeout time.Duration) error
+
+	// GetPodStatus retrieves the status of a pod by name from the provider.
+	GetPodStatus(ctx context.Context, namespace, name string) (*v1.PodStatus, error)
 
 	// GetPods retrieves a list of all pods running on the provider (can be cached).
-	GetPods() ([]*v1.Pod, error)
+	GetPods(context.Context) ([]*v1.Pod, error)
 
 	// Capacity returns a resource list with the capacity constraints of the provider.
-	Capacity() v1.ResourceList
+	Capacity(context.Context) v1.ResourceList
 
-	// NodeConditions returns a list of conditions (Ready, OutOfDisk, etc), which is polled periodically to update the node status
+	// NodeConditions returns a list of conditions (Ready, OutOfDisk, etc), which is
+	// polled periodically to update the node status within Kubernetes.
+	NodeConditions(context.Context) []v1.NodeCondition
+
+	// NodeAddresses returns a list of addresses for the node status
 	// within Kubernetes.
-	NodeConditions() []v1.NodeCondition
+	NodeAddresses(context.Context) []v1.NodeAddress
+
+	// NodeDaemonEndpoints returns NodeDaemonEndpoints for the node status
+	// within Kubernetes.
+	NodeDaemonEndpoints(context.Context) *v1.NodeDaemonEndpoints
 
 	// OperatingSystem returns the operating system the provider is for.
 	OperatingSystem() string
+}
+
+// PodMetricsProvider is an optional interface that providers can implement to expose pod stats
+type PodMetricsProvider interface {
+	GetStatsSummary(context.Context) (*stats.Summary, error)
 }
 ```
 
 ## Testing
 
+### Unit tests
+
 Running the unit tests locally is as simple as `make test`.
+
+### End-to-end tests
+
+Virtual Kubelet includes an end-to-end (e2e) test suite which is used to validate its implementation.
+The current e2e suite **does not** run for any providers other than the `mock` provider.
+
+To run the e2e suite, three things are required:
+- a local Kubernetes cluster (we have tested with [Docker for Mac](https://docs.docker.com/docker-for-mac/install/) and [Minikube](https://github.com/kubernetes/minikube));
+- Your _kubeconfig_ default context points to the local Kubernetes cluster;
+- [`skaffold`](https://github.com/GoogleContainerTools/skaffold).
+
+Since our CI uses Minikube, we describe below how to run e2e on top of it.
+
+To create a Minikube cluster, run the following command after [installing Minikube](https://github.com/kubernetes/minikube#installation):
+
+```console
+$ minikube start
+```
+
+The e2e suite requires Virtual Kubelet to be running as a pod inside the Kubernetes cluster.
+To make the deployment process easier, the build toolchain leverages on `skaffold`.
+
+In order to deploy the Virtual Kubelet, run the following command after [installing `skaffold`](https://github.com/GoogleContainerTools/skaffold#installation):
+
+```console
+$ make skaffold
+```
+
+By default, this will run `skaffold` in [_development_ mode](https://github.com/GoogleContainerTools/skaffold#skaffold-dev).
+This will make `skaffold` watch `hack/skaffold/virtual-kubelet/Dockerfile` and its dependencies for changes and re-deploy the Virtual Kubelet when said changes happen.
+It will also make `skaffold` stream logs from the Virtual Kubelet pod.
+
+As an alternative, and if you are not concerned about continuous deployment and log streaming, you can run the following command instead:
+
+```console
+$ make skaffold MODE=run
+```
+
+This will deploy the Virtual Kubelet and return immediately.
+
+To run the e2e test suite, you can now run the following command:
+
+```console
+$ make e2e
+```
+
+When you're done testing, you can run the following command to cleanup the resources created by `skaffold`:
+
+```console
+$ make skaffold MODE=delete
+```
+
+Please note that this will not unregister the Virtual Kubelet as a node in the Kubernetes cluster.
+In order to do so, you should run:
+
+```console
+$ kubectl delete node vkubelet-mock-0
+```
 
 ### Testing the Azure Provider Client
 

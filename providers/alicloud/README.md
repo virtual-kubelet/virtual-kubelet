@@ -53,5 +53,5 @@ spec:
 Alibaba Cloud serverless kubernetes allows you to quickly create kubernetes container applications without
 having to manage and maintain clusters and servers.  It is based on ECI and fully compatible with the Kuberentes API.
 
-You can find more infomation via [alibaba cloud serverless kubernetes product doc](https://www.alibabacloud.com/help/doc-detail/71479.htm)
+You can find more infomation via [alibaba cloud serverless kubernetes product doc](https://www.alibabacloud.com/help/doc-detail/94078.htm)
 
