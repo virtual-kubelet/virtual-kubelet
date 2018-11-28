@@ -246,25 +246,35 @@ Running the unit tests locally is as simple as `make test`.
 
 ### End-to-end tests
 
-Virtual Kubelet includes an end-to-end suite which is used to validate its implementation.
-To run the test suite, a Minikube cluster is currently required.
-To create a Minikube cluster, you can run the following command after [installing Minikube](https://github.com/kubernetes/minikube#installation):
+Virtual Kubelet includes an end-to-end (e2e) test suite which is used to validate its implementation.
+The current e2e suite **does not** run for any providers other than the `mock` provider.
+
+To run the e2e suite, three things are required:
+- a local Kubernetes cluster (we have tested with [Docker for Mac](https://docs.docker.com/docker-for-mac/install/) and [Minikube](https://github.com/kubernetes/minikube));
+- Your _kubeconfig_ default context points to the local Kubernetes cluster;
+- [`skaffold`](https://github.com/GoogleContainerTools/skaffold).
+
+Since our CI uses Minikube, we describe below how to run e2e on top of it.
+
+To create a Minikube cluster, run the following command after [installing Minikube](https://github.com/kubernetes/minikube#installation):
 
 ```console
 $ minikube start
 ```
 
-The test suite requires Virtual Kubelet to be running as a pod inside the Kubernetes cluster.
-To make the deployment process easier, the build toolchain leverages on [`skaffold`](https://github.com/GoogleContainerTools/skaffold).
-To deploy Virtual Kubelet to the Kubernetes cluster pointed at by the current context, you can run the following command after [installing `skaffold`](https://github.com/GoogleContainerTools/skaffold#installation):
+The e2e suite requires Virtual Kubelet to be running as a pod inside the Kubernetes cluster.
+To make the deployment process easier, the build toolchain leverages on `skaffold`.
+
+In order to deploy the Virtual Kubelet, run the following command after [installing `skaffold`](https://github.com/GoogleContainerTools/skaffold#installation):
 
 ```console
 $ make skaffold
 ```
 
-By default, and since no value for `MODE` is being specified, this will run `skaffold` in [_development_ mode](https://github.com/GoogleContainerTools/skaffold#skaffold-dev).
+By default, this will run `skaffold` in [_development_ mode](https://github.com/GoogleContainerTools/skaffold#skaffold-dev).
 This will make `skaffold` watch `hack/skaffold/virtual-kubelet/Dockerfile` and its dependencies for changes and re-deploy the Virtual Kubelet when said changes happen.
 It will also make `skaffold` stream logs from the Virtual Kubelet pod.
+
 As an alternative, and if you are not concerned about continuous deployment and log streaming, you can run the following command instead:
 
 ```console
@@ -272,7 +282,8 @@ $ make skaffold MODE=run
 ```
 
 This will deploy the Virtual Kubelet and return immediately.
-To run the end-to-end test suite, you can now run the following command:
+
+To run the e2e test suite, you can now run the following command:
 
 ```console
 $ make e2e
@@ -285,7 +296,7 @@ $ make skaffold MODE=delete
 ```
 
 Please note that this will not unregister the Virtual Kubelet as a node in the Kubernetes cluster.
-To do so, you must run:
+In order to do so, you should run:
 
 ```console
 $ kubectl delete node vkubelet-mock-0
