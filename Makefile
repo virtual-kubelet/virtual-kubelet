@@ -1,3 +1,4 @@
+SHELL := /bin/bash
 IMPORT_PATH := github.com/virtual-kubelet/virtual-kubelet
 DOCKER_IMAGE := virtual-kubelet
 exec := $(DOCKER_IMAGE)
