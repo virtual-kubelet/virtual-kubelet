@@ -80,7 +80,7 @@ func TestPodLifecycle(t *testing.T) {
 	}
 	// Delete the "nginx-1-Y" pod after the test finishes.
 	defer func() {
-		if err := f.DeletePod(pod0.Namespace, pod0.Name); err != nil && !apierrors.IsNotFound(err) {
+		if err := f.DeletePod(pod1.Namespace, pod1.Name); err != nil && !apierrors.IsNotFound(err) {
 			t.Error(err)
 		}
 	}()
