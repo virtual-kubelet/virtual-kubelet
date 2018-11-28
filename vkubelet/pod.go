@@ -214,7 +214,7 @@ func (s *Server) deletePod(ctx context.Context, pod *corev1.Pod) error {
 	logger := log.G(ctx).WithField("pod", pod.GetName()).WithField("namespace", pod.GetNamespace())
 	if !errors.IsNotFound(delErr) {
 		var grace int64
-		if err := s.k8sClient.CoreV1().Pods(pod.GetNamespace()).Delete(pod.GetName(), &metav1.DeleteOptions{GracePeriodSeconds: &grace}); err != nil && errors.IsNotFound(err) {
+		if err := s.k8sClient.CoreV1().Pods(pod.GetNamespace()).Delete(pod.GetName(), &metav1.DeleteOptions{GracePeriodSeconds: &grace}); err != nil {
 			if errors.IsNotFound(err) {
 				span.Annotate(nil, "Pod does not exist in k8s, nothing to delete")
 				return nil
