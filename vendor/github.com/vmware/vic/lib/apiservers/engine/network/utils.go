@@ -52,24 +52,29 @@ var (
 
 	cbpLock         sync.Mutex
 	ContainerByPort map[string]string // port:containerID
+	once            sync.Once
 )
 
 func init() {
 	portMapper = portmap.NewPortMapper()
 	btbRules = make(map[string][]string)
 	ContainerByPort = make(map[string]string)
+}
 
-	l, err := netlink.LinkByName(publicIfaceName)
-	if l == nil {
-		l, err = netlink.LinkByAlias(publicIfaceName)
-		if err != nil {
-			log.Errorf("interface %s not found", publicIfaceName)
-			return
+func Init() {
+	once.Do(func() {
+		l, err := netlink.LinkByName(publicIfaceName)
+		if l == nil {
+			l, err = netlink.LinkByAlias(publicIfaceName)
+			if err != nil {
+				log.Errorf("interface %s not found", publicIfaceName)
+				return
+			}
 		}
-	}
 
-	// don't use interface alias for iptables rules
-	publicIfaceName = l.Attrs().Name
+		// don't use interface alias for iptables rules
+		publicIfaceName = l.Attrs().Name
+	})
 }
 
 // requestHostPort finds a free port on the host
