@@ -1,3 +1,4 @@
+SHELL := /bin/bash
 IMPORT_PATH := github.com/virtual-kubelet/virtual-kubelet
 DOCKER_IMAGE := virtual-kubelet
 exec := $(DOCKER_IMAGE)
@@ -108,6 +109,44 @@ format: $(GOPATH)/bin/goimports
 	$Q find . -iname \*.go | grep -v \
         -e "^$$" $(addprefix -e ,$(IGNORED_PACKAGES)) | xargs goimports -w
 
+# skaffold deploys the virtual-kubelet to the Kubernetes cluster targeted by the current kubeconfig using skaffold.
+# The current context (as indicated by "kubectl config current-context") must be one of "minikube" or "docker-for-desktop".
+# MODE must be set to one of "dev" (default), "delete" or "run", and is used as the skaffold command to be run.
+.PHONY: skaffold
+skaffold: MODE ?= dev
+skaffold: PROFILE := local
+skaffold: VK_BUILD_TAGS ?= no_alicloud_provider no_aws_provider no_azure_provider no_azurebatch_provider no_cri_provider no_huawei_provider no_hyper_provider no_vic_provider no_web_provider
+skaffold:
+	@if [[ ! "minikube,docker-for-desktop" =~ .*"$(kubectl_context)".* ]]; then \
+		echo current-context is [$(kubectl_context)]. Must be one of [minikube,docker-for-desktop]; false; \
+	fi
+	@if [[ ! "$(MODE)" == "delete" ]]; then \
+		GOOS=linux GOARCH=amd64 VK_BUILD_TAGS="$(VK_BUILD_TAGS)" $(MAKE) build; \
+	fi
+	@skaffold $(MODE) \
+		-f $(PWD)/hack/skaffold/virtual-kubelet/skaffold.yml \
+		-p $(PROFILE)
+
+# e2e runs the end-to-end test suite against the Kubernetes cluster targeted by the current kubeconfig.
+# It is assumed that the virtual-kubelet node to be tested is running as a pod called NODE_NAME inside this Kubernetes cluster.
+# It is also assumed that this virtual-kubelet node has been started with the "--node-name" flag set to NODE_NAME.
+# Finally, running the e2e suite is not guaranteed to succeed against a provider other than "mock".
+.PHONY: e2e
+e2e: KUBECONFIG ?= $(HOME)/.kube/config
+e2e: NAMESPACE ?= default
+e2e: NODE_NAME ?= vkubelet-mock-0
+e2e: TAINT_KEY ?= virtual-kubelet.io/provider
+e2e: TAINT_VALUE ?= mock
+e2e: TAINT_EFFECT ?= NoSchedule
+e2e:
+	@cd $(PWD)/test/e2e && go test -v -tags e2e ./... \
+		-kubeconfig=$(KUBECONFIG) \
+		-namespace=$(NAMESPACE) \
+		-node-name=$(NODE_NAME) \
+		-taint-key=$(TAINT_KEY) \
+		-taint-value=$(TAINT_VALUE) \
+		-taint-effect=$(TAINT_EFFECT)
+
 ##### =====> Internals <===== #####
 
 .PHONY: setup
@@ -118,12 +157,6 @@ setup: clean
     fi
 	if ! grep "/cover" .gitignore > /dev/null 2>&1; then \
         echo "/cover" >> .gitignore; \
-    fi
-	if ! grep "/bin" .gitignore > /dev/null 2>&1; then \
-        echo "/bin" >> .gitignore; \
-    fi
-	if ! grep "/test" .gitignore > /dev/null 2>&1; then \
-        echo "/test" >> .gitignore; \
     fi
 	mkdir -p cover
 	mkdir -p bin
