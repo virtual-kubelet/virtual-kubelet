@@ -7,11 +7,13 @@ package azure
 import (
 	"bytes"
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/http"
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/google/uuid"
@@ -34,6 +36,70 @@ const (
 	fakeTenantID      = "8cb81aca-83fe-4c6f-b667-4ec09c45a8bf"
 	fakeNodeName      = "vk"
 )
+
+// Test make registry credential
+func TestMakeRegistryCredential(t *testing.T) {
+	server := "server-" + uuid.New().String()
+	username := "user-" + uuid.New().String()
+	password := "pass-" + uuid.New().String()
+	auth := base64.StdEncoding.EncodeToString([]byte(fmt.Sprintf("%s:%s", username, password)))
+
+	tt := []struct {
+		name        string
+		authConfig  AuthConfig
+		shouldFail  bool
+		failMessage string
+	}{
+		{
+			"Valid username and password",
+			AuthConfig{Username: username, Password: password},
+			false,
+			"",
+		},
+		{
+			"Username and password in auth",
+			AuthConfig{Auth: auth},
+			false,
+			"",
+		},
+		{
+			"No Username",
+			AuthConfig{},
+			true,
+			"no username present in auth config for server",
+		},
+		{
+			"Invalid Auth",
+			AuthConfig{Auth: "123"},
+			true,
+			"error decoding the auth for server",
+		},
+		{
+			"Malformed Auth",
+			AuthConfig{Auth: base64.StdEncoding.EncodeToString([]byte("123"))},
+			true,
+			"malformed auth for server",
+		},
+	}
+
+	for _, tc := range tt {
+		t.Run(tc.name, func(t *testing.T) {
+			cred, err := makeRegistryCredential(server, tc.authConfig)
+
+			if tc.shouldFail {
+				assert.NotNil(t, err, "convertion should fail")
+				assert.True(t, strings.Contains(err.Error(), tc.failMessage), "failed message is not expected")
+				return
+			}
+
+			assert.Nil(t, err, "convertion should not fail")
+			assert.NotNil(t, cred, "credential should not be nil")
+			assert.Equal(t, server, cred.Server, "server doesn't match")
+			assert.Equal(t, username, cred.Username, "username doesn't match")
+			assert.Equal(t, password, cred.Password, "password doesn't match")
+		})
+	}
+}
 
 // Tests create pod without resource spec
 func TestCreatePodWithoutResourceSpec(t *testing.T) {
