@@ -228,7 +228,7 @@ func (pc *PodController) syncHandler(key string) error {
 		// At this point we know the Pod resource doesn't exist, which most probably means it was deleted.
 		// Hence, we must delete it from the provider if it still exists there.
 		if err := pc.server.deletePod(pc.context, namespace, name); err != nil {
-			return vkerrors.Unknown(err, "failed to delete pod %q in the provider", metaKeyFromNamespaceName(namespace, name))
+			return vkerrors.Unknown(err, "failed to delete pod %q in the provider", loggablePodNameFromCoordinates(namespace, name))
 		}
 		return nil
 	}
@@ -238,27 +238,24 @@ func (pc *PodController) syncHandler(key string) error {
 
 // syncPodInProvider tries and reconciles the state of a pod by comparing its Kubernetes representation and the provider's representation.
 func (pc *PodController) syncPodInProvider(pod *corev1.Pod) error {
-	// Reconstruct the pod's key.
-	key := metaKey(pod)
-
 	// Check whether the pod has been marked for deletion.
 	// If it does, delete it in the provider.
 	if pod.DeletionTimestamp != nil {
 		// Delete the pod.
 		if err := pc.server.deletePod(pc.context, pod.Namespace, pod.Name); err != nil {
-			return vkerrors.Unknown(err, "failed to delete pod %q in the provider", key)
+			return vkerrors.Unknown(err, "failed to delete pod %q in the provider", loggablePodName(pod))
 		}
 		return nil
 	}
 
 	// Ignore the pod if it is in the "Failed" state.
 	if pod.Status.Phase == corev1.PodFailed {
-		log.G(pc.context).Warnf("skipping sync of pod %q in %q phase", key, pod.Status.Phase)
+		log.G(pc.context).Warnf("skipping sync of pod %q in %q phase", loggablePodName(pod), pod.Status.Phase)
 	}
 
 	// Create or update the pod in the provider.
 	if err := pc.server.createOrUpdatePod(pc.context, pod); err != nil {
-		return vkerrors.Unknown(err, "failed to sync pod %q in the provider", key)
+		return vkerrors.Unknown(err, "failed to sync pod %q in the provider", loggablePodName(pod))
 	}
 	return nil
 }
@@ -295,9 +292,9 @@ func (pc *PodController) deleteDanglingPods() error {
 	for _, pod := range ptd {
 		go func(pod *corev1.Pod) {
 			if err := pc.server.deletePod(pc.context, pod.Namespace, pod.Name); err != nil {
-				log.G(pc.context).Errorf("failed to delete pod %q in provider", metaKey(pod))
+				log.G(pc.context).Errorf("failed to delete pod %q in provider", loggablePodName(pod))
 			} else {
-				log.G(pc.context).Infof("deleted leaked pod %q in provider", metaKey(pod))
+				log.G(pc.context).Infof("deleted leaked pod %q in provider", loggablePodName(pod))
 			}
 			wg.Done()
 		}(pod)
@@ -308,9 +305,10 @@ func (pc *PodController) deleteDanglingPods() error {
 	return nil
 }
 
-// metaKey returns the "namespace/name" key for the specified pod.
+// loggablePodName returns the "namespace/name" key for the specified pod.
 // If the key cannot be computed, "(unknown)" is returned.
-func metaKey(pod *corev1.Pod) string {
+// This method is meant to be used for logging purposes only.
+func loggablePodName(pod *corev1.Pod) string {
 	k, err := cache.MetaNamespaceKeyFunc(pod)
 	if err != nil {
 		return "(unknown)"
@@ -318,7 +316,7 @@ func metaKey(pod *corev1.Pod) string {
 	return k
 }
 
-// metaKeyFromNamespaceName returns the "namespace/name" key for the pod identified by the specified namespace and name.
-func metaKeyFromNamespaceName(namespace, name string) string {
+// loggablePodNameFromCoordinates returns the "namespace/name" key for the pod identified by the specified namespace and name (coordinates).
+func loggablePodNameFromCoordinates(namespace, name string) string {
 	return fmt.Sprintf("%s/%s", namespace, name)
 }
