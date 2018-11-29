@@ -5,10 +5,16 @@ package e2e
 import (
 	"fmt"
 	"testing"
+	"time"
 
 	"k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/kubernetes/pkg/kubelet/apis/stats/v1alpha1"
+)
+
+const (
+	// deleteGracePeriodForProvider is the amount of time we allow for the provider to react to deletion of a pod before proceeding to assert that the pod has been deleted.
+	deleteGracePeriodForProvider = 100 * time.Millisecond
 )
 
 // TestGetStatsSummary creates a pod having two containers and queries the /stats/summary endpoint of the virtual-kubelet.
@@ -110,15 +116,27 @@ func TestPodLifecycle(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	// Wait for the "nginx-1-Y" pod to be deleted in a separate goroutine.
+	// This ensures that we don't possibly miss the MODIFIED/DELETED events due to establishing the watch too late in the process.
+	pod1Ch := make(chan struct{})
+	go func() {
+		// Wait for the "nginx-1-Y" pod to be reported as having been marked for deletion.
+		if err := f.WaitUntilPodDeleted(pod1.Namespace, pod1.Name); err != nil {
+			t.Fatal(err)
+		} else {
+			// Close the pod0Ch channel, signaling we've observed deletion of the pod.
+			close(pod1Ch)
+		}
+	}()
+
 	// Delete the "nginx-1" pod.
 	if err := f.DeletePod(pod1.Namespace, pod1.Name); err != nil {
 		t.Fatal(err)
 	}
-
-	// Wait for the "nginx-1-Y" pod to be reported as having been marked for deletion.
-	if err := f.WaitUntilPodDeleted(pod1.Namespace, pod1.Name); err != nil {
-		t.Fatal(err)
-	}
+	// Wait for the delete event to be ACKed.
+	<-pod1Ch
+	// Give the provider some time to react to the MODIFIED/DELETED events before proceeding.
+	time.Sleep(deleteGracePeriodForProvider)
 
 	// Grab the stats from the provider.
 	stats, err = f.GetStatsSummary()
