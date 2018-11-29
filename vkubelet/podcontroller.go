@@ -56,10 +56,13 @@ type PodController struct {
 	workqueue workqueue.RateLimitingInterface
 	// recorder is an event recorder for recording Event resources to the Kubernetes API.
 	recorder record.EventRecorder
+
+	// context is the context to use when executing the syncHandler and calling the provider.
+	context context.Context
 }
 
 // NewPodController returns a new instance of PodController.
-func NewPodController(server *Server) *PodController {
+func NewPodController(server *Server, context context.Context) *PodController {
 	// Create an event broadcaster.
 	eventBroadcaster := record.NewBroadcaster()
 	eventBroadcaster.StartLogging(log.L.Infof)
@@ -73,6 +76,7 @@ func NewPodController(server *Server) *PodController {
 		podsLister:   server.podInformer.Lister(),
 		workqueue:    workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "pods"),
 		recorder:     recorder,
+		context:      context,
 	}
 
 	// Set up event handlers for when Pod resources change.
@@ -106,29 +110,29 @@ func NewPodController(server *Server) *PodController {
 
 // Run will set up the event handlers for types we are interested in, as well as syncing informer caches and starting workers.
 // It will block until stopCh is closed, at which point it will shutdown the work queue and wait for workers to finish processing their current work items.
-func (pc *PodController) Run(ctx context.Context, threadiness int) error {
+func (pc *PodController) Run(threadiness int) error {
 	defer runtime.HandleCrash()
 	defer pc.workqueue.ShutDown()
 
 	// Wait for the caches to be synced before starting workers.
-	if ok := cache.WaitForCacheSync(ctx.Done(), pc.podsInformer.Informer().HasSynced); !ok {
+	if ok := cache.WaitForCacheSync(pc.context.Done(), pc.podsInformer.Informer().HasSynced); !ok {
 		return vkerrors.DeadlineWithMessage("failed to wait for caches to sync")
 	}
 
 	// Perform a reconciliation step that deletes any dangling pods from the provider.
 	// This happens only when the virtual-kubelet is starting, and operates on a "best-effort" basis.
 	// If by any reason the provider fails to delete a dangling pod, it will stay in the provider and deletion won't be retried.
-	pc.deleteDanglingPods(ctx)
+	pc.deleteDanglingPods()
 
 	// Launch two workers to process Pod resources.
-	log.G(ctx).Info("starting workers")
+	log.G(pc.context).Info("starting workers")
 	for i := 0; i < threadiness; i++ {
-		go wait.Until(pc.runWorker, time.Second, ctx.Done())
+		go wait.Until(pc.runWorker, time.Second, pc.context.Done())
 	}
 
-	log.G(ctx).Info("started workers")
-	<-ctx.Done()
-	log.G(ctx).Info("shutting down workers")
+	log.G(pc.context).Info("started workers")
+	<-pc.context.Done()
+	log.G(pc.context).Info("shutting down workers")
 
 	return nil
 }
@@ -200,9 +204,6 @@ func (pc *PodController) syncHandler(key string) error {
 		return nil
 	}
 
-	// Create a context to pass to the provider.
-	ctx := context.Background()
-
 	// Get the Pod resource with this namespace/name.
 	pod, err := pc.podsLister.Pods(namespace).Get(name)
 	if err != nil {
@@ -213,14 +214,14 @@ func (pc *PodController) syncHandler(key string) error {
 		}
 		// At this point we know the Pod resource doesn't exist, which most probably means it was deleted.
 		// Hence, we must delete it from the provider if it still exists there.
-		return pc.deletePodInProvider(ctx, namespace, name)
+		return pc.deletePodInProvider(namespace, name)
 	}
 	// At this point we know the Pod resource has either been created or updated (which includes being marked for deletion).
-	return pc.syncPodInProvider(ctx, pod)
+	return pc.syncPodInProvider(pod)
 }
 
 // syncPodInProvider tries and reconciles the state of a pod by comparing its Kubernetes representation and the provider's representation.
-func (pc *PodController) syncPodInProvider(ctx context.Context, pod *corev1.Pod) error {
+func (pc *PodController) syncPodInProvider(pod *corev1.Pod) error {
 	// Reconstruct the pod's key.
 	key := metaKey(pod)
 
@@ -228,7 +229,7 @@ func (pc *PodController) syncPodInProvider(ctx context.Context, pod *corev1.Pod)
 	// If it does, delete it in the provider.
 	if pod.DeletionTimestamp != nil {
 		// Delete the pod.
-		if err := pc.server.deletePod(ctx, pod); err != nil {
+		if err := pc.server.deletePod(pc.context, pod); err != nil {
 			return vkerrors.Unknown(err, "failed to delete pod %q in the provider", key)
 		}
 		return nil
@@ -236,20 +237,20 @@ func (pc *PodController) syncPodInProvider(ctx context.Context, pod *corev1.Pod)
 
 	// Ignore the pod if it is in the "Failed" state.
 	if pod.Status.Phase == corev1.PodFailed {
-		log.G(ctx).Warnf("skipping sync of pod %q in %q phase", key, pod.Status.Phase)
+		log.G(pc.context).Warnf("skipping sync of pod %q in %q phase", key, pod.Status.Phase)
 	}
 
 	// Check if the pod is already known by the provider.
 	// NOTE: Some providers return a non-nil error in their GetPod implementation when the pod is not found while some other don't.
 	// Hence, we ignore the error and just act upon the pod if it is non-nil (meaning that the provider still knows about the pod).
-	pp, _ := pc.server.provider.GetPod(ctx, pod.Namespace, pod.Name)
+	pp, _ := pc.server.provider.GetPod(pc.context, pod.Namespace, pod.Name)
 	if pp != nil {
 		// The pod has already been created in the provider.
 		// Hence, we return since pod updates are not yet supported.
 		return nil
 	}
 	// Create the pod in the provider.
-	if err := pc.server.createPod(ctx, pod); err != nil {
+	if err := pc.server.createPod(pc.context, pod); err != nil {
 		return vkerrors.Unknown(err, "failed to create pod %q in the provider", key)
 	}
 	return nil
@@ -257,7 +258,7 @@ func (pc *PodController) syncPodInProvider(ctx context.Context, pod *corev1.Pod)
 
 // deletePodInProvider checks whether the pod with the specified namespace and name is still known to the provider, and deletes it in case it is.
 // This function is meant to be called only when a given Pod resource has already been deleted from Kubernetes.
-func (pc *PodController) deletePodInProvider(ctx context.Context, namespace, name string) error {
+func (pc *PodController) deletePodInProvider(namespace, name string) error {
 	// Reconstruct the pod's key.
 	key := metaKeyFromNamespaceName(namespace, name)
 
@@ -265,23 +266,23 @@ func (pc *PodController) deletePodInProvider(ctx context.Context, namespace, nam
 	// Since this function is only called when the Pod resource has already been deleted from Kubernetes, we must get it from the provider so we can call "deletePod".
 	// NOTE: Some providers return a non-nil error in their GetPod implementation when the pod is not found while some other don't.
 	// Hence, we ignore the error and just act upon the pod if it is non-nil (meaning that the provider still knows about the pod).
-	pod, _ := pc.server.provider.GetPod(ctx, namespace, name)
+	pod, _ := pc.server.provider.GetPod(pc.context, namespace, name)
 	if pod == nil {
 		// The provider is not aware of the pod, so we just exit.
 		return nil
 	}
 
 	// Delete the pod.
-	if err := pc.server.deletePod(ctx, pod); err != nil {
+	if err := pc.server.deletePod(pc.context, pod); err != nil {
 		return vkerrors.Unknown(err, "failed to delete pod %q in the provider", key)
 	}
 	return nil
 }
 
 // deleteDanglingPods checks whether the provider knows about any pods which Kubernetes doesn't know about, and deletes them.
-func (pc *PodController) deleteDanglingPods(ctx context.Context) error {
+func (pc *PodController) deleteDanglingPods() error {
 	// Grab the list of pods known to the provider.
-	pps, err := pc.server.provider.GetPods(ctx)
+	pps, err := pc.server.provider.GetPods(pc.context)
 	if err != nil {
 		return vkerrors.Unknown(err, "failed to fetch the list of pods from the provider")
 	}
@@ -309,10 +310,10 @@ func (pc *PodController) deleteDanglingPods(ctx context.Context) error {
 	// Iterate over the slice of pods to be deleted and delete them in the provider.
 	for _, pod := range ptd {
 		go func(pod *corev1.Pod) {
-			if err := pc.server.deletePod(ctx, pod); err != nil {
-				log.G(ctx).Errorf("failed to delete pod %q in provider", metaKey(pod))
+			if err := pc.server.deletePod(pc.context, pod); err != nil {
+				log.G(pc.context).Errorf("failed to delete pod %q in provider", metaKey(pod))
 			} else {
-				log.G(ctx).Infof("deleted leaked pod %q in provider", metaKey(pod))
+				log.G(pc.context).Infof("deleted leaked pod %q in provider", metaKey(pod))
 			}
 			wg.Done()
 		}(pod)

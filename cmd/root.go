@@ -78,6 +78,9 @@ var userTraceExporters []string
 var userTraceConfig = TracingExporterOptions{Tags: make(map[string]string)}
 var traceSampler string
 
+var rootContext context.Context
+var rootContextCancel func()
+
 // RootCmd represents the base command when called without any subcommands
 var RootCmd = &cobra.Command{
 	Use:   "virtual-kubelet",
@@ -86,9 +89,7 @@ var RootCmd = &cobra.Command{
 backend implementation allowing users to create kubernetes nodes without running the kubelet.
 This allows users to schedule kubernetes workloads on nodes that aren't running Kubernetes.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		ctx, cancel := context.WithCancel(context.Background())
-
-		f, err := vkubelet.New(ctx, vkubelet.Config{
+		f, err := vkubelet.New(rootContext, vkubelet.Config{
 			Client:          k8sClient,
 			Namespace:       kubeNamespace,
 			NodeName:        nodeName,
@@ -108,10 +109,10 @@ This allows users to schedule kubernetes workloads on nodes that aren't running 
 		signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM)
 		go func() {
 			<-sig
-			cancel()
+			rootContextCancel()
 		}()
 
-		if err := f.Run(ctx); err != nil && errors.Cause(err) != context.Canceled {
+		if err := f.Run(rootContext); err != nil && errors.Cause(err) != context.Canceled {
 			log.L.Fatal(err)
 		}
 	},
@@ -198,6 +199,9 @@ func init() {
 
 // initConfig reads in config file and ENV variables if set.
 func initConfig() {
+	// Create a root context to be used by the pod controller and by the shared informer factories.
+	rootContext, rootContextCancel = context.WithCancel(context.Background())
+
 	if provider == "" {
 		log.G(context.TODO()).Fatal("You must supply a cloud provider option: use --provider")
 	}
@@ -286,9 +290,9 @@ func initConfig() {
 	}
 
 	// Start the shared informer factory for pods.
-	go podInformerFactory.Start(context.Background().Done())
+	go podInformerFactory.Start(rootContext.Done())
 	// Start the shared informer factory for secrets and configmaps.
-	go scmInformerFactory.Start(context.Background().Done())
+	go scmInformerFactory.Start(rootContext.Done())
 
 	daemonPortEnv := getEnv("KUBELET_PORT", defaultDaemonPort)
 	daemonPort, err := strconv.ParseInt(daemonPortEnv, 10, 32)
