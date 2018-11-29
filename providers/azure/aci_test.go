@@ -19,13 +19,12 @@ import (
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/virtual-kubelet/virtual-kubelet/manager"
-	azure "github.com/virtual-kubelet/virtual-kubelet/providers/azure/client"
+	"github.com/virtual-kubelet/virtual-kubelet/providers/azure/client"
 	"github.com/virtual-kubelet/virtual-kubelet/providers/azure/client/aci"
 	"k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"k8s.io/client-go/kubernetes/fake"
 )
 
 const (
@@ -578,8 +577,7 @@ func prepareMocks() (*AADMock, *ACIMock, *ACIProvider, error) {
 	os.Setenv("AZURE_AUTH_LOCATION", file.Name())
 	os.Setenv("ACI_RESOURCE_GROUP", fakeResourceGroup)
 
-	clientset := fake.NewSimpleClientset()
-	rm, err := manager.NewResourceManager(clientset)
+	rm, err := manager.NewResourceManager(nil, nil, nil)
 	if err != nil {
 		return nil, nil, nil, err
 	}
