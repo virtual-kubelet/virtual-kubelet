@@ -148,6 +148,39 @@ func TestPodLifecycle(t *testing.T) {
 	if _, err := findPodInPodStats(stats, pod1); err == nil {
 		t.Fatalf("expected to NOT find pod \"%s/%s\" in the slice of pod stats", pod1.Namespace, pod1.Name)
 	}
+
+	// Wait for the "nginx-0-X" pod to be deleted in a separate goroutine.
+	// This ensures that we don't possibly miss the MODIFIED/DELETED events due to establishing the watch too late in the process.
+	pod0Ch := make(chan struct{})
+	go func() {
+		// Wait for the "nginx-0-X" pod to be reported as having been deleted.
+		if err := f.WaitUntilPodDeleted(pod0.Namespace, pod0.Name); err != nil {
+			t.Fatal(err)
+		} else {
+			// Close the pod0Ch channel, signaling we've observed deletion of the pod.
+			close(pod0Ch)
+		}
+	}()
+
+	// Forcibly delete the "nginx-0" pod.
+	if err := f.DeletePodImmediately(pod0.Namespace, pod0.Name); err != nil {
+		t.Fatal(err)
+	}
+	// Wait for the delete event to be ACKed.
+	<-pod0Ch
+	// Give the provider some time to react to the MODIFIED/DELETED events before proceeding.
+	time.Sleep(deleteGracePeriodForProvider)
+
+	// Grab the stats from the provider.
+	stats, err = f.GetStatsSummary()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Make sure the "nginx-0-X" pod DOES NOT exist in the slice of PodStats anymore.
+	if _, err := findPodInPodStats(stats, pod0); err == nil {
+		t.Fatalf("expected to NOT find pod \"%s/%s\" in the slice of pod stats", pod0.Namespace, pod0.Name)
+	}
 }
 
 // findPodInPodStats returns the index of the specified pod in the .pods field of the specified Summary object.

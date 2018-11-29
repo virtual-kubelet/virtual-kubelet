@@ -57,9 +57,20 @@ func (f *Framework) CreatePod(pod *corev1.Pod) (*corev1.Pod, error) {
 	return f.KubeClient.CoreV1().Pods(f.Namespace).Create(pod)
 }
 
-// DeletePod deletes the pod with the specified name and namespace in the Kubernetes API.
+// DeletePod deletes the pod with the specified name and namespace in the Kubernetes API using the default grace period.
 func (f *Framework) DeletePod(namespace, name string) error {
 	return f.KubeClient.CoreV1().Pods(namespace).Delete(name, &metav1.DeleteOptions{})
+}
+
+// DeletePodImmediately forcibly deletes the pod with the specified name and namespace in the Kubernetes API.
+// This is equivalent to running "kubectl delete --force --grace-period 0 --namespace <namespace> pod <name>".
+func (f *Framework) DeletePodImmediately(namespace, name string) error {
+	grace := int64(0)
+	propagation := metav1.DeletePropagationBackground
+	return f.KubeClient.CoreV1().Pods(namespace).Delete(name, &metav1.DeleteOptions{
+		GracePeriodSeconds: &grace,
+		PropagationPolicy:  &propagation,
+	})
 }
 
 // WaitUntilPodCondition establishes a watch on the pod with the specified name and namespace.
