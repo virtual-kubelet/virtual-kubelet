@@ -84,7 +84,7 @@ func NewPodController(server *Server, context context.Context) *PodController {
 	pc.podsInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(pod interface{}) {
 			if key, err := cache.MetaNamespaceKeyFunc(pod); err != nil {
-				runtime.HandleError(err)
+				log.G(pc.context).Error(err)
 			} else {
 				pc.workqueue.AddRateLimited(key)
 			}
@@ -103,14 +103,14 @@ func NewPodController(server *Server, context context.Context) *PodController {
 			}
 			// At this point we know that something in .metadata or .spec has changed, so we must proceed to sync the pod.
 			if key, err := cache.MetaNamespaceKeyFunc(newPod); err != nil {
-				runtime.HandleError(err)
+				log.G(pc.context).Error(err)
 			} else {
 				pc.workqueue.AddRateLimited(key)
 			}
 		},
 		DeleteFunc: func(pod interface{}) {
 			if key, err := cache.DeletionHandlingMetaNamespaceKeyFunc(pod); err != nil {
-				runtime.HandleError(err)
+				log.G(pc.context).Error(err)
 			} else {
 				pc.workqueue.AddRateLimited(key)
 			}
@@ -179,7 +179,7 @@ func (pc *PodController) processNextWorkItem() bool {
 		if key, ok = obj.(string); !ok {
 			// As the item in the work queue is actually invalid, we call Forget here else we'd go into a loop of attempting to process a work item that is invalid.
 			pc.workqueue.Forget(obj)
-			runtime.HandleError(vkerrors.InvalidArgumentWithMessage("expected string in work queue but got %#v", obj))
+			log.G(pc.context).Error(vkerrors.InvalidArgumentWithMessage("expected string in work queue but got %#v", obj))
 			return nil
 		}
 		// Run the syncHandler, passing it the namespace/name string of the Pod resource to be synced.
@@ -200,7 +200,7 @@ func (pc *PodController) processNextWorkItem() bool {
 	}(obj)
 
 	if err != nil {
-		runtime.HandleError(err)
+		log.G(pc.context).Error(err)
 		return true
 	}
 
@@ -213,7 +213,7 @@ func (pc *PodController) syncHandler(key string) error {
 	namespace, name, err := cache.SplitMetaNamespaceKey(key)
 	if err != nil {
 		// Log the error but do not requeue the key as it is invalid.
-		runtime.HandleError(vkerrors.InvalidArgument(err))
+		log.G(pc.context).Error(vkerrors.InvalidArgument(err))
 		return nil
 	}
 
