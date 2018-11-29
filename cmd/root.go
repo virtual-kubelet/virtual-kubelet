@@ -78,8 +78,8 @@ var userTraceExporters []string
 var userTraceConfig = TracingExporterOptions{Tags: make(map[string]string)}
 var traceSampler string
 
-var rootContext context.Context
-var rootContextCancel func()
+// Create a root context to be used by the pod controller and by the shared informer factories.
+var rootContext, rootContextCancel = context.WithCancel(context.Background())
 
 // RootCmd represents the base command when called without any subcommands
 var RootCmd = &cobra.Command{
@@ -89,6 +89,8 @@ var RootCmd = &cobra.Command{
 backend implementation allowing users to create kubernetes nodes without running the kubelet.
 This allows users to schedule kubernetes workloads on nodes that aren't running Kubernetes.`,
 	Run: func(cmd *cobra.Command, args []string) {
+		defer rootContextCancel()
+
 		f, err := vkubelet.New(rootContext, vkubelet.Config{
 			Client:          k8sClient,
 			Namespace:       kubeNamespace,
@@ -199,9 +201,6 @@ func init() {
 
 // initConfig reads in config file and ENV variables if set.
 func initConfig() {
-	// Create a root context to be used by the pod controller and by the shared informer factories.
-	rootContext, rootContextCancel = context.WithCancel(context.Background())
-
 	if provider == "" {
 		log.G(context.TODO()).Fatal("You must supply a cloud provider option: use --provider")
 	}
