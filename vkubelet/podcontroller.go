@@ -21,6 +21,7 @@ import (
 	"sync"
 	"time"
 
+	pkgerrors "github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/util/runtime"
@@ -33,7 +34,6 @@ import (
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/workqueue"
 
-	vkerrors "github.com/virtual-kubelet/virtual-kubelet/errors"
 	"github.com/virtual-kubelet/virtual-kubelet/log"
 )
 
@@ -129,7 +129,7 @@ func (pc *PodController) Run(threadiness int) error {
 
 	// Wait for the caches to be synced before starting workers.
 	if ok := cache.WaitForCacheSync(pc.context.Done(), pc.podsInformer.Informer().HasSynced); !ok {
-		return vkerrors.DeadlineWithMessage("failed to wait for caches to sync")
+		return pkgerrors.New("failed to wait for caches to sync")
 	}
 
 	// Perform a reconciliation step that deletes any dangling pods from the provider.
@@ -179,7 +179,7 @@ func (pc *PodController) processNextWorkItem() bool {
 		if key, ok = obj.(string); !ok {
 			// As the item in the work queue is actually invalid, we call Forget here else we'd go into a loop of attempting to process a work item that is invalid.
 			pc.workqueue.Forget(obj)
-			log.G(pc.context).Error(vkerrors.InvalidArgumentWithMessage("expected string in work queue but got %#v", obj))
+			log.G(pc.context).Error(pkgerrors.Errorf("expected string in work queue but got %#v", obj))
 			return nil
 		}
 		// Run the syncHandler, passing it the namespace/name string of the Pod resource to be synced.
@@ -192,7 +192,7 @@ func (pc *PodController) processNextWorkItem() bool {
 			}
 			// We've exceeded the maximum retries, so we must forget the key.
 			pc.workqueue.Forget(key)
-			return vkerrors.Exhausted(err)
+			return pkgerrors.Wrapf(err, "forgetting %q due to maximum retries reached", key)
 		}
 		// Finally, if no error occurs we Forget this item so it does not get queued again until another change happens.
 		pc.workqueue.Forget(obj)
@@ -213,7 +213,7 @@ func (pc *PodController) syncHandler(key string) error {
 	namespace, name, err := cache.SplitMetaNamespaceKey(key)
 	if err != nil {
 		// Log the error but do not requeue the key as it is invalid.
-		log.G(pc.context).Error(vkerrors.InvalidArgument(err))
+		log.G(pc.context).Error(pkgerrors.Wrapf(err, "invalid resource key: %q", key))
 		return nil
 	}
 
@@ -223,12 +223,12 @@ func (pc *PodController) syncHandler(key string) error {
 		if !errors.IsNotFound(err) {
 			// We've failed to fetch the pod from the lister, but the error is not a 404.
 			// Hence, we add the key back to the work queue so we can retry processing it later.
-			return vkerrors.Unknown(err, "failed to fetch pod with key %q from lister", key)
+			return pkgerrors.Wrapf(err, "failed to fetch pod with key %q from lister", key)
 		}
 		// At this point we know the Pod resource doesn't exist, which most probably means it was deleted.
 		// Hence, we must delete it from the provider if it still exists there.
 		if err := pc.server.deletePod(pc.context, namespace, name); err != nil {
-			return vkerrors.Unknown(err, "failed to delete pod %q in the provider", loggablePodNameFromCoordinates(namespace, name))
+			return pkgerrors.Wrapf(err, "failed to delete pod %q in the provider", loggablePodNameFromCoordinates(namespace, name))
 		}
 		return nil
 	}
@@ -243,7 +243,7 @@ func (pc *PodController) syncPodInProvider(pod *corev1.Pod) error {
 	if pod.DeletionTimestamp != nil {
 		// Delete the pod.
 		if err := pc.server.deletePod(pc.context, pod.Namespace, pod.Name); err != nil {
-			return vkerrors.Unknown(err, "failed to delete pod %q in the provider", loggablePodName(pod))
+			return pkgerrors.Wrapf(err, "failed to delete pod %q in the provider", loggablePodName(pod))
 		}
 		return nil
 	}
@@ -255,7 +255,7 @@ func (pc *PodController) syncPodInProvider(pod *corev1.Pod) error {
 
 	// Create or update the pod in the provider.
 	if err := pc.server.createOrUpdatePod(pc.context, pod); err != nil {
-		return vkerrors.Unknown(err, "failed to sync pod %q in the provider", loggablePodName(pod))
+		return pkgerrors.Wrapf(err, "failed to sync pod %q in the provider", loggablePodName(pod))
 	}
 	return nil
 }
@@ -265,7 +265,7 @@ func (pc *PodController) deleteDanglingPods() error {
 	// Grab the list of pods known to the provider.
 	pps, err := pc.server.provider.GetPods(pc.context)
 	if err != nil {
-		return vkerrors.Unknown(err, "failed to fetch the list of pods from the provider")
+		return pkgerrors.Wrap(err, "failed to fetch the list of pods from the provider")
 	}
 
 	// Create a slice to hold the pods we will be deleting from the provider.
@@ -281,7 +281,7 @@ func (pc *PodController) deleteDanglingPods() error {
 				continue
 			}
 			// For some reason we couldn't fetch the pod from the lister, so we propagate the error.
-			return vkerrors.Unknown(err, "failed to fetch pod from the lister")
+			return pkgerrors.Wrap(err, "failed to fetch pod from the lister")
 		}
 	}
 
