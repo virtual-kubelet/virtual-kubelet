@@ -17,6 +17,7 @@ package vkubelet
 import (
 	"context"
 	"fmt"
+	"reflect"
 	"sync"
 	"time"
 
@@ -88,8 +89,20 @@ func NewPodController(server *Server, context context.Context) *PodController {
 				pc.workqueue.AddRateLimited(key)
 			}
 		},
-		UpdateFunc: func(_, pod interface{}) {
-			if key, err := cache.MetaNamespaceKeyFunc(pod); err != nil {
+		UpdateFunc: func(oldObj, newObj interface{}) {
+			// Create a copy of the old and new pod objects so we don't mutate the cache.
+			oldPod := oldObj.(*corev1.Pod).DeepCopy()
+			newPod := newObj.(*corev1.Pod).DeepCopy()
+			// We want to check if the two objects differ in anything other than their resource versions.
+			// Hence, we make them equal so that this change isn't picked up by reflect.DeepEqual.
+			newPod.ResourceVersion = oldPod.ResourceVersion
+			// Skip adding this pod's key to the work queue if its .metadata (except .metadata.resourceVersion) and .spec fields haven't changed.
+			// This guarantees that we don't attempt to sync the pod every time its .status field is updated.
+			if reflect.DeepEqual(oldPod.ObjectMeta, newPod.ObjectMeta) && reflect.DeepEqual(oldPod.Spec, newPod.Spec) {
+				return
+			}
+			// At this point we know that something in .metadata or .spec has changed, so we must proceed to sync the pod.
+			if key, err := cache.MetaNamespaceKeyFunc(newPod); err != nil {
 				runtime.HandleError(err)
 			} else {
 				pc.workqueue.AddRateLimited(key)
@@ -214,7 +227,10 @@ func (pc *PodController) syncHandler(key string) error {
 		}
 		// At this point we know the Pod resource doesn't exist, which most probably means it was deleted.
 		// Hence, we must delete it from the provider if it still exists there.
-		return pc.deletePodInProvider(namespace, name)
+		if err := pc.server.deletePod(pc.context, namespace, name); err != nil {
+			return vkerrors.Unknown(err, "failed to delete pod %q in the provider", metaKeyFromNamespaceName(namespace, name))
+		}
+		return nil
 	}
 	// At this point we know the Pod resource has either been created or updated (which includes being marked for deletion).
 	return pc.syncPodInProvider(pod)
@@ -229,7 +245,7 @@ func (pc *PodController) syncPodInProvider(pod *corev1.Pod) error {
 	// If it does, delete it in the provider.
 	if pod.DeletionTimestamp != nil {
 		// Delete the pod.
-		if err := pc.server.deletePod(pc.context, pod); err != nil {
+		if err := pc.server.deletePod(pc.context, pod.Namespace, pod.Name); err != nil {
 			return vkerrors.Unknown(err, "failed to delete pod %q in the provider", key)
 		}
 		return nil
@@ -240,41 +256,9 @@ func (pc *PodController) syncPodInProvider(pod *corev1.Pod) error {
 		log.G(pc.context).Warnf("skipping sync of pod %q in %q phase", key, pod.Status.Phase)
 	}
 
-	// Check if the pod is already known by the provider.
-	// NOTE: Some providers return a non-nil error in their GetPod implementation when the pod is not found while some other don't.
-	// Hence, we ignore the error and just act upon the pod if it is non-nil (meaning that the provider still knows about the pod).
-	pp, _ := pc.server.provider.GetPod(pc.context, pod.Namespace, pod.Name)
-	if pp != nil {
-		// The pod has already been created in the provider.
-		// Hence, we return since pod updates are not yet supported.
-		return nil
-	}
-	// Create the pod in the provider.
-	if err := pc.server.createPod(pc.context, pod); err != nil {
-		return vkerrors.Unknown(err, "failed to create pod %q in the provider", key)
-	}
-	return nil
-}
-
-// deletePodInProvider checks whether the pod with the specified namespace and name is still known to the provider, and deletes it in case it is.
-// This function is meant to be called only when a given Pod resource has already been deleted from Kubernetes.
-func (pc *PodController) deletePodInProvider(namespace, name string) error {
-	// Reconstruct the pod's key.
-	key := metaKeyFromNamespaceName(namespace, name)
-
-	// Grab the pod as known by the provider.
-	// Since this function is only called when the Pod resource has already been deleted from Kubernetes, we must get it from the provider so we can call "deletePod".
-	// NOTE: Some providers return a non-nil error in their GetPod implementation when the pod is not found while some other don't.
-	// Hence, we ignore the error and just act upon the pod if it is non-nil (meaning that the provider still knows about the pod).
-	pod, _ := pc.server.provider.GetPod(pc.context, namespace, name)
-	if pod == nil {
-		// The provider is not aware of the pod, so we just exit.
-		return nil
-	}
-
-	// Delete the pod.
-	if err := pc.server.deletePod(pc.context, pod); err != nil {
-		return vkerrors.Unknown(err, "failed to delete pod %q in the provider", key)
+	// Create or update the pod in the provider.
+	if err := pc.server.createOrUpdatePod(pc.context, pod); err != nil {
+		return vkerrors.Unknown(err, "failed to sync pod %q in the provider", key)
 	}
 	return nil
 }
@@ -310,7 +294,7 @@ func (pc *PodController) deleteDanglingPods() error {
 	// Iterate over the slice of pods to be deleted and delete them in the provider.
 	for _, pod := range ptd {
 		go func(pod *corev1.Pod) {
-			if err := pc.server.deletePod(pc.context, pod); err != nil {
+			if err := pc.server.deletePod(pc.context, pod.Namespace, pod.Name); err != nil {
 				log.G(pc.context).Errorf("failed to delete pod %q in provider", metaKey(pod))
 			} else {
 				log.G(pc.context).Infof("deleted leaked pod %q in provider", metaKey(pod))

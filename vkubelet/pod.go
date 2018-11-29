@@ -25,8 +25,18 @@ func addPodAttributes(span *trace.Span, pod *corev1.Pod) {
 	)
 }
 
-func (s *Server) createPod(ctx context.Context, pod *corev1.Pod) error {
-	ctx, span := trace.StartSpan(ctx, "createPod")
+func (s *Server) createOrUpdatePod(ctx context.Context, pod *corev1.Pod) error {
+	// Check if the pod is already known by the provider.
+	// NOTE: Some providers return a non-nil error in their GetPod implementation when the pod is not found while some other don't.
+	// Hence, we ignore the error and just act upon the pod if it is non-nil (meaning that the provider still knows about the pod).
+	if pp, _ := s.provider.GetPod(ctx, pod.Namespace, pod.Name); pp != nil {
+		// The pod has already been created in the provider.
+		// Hence, we return since pod updates are not yet supported.
+		log.G(ctx).Warnf("skipping update of pod %s as pod updates are not supported", pp.Name)
+		return nil
+	}
+
+	ctx, span := trace.StartSpan(ctx, "createOrUpdatePod")
 	defer span.End()
 	addPodAttributes(span, pod)
 
@@ -65,7 +75,17 @@ func (s *Server) createPod(ctx context.Context, pod *corev1.Pod) error {
 	return nil
 }
 
-func (s *Server) deletePod(ctx context.Context, pod *corev1.Pod) error {
+func (s *Server) deletePod(ctx context.Context, namespace, name string) error {
+	// Grab the pod as known by the provider.
+	// Since this function is only called when the Pod resource has already been deleted from Kubernetes, we must get it from the provider so we can call "deletePod".
+	// NOTE: Some providers return a non-nil error in their GetPod implementation when the pod is not found while some other don't.
+	// Hence, we ignore the error and just act upon the pod if it is non-nil (meaning that the provider still knows about the pod).
+	pod, _ := s.provider.GetPod(ctx, namespace, name)
+	if pod == nil {
+		// The provider is not aware of the pod, so we just exit.
+		return nil
+	}
+
 	ctx, span := trace.StartSpan(ctx, "deletePod")
 	defer span.End()
 	addPodAttributes(span, pod)
