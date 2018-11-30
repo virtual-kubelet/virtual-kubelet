@@ -138,7 +138,7 @@ func (pc *PodController) Run(threadiness int) error {
 	// Perform a reconciliation step that deletes any dangling pods from the provider.
 	// This happens only when the virtual-kubelet is starting, and operates on a "best-effort" basis.
 	// If by any reason the provider fails to delete a dangling pod, it will stay in the provider and deletion won't be retried.
-	pc.deleteDanglingPods()
+	pc.deleteDanglingPods(threadiness)
 
 	// Launch "threadiness" workers to process Pod resources.
 	log.G(pc.context).Info("starting workers")
@@ -299,7 +299,7 @@ func (pc *PodController) syncPodInProvider(ctx context.Context, pod *corev1.Pod)
 }
 
 // deleteDanglingPods checks whether the provider knows about any pods which Kubernetes doesn't know about, and deletes them.
-func (pc *PodController) deleteDanglingPods() {
+func (pc *PodController) deleteDanglingPods(threadiness int) {
 	ctx, span := trace.StartSpan(pc.context, "deleteDanglingPods")
 	defer span.End()
 
@@ -332,14 +332,24 @@ func (pc *PodController) deleteDanglingPods() {
 		}
 	}
 
+	// We delete each pod in its own goroutine, allowing a maximum of "threadiness" concurrent deletions.
+	semaphore := make(chan struct{}, threadiness)
 	var wg sync.WaitGroup
 	wg.Add(len(ptd))
 
 	// Iterate over the slice of pods to be deleted and delete them in the provider.
 	for _, pod := range ptd {
 		go func(ctx context.Context, pod *corev1.Pod) {
+			defer wg.Done()
+
 			ctx, span := trace.StartSpan(ctx, "deleteDanglingPod")
 			defer span.End()
+
+			semaphore <- struct{}{}
+			defer func() {
+				<-semaphore
+			}()
+
 			// Add the pod's attributes to the current span.
 			addPodAttributes(span, pod)
 			// Actually delete the pod.
@@ -349,7 +359,6 @@ func (pc *PodController) deleteDanglingPods() {
 			} else {
 				log.G(ctx).Infof("deleted leaked pod %q in provider", loggablePodName(pod))
 			}
-			wg.Done()
 		}(ctx, pod)
 	}
 
