@@ -110,7 +110,6 @@ func loadConfig(providerConfig, nodeName string) (config MockConfig, err error) 
 
 // CreatePod accepts a Pod definition and stores it in memory.
 func (p *MockProvider) CreatePod(ctx context.Context, pod *v1.Pod) error {
-	// Create a span for the current call.
 	ctx, span := trace.StartSpan(ctx, "CreatePod")
 	defer span.End()
 
@@ -131,7 +130,6 @@ func (p *MockProvider) CreatePod(ctx context.Context, pod *v1.Pod) error {
 
 // UpdatePod accepts a Pod definition and updates its reference.
 func (p *MockProvider) UpdatePod(ctx context.Context, pod *v1.Pod) error {
-	// Create a span for the current call.
 	ctx, span := trace.StartSpan(ctx, "UpdatePod")
 	defer span.End()
 
@@ -152,7 +150,6 @@ func (p *MockProvider) UpdatePod(ctx context.Context, pod *v1.Pod) error {
 
 // DeletePod deletes the specified pod out of memory.
 func (p *MockProvider) DeletePod(ctx context.Context, pod *v1.Pod) (err error) {
-	// Create a span for the current call.
 	ctx, span := trace.StartSpan(ctx, "DeletePod")
 	defer span.End()
 
@@ -177,7 +174,6 @@ func (p *MockProvider) DeletePod(ctx context.Context, pod *v1.Pod) (err error) {
 
 // GetPod returns a pod by name that is stored in memory.
 func (p *MockProvider) GetPod(ctx context.Context, namespace, name string) (pod *v1.Pod, err error) {
-	// Create a span for the current call.
 	ctx, span := trace.StartSpan(ctx, "GetPod")
 	defer span.End()
 
@@ -200,7 +196,6 @@ func (p *MockProvider) GetPod(ctx context.Context, namespace, name string) (pod 
 
 // GetContainerLogs retrieves the logs of a container by name from the provider.
 func (p *MockProvider) GetContainerLogs(ctx context.Context, namespace, podName, containerName string, tail int) (string, error) {
-	// Create a span for the current call.
 	ctx, span := trace.StartSpan(ctx, "GetContainerLogs")
 	defer span.End()
 
@@ -227,7 +222,6 @@ func (p *MockProvider) ExecInContainer(name string, uid types.UID, container str
 // GetPodStatus returns the status of a pod by name that is "running".
 // returns nil if a pod by that name is not found.
 func (p *MockProvider) GetPodStatus(ctx context.Context, namespace, name string) (*v1.PodStatus, error) {
-	// Create a span for the current call.
 	ctx, span := trace.StartSpan(ctx, "GetPodStatus")
 	defer span.End()
 
@@ -283,7 +277,6 @@ func (p *MockProvider) GetPodStatus(ctx context.Context, namespace, name string)
 
 // GetPods returns a list of all pods known to be "running".
 func (p *MockProvider) GetPods(ctx context.Context) ([]*v1.Pod, error) {
-	// Create a span for the current call.
 	ctx, span := trace.StartSpan(ctx, "GetPods")
 	defer span.End()
 
@@ -313,7 +306,6 @@ func (p *MockProvider) Capacity(ctx context.Context) v1.ResourceList {
 // NodeConditions returns a list of conditions (Ready, OutOfDisk, etc), for updates to the node status
 // within Kubernetes.
 func (p *MockProvider) NodeConditions(ctx context.Context) []v1.NodeCondition {
-	// Create a span for the current call.
 	ctx, span := trace.StartSpan(ctx, "NodeConditions")
 	defer span.End()
 
@@ -366,7 +358,6 @@ func (p *MockProvider) NodeConditions(ctx context.Context) []v1.NodeCondition {
 // NodeAddresses returns a list of addresses for the node status
 // within Kubernetes.
 func (p *MockProvider) NodeAddresses(ctx context.Context) []v1.NodeAddress {
-	// Create a span for the current call.
 	ctx, span := trace.StartSpan(ctx, "NodeAddresses")
 	defer span.End()
 
@@ -381,7 +372,6 @@ func (p *MockProvider) NodeAddresses(ctx context.Context) []v1.NodeAddress {
 // NodeDaemonEndpoints returns NodeDaemonEndpoints for the node status
 // within Kubernetes.
 func (p *MockProvider) NodeDaemonEndpoints(ctx context.Context) *v1.NodeDaemonEndpoints {
-	// Create a span for the current call.
 	ctx, span := trace.StartSpan(ctx, "NodeDaemonEndpoints")
 	defer span.End()
 
@@ -400,7 +390,6 @@ func (p *MockProvider) OperatingSystem() string {
 
 // GetStatsSummary returns dummy stats for all pods known by this provider.
 func (p *MockProvider) GetStatsSummary(ctx context.Context) (*stats.Summary, error) {
-	// Create a span for the current call.
 	ctx, span := trace.StartSpan(ctx, "GetStatsSummary")
 	defer span.End()
 

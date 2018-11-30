@@ -170,8 +170,7 @@ func (pc *PodController) processNextWorkItem(workerId string) bool {
 		return false
 	}
 
-	// Create a span for the current call.
-	// We create it only after popping from the queue so that we can get an adequate picture of how long it took to process the item.
+	// We create a span only after popping from the queue so that we can get an adequate picture of how long it took to process the item.
 	ctx, span := trace.StartSpan(pc.context, "processNextWorkItem")
 	defer span.End()
 
@@ -227,7 +226,6 @@ func (pc *PodController) processNextWorkItem(workerId string) bool {
 
 // syncHandler compares the actual state with the desired, and attempts to converge the two.
 func (pc *PodController) syncHandler(ctx context.Context, key string) error {
-	// Create a span for the current call.
 	ctx, span := trace.StartSpan(ctx, "syncHandler")
 	defer span.End()
 
@@ -267,7 +265,6 @@ func (pc *PodController) syncHandler(ctx context.Context, key string) error {
 
 // syncPodInProvider tries and reconciles the state of a pod by comparing its Kubernetes representation and the provider's representation.
 func (pc *PodController) syncPodInProvider(ctx context.Context, pod *corev1.Pod) error {
-	// Create a span for the current call.
 	ctx, span := trace.StartSpan(ctx, "syncPodInProvider")
 	defer span.End()
 
@@ -303,7 +300,6 @@ func (pc *PodController) syncPodInProvider(ctx context.Context, pod *corev1.Pod)
 
 // deleteDanglingPods checks whether the provider knows about any pods which Kubernetes doesn't know about, and deletes them.
 func (pc *PodController) deleteDanglingPods() {
-	// Create a span for the current call.
 	ctx, span := trace.StartSpan(pc.context, "deleteDanglingPods")
 	defer span.End()
 
@@ -342,7 +338,6 @@ func (pc *PodController) deleteDanglingPods() {
 	// Iterate over the slice of pods to be deleted and delete them in the provider.
 	for _, pod := range ptd {
 		go func(ctx context.Context, pod *corev1.Pod) {
-			// Create a span for the current call.
 			ctx, span := trace.StartSpan(ctx, "deleteDanglingPod")
 			defer span.End()
 			// Add the pod's attributes to the current span.
