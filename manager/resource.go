@@ -32,7 +32,7 @@ func NewResourceManager(podLister corev1listers.PodLister, secretLister corev1li
 
 // GetPods returns a list of all known pods assigned to this virtual node.
 func (rm *ResourceManager) GetPods() []*v1.Pod {
-	l, err := rm.podLister.Pods(v1.NamespaceAll).List(labels.Everything())
+	l, err := rm.podLister.List(labels.Everything())
 	if err == nil {
 		return l
 	}
