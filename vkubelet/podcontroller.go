@@ -137,7 +137,7 @@ func (pc *PodController) Run(threadiness int) error {
 	// If by any reason the provider fails to delete a dangling pod, it will stay in the provider and deletion won't be retried.
 	pc.deleteDanglingPods()
 
-	// Launch two workers to process Pod resources.
+	// Launch "threadiness" workers to process Pod resources.
 	log.G(pc.context).Info("starting workers")
 	for i := 0; i < threadiness; i++ {
 		go wait.Until(pc.runWorker, time.Second, pc.context.Done())
