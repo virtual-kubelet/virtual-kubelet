@@ -60,19 +60,27 @@ clean:
 	@echo "Clean..."
 	$Q rm -rf bin
 
+vet:
+	@echo "go vet'ing..."
+ifndef CI
+	@echo "go vet'ing Outside CI..."
+	$Q go vet $(allpackages)
+else
+	@echo "go vet'ing in CI..."
+	$Q mkdir -p test
+	$Q ( go vet $(allpackages); echo $$? ) | \
+       tee test/vet.txt | sed '$$ d'; exit $$(tail -1 test/vet.txt)
+endif
 
 test:
 	@echo "Testing..."
 	$Q go test $(if $V,-v) -i $(allpackages) # install -race libs to speed up next run
 ifndef CI
 	@echo "Testing Outside CI..."
-	$Q go vet $(allpackages)
 	$Q GODEBUG=cgocheck=2 go test $(allpackages)
 else
 	@echo "Testing in CI..."
 	$Q mkdir -p test
-	$Q ( go vet $(allpackages); echo $$? ) | \
-       tee test/vet.txt | sed '$$ d'; exit $$(tail -1 test/vet.txt)
 	$Q ( GODEBUG=cgocheck=2 go test -v $(allpackages); echo $$? ) | \
        tee test/output.txt | sed '$$ d'; exit $$(tail -1 test/output.txt)
 endif
