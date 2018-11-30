@@ -68,7 +68,7 @@ func NewPodController(server *Server, context context.Context) *PodController {
 	eventBroadcaster := record.NewBroadcaster()
 	eventBroadcaster.StartLogging(log.L.Infof)
 	eventBroadcaster.StartRecordingToSink(&typedcorev1.EventSinkImpl{Interface: server.k8sClient.CoreV1().Events("")})
-	recorder := eventBroadcaster.NewRecorder(scheme.Scheme, corev1.EventSource{Component: "pod-controller"})
+	recorder := eventBroadcaster.NewRecorder(scheme.Scheme, corev1.EventSource{Component: fmt.Sprintf("%s/pod-controller", server.nodeName)})
 
 	// Create an instance of PodController having a work queue that uses the rate limiter created above.
 	pc := &PodController{
