@@ -127,5 +127,5 @@ func New(ctx context.Context, cfg Config) (s *Server, retErr error) {
 
 // Run creates and starts an instance of the pod controller, blocking until it stops.
 func (s *Server) Run(ctx context.Context) error {
-	return NewPodController(s, ctx).Run(s.podSyncWorkers)
+	return NewPodController(s).Run(ctx, s.podSyncWorkers)
 }
