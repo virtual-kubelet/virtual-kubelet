@@ -277,8 +277,8 @@ func (pc *PodController) syncPodInProvider(ctx context.Context, pod *corev1.Pod)
 		return nil
 	}
 
-	// Ignore the pod if it is in the "Failed" state.
-	if pod.Status.Phase == corev1.PodFailed {
+	// Ignore the pod if it is in the "Failed" or "Succeeded" state.
+	if pod.Status.Phase == corev1.PodFailed || pod.Status.Phase == corev1.PodSucceeded {
 		log.G(ctx).Warnf("skipping sync of pod %q in %q phase", loggablePodName(pod), pod.Status.Phase)
 		return nil
 	}
