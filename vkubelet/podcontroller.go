@@ -27,7 +27,6 @@ import (
 	"go.opencensus.io/trace"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/informers/core/v1"
 	"k8s.io/client-go/kubernetes/scheme"
@@ -123,7 +122,6 @@ func NewPodController(server *Server) *PodController {
 // Run will set up the event handlers for types we are interested in, as well as syncing informer caches and starting workers.
 // It will block until stopCh is closed, at which point it will shutdown the work queue and wait for workers to finish processing their current work items.
 func (pc *PodController) Run(ctx context.Context, threadiness int) error {
-	defer runtime.HandleCrash()
 	defer pc.workqueue.ShutDown()
 
 	// Wait for the caches to be synced before starting workers.
