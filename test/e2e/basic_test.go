@@ -118,11 +118,12 @@ func TestPodLifecycle(t *testing.T) {
 
 	// Wait for the "nginx-1-Y" pod to be deleted in a separate goroutine.
 	// This ensures that we don't possibly miss the MODIFIED/DELETED events due to establishing the watch too late in the process.
-	pod1Ch := make(chan struct{})
+	pod1Ch := make(chan error)
 	go func() {
 		// Wait for the "nginx-1-Y" pod to be reported as having been marked for deletion.
 		if err := f.WaitUntilPodDeleted(pod1.Namespace, pod1.Name); err != nil {
-			t.Fatal(err)
+			// Propagate the error to the outside so we can fail the test.
+			pod1Ch <- err
 		} else {
 			// Close the pod0Ch channel, signaling we've observed deletion of the pod.
 			close(pod1Ch)
@@ -134,7 +135,9 @@ func TestPodLifecycle(t *testing.T) {
 		t.Fatal(err)
 	}
 	// Wait for the delete event to be ACKed.
-	<-pod1Ch
+	if err := <-pod1Ch; err != nil {
+		t.Fatal(err)
+	}
 	// Give the provider some time to react to the MODIFIED/DELETED events before proceeding.
 	time.Sleep(deleteGracePeriodForProvider)
 
@@ -151,11 +154,12 @@ func TestPodLifecycle(t *testing.T) {
 
 	// Wait for the "nginx-0-X" pod to be deleted in a separate goroutine.
 	// This ensures that we don't possibly miss the MODIFIED/DELETED events due to establishing the watch too late in the process.
-	pod0Ch := make(chan struct{})
+	pod0Ch := make(chan error)
 	go func() {
 		// Wait for the "nginx-0-X" pod to be reported as having been deleted.
 		if err := f.WaitUntilPodDeleted(pod0.Namespace, pod0.Name); err != nil {
-			t.Fatal(err)
+			// Propagate the error to the outside so we can fail the test.
+			pod0Ch <- err
 		} else {
 			// Close the pod0Ch channel, signaling we've observed deletion of the pod.
 			close(pod0Ch)
@@ -167,7 +171,9 @@ func TestPodLifecycle(t *testing.T) {
 		t.Fatal(err)
 	}
 	// Wait for the delete event to be ACKed.
-	<-pod0Ch
+	if err := <-pod0Ch; err != nil {
+		t.Fatal(err)
+	}
 	// Give the provider some time to react to the MODIFIED/DELETED events before proceeding.
 	time.Sleep(deleteGracePeriodForProvider)
 
