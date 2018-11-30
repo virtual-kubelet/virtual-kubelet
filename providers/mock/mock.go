@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/cpuguy83/strongerrors"
+	"go.opencensus.io/trace"
 	"k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -26,6 +27,11 @@ const (
 	defaultCPUCapacity    = "20"
 	defaultMemoryCapacity = "100Gi"
 	defaultPodCapacity    = "20"
+
+	// Values used in tracing as attribute keys.
+	namespaceKey     = "namespace"
+	nameKey          = "name"
+	containerNameKey = "containerName"
 )
 
 // MockProvider implements the virtual-kubelet provider interface and stores pods in memory.
@@ -104,6 +110,12 @@ func loadConfig(providerConfig, nodeName string) (config MockConfig, err error) 
 
 // CreatePod accepts a Pod definition and stores it in memory.
 func (p *MockProvider) CreatePod(ctx context.Context, pod *v1.Pod) error {
+	ctx, span := trace.StartSpan(ctx, "CreatePod")
+	defer span.End()
+
+	// Add the pod's coordinates to the current span.
+	addAttributes(span, namespaceKey, pod.Namespace, nameKey, pod.Name)
+
 	log.Printf("receive CreatePod %q\n", pod.Name)
 
 	key, err := buildKey(pod)
@@ -118,6 +130,12 @@ func (p *MockProvider) CreatePod(ctx context.Context, pod *v1.Pod) error {
 
 // UpdatePod accepts a Pod definition and updates its reference.
 func (p *MockProvider) UpdatePod(ctx context.Context, pod *v1.Pod) error {
+	ctx, span := trace.StartSpan(ctx, "UpdatePod")
+	defer span.End()
+
+	// Add the pod's coordinates to the current span.
+	addAttributes(span, namespaceKey, pod.Namespace, nameKey, pod.Name)
+
 	log.Printf("receive UpdatePod %q\n", pod.Name)
 
 	key, err := buildKey(pod)
@@ -132,6 +150,12 @@ func (p *MockProvider) UpdatePod(ctx context.Context, pod *v1.Pod) error {
 
 // DeletePod deletes the specified pod out of memory.
 func (p *MockProvider) DeletePod(ctx context.Context, pod *v1.Pod) (err error) {
+	ctx, span := trace.StartSpan(ctx, "DeletePod")
+	defer span.End()
+
+	// Add the pod's coordinates to the current span.
+	addAttributes(span, namespaceKey, pod.Namespace, nameKey, pod.Name)
+
 	log.Printf("receive DeletePod %q\n", pod.Name)
 
 	key, err := buildKey(pod)
@@ -150,6 +174,12 @@ func (p *MockProvider) DeletePod(ctx context.Context, pod *v1.Pod) (err error) {
 
 // GetPod returns a pod by name that is stored in memory.
 func (p *MockProvider) GetPod(ctx context.Context, namespace, name string) (pod *v1.Pod, err error) {
+	ctx, span := trace.StartSpan(ctx, "GetPod")
+	defer span.End()
+
+	// Add the pod's coordinates to the current span.
+	addAttributes(span, namespaceKey, namespace, nameKey, name)
+
 	log.Printf("receive GetPod %q\n", name)
 
 	key, err := buildKeyFromNames(namespace, name)
@@ -166,6 +196,12 @@ func (p *MockProvider) GetPod(ctx context.Context, namespace, name string) (pod 
 
 // GetContainerLogs retrieves the logs of a container by name from the provider.
 func (p *MockProvider) GetContainerLogs(ctx context.Context, namespace, podName, containerName string, tail int) (string, error) {
+	ctx, span := trace.StartSpan(ctx, "GetContainerLogs")
+	defer span.End()
+
+	// Add pod and container attributes to the current span.
+	addAttributes(span, namespaceKey, namespace, nameKey, podName, containerNameKey, containerName)
+
 	log.Printf("receive GetContainerLogs %q\n", podName)
 	return "", nil
 }
@@ -186,6 +222,12 @@ func (p *MockProvider) ExecInContainer(name string, uid types.UID, container str
 // GetPodStatus returns the status of a pod by name that is "running".
 // returns nil if a pod by that name is not found.
 func (p *MockProvider) GetPodStatus(ctx context.Context, namespace, name string) (*v1.PodStatus, error) {
+	ctx, span := trace.StartSpan(ctx, "GetPodStatus")
+	defer span.End()
+
+	// Add namespace and name as attributes to the current span.
+	addAttributes(span, namespaceKey, namespace, nameKey, name)
+
 	log.Printf("receive GetPodStatus %q\n", name)
 
 	now := metav1.NewTime(time.Now())
@@ -235,6 +277,9 @@ func (p *MockProvider) GetPodStatus(ctx context.Context, namespace, name string)
 
 // GetPods returns a list of all pods known to be "running".
 func (p *MockProvider) GetPods(ctx context.Context) ([]*v1.Pod, error) {
+	ctx, span := trace.StartSpan(ctx, "GetPods")
+	defer span.End()
+
 	log.Printf("receive GetPods\n")
 
 	var pods []*v1.Pod
@@ -248,6 +293,9 @@ func (p *MockProvider) GetPods(ctx context.Context) ([]*v1.Pod, error) {
 
 // Capacity returns a resource list containing the capacity limits.
 func (p *MockProvider) Capacity(ctx context.Context) v1.ResourceList {
+	ctx, span := trace.StartSpan(ctx, "Capacity")
+	defer span.End()
+
 	return v1.ResourceList{
 		"cpu":    resource.MustParse(p.config.CPU),
 		"memory": resource.MustParse(p.config.Memory),
@@ -258,6 +306,9 @@ func (p *MockProvider) Capacity(ctx context.Context) v1.ResourceList {
 // NodeConditions returns a list of conditions (Ready, OutOfDisk, etc), for updates to the node status
 // within Kubernetes.
 func (p *MockProvider) NodeConditions(ctx context.Context) []v1.NodeCondition {
+	ctx, span := trace.StartSpan(ctx, "NodeConditions")
+	defer span.End()
+
 	// TODO: Make this configurable
 	return []v1.NodeCondition{
 		{
@@ -307,6 +358,9 @@ func (p *MockProvider) NodeConditions(ctx context.Context) []v1.NodeCondition {
 // NodeAddresses returns a list of addresses for the node status
 // within Kubernetes.
 func (p *MockProvider) NodeAddresses(ctx context.Context) []v1.NodeAddress {
+	ctx, span := trace.StartSpan(ctx, "NodeAddresses")
+	defer span.End()
+
 	return []v1.NodeAddress{
 		{
 			Type:    "InternalIP",
@@ -318,6 +372,9 @@ func (p *MockProvider) NodeAddresses(ctx context.Context) []v1.NodeAddress {
 // NodeDaemonEndpoints returns NodeDaemonEndpoints for the node status
 // within Kubernetes.
 func (p *MockProvider) NodeDaemonEndpoints(ctx context.Context) *v1.NodeDaemonEndpoints {
+	ctx, span := trace.StartSpan(ctx, "NodeDaemonEndpoints")
+	defer span.End()
+
 	return &v1.NodeDaemonEndpoints{
 		KubeletEndpoint: v1.DaemonEndpoint{
 			Port: p.daemonEndpointPort,
@@ -333,6 +390,9 @@ func (p *MockProvider) OperatingSystem() string {
 
 // GetStatsSummary returns dummy stats for all pods known by this provider.
 func (p *MockProvider) GetStatsSummary(ctx context.Context) (*stats.Summary, error) {
+	ctx, span := trace.StartSpan(ctx, "GetStatsSummary")
+	defer span.End()
+
 	// Grab the current timestamp so we can report it as the time the stats were generated.
 	time := metav1.NewTime(time.Now())
 
@@ -420,4 +480,17 @@ func buildKey(pod *v1.Pod) (string, error) {
 	}
 
 	return buildKeyFromNames(pod.ObjectMeta.Namespace, pod.ObjectMeta.Name)
+}
+
+// addAttributes adds the specified attributes to the provided span.
+// attrs must be an even-sized list of string arguments.
+// Otherwise, the span won't be modified.
+// TODO: Refactor and move to a "tracing utilities" package.
+func addAttributes(span *trace.Span, attrs ...string) {
+	if len(attrs)%2 == 1 {
+		return
+	}
+	for i := 0; i < len(attrs); i += 2 {
+		span.AddAttributes(trace.StringAttribute(attrs[i], attrs[i+1]))
+	}
 }
