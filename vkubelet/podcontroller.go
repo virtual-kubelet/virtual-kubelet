@@ -266,9 +266,8 @@ func (pc *PodController) syncPodInProvider(ctx context.Context, pod *corev1.Pod)
 	addPodAttributes(span, pod)
 
 	// Check whether the pod has been marked for deletion.
-	// If it does, delete it in the provider.
+	// If it does, guarantee it is deleted in the provider and Kubernetes.
 	if pod.DeletionTimestamp != nil {
-		// Delete the pod.
 		if err := pc.server.deletePod(ctx, pod.Namespace, pod.Name); err != nil {
 			err := pkgerrors.Wrapf(err, "failed to delete pod %q in the provider", loggablePodName(pod))
 			span.SetStatus(ocstatus.FromError(err))

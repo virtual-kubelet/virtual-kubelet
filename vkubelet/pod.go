@@ -77,13 +77,12 @@ func (s *Server) createOrUpdatePod(ctx context.Context, pod *corev1.Pod) error {
 
 func (s *Server) deletePod(ctx context.Context, namespace, name string) error {
 	// Grab the pod as known by the provider.
-	// Since this function is only called when the Pod resource has already been deleted from Kubernetes, we must get it from the provider so we can call "deletePod".
 	// NOTE: Some providers return a non-nil error in their GetPod implementation when the pod is not found while some other don't.
 	// Hence, we ignore the error and just act upon the pod if it is non-nil (meaning that the provider still knows about the pod).
 	pod, _ := s.provider.GetPod(ctx, namespace, name)
 	if pod == nil {
-		// The provider is not aware of the pod, so we just exit.
-		return nil
+		// The provider is not aware of the pod, but we must still delete the Kubernetes API resource.
+		return s.forceDeletePodResource(ctx, namespace, name)
 	}
 
 	ctx, span := trace.StartSpan(ctx, "deletePod")
@@ -99,20 +98,34 @@ func (s *Server) deletePod(ctx context.Context, namespace, name string) error {
 
 	logger := log.G(ctx).WithField("pod", pod.GetName()).WithField("namespace", pod.GetNamespace())
 	if !errors.IsNotFound(delErr) {
-		var grace int64
-		if err := s.k8sClient.CoreV1().Pods(pod.GetNamespace()).Delete(pod.GetName(), &metav1.DeleteOptions{GracePeriodSeconds: &grace}); err != nil {
-			if errors.IsNotFound(err) {
-				span.Annotate(nil, "Pod does not exist in k8s, nothing to delete")
-				return nil
-			}
-
-			span.SetStatus(trace.Status{Code: trace.StatusCodeUnknown, Message: err.Error()})
-			return fmt.Errorf("Failed to delete kubernetes pod: %s", err)
+		if err := s.forceDeletePodResource(ctx, namespace, name); err != nil {
+			span.SetStatus(ocstatus.FromError(err))
+			return err
 		}
 		span.Annotate(nil, "Deleted pod from k8s")
 		logger.Info("Pod deleted")
 	}
 
+	return nil
+}
+
+func (s *Server) forceDeletePodResource(ctx context.Context, namespace, name string) error {
+	ctx, span := trace.StartSpan(ctx, "forceDeletePodResource")
+	defer span.End()
+	span.AddAttributes(
+		trace.StringAttribute("namespace", namespace),
+		trace.StringAttribute("name", name),
+	)
+
+	var grace int64
+	if err := s.k8sClient.CoreV1().Pods(namespace).Delete(name, &metav1.DeleteOptions{GracePeriodSeconds: &grace}); err != nil {
+		if errors.IsNotFound(err) {
+			span.Annotate(nil, "Pod does not exist in Kubernetes, nothing to delete")
+			return nil
+		}
+		span.SetStatus(trace.Status{Code: trace.StatusCodeUnknown, Message: err.Error()})
+		return fmt.Errorf("Failed to delete Kubernetes pod: %s", err)
+	}
 	return nil
 }
 
