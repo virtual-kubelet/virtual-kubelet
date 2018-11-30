@@ -18,10 +18,13 @@ import (
 	"context"
 	"fmt"
 	"reflect"
+	"strconv"
 	"sync"
 	"time"
 
+	"github.com/cpuguy83/strongerrors/status/ocstatus"
 	pkgerrors "github.com/pkg/errors"
+	"go.opencensus.io/trace"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/util/runtime"
@@ -139,8 +142,11 @@ func (pc *PodController) Run(threadiness int) error {
 
 	// Launch "threadiness" workers to process Pod resources.
 	log.G(pc.context).Info("starting workers")
-	for i := 0; i < threadiness; i++ {
-		go wait.Until(pc.runWorker, time.Second, pc.context.Done())
+	for id := 0; id < threadiness; id++ {
+		go wait.Until(func() {
+			// Use the worker's "index" as its ID so we can use it for tracing.
+			pc.runWorker(strconv.Itoa(id))
+		}, time.Second, pc.context.Done())
 	}
 
 	log.G(pc.context).Info("started workers")
@@ -151,18 +157,26 @@ func (pc *PodController) Run(threadiness int) error {
 }
 
 // runWorker is a long-running function that will continually call the processNextWorkItem function in order to read and process an item on the work queue.
-func (pc *PodController) runWorker() {
-	for pc.processNextWorkItem() {
+func (pc *PodController) runWorker(workerId string) {
+	for pc.processNextWorkItem(workerId) {
 	}
 }
 
 // processNextWorkItem will read a single work item off the work queue and attempt to process it,by calling the syncHandler.
-func (pc *PodController) processNextWorkItem() bool {
+func (pc *PodController) processNextWorkItem(workerId string) bool {
 	obj, shutdown := pc.workqueue.Get()
 
 	if shutdown {
 		return false
 	}
+
+	// Create a span for the current call.
+	// We create it only after popping from the queue so that we can get an adequate picture of how long it took to process the item.
+	ctx, span := trace.StartSpan(pc.context, "processNextWorkItem")
+	defer span.End()
+
+	// Add the ID of the current worker as an attribute to the current span.
+	span.AddAttributes(trace.StringAttribute("workerId", workerId))
 
 	// We wrap this block in a func so we can defer pc.workqueue.Done.
 	err := func(obj interface{}) error {
@@ -179,14 +193,16 @@ func (pc *PodController) processNextWorkItem() bool {
 		if key, ok = obj.(string); !ok {
 			// As the item in the work queue is actually invalid, we call Forget here else we'd go into a loop of attempting to process a work item that is invalid.
 			pc.workqueue.Forget(obj)
-			log.G(pc.context).Error(pkgerrors.Errorf("expected string in work queue but got %#v", obj))
+			log.G(ctx).Warnf("expected string in work queue but got %#v", obj)
 			return nil
 		}
+		// Add the current key as an attribute to the current span.
+		span.AddAttributes(trace.StringAttribute("key", key))
 		// Run the syncHandler, passing it the namespace/name string of the Pod resource to be synced.
-		if err := pc.syncHandler(key); err != nil {
+		if err := pc.syncHandler(ctx, key); err != nil {
 			if pc.workqueue.NumRequeues(key) < maxRetries {
 				// Put the item back on the work queue to handle any transient errors.
-				log.L.Errorf("requeuing %q due to failed sync", key)
+				log.G(ctx).Warnf("requeuing %q due to failed sync", key)
 				pc.workqueue.AddRateLimited(key)
 				return nil
 			}
@@ -200,7 +216,9 @@ func (pc *PodController) processNextWorkItem() bool {
 	}(obj)
 
 	if err != nil {
-		log.G(pc.context).Error(err)
+		// We've actually hit an error, so we set the span's status based on the error.
+		span.SetStatus(ocstatus.FromError(err))
+		log.G(ctx).Error(err)
 		return true
 	}
 
@@ -208,12 +226,19 @@ func (pc *PodController) processNextWorkItem() bool {
 }
 
 // syncHandler compares the actual state with the desired, and attempts to converge the two.
-func (pc *PodController) syncHandler(key string) error {
+func (pc *PodController) syncHandler(ctx context.Context, key string) error {
+	// Create a span for the current call.
+	ctx, span := trace.StartSpan(ctx, "syncHandler")
+	defer span.End()
+
+	// Add the current key as an attribute to the current span.
+	span.AddAttributes(trace.StringAttribute("key", key))
+
 	// Convert the namespace/name string into a distinct namespace and name.
 	namespace, name, err := cache.SplitMetaNamespaceKey(key)
 	if err != nil {
-		// Log the error but do not requeue the key as it is invalid.
-		log.G(pc.context).Error(pkgerrors.Wrapf(err, "invalid resource key: %q", key))
+		// Log the error as a warning, but do not requeue the key as it is invalid.
+		log.G(ctx).Warn(pkgerrors.Wrapf(err, "invalid resource key: %q", key))
 		return nil
 	}
 
@@ -223,49 +248,72 @@ func (pc *PodController) syncHandler(key string) error {
 		if !errors.IsNotFound(err) {
 			// We've failed to fetch the pod from the lister, but the error is not a 404.
 			// Hence, we add the key back to the work queue so we can retry processing it later.
-			return pkgerrors.Wrapf(err, "failed to fetch pod with key %q from lister", key)
+			err := pkgerrors.Wrapf(err, "failed to fetch pod with key %q from lister", key)
+			span.SetStatus(ocstatus.FromError(err))
+			return err
 		}
 		// At this point we know the Pod resource doesn't exist, which most probably means it was deleted.
 		// Hence, we must delete it from the provider if it still exists there.
-		if err := pc.server.deletePod(pc.context, namespace, name); err != nil {
-			return pkgerrors.Wrapf(err, "failed to delete pod %q in the provider", loggablePodNameFromCoordinates(namespace, name))
+		if err := pc.server.deletePod(ctx, namespace, name); err != nil {
+			err := pkgerrors.Wrapf(err, "failed to delete pod %q in the provider", loggablePodNameFromCoordinates(namespace, name))
+			span.SetStatus(ocstatus.FromError(err))
+			return err
 		}
 		return nil
 	}
 	// At this point we know the Pod resource has either been created or updated (which includes being marked for deletion).
-	return pc.syncPodInProvider(pod)
+	return pc.syncPodInProvider(ctx, pod)
 }
 
 // syncPodInProvider tries and reconciles the state of a pod by comparing its Kubernetes representation and the provider's representation.
-func (pc *PodController) syncPodInProvider(pod *corev1.Pod) error {
+func (pc *PodController) syncPodInProvider(ctx context.Context, pod *corev1.Pod) error {
+	// Create a span for the current call.
+	ctx, span := trace.StartSpan(ctx, "syncPodInProvider")
+	defer span.End()
+
+	// Add the pod's attributes to the current span.
+	addPodAttributes(span, pod)
+
 	// Check whether the pod has been marked for deletion.
 	// If it does, delete it in the provider.
 	if pod.DeletionTimestamp != nil {
 		// Delete the pod.
-		if err := pc.server.deletePod(pc.context, pod.Namespace, pod.Name); err != nil {
-			return pkgerrors.Wrapf(err, "failed to delete pod %q in the provider", loggablePodName(pod))
+		if err := pc.server.deletePod(ctx, pod.Namespace, pod.Name); err != nil {
+			err := pkgerrors.Wrapf(err, "failed to delete pod %q in the provider", loggablePodName(pod))
+			span.SetStatus(ocstatus.FromError(err))
+			return err
 		}
 		return nil
 	}
 
 	// Ignore the pod if it is in the "Failed" state.
 	if pod.Status.Phase == corev1.PodFailed {
-		log.G(pc.context).Warnf("skipping sync of pod %q in %q phase", loggablePodName(pod), pod.Status.Phase)
+		log.G(ctx).Warnf("skipping sync of pod %q in %q phase", loggablePodName(pod), pod.Status.Phase)
+		return nil
 	}
 
 	// Create or update the pod in the provider.
-	if err := pc.server.createOrUpdatePod(pc.context, pod); err != nil {
-		return pkgerrors.Wrapf(err, "failed to sync pod %q in the provider", loggablePodName(pod))
+	if err := pc.server.createOrUpdatePod(ctx, pod); err != nil {
+		err := pkgerrors.Wrapf(err, "failed to sync pod %q in the provider", loggablePodName(pod))
+		span.SetStatus(ocstatus.FromError(err))
+		return err
 	}
 	return nil
 }
 
 // deleteDanglingPods checks whether the provider knows about any pods which Kubernetes doesn't know about, and deletes them.
-func (pc *PodController) deleteDanglingPods() error {
+func (pc *PodController) deleteDanglingPods() {
+	// Create a span for the current call.
+	ctx, span := trace.StartSpan(pc.context, "deleteDanglingPods")
+	defer span.End()
+
 	// Grab the list of pods known to the provider.
-	pps, err := pc.server.provider.GetPods(pc.context)
+	pps, err := pc.server.provider.GetPods(ctx)
 	if err != nil {
-		return pkgerrors.Wrap(err, "failed to fetch the list of pods from the provider")
+		err := pkgerrors.Wrap(err, "failed to fetch the list of pods from the provider")
+		span.SetStatus(ocstatus.FromError(err))
+		log.G(ctx).Error(err)
+		return
 	}
 
 	// Create a slice to hold the pods we will be deleting from the provider.
@@ -281,7 +329,10 @@ func (pc *PodController) deleteDanglingPods() error {
 				continue
 			}
 			// For some reason we couldn't fetch the pod from the lister, so we propagate the error.
-			return pkgerrors.Wrap(err, "failed to fetch pod from the lister")
+			err := pkgerrors.Wrap(err, "failed to fetch pod from the lister")
+			span.SetStatus(ocstatus.FromError(err))
+			log.G(ctx).Error(err)
+			return
 		}
 	}
 
@@ -290,19 +341,26 @@ func (pc *PodController) deleteDanglingPods() error {
 
 	// Iterate over the slice of pods to be deleted and delete them in the provider.
 	for _, pod := range ptd {
-		go func(pod *corev1.Pod) {
-			if err := pc.server.deletePod(pc.context, pod.Namespace, pod.Name); err != nil {
-				log.G(pc.context).Errorf("failed to delete pod %q in provider", loggablePodName(pod))
+		go func(ctx context.Context, pod *corev1.Pod) {
+			// Create a span for the current call.
+			ctx, span := trace.StartSpan(ctx, "deleteDanglingPod")
+			defer span.End()
+			// Add the pod's attributes to the current span.
+			addPodAttributes(span, pod)
+			// Actually delete the pod.
+			if err := pc.server.deletePod(ctx, pod.Namespace, pod.Name); err != nil {
+				span.SetStatus(ocstatus.FromError(err))
+				log.G(ctx).Errorf("failed to delete pod %q in provider", loggablePodName(pod))
 			} else {
-				log.G(pc.context).Infof("deleted leaked pod %q in provider", loggablePodName(pod))
+				log.G(ctx).Infof("deleted leaked pod %q in provider", loggablePodName(pod))
 			}
 			wg.Done()
-		}(pod)
+		}(ctx, pod)
 	}
 
 	// Wait for all pods to be deleted.
 	wg.Wait()
-	return nil
+	return
 }
 
 // loggablePodName returns the "namespace/name" key for the specified pod.
