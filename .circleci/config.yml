@@ -7,6 +7,9 @@ jobs:
     steps:
       - checkout
       - run:
+          name: go vet
+          command: V=1 CI=1 make vet
+      - run:
           name: Install linters
           command: curl -sfL https://install.goreleaser.com/github.com/golangci/golangci-lint.sh | bash -s v1.10.2 && mv ./bin/* /go/bin/
       - run:
