@@ -9,9 +9,9 @@ import (
 
 const (
 	// BaseURI is the default URI used for compute services.
-	BaseURI    = "https://management.azure.com"
-	userAgent  = "virtual-kubelet/azure-arm-resourcegroups/2017-12-01"
-	apiVersion = "2017-08-01"
+	BaseURI          = "https://management.azure.com"
+	defaultUserAgent = "virtual-kubelet/azure-arm-resourcegroups/2017-12-01"
+	apiVersion       = "2017-08-01"
 
 	resourceGroupURLPath = "subscriptions/{{.subscriptionId}}/resourcegroups/{{.resourceGroupName}}"
 )
@@ -26,9 +26,14 @@ type Client struct {
 }
 
 // NewClient creates a new Azure resource groups client.
-func NewClient(auth *azure.Authentication) (*Client, error) {
+func NewClient(auth *azure.Authentication, extraUserAgent string) (*Client, error) {
 	if auth == nil {
 		return nil, fmt.Errorf("Authentication is not supplied for the Azure client")
+	}
+
+	userAgent := []string{defaultUserAgent}
+	if extraUserAgent != "" {
+		userAgent = append(userAgent, extraUserAgent)
 	}
 
 	client, err := azure.NewClient(auth, BaseURI, userAgent)

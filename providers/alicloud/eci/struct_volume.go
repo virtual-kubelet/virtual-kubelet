@@ -25,11 +25,11 @@ const (
 )
 
 type Volume struct {
-	Type                              string             `json:"Type" xml:"Type" position:"Query" name:"Type"`
-	Name                              string             `json:"Name" xml:"Name" position:"Query" name:"Name"`
-	NfsVolumePath                     string             `json:"NfsVolumePath" xml:"NfsVolumePath" position:"Query" name:"NFSVolume.Path"`
-	NfsVolumeServer                   string             `json:"NfsVolumeServer" xml:"NfsVolumeServer" position:"Query" name:"NFSVolume.Server"`
-	NfsVolumeReadOnly                 requests.Boolean   `json:"NfsVolumeReadOnly" xml:"NfsVolumeReadOnly" position:"Query" name:"NFSVolume.ReadOnly"`
-	EmptyDirVolumeEnable              requests.Boolean   `json:"EmptyDirVolumeEnable" xml:"EmptyDirVolumeEnable" position:"Query" name:"EmptyDirVolume.Enable"`
-	ConfigFileVolumeConfigFileToPaths []ConfigFileToPath `json:"ConfigFileVolumeConfigFileToPaths" xml:"ConfigFileVolume" position:"Query" name:"ConfigFileVolume.ConfigFileToPath"  type:"Repeated"`
+	Type                 string             `name:"Type"`
+	Name                 string             `name:"Name"`
+	NfsVolumePath        string             `name:"NFSVolume.Path"`
+	NfsVolumeServer      string             `name:"NFSVolume.Server"`
+	NfsVolumeReadOnly    requests.Boolean   `name:"NFSVolume.ReadOnly"`
+	EmptyDirVolumeEnable requests.Boolean   `name:"EmptyDirVolume.Enable"`
+	ConfigFileToPaths    []ConfigFileToPath `name:"ConfigFileVolume.ConfigFileToPath" type:"Repeated"`
 }

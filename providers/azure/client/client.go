@@ -24,13 +24,13 @@ type BearerAuthorizer struct {
 }
 
 type userAgentTransport struct {
-	userAgent string
+	userAgent []string
 	base      http.RoundTripper
 	client    *Client
 }
 
 // NewClient creates a new Azure API client from an Authentication struct and BaseURI.
-func NewClient(auth *Authentication, baseURI string, userAgent string) (*Client, error) {
+func NewClient(auth *Authentication, baseURI string, userAgent []string) (*Client, error) {
 	resource, err := getResourceForToken(auth, baseURI)
 	if err != nil {
 		return nil, fmt.Errorf("Getting resource for token failed: %v", err)
@@ -52,9 +52,16 @@ func NewClient(auth *Authentication, baseURI string, userAgent string) (*Client,
 
 	client.BearerAuthorizer = &BearerAuthorizer{tokenProvider: tp}
 
+	nonEmptyUserAgent := userAgent[:0]
+	for _, ua := range userAgent {
+		if ua != "" {
+			nonEmptyUserAgent = append(nonEmptyUserAgent, ua)
+		}
+	}
+
 	uat := userAgentTransport{
 		base:      http.DefaultTransport,
-		userAgent: userAgent,
+		userAgent: nonEmptyUserAgent,
 		client:    client,
 	}
 
@@ -77,7 +84,7 @@ func (t userAgentTransport) RoundTrip(req *http.Request) (*http.Response, error)
 	}
 
 	// Add the user agent header.
-	newReq.Header["User-Agent"] = []string{t.userAgent}
+	newReq.Header["User-Agent"] = []string{strings.Join(t.userAgent, " ")}
 
 	// Add the content-type header.
 	newReq.Header["Content-Type"] = []string{"application/json"}

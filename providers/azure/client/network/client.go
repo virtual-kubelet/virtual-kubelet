@@ -4,16 +4,16 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/Azure/azure-sdk-for-go/services/network/mgmt/2018-05-01/network"
+	"github.com/Azure/azure-sdk-for-go/services/network/mgmt/2018-08-01/network"
 	"github.com/Azure/go-autorest/autorest/azure/auth"
 	azure "github.com/virtual-kubelet/virtual-kubelet/providers/azure/client"
 	"github.com/virtual-kubelet/virtual-kubelet/providers/azure/client/api"
 )
 
 const (
-	baseURI    = "https://management.azure.com"
-	userAgent  = "virtual-kubelet/azure-arm-networking/2018-07-01"
-	apiVersion = "2018-07-01"
+	baseURI          = "https://management.azure.com"
+	defaultUserAgent = "virtual-kubelet/azure-arm-network/2018-08-01"
+	apiVersion       = "2018-08-01"
 )
 
 // Client is a client for interacting with Azure networking
@@ -25,9 +25,14 @@ type Client struct {
 }
 
 // NewClient creates a new client for interacting with azure networking
-func NewClient(azAuth *azure.Authentication) (*Client, error) {
+func NewClient(azAuth *azure.Authentication, extraUserAgent string) (*Client, error) {
 	if azAuth == nil {
 		return nil, fmt.Errorf("Authentication is not supplied for the Azure client")
+	}
+
+	userAgent := []string{defaultUserAgent}
+	if extraUserAgent != "" {
+		userAgent = append(userAgent, extraUserAgent)
 	}
 
 	client, err := azure.NewClient(azAuth, baseURI, userAgent)

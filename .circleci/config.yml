@@ -7,6 +7,9 @@ jobs:
     steps:
       - checkout
       - run:
+          name: go vet
+          command: V=1 CI=1 make vet
+      - run:
           name: Install linters
           command: curl -sfL https://install.goreleaser.com/github.com/golangci/golangci-lint.sh | bash -s v1.10.2 && mv ./bin/* /go/bin/
       - run:
@@ -36,9 +39,66 @@ jobs:
           name: Tests
           command: V=1 CI=1 SKIP_AWS_E2E=1 make test
 
+  e2e:
+    machine:
+      image: circleci/classic:201808-01
+    working_directory: /home/circleci/go/src/github.com/virtual-kubelet/virtual-kubelet
+    environment:
+      CHANGE_MINIKUBE_NONE_USER: true
+      GOPATH: /home/circleci/go
+      KUBECONFIG: /home/circleci/.kube/config
+      KUBERNETES_VERSION: v1.12.3
+      MINIKUBE_HOME: /home/circleci
+      MINIKUBE_VERSION: v0.30.0
+      MINIKUBE_WANTUPDATENOTIFICATION: false
+      MINIKUBE_WANTREPORTERRORPROMPT: false
+      SKAFFOLD_VERSION: v0.18.0
+    steps:
+      - checkout
+      - run:
+          name: Install kubectl
+          command: |
+            curl -Lo kubectl https://storage.googleapis.com/kubernetes-release/release/${KUBERNETES_VERSION}/bin/linux/amd64/kubectl
+            chmod +x kubectl
+            sudo mv kubectl /usr/local/bin/
+            mkdir -p ${HOME}/.kube
+            touch ${HOME}/.kube/config
+      - run:
+          name: Install Skaffold
+          command: |
+            curl -Lo skaffold https://github.com/GoogleContainerTools/skaffold/releases/download/${SKAFFOLD_VERSION}/skaffold-linux-amd64
+            chmod +x skaffold
+            sudo mv skaffold /usr/local/bin/
+      - run:
+          name: Install Minikube
+          command: |
+            curl -Lo minikube https://github.com/kubernetes/minikube/releases/download/${MINIKUBE_VERSION}/minikube-linux-amd64
+            chmod +x minikube
+            sudo mv minikube /usr/local/bin/
+      - run:
+          name: Start Minikube
+          command: |
+            sudo -E minikube start --vm-driver=none --cpus 2 --memory 2048 --kubernetes-version=${KUBERNETES_VERSION}
+      - run:
+          name: Wait for Minikube
+          command: |
+            JSONPATH='{range .items[*]}{@.metadata.name}:{range @.status.conditions[*]}{@.type}={@.status};{end}{end}';
+            until kubectl get nodes -o jsonpath="$JSONPATH" 2>&1 | grep -q "Ready=True"; do
+              sleep 1;
+            done
+      - run:
+          name: Deploy virtual-kubelet
+          command: |
+            make skaffold MODE=run
+      - run:
+          name: Run the end-to-end test suite
+          command: |
+            make e2e
+
 workflows:
   version: 2
   validate_and_test:
     jobs:
       - validate
       - test
+      - e2e

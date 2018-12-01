@@ -46,7 +46,6 @@ const (
 
 	subnetsAction           = "Microsoft.Network/virtualNetworks/subnets/action"
 	subnetDelegationService = "Microsoft.ContainerInstance/containerGroups"
-	networkProfileType      = "Microsoft.Network/networkProfiles"
 )
 
 // DNS configuration settings
@@ -77,6 +76,7 @@ type ACIProvider struct {
 	networkProfile     string
 	kubeProxyExtension *aci.Extension
 	kubeDNSIP          string
+	extraUserAgent     string
 
 	metricsSync     sync.Mutex
 	metricsSyncTime time.Time
@@ -198,7 +198,9 @@ func NewACIProvider(config string, rm *manager.ResourceManager, nodeName, operat
 		azAuth.SubscriptionID = subscriptionID
 	}
 
-	p.aciClient, err = aci.NewClient(azAuth)
+	p.extraUserAgent = os.Getenv("ACI_EXTRA_USER_AGENT")
+
+	p.aciClient, err = aci.NewClient(azAuth, p.extraUserAgent)
 	if err != nil {
 		return nil, err
 	}
@@ -317,7 +319,7 @@ func NewACIProvider(config string, rm *manager.ResourceManager, nodeName, operat
 }
 
 func (p *ACIProvider) setupNetworkProfile(auth *client.Authentication) error {
-	c, err := network.NewClient(auth)
+	c, err := network.NewClient(auth, p.extraUserAgent)
 	if err != nil {
 		return fmt.Errorf("error creating azure networking client: %v", err)
 	}
@@ -332,95 +334,77 @@ func (p *ACIProvider) setupNetworkProfile(auth *client.Authentication) error {
 	}
 	if err == nil {
 		if p.subnetCIDR == "" {
-			p.subnetCIDR = subnet.Properties.AddressPrefix
+			p.subnetCIDR = *subnet.SubnetPropertiesFormat.AddressPrefix
 		}
-		if p.subnetCIDR != subnet.Properties.AddressPrefix {
-			return fmt.Errorf("found subnet '%s' using different CIDR: '%s'. desired: '%s'", p.subnetName, subnet.Properties.AddressPrefix, p.subnetCIDR)
+		if p.subnetCIDR != *subnet.SubnetPropertiesFormat.AddressPrefix {
+			return fmt.Errorf("found subnet '%s' using different CIDR: '%s'. desired: '%s'", p.subnetName, *subnet.SubnetPropertiesFormat.AddressPrefix, p.subnetCIDR)
 		}
-		for _, d := range subnet.Properties.Delegations {
-			if d.Properties.ServiceName == subnetDelegationService {
-				createSubnet = false
-				break
+		if subnet.SubnetPropertiesFormat.NetworkSecurityGroup != nil {
+			return fmt.Errorf("unable to delegate subnet '%s' to Azure Container Instance since it references the network security group '%s'.", p.subnetName, *subnet.SubnetPropertiesFormat.NetworkSecurityGroup.ID)
+		}
+		if subnet.SubnetPropertiesFormat.RouteTable != nil {
+			return fmt.Errorf("unable to delegate subnet '%s' to Azure Container Instance since it references the route table '%s'.", p.subnetName, *subnet.SubnetPropertiesFormat.RouteTable.ID)
+		}
+		if subnet.SubnetPropertiesFormat.ServiceAssociationLinks != nil {
+			for _, l := range *subnet.SubnetPropertiesFormat.ServiceAssociationLinks {
+				if l.ServiceAssociationLinkPropertiesFormat != nil && *l.ServiceAssociationLinkPropertiesFormat.LinkedResourceType == subnetDelegationService {
+					createSubnet = false
+					break
+				}
+
+				return fmt.Errorf("unable to delegate subnet '%s' to Azure Container Instance as it is used by other Azure resource: '%v'.", p.subnetName, l)
+			}
+		} else {
+			for _, d := range *subnet.SubnetPropertiesFormat.Delegations {
+				if d.ServiceDelegationPropertiesFormat != nil && *d.ServiceDelegationPropertiesFormat.ServiceName == subnetDelegationService {
+					createSubnet = false
+					break
+				}
 			}
 		}
 	}
 
 	if createSubnet {
-		if subnet == nil {
-			subnet = &network.Subnet{Name: p.subnetName}
-		}
-		populateSubnet(subnet, p.subnetCIDR)
+		subnet = network.NewSubnetWithContainerInstanceDelegation(p.subnetName, p.subnetCIDR)
 		subnet, err = c.CreateOrUpdateSubnet(p.vnetResourceGroup, p.vnetName, subnet)
 		if err != nil {
 			return fmt.Errorf("error creating subnet: %v", err)
 		}
 	}
 
-	profile, err := c.GetProfile(p.resourceGroup, p.nodeName)
+	networkProfileName := getNetworkProfileName(*subnet.ID)
+
+	profile, err := c.GetProfile(p.resourceGroup, networkProfileName)
 	if err != nil && !network.IsNotFound(err) {
 		return fmt.Errorf("error while looking up network profile: %v", err)
 	}
 	if err == nil {
-		for _, config := range profile.Properties.ContainerNetworkInterfaceConfigurations {
-			for _, ipConfig := range config.Properties.IPConfigurations {
-				if ipConfig.Properties.Subnet.ID == subnet.ID {
-					p.networkProfile = profile.ID
+		for _, config := range *profile.ProfilePropertiesFormat.ContainerNetworkInterfaceConfigurations {
+			for _, ipConfig := range *config.ContainerNetworkInterfaceConfigurationPropertiesFormat.IPConfigurations {
+				if *ipConfig.IPConfigurationProfilePropertiesFormat.Subnet.ID == *subnet.ID {
+					p.networkProfile = *profile.ID
 					return nil
 				}
 			}
 		}
-		return fmt.Errorf("found existing network profile but the profile is not linked to the subnet: %v, %v", profile, err)
 	}
 
 	// at this point, profile should be nil
-	profile = &network.Profile{
-		Name:     p.nodeName,
-		Location: p.region,
-		Type:     networkProfileType,
-	}
-
-	populateNetworkProfile(profile, subnet)
+	profile = network.NewNetworkProfile(networkProfileName, p.region, *subnet.ID)
 	profile, err = c.CreateOrUpdateProfile(p.resourceGroup, profile)
 	if err != nil {
 		return err
 	}
 
-	p.networkProfile = profile.ID
+	p.networkProfile = *profile.ID
 	return nil
 }
 
-func populateSubnet(s *network.Subnet, cidr string) {
-	if s.Properties == nil {
-		s.Properties = &network.SubnetProperties{
-			AddressPrefix: cidr,
-		}
-	}
-
-	s.Properties.Delegations = append(s.Properties.Delegations, network.Delegation{
-		Name: "aciDelegation",
-		Properties: network.DelegationProperties{
-			ServiceName: subnetDelegationService,
-			Actions:     []string{subnetsAction},
-		},
-	})
-}
-
-func populateNetworkProfile(p *network.Profile, subnet *network.Subnet) {
-	p.Properties.ContainerNetworkInterfaceConfigurations = append(p.Properties.ContainerNetworkInterfaceConfigurations, network.InterfaceConfiguration{
-		Name: "eth0",
-		Properties: network.InterfaceConfigurationProperties{
-			IPConfigurations: []network.IPConfiguration{
-				{
-					Name: "ipconfigprofile1",
-					Properties: network.IPConfigurationProperties{
-						Subnet: network.ID{
-							ID: subnet.ID,
-						},
-					},
-				},
-			},
-		},
-	})
+func getNetworkProfileName(subnetID string) string {
+	h := sha256.New()
+	h.Write([]byte(strings.ToUpper(subnetID)))
+	hashBytes := h.Sum(nil)
+	return fmt.Sprintf("vk-%s", hex.EncodeToString(hashBytes))
 }
 
 func getKubeProxyExtension(secretPath, masterURI, clusterCIDR string) (*aci.Extension, error) {
@@ -444,7 +428,7 @@ func getKubeProxyExtension(secretPath, masterURI, clusterCIDR string) (*aci.Exte
 			clientcmdv1.NamedCluster{
 				Name: name,
 				Cluster: clientcmdv1.Cluster{
-					Server: masterURI,
+					Server:                   masterURI,
 					CertificateAuthorityData: ca,
 				},
 			},
@@ -708,7 +692,8 @@ func (p *ACIProvider) DeletePod(ctx context.Context, pod *v1.Pod) error {
 	defer span.End()
 	addAzureAttributes(span, p)
 
-	return p.aciClient.DeleteContainerGroup(ctx, p.resourceGroup, fmt.Sprintf("%s-%s", pod.Namespace, pod.Name))
+	err := p.aciClient.DeleteContainerGroup(ctx, p.resourceGroup, fmt.Sprintf("%s-%s", pod.Namespace, pod.Name))
+	return wrapError(err)
 }
 
 // GetPod returns a pod by name that is running inside ACI
@@ -1013,6 +998,38 @@ func (p *ACIProvider) getImagePullSecrets(pod *v1.Pod) ([]aci.ImageRegistryCrede
 	return ips, nil
 }
 
+func makeRegistryCredential(server string, authConfig AuthConfig) (*aci.ImageRegistryCredential, error) {
+	username := authConfig.Username
+	password := authConfig.Password
+
+	if username == "" {
+		if authConfig.Auth == "" {
+			return nil, fmt.Errorf("no username present in auth config for server: %s", server)
+		}
+
+		decoded, err := base64.StdEncoding.DecodeString(authConfig.Auth)
+		if err != nil {
+			return nil, fmt.Errorf("error decoding the auth for server: %s Error: %v", server, err)
+		}
+
+		parts := strings.Split(string(decoded), ":")
+		if len(parts) != 2 {
+			return nil, fmt.Errorf("malformed auth for server: %s", server)
+		}
+
+		username = parts[0]
+		password = parts[1]
+	}
+
+	cred := aci.ImageRegistryCredential{
+		Server:   server,
+		Username: username,
+		Password: password,
+	}
+
+	return &cred, nil
+}
+
 func readDockerCfgSecret(secret *v1.Secret, ips []aci.ImageRegistryCredential) ([]aci.ImageRegistryCredential, error) {
 	var err error
 	var authConfigs map[string]AuthConfig
@@ -1027,12 +1044,13 @@ func readDockerCfgSecret(secret *v1.Secret, ips []aci.ImageRegistryCredential) (
 		return ips, err
 	}
 
-	for server, authConfig := range authConfigs {
-		ips = append(ips, aci.ImageRegistryCredential{
-			Password: authConfig.Password,
-			Server:   server,
-			Username: authConfig.Username,
-		})
+	for server := range authConfigs {
+		cred, err := makeRegistryCredential(server, authConfigs[server])
+		if err != nil {
+			return ips, err
+		}
+
+		ips = append(ips, *cred)
 	}
 
 	return ips, err
@@ -1054,17 +1072,17 @@ func readDockerConfigJSONSecret(secret *v1.Secret, ips []aci.ImageRegistryCreden
 	}
 
 	auths, ok := authConfigs["auths"]
-
 	if !ok {
 		return ips, fmt.Errorf("malformed dockerconfigjson in secret")
 	}
 
-	for server, authConfig := range auths {
-		ips = append(ips, aci.ImageRegistryCredential{
-			Password: authConfig.Password,
-			Server:   server,
-			Username: authConfig.Username,
-		})
+	for server := range auths {
+		cred, err := makeRegistryCredential(server, auths[server])
+		if err != nil {
+			return ips, err
+		}
+
+		ips = append(ips, *cred)
 	}
 
 	return ips, err
@@ -1286,11 +1304,7 @@ func (p *ACIProvider) getVolumes(pod *v1.Pod) ([]aci.Volume, error) {
 			}
 
 			for k, v := range secret.Data {
-				var b bytes.Buffer
-				enc := base64.NewEncoder(base64.StdEncoding, &b)
-				enc.Write(v)
-
-				paths[k] = b.String()
+				paths[k] = base64.StdEncoding.EncodeToString(v)
 			}
 
 			if len(paths) != 0 {
@@ -1313,12 +1327,8 @@ func (p *ACIProvider) getVolumes(pod *v1.Pod) ([]aci.Volume, error) {
 				continue
 			}
 
-			for k, v := range configMap.Data {
-				var b bytes.Buffer
-				enc := base64.NewEncoder(base64.StdEncoding, &b)
-				enc.Write([]byte(v))
-
-				paths[k] = b.String()
+			for k, v := range configMap.BinaryData {
+				paths[k] = base64.StdEncoding.EncodeToString(v)
 			}
 
 			if len(paths) != 0 {
@@ -1523,11 +1533,16 @@ func aciContainerStateToContainerState(cs aci.ContainerState) v1.ContainerState 
 		}
 	}
 
+	state := cs.State
+	if state == "" {
+		state = "Creating"
+	}
+
 	// Handle the case where the container is pending.
 	// Which should be all other aci states.
 	return v1.ContainerState{
 		Waiting: &v1.ContainerStateWaiting{
-			Reason:  cs.State,
+			Reason:  state,
 			Message: cs.DetailStatus,
 		},
 	}
