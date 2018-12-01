@@ -136,17 +136,18 @@ skaffold:
 		-p $(PROFILE)
 
 # e2e runs the end-to-end test suite against the Kubernetes cluster targeted by the current kubeconfig.
-# It is assumed that the virtual-kubelet node to be tested is running as a pod called NODE_NAME inside this Kubernetes cluster.
-# It is also assumed that this virtual-kubelet node has been started with the "--node-name" flag set to NODE_NAME.
-# Finally, running the e2e suite is not guaranteed to succeed against a provider other than "mock".
+# It automatically deploys the virtual-kubelet with the mock provider by running "make skaffold MODE=run".
+# It is the caller's responsibility to cleanup the deployment after running this target (e.g. by running "make skaffold MODE=delete").
 .PHONY: e2e
 e2e: KUBECONFIG ?= $(HOME)/.kube/config
-e2e: NAMESPACE ?= default
-e2e: NODE_NAME ?= vkubelet-mock-0
-e2e: TAINT_KEY ?= virtual-kubelet.io/provider
-e2e: TAINT_VALUE ?= mock
-e2e: TAINT_EFFECT ?= NoSchedule
+e2e: NAMESPACE := default
+e2e: NODE_NAME := vkubelet-mock-0
+e2e: TAINT_KEY := virtual-kubelet.io/provider
+e2e: TAINT_VALUE := mock
+e2e: TAINT_EFFECT := NoSchedule
 e2e:
+	@$(MAKE) skaffold MODE=delete && kubectl delete --ignore-not-found node $(NODE_NAME)
+	@$(MAKE) skaffold MODE=run
 	@cd $(PWD)/test/e2e && go test -v -tags e2e ./... \
 		-kubeconfig=$(KUBECONFIG) \
 		-namespace=$(NAMESPACE) \

@@ -43,6 +43,8 @@ The diagram below illustrates how Virtual-Kubelet works.
 
 Deploy a Kubernetes cluster and make sure it's reachable.
 
+### Outside the Kubernetes cluster
+
 Run the binary with your chosen provider:
 
 ```bash
@@ -51,6 +53,31 @@ Run the binary with your chosen provider:
 
 Now that the virtual-kubelet is deployed run `kubectl get nodes` and you should see
 a `virtual-kubelet` node.
+
+### Inside the Kubernetes cluster (Minikube or Docker for Desktop)
+
+It is possible to run the Virtual Kubelet as a Kubernetes pod inside a Minikube or Docker for Desktop cluster.
+As of this writing, automation of this deployment is supported only for the mock provider, and is primarily intended at testing.
+In order to deploy the Virtual Kubelet, you need to [install `skaffold`](https://github.com/GoogleContainerTools/skaffold#installation).
+You also need to make sure that your current context is either `minikube` or `docker-for-desktop`.
+
+In order to deploy the Virtual Kubelet, run the following command after the prerequisites have been met:
+
+```console
+$ make skaffold
+```
+
+By default, this will run `skaffold` in [_development_ mode](https://github.com/GoogleContainerTools/skaffold#skaffold-dev).
+This will make `skaffold` watch `hack/skaffold/virtual-kubelet/Dockerfile` and its dependencies for changes and re-deploy the Virtual Kubelet when said changes happen.
+It will also make `skaffold` stream logs from the Virtual Kubelet pod.
+
+As an alternative, and if you are not concerned about continuous deployment and log streaming, you can run the following command instead:
+
+```console
+$ make skaffold MODE=run
+```
+
+This will build and deploy the Virtual Kubelet, and return.
 
 ## Current Features
 
@@ -263,27 +290,9 @@ $ minikube start
 ```
 
 The e2e suite requires Virtual Kubelet to be running as a pod inside the Kubernetes cluster.
-To make the deployment process easier, the build toolchain leverages on `skaffold`.
+In order to make the testing process easier, the build toolchain leverages on `skaffold` to automatically deploy the Virtual Kubelet to the Kubernetes cluster using the mock provider.
 
-In order to deploy the Virtual Kubelet, run the following command after [installing `skaffold`](https://github.com/GoogleContainerTools/skaffold#installation):
-
-```console
-$ make skaffold
-```
-
-By default, this will run `skaffold` in [_development_ mode](https://github.com/GoogleContainerTools/skaffold#skaffold-dev).
-This will make `skaffold` watch `hack/skaffold/virtual-kubelet/Dockerfile` and its dependencies for changes and re-deploy the Virtual Kubelet when said changes happen.
-It will also make `skaffold` stream logs from the Virtual Kubelet pod.
-
-As an alternative, and if you are not concerned about continuous deployment and log streaming, you can run the following command instead:
-
-```console
-$ make skaffold MODE=run
-```
-
-This will build and deploy the Virtual Kubelet, and return.
-
-To run the e2e test suite, you can now run the following command:
+To run the e2e test suite, you can run the following command:
 
 ```console
 $ make e2e
