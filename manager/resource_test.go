@@ -3,100 +3,156 @@ package manager
 import (
 	"testing"
 
-	"github.com/google/uuid"
 	"k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/kubernetes/fake"
+	"k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	corev1listers "k8s.io/client-go/listers/core/v1"
+	"k8s.io/client-go/tools/cache"
 )
 
-var (
-	fakeClient kubernetes.Interface
-)
+// TestGetPods verifies that the resource manager acts as a passthrough to a pod lister.
+func TestGetPods(t *testing.T) {
+	var (
+		lsPods = []*v1.Pod{
+			makePod("namespace-0", "name-0", "image-0"),
+			makePod("namespace-1", "name-1", "image-1"),
+		}
+	)
 
-func init() {
-	fakeClient = fake.NewSimpleClientset()
-}
+	// Create a pod lister that will list the pods defined above.
+	indexer := cache.NewIndexer(cache.MetaNamespaceKeyFunc, cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc})
+	for _, pod := range lsPods {
+		indexer.Add(pod)
+	}
+	podLister := corev1listers.NewPodLister(indexer)
 
-func TestResourceManager(t *testing.T) {
-	pm, err := NewResourceManager(fakeClient)
+	// Create a new instance of the resource manager based on the pod lister.
+	rm, err := NewResourceManager(podLister, nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	pod1Name := "Pod1"
-	pod1Namespace := "Pod1Namespace"
-	pod1 := makePod(pod1Namespace, pod1Name)
-	pm.UpdatePod(pod1)
 
-	pods := pm.GetPods()
-	if len(pods) != 1 {
-		t.Errorf("Got %d, expected 1 pod", len(pods))
-	}
-	gotPod1 := pm.GetPod(pod1Namespace, pod1Name)
-	if gotPod1.Name != pod1.Name {
-		t.Errorf("Got %s, wanted %s", gotPod1.Name, pod1.Name)
+	// Check that the resource manager returns two pods in the call to "GetPods".
+	rmPods := rm.GetPods()
+	if len(rmPods) != len(lsPods) {
+		t.Fatalf("expected %d pods, found %d", len(lsPods), len(rmPods))
 	}
 }
 
-func TestResourceManagerDeletePod(t *testing.T) {
-	pm, err := NewResourceManager(fakeClient)
+// TestGetSecret verifies that the resource manager acts as a passthrough to a secret lister.
+func TestGetSecret(t *testing.T) {
+	var (
+		lsSecrets = []*v1.Secret{
+			makeSecret("namespace-0", "name-0", "key-0", "val-0"),
+			makeSecret("namespace-1", "name-1", "key-1", "val-1"),
+		}
+	)
+
+	// Create a secret lister that will list the secrets defined above.
+	indexer := cache.NewIndexer(cache.MetaNamespaceKeyFunc, cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc})
+	for _, secret := range lsSecrets {
+		indexer.Add(secret)
+	}
+	secretLister := corev1listers.NewSecretLister(indexer)
+
+	// Create a new instance of the resource manager based on the secret lister.
+	rm, err := NewResourceManager(nil, secretLister, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	pod1Name := "Pod1"
-	pod1Namespace := "Pod1Namespace"
-	pod1 := makePod(pod1Namespace, pod1Name)
-	pm.UpdatePod(pod1)
-	pods := pm.GetPods()
-	if len(pods) != 1 {
-		t.Errorf("Got %d, expected 1 pod", len(pods))
-	}
-	pm.DeletePod(pod1)
 
-	pods = pm.GetPods()
-	if len(pods) != 0 {
-		t.Errorf("Got %d, expected 0 pods", len(pods))
-	}
-}
-func makePod(namespace, name string) *v1.Pod {
-	pod := &v1.Pod{}
-	pod.Name = name
-	pod.Namespace = namespace
-	pod.UID = types.UID(uuid.New().String())
-	return pod
-}
-
-func TestResourceManagerUpdatePod(t *testing.T) {
-	pm, err := NewResourceManager(fakeClient)
+	// Get the secret with coordinates "namespace-0/name-0".
+	secret, err := rm.GetSecret("name-0", "namespace-0")
 	if err != nil {
 		t.Fatal(err)
 	}
-	pod1Name := "Pod1"
-	pod1Namespace := "Pod1Namespace"
-	pod1 := makePod(pod1Namespace, pod1Name)
-	pm.UpdatePod(pod1)
-
-	pods := pm.GetPods()
-	if len(pods) != 1 {
-		t.Errorf("Got %d, expected 1 pod", len(pods))
-	}
-	gotPod1 := pm.GetPod(pod1Namespace, pod1Name)
-	if gotPod1.Name != pod1.Name {
-		t.Errorf("Got %s, wanted %s", gotPod1.Name, pod1.Name)
+	value := secret.Data["key-0"]
+	if string(value) != "val-0" {
+		t.Fatal("got unexpected value", string(value))
 	}
 
-	if gotPod1.Namespace != pod1.Namespace {
-		t.Errorf("Got %s, wanted %s", gotPod1.Namespace, pod1.Namespace)
+	// Try to get a secret that does not exist, and make sure we've got a "not found" error as a response.
+	_, err = rm.GetSecret("name-X", "namespace-X")
+	if err == nil || !errors.IsNotFound(err) {
+		t.Fatalf("expected a 'not found' error, got %v", err)
 	}
-	pod1.Namespace = "POD2NAMESPACE"
-	pm.UpdatePod(pod1)
+}
 
-	gotPod1 = pm.GetPod(pod1Namespace, pod1Name)
-	if gotPod1.Name != pod1.Name {
-		t.Errorf("Got %s, wanted %s", gotPod1.Name, pod1.Name)
+// TestGetConfigMap verifies that the resource manager acts as a passthrough to a config map lister.
+func TestGetConfigMap(t *testing.T) {
+	var (
+		lsConfigMaps = []*v1.ConfigMap{
+			makeConfigMap("namespace-0", "name-0", "key-0", "val-0"),
+			makeConfigMap("namespace-1", "name-1", "key-1", "val-1"),
+		}
+	)
+
+	// Create a config map lister that will list the config maps defined above.
+	indexer := cache.NewIndexer(cache.MetaNamespaceKeyFunc, cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc})
+	for _, secret := range lsConfigMaps {
+		indexer.Add(secret)
+	}
+	configMapLister := corev1listers.NewConfigMapLister(indexer)
+
+	// Create a new instance of the resource manager based on the config map lister.
+	rm, err := NewResourceManager(nil, nil, configMapLister)
+	if err != nil {
+		t.Fatal(err)
 	}
 
-	if gotPod1.Namespace != pod1.Namespace {
-		t.Errorf("Got %s, wanted %s", gotPod1.Namespace, pod1.Namespace)
+	// Get the config map with coordinates "namespace-0/name-0".
+	configMap, err := rm.GetConfigMap("name-0", "namespace-0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	value := configMap.Data["key-0"]
+	if value != "val-0" {
+		t.Fatal("got unexpected value", string(value))
+	}
+
+	// Try to get a configmap that does not exist, and make sure we've got a "not found" error as a response.
+	_, err = rm.GetConfigMap("name-X", "namespace-X")
+	if err == nil || !errors.IsNotFound(err) {
+		t.Fatalf("expected a 'not found' error, got %v", err)
+	}
+}
+
+func makeConfigMap(namespace, name, key, value string) *v1.ConfigMap {
+	return &v1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: namespace,
+			Name:      name,
+		},
+		Data: map[string]string{
+			key: value,
+		},
+	}
+}
+
+func makePod(namespace, name, image string) *v1.Pod {
+	return &v1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: namespace,
+			Name:      name,
+		},
+		Spec: v1.PodSpec{
+			Containers: []v1.Container{
+				{
+					Image: image,
+				},
+			},
+		},
+	}
+}
+
+func makeSecret(namespace, name, key, value string) *v1.Secret {
+	return &v1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: namespace,
+			Name:      name,
+		},
+		Data: map[string][]byte{
+			key: []byte(value),
+		},
 	}
 }

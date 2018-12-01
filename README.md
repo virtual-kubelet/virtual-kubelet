@@ -281,7 +281,7 @@ As an alternative, and if you are not concerned about continuous deployment and 
 $ make skaffold MODE=run
 ```
 
-This will deploy the Virtual Kubelet and return immediately.
+This will build and deploy the Virtual Kubelet, and return.
 
 To run the e2e test suite, you can now run the following command:
 
