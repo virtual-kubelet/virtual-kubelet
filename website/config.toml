@@ -1,0 +1,13 @@
+# Basic site config
+baseURL      = "https://virtual-kubelet.netlify.com"
+languageCode = "en-us"
+enableRobotsTxt = true
+
+# Syntax highlighting config
+pygmentsUseClasses = true
+pygmentsCodeFences = true
+pygmentsStyle      = "monokai"
+
+# BlackFriday Markdown settings
+[blackfriday]
+hrefTargetBlank = true
