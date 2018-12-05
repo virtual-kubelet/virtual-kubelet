@@ -22,9 +22,9 @@ sansSerifFont      = "Noto Sans TC"
 #monospaceFont      = "Fira Mono"
 fontAwesomeVersion = "5.5.0"
 description        = """
-**Virtual Kubelet** is an open-source [Kubernetes kubelet](https://kubernetes.io/docs/reference/generated/kubelet/) implementation that masquerades as a kubelet for the purposes of connecting Kubernetes to other APIs.
+**Virtual Kubelet** is an open-source [Kubernetes kubelet](https://kubernetes.io/docs/reference/generated/kubelet/) implementation that *masquerades* as a kubelet. 
 
-This allows the nodes to be backed by other services like [Azure Container Instances](https://azure.microsoft.com/en-us/services/container-instances/), [AWS Fargate](https://aws.amazon.com/fargate/), [Hyper.sh](https://hyper.sh/), [IoT Edge](https://azure.microsoft.com/en-us/services/iot-edge/), and others.
+This allows Kubernetes nodes to be backed by Virtual Kubelet **providers** such as serverless cloud container platforms.
 """
 
 [params.social]
