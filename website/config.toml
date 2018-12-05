@@ -15,3 +15,26 @@ pygmentsStyle      = "monokai"
 # BlackFriday Markdown settings
 [blackfriday]
 hrefTargetBlank = true
+
+# General site-level parameters
+[params]
+sansSerifFont      = "Noto Sans TC"
+#monospaceFont      = "Fira Mono"
+fontAwesomeVersion = "5.5.0"
+description        = """
+**Virtual Kubelet** is an open-source [Kubernetes kubelet](https://kubernetes.io/docs/reference/generated/kubelet/) implementation that masquerades as a kubelet for the purposes of connecting Kubernetes to other APIs.
+
+This allows the nodes to be backed by other services like [Azure Container Instances](https://azure.microsoft.com/en-us/services/container-instances/), [AWS Fargate](https://aws.amazon.com/fargate/), [Hyper.sh](https://hyper.sh/), [IoT Edge](https://azure.microsoft.com/en-us/services/iot-edge/), and others.
+"""
+
+[params.social]
+twitter = "https://twitter.com/virtualkubelet"
+github  = "https://github.com/virtual-kubelet/virtual-kubelet"
+
+[[params.fonts]]
+name  = "Noto Sans TC"
+sizes = [300,400,600,700]
+
+#[[params.fonts]]
+#name  = "Fira Mono"
+#sizes = [400]

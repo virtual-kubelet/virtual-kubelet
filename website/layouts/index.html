@@ -3,5 +3,8 @@
 {{ end }}
 
 {{ define "main" }}
-<h1>{{ .Site.Title }}</h1>
+{{ partial "home/hero.html" . }}
+{{ partial "home/info.html" . }}
+{{ partial "home/cncf.html" . }}
+{{ partial "home/coming-soon.html" . }}
 {{ end }}

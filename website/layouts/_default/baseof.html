@@ -4,9 +4,14 @@
     <title>
       {{ block "title" . }}{{ .Site.Title }}{{ end }}
     </title>
+    {{ partial "css.html" . }}
   </head>
-  <body>
-    {{ block "main" . }}
-    {{ end }}
+  <body class="page">
+    <main class="main">
+      {{ block "main" . }}
+      {{ end }}
+    </main>
+
+    {{ partial "footer.html" . }}
   </body>
 </html>

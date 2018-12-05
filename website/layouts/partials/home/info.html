@@ -1,0 +1,17 @@
+{{- $description := .Site.Params.description | markdownify }}
+{{- $social      := .Site.Params.social }}
+<section class="section">
+  <div class="container">
+    <div class="columns">
+      <div class="column">
+        <span class="content is-size-4 is-size-5-mobile">
+          {{ $description }}
+        </span>
+
+        <br /><br />
+
+        {{ partial "home/social.html" . }}
+      </div>
+    </div>
+  </div>
+</section>

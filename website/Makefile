@@ -5,10 +5,11 @@ serve:
 		--disableFastRender
 
 production-build:
-	hugo
+	hugo --minify
 
 preview-build:
 	hugo \
 		--baseURL $(DEPLOY_PRIME_URL) \
 		--buildDrafts \
-		--buildFuture
+		--buildFuture \
+		--minify
