@@ -1,0 +1,35 @@
+{{- $providers := .Site.Data.providers }}
+{{- $how       := readFile "includes/how.md" | markdownify }}
+<section class="section has-background-white-bis">
+  <div class="container">
+    <div class="columns">
+      <div class="column has-background-black has-extra-padding">
+        <p class="title is-size-2 is-size-3-mobile has-text-white-bis has-text-weight-light">
+          Providers
+        </p>
+
+        <ul>
+          {{- range $providers }}
+          {{- $url := printf "https://github.com/virtual-kubelet/virtual-kubelet/tree/master/providers/%s" .tag }}
+          <li class="has-bottom-spacing">
+            <a class="is-size-5 is-size-6-mobile has-text-grey-lighter has-text-weight-light" href="{{ $url }}" target="_blank">
+              {{ .name | markdownify }}
+            </a>
+            <br />
+          </li>
+          {{- end }}
+        </ul>
+      </div>
+
+      <div class="column has-background-grey-lighter has-extra-padding">
+        <p class="title is-size-2 is-size-3-mobile has-text-primary has-text-weight-light">
+          How it works
+        </p>
+
+        <div class="content is-medium">
+          {{ $how }}
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
