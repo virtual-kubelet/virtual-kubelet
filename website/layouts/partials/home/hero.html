@@ -1,7 +1,8 @@
+{{- $heroLogo := .Site.Params.logos.hero }}
 <div class="hero is-primary">
   <div class="hero-body">
     <div class="container has-text-centered">
-      <img class="is-main-logo" src="https://raw.githubusercontent.com/cncf/artwork/master/virtualkubelet/horizontal/white/virtualkubelet-horizontal-white.png">
+      <img class="is-main-logo" src="{{ $heroLogo }}" alt="Main Virtual Kubelet hero logo">
     </div>
   </div>
 </div>

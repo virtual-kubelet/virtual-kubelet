@@ -7,12 +7,15 @@
     </title>
     {{ partial "css.html" . }}
   </head>
-  <body class="page">
+  <body class="page is-{{ .Kind }}-page">
+    {{ partial "navbar.html" . }}
+
     <main class="main">
       {{ block "main" . }}
       {{ end }}
     </main>
 
     {{ partial "footer.html" . }}
+    {{ partial "javascript.html" . }}
   </body>
 </html>

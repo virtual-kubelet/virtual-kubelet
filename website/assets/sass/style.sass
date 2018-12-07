@@ -51,6 +51,10 @@ $colors: mergeColorMaps(("twitter-blue": ($twitter-blue, $white)), $colors)
   .main
     flex: 1
 
+
+=hide
+  display: none
+
 =logo($tablet, $mobile)
   +tablet
     width: $tablet
@@ -73,3 +77,6 @@ $colors: mergeColorMaps(("twitter-blue": ($twitter-blue, $white)), $colors)
 
 .has-bottom-spacing
   margin-bottom: 1rem
+
+.navbar
+  +hide
