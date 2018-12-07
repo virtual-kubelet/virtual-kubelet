@@ -1,3 +1,4 @@
+{{- $favicon      := .Site.Params.favicon }}
 {{- $inServerMode := .Site.IsServer }}
 {{- $includePaths := (slice "node_modules") }}
 {{- $sass         := "sass/style.sass" }}
@@ -12,4 +13,4 @@
 {{- $prodCss      := $css | fingerprint }}
 <link rel="stylesheet" href="{{ $prodCss.RelPermalink }}" integrity="{{ $prodCss.Data.Integrity }}">
 {{- end }}
-<link rel="shortcut icon" href="https://raw.githubusercontent.com/cncf/artwork/master/virtualkubelet/icon/color/virtualkubelet-icon-color.png">
+<link rel="shortcut icon" href="{{ $favicon }}">
