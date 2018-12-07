@@ -1,4 +1,7 @@
 {{- $socialButtons := .Site.Params.social }}
+{{- $repoInfo    := getJSON "https://api.github.com/repos/virtual-kubelet/virtual-kubelet" }}
+{{- $numStars    := $repoInfo.stargazers_count }}
+{{- $numWatchers := $repoInfo.subscribers_count }}
 <div class="buttons">
   {{- range $socialButtons }}
   <a class="button is-medium is-{{ .color }}" href="{{ .url }}" target="_blank">
@@ -10,4 +13,26 @@
     </span>
   </a>
   {{- end }}
+</div>
+
+<div class="buttons">
+  <a class="button is-dark is-radiusless">
+    <span class="icon">
+      <i class="fab fa-github"></i>
+    </span>
+
+    <span>
+      Stars &nbsp;<strong>{{ $numStars }}</strong>
+    </span>
+  </a>
+
+  <a class="button is-dark is-radiusless">
+    <span class="icon">
+      <i class="fab fa-github"></i>
+    </span>
+
+    <span>
+      Watchers &nbsp;<strong>{{ $numWatchers }}</strong>
+    </span>
+  </a>
 </div>
