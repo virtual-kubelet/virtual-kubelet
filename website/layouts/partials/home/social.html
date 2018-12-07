@@ -1,20 +1,13 @@
-{{- $social := .Site.Params.social }}
+{{- $socialButtons := .Site.Params.social }}
 <div class="buttons">
-  <a class="button is-medium is-twitter-blue" href="{{ $social.twitter }}" target="_blank">
+  {{- range $socialButtons }}
+  <a class="button is-medium is-{{ .color }}" href="{{ .url }}" target="_blank">
     <span class="icon">
-      <i class="fab fa-twitter"></i>
+      <i class="fab fa-{{ .icon }}"></i>
     </span>
     <span>
-      Twitter
+      {{ .name }}
     </span>
   </a>
-
-  <a class="button is-medium is-black" href="{{ $social.github }}" target="_blank">
-    <span class="icon">
-      <i class="fab fa-github"></i>
-    </span>
-    <span>
-      GitHub
-    </span>
-  </a>
+  {{- end }}
 </div>
