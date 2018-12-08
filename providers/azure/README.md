@@ -9,6 +9,7 @@ This document details configuring the Virtual Kubelet ACI provider.
 #### Table of Contents
 
 * [Prerequiste](#prerequisite)
+* [Set-up virtual node in AKS](#set-up-virtual-node-in-AKS)
 * [Quick set-up with the ACI Connector](#quick-set-up-with-the-aci-connector)
 * [Manual set-up](#manual-set-up)
 * [Create a cluster with a Virtual Network](#create-an-aks-cluster-with-vnet)
@@ -120,6 +121,12 @@ First let's identify your Azure subscription and save it for use later on in the
    ```cli
    az provider register -n Microsoft.ContainerInstance
    ```
+
+## Set-up virtual node in AKS
+
+Azure Kubernetes Service has easy ways of setting up virtual kubelet with the ACI provider with a feature called virtual node. You can easily install a virtual node that will deploy Linux workloads to ACI. The pods that spin out will automatically get private IPs as the experience forces you to pick "advanced networking."
+
+To install virtual node in the Azure portal go [here](https://docs.microsoft.com/en-us/azure/aks/virtual-nodes-portal). To install virtual node in the Azure CLI go [here](https://docs.microsoft.com/en-us/azure/aks/virtual-nodes-cli). 
 
 ## Quick set-up with the ACI Connector
 
