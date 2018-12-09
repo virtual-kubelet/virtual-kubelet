@@ -30,6 +30,7 @@ $dark: $vk-dark
 
 $link: $primary
 $link-hover: $dark
+$code: $primary
 
 $family-sans-serif: "{{ $sansSerifFont }}", BlinkMacSystemFont, -apple-system, "Segoe UI", "Roboto", "Oxygen", "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue", "Helvetica", "Arial", sans-serif
 //$family-code: "{{ $monospaceFont }}", monospace
@@ -42,6 +43,7 @@ $navbar-item-img-max-height: 3.5rem
 $colors: mergeColorMaps(("twitter-blue": ($twitter-blue, $white), "slack-green": ($slack-green, $white)), $colors)
 
 @import "bulma/bulma"
+@import "bulma-dashboard/bulma-dashboard.sass"
 
 // Ensure sticky footer at the bottom of the page
 .page
@@ -52,6 +54,8 @@ $colors: mergeColorMaps(("twitter-blue": ($twitter-blue, $white), "slack-green":
   .main
     flex: 1
 
+.dashboard
+  &-main
 
 =hide
   display: none
@@ -63,12 +67,18 @@ $colors: mergeColorMaps(("twitter-blue": ($twitter-blue, $white), "slack-green":
   +mobile
     width: $mobile
 
+.menu-item
+  font-size: 1.75rem
+   
+  .icon
+    color: $white
+    margin-right: 1.5rem
+
 .is-main-logo
   +logo(50%, 90%)
 
 .is-cncf-logo
   +logo(40%, 80%)
-
 
 .is-footer-logo
   +logo(10%, 20%)
@@ -79,9 +89,20 @@ $colors: mergeColorMaps(("twitter-blue": ($twitter-blue, $white), "slack-green":
 .has-bottom-spacing
   margin-bottom: 1rem
 
-.navbar
+.is-home-page .navbar
   +hide
 
 .button
   &.is-radiusless
     border-radius: none
+
+.dashboard
+  &-main
+    &-header
+      padding: 2rem 1.5rem
+      border-bottom: 2px solid $primary
+      position: sticky
+      top: 0
+
+  .footer
+    flex: 1

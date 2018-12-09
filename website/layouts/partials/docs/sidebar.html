@@ -1,0 +1,18 @@
+{{- $heroLogo := .Site.Params.logos.hero }}
+{{- $docs     := where .Site.Pages "Section" "docs" }}
+<div class="dashboard-panel is-medium is-hidden-mobile has-thick-padding has-background-primary">
+  <div class="has-text-centered">
+    <img src="{{ $heroLogo }}" width="70%">
+  </div>
+
+  <br />
+
+  {{- range $docs }}
+  <div class="menu-item">
+    
+    <a class="is-size-4 has-text-white has-text-weight-light" href="{{ .URL }}">
+      {{ .Title }}
+    </a>
+  </div>
+  {{- end }}
+</div>

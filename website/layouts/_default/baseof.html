@@ -8,6 +8,7 @@
     {{ partial "css.html" . }}
   </head>
   <body class="page is-{{ .Kind }}-page">
+    {{ block "main" . }}
     {{ partial "navbar.html" . }}
 
     <main class="main">
@@ -16,6 +17,8 @@
     </main>
 
     {{ partial "footer.html" . }}
+    {{ end }}
+
     {{ partial "javascript.html" . }}
   </body>
 </html>

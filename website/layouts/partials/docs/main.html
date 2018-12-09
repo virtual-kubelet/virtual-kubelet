@@ -1,0 +1,21 @@
+{{- $description := .Params.description }}
+<div class="dashboard-main is-scrollable">
+  <section class="dashboard-main-header has-background-white">
+    <p class="title is-size-1 has-text-weight-light{{ if $description }} is-spaced{{ end }}">
+      {{ .Title }}
+    </p>
+    {{- with $description }}
+    <p class="subtitle is-size-3 is-size-4-mobile has-text-weight-light">
+      {{ . }}
+    </p>
+    {{- end }}
+  </section>
+
+  <section class="section">
+    <div class="content is-medium">
+      {{ .Content }}
+    </div>
+  </section>
+
+  {{ partial "footer.html" . }}
+</div>
