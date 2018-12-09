@@ -2,7 +2,9 @@
 {{- $docs     := where .Site.Pages "Section" "docs" }}
 <div class="dashboard-panel is-medium is-hidden-mobile has-thick-padding has-background-primary">
   <div class="has-text-centered">
-    <img src="{{ $heroLogo }}" width="70%">
+    <a href="{{ .Site.BaseURL }}">
+      <img src="{{ $heroLogo }}" width="70%">
+    </a>
   </div>
 
   <br />
@@ -15,4 +17,14 @@
     </a>
   </div>
   {{- end }}
+  <div class="menu-item">
+    <a class="is-size-4 has-text-white has-text-weight-light" href="https://github.com/virtual-kubelet/virtual-kubelet/blob/master/CONTRIBUTING.md">
+      Contributing
+    </a>
+  </div>
+  <div class="menu-item">
+    <a class="is-size-4 has-text-white has-text-weight-light" href="https://github.com/virtual-kubelet/virtual-kubelet/blob/master/DEBUGGING.md">
+      Debugging
+    </a>
+  </div>
 </div>
