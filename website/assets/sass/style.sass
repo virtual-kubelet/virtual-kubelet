@@ -13,6 +13,9 @@
 @import url({{ $fontsUrl }})
 @import url({{ $fontAwesomeUrl }})
 
+@import "bulma/sass/utilities/initial-variables"
+@import "bulma/sass/utilities/functions"
+
 // Project-specific colors and variables
 $vk-blue: #3e71db
 $vk-dark: #383d49
@@ -20,10 +23,6 @@ $vk-dark: #383d49
 // Other colors
 $twitter-blue: #1da1f2
 $slack-green: #74cdb0
-
-@import "bulma/sass/utilities/initial-variables"
-@import "bulma/sass/utilities/functions"
-
 // Bulma variable overwrites
 $primary: $vk-blue
 $dark: $vk-dark
@@ -37,6 +36,14 @@ $family-sans-serif: "{{ $sansSerifFont }}", BlinkMacSystemFont, -apple-system, "
 
 $navbar-height: 5rem
 $navbar-item-img-max-height: 3.5rem
+$dashboard-panel-padding: 3rem 3rem
+$dashboard-panel-header-bottom-margin: 2.5rem
+$toc-item-color: $white
+$toc-item-font-size: 1.5rem
+$toc-item-icon-color: $white-bis
+$toc-item-icon-right-margin: 1.5rem
+$toc-item-top-margin: 1rem
+
 
 @import "bulma/sass/utilities/derived-variables"
 
@@ -44,6 +51,7 @@ $colors: mergeColorMaps(("twitter-blue": ($twitter-blue, $white), "slack-green":
 
 @import "bulma/bulma"
 @import "bulma-dashboard/bulma-dashboard.sass"
+@import "bulma-toc/bulma-toc.sass"
 
 // Ensure sticky footer at the bottom of the page
 .page
