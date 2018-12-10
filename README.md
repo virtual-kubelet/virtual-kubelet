@@ -37,7 +37,7 @@ The best description is "Kubernetes API on top, programmable back."
 
 The diagram below illustrates how Virtual-Kubelet works.
 
-![diagram](diagram.svg)
+![diagram](website/static/img/diagram.svg)
 
 ## Usage
 
