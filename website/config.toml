@@ -8,9 +8,8 @@ enableRobotsTxt = true
 disableKinds = ["taxonomyTerm"]
 
 # Syntax highlighting config
-pygmentsUseClasses = true
 pygmentsCodeFences = true
-pygmentsStyle      = "monokai"
+pygmentsStyle      = "fruity"
 
 # BlackFriday Markdown settings
 [blackfriday]
