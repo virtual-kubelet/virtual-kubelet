@@ -36,14 +36,13 @@ $family-sans-serif: "{{ $sansSerifFont }}", BlinkMacSystemFont, -apple-system, "
 
 $navbar-height: 5rem
 $navbar-item-img-max-height: 3.5rem
-$dashboard-panel-padding: 3rem 3rem
-$dashboard-panel-header-bottom-margin: 2.5rem
+$dashboard-panel-padding: 3rem 2.5rem 5rem 2.5rem
+$dashboard-panel-header-bottom-margin: 2rem
 $toc-item-color: $white
-$toc-item-font-size: 1.5rem
+$toc-item-font-size: 1.75rem
 $toc-item-icon-color: $white-bis
 $toc-item-icon-right-margin: 1.5rem
 $toc-item-top-margin: 1rem
-
 
 @import "bulma/sass/utilities/derived-variables"
 
@@ -102,11 +101,34 @@ $colors: mergeColorMaps(("twitter-blue": ($twitter-blue, $white), "slack-green":
     border-radius: none
 
 .dashboard
+  &-panel-header
+    img
+      width: 50%
+
   &-main
     &-header
       padding: 2rem 1.5rem
-      position: sticky
-      top: 0
+      //position: sticky
+      //top: 0
 
   .footer
     flex: 1
+
+.toc-panel
+  padding: 1.75rem
+  border-left: 1px solid $grey-light
+
+.toc-bar
+  margin-top: 1.5rem
+
+  li
+    line-height: 110%
+    font-size: 1rem
+
+    a
+      color: $dark
+
+  ul
+    li
+      & + li
+        margin-top: .8rem

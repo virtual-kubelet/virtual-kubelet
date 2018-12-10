@@ -1,5 +1,5 @@
 ---
-title: Providers
+title: Getting started
 description: Extend the Virtual Kubelet interface
 weight: 2
 ---
