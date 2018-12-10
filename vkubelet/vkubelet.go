@@ -106,14 +106,15 @@ func New(ctx context.Context, cfg Config) (s *Server, retErr error) {
 		return s, err
 	}
 
-	tick := time.Tick(5 * time.Second)
-
 	go func() {
+		tick := time.NewTicker(5 * time.Second)
+		defer tick.Stop()
+
 		for {
 			select {
 			case <-ctx.Done():
 				return
-			case <-tick:
+			case <-tick.C:
 				ctx, span := trace.StartSpan(ctx, "syncActualState")
 				s.updateNode(ctx)
 				s.updatePodStatuses(ctx)
