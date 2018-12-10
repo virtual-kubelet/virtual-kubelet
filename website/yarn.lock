@@ -3,9 +3,9 @@
 
 
 bulma-dashboard@^0.1.1:
-  version "0.1.2"
-  resolved "https://registry.yarnpkg.com/bulma-dashboard/-/bulma-dashboard-0.1.2.tgz#cdde36278dc70c9c2c5a746cf4e353f8256c93ac"
-  integrity sha512-1GAyuSJN6/xsk+s9D0RgRlIcIo0iV15IwP4jP++EbO1WcMo89+0PrgUzXYCeh0qV1jPn2sm0uwSshceqOoIKlA==
+  version "0.1.31"
+  resolved "https://registry.yarnpkg.com/bulma-dashboard/-/bulma-dashboard-0.1.31.tgz#3b6f037474a64a8e58a9246347d4b38dbb88feb2"
+  integrity sha512-C/VllMhwWITRKhSyYWd0HQYDrLlnI5KSQ32keu0mVZ1LAhfU5G7nipDQ0GgRbumOto5ROwHjOw/Y0BFJ2s3yHA==
 
 bulma@^0.7.2:
   version "0.7.2"
