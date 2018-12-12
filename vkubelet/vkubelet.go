@@ -29,7 +29,6 @@ type Server struct {
 	provider        providers.Provider
 	resourceManager *manager.ResourceManager
 	podSyncWorkers  int
-	podCh           chan *podNotification
 	podInformer     corev1informers.PodInformer
 }
 
@@ -54,11 +53,6 @@ type APIConfig struct {
 	Addr     string
 }
 
-type podNotification struct {
-	pod *corev1.Pod
-	ctx context.Context
-}
-
 // New creates a new virtual-kubelet server.
 func New(ctx context.Context, cfg Config) (s *Server, retErr error) {
 	s = &Server{
@@ -69,7 +63,6 @@ func New(ctx context.Context, cfg Config) (s *Server, retErr error) {
 		resourceManager: cfg.ResourceManager,
 		provider:        cfg.Provider,
 		podSyncWorkers:  cfg.PodSyncWorkers,
-		podCh:           make(chan *podNotification, cfg.PodSyncWorkers),
 		podInformer:     cfg.PodInformer,
 	}
 
