@@ -195,7 +195,7 @@ func (pc *PodController) processNextWorkItem(ctx context.Context, workerId strin
 		if err := pc.syncHandler(ctx, key); err != nil {
 			if pc.workqueue.NumRequeues(key) < maxRetries {
 				// Put the item back on the work queue to handle any transient errors.
-				log.G(ctx).Warnf("requeuing %q due to failed sync", key)
+				log.G(ctx).Warnf("requeuing %q due to failed sync: %v", key, err)
 				pc.workqueue.AddRateLimited(key)
 				return nil
 			}
