@@ -1,3 +1,13 @@
+function anchorJs() {
+  if ($('.is-docs-page').length > 0) {
+    anchors.options = {
+      icon: '#'
+    }
+
+    anchors.add('.content h2, .content h3, .content h4');
+  }
+}
+
 function scrollFadeInOut(threshold, element) {
   //element.hide();
 
@@ -18,5 +28,6 @@ function navbarScrollToggle() {
 }
 
 $(function() {
+  anchorJs();
   navbarScrollToggle();
 });

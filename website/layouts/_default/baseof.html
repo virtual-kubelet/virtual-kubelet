@@ -1,4 +1,5 @@
 {{- .Scratch.Set "numFigures" 1 }}
+{{- $pageType := cond .IsHome "home" .Section }}
 <!DOCTYPE html>
 <html lang="{{ .Site.LanguageCode }}">
   <head>
@@ -8,7 +9,7 @@
     </title>
     {{ partial "css.html" . }}
   </head>
-  <body class="page is-{{ .Kind }}-page">
+  <body class="page is-{{ $pageType }}-page">
     {{ block "main" . }}
     {{ partial "navbar.html" . }}
 
