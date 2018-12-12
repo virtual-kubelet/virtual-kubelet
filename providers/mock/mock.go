@@ -190,8 +190,7 @@ func (p *MockProvider) GetPod(ctx context.Context, namespace, name string) (pod 
 	if pod, ok := p.pods[key]; ok {
 		return pod, nil
 	}
-
-	return nil, nil
+	return nil, strongerrors.NotFound(fmt.Errorf("pod \"%s/%s\" is not known to the provider", namespace, name))
 }
 
 // GetContainerLogs retrieves the logs of a container by name from the provider.
@@ -255,7 +254,7 @@ func (p *MockProvider) GetPodStatus(ctx context.Context, namespace, name string)
 
 	pod, err := p.GetPod(ctx, namespace, name)
 	if err != nil {
-		return status, err
+		return nil, err
 	}
 
 	for _, container := range pod.Spec.Containers {
