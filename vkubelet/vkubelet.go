@@ -3,6 +3,7 @@ package vkubelet
 import (
 	"context"
 	"net"
+	"net/http"
 	"time"
 
 	pkgerrors "github.com/pkg/errors"
@@ -34,9 +35,7 @@ type Server struct {
 
 // Config is used to configure a new server.
 type Config struct {
-	APIConfig       APIConfig
 	Client          *kubernetes.Clientset
-	MetricsAddr     string
 	Namespace       string
 	NodeName        string
 	Provider        providers.Provider
@@ -46,16 +45,30 @@ type Config struct {
 	PodInformer     corev1informers.PodInformer
 }
 
+// ServeMux defines an interface used to attach routes to an existing http serve mux
+// It is used to enable callers creating a new server to completely manage their
+// own HTTP server while allowing us to attach the required routes to satisfy
+// the Kubelet interfaces.
+type ServeMux interface {
+	Handle(path string, h http.Handler, methods ...string) Route
+	HandleFunc(path string, h http.HandlerFunc, methods ...string) Route
+}
+
 // APIConfig is used to configure the API server of the virtual kubelet.
+// Routes required to satisfy the kubelet interface are attached to these.
+//
+// Callers should take care to namespace these serve muxes (muxi?) as they see
+// fit, however these routes get called by the Kubernetes API server when a user
+// requests things, e.g. `kubectl logs`.
 type APIConfig struct {
-	CertPath string
-	KeyPath  string
-	Addr     string
+	ServerMux  ServeMux
+	MetricsMux ServeMux
 }
 
 // New creates a new virtual-kubelet server.
-func New(ctx context.Context, cfg Config) (s *Server, retErr error) {
-	s = &Server{
+// This is the entrypoint to this package.
+func New(cfg Config) (*Server, error) {
+	return &Server{
 		namespace:       cfg.Namespace,
 		nodeName:        cfg.NodeName,
 		taint:           cfg.Taint,
@@ -65,20 +78,14 @@ func New(ctx context.Context, cfg Config) (s *Server, retErr error) {
 		podSyncWorkers:  cfg.PodSyncWorkers,
 		podInformer:     cfg.PodInformer,
 	}
+}
 
+// Run creates and starts an instance of the pod controller, blocking until it stops.
+func (s *Server) Run(ctx context.Context, cfg APIConfig) (retErr error) {
 	ctx = log.WithLogger(ctx, log.G(ctx))
 
-	apiL, err := net.Listen("tcp", cfg.APIConfig.Addr)
-	if err != nil {
-		return nil, pkgerrors.Wrap(err, "error setting up API listener")
-	}
-	defer func() {
-		if retErr != nil {
-			apiL.Close()
-		}
-	}()
-
-	go KubeletServerStart(cfg.Provider, apiL, cfg.APIConfig.CertPath, cfg.APIConfig.KeyPath)
+	attachPodRoutes(cfg.Provider, cfg.ServerMux)
+	go KubeletServerStart(cfg.Provider, apiL, cfg.CertPath, cfg.KeyPath)
 
 	if cfg.MetricsAddr != "" {
 		metricsL, err := net.Listen("tcp", cfg.MetricsAddr)
@@ -96,7 +103,7 @@ func New(ctx context.Context, cfg Config) (s *Server, retErr error) {
 	}
 
 	if err := s.registerNode(ctx); err != nil {
-		return s, err
+		return err
 	}
 
 	go func() {
@@ -116,10 +123,5 @@ func New(ctx context.Context, cfg Config) (s *Server, retErr error) {
 		}
 	}()
 
-	return s, nil
-}
-
-// Run creates and starts an instance of the pod controller, blocking until it stops.
-func (s *Server) Run(ctx context.Context) error {
 	return NewPodController(s).Run(ctx, s.podSyncWorkers)
 }

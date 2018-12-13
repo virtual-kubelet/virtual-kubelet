@@ -48,7 +48,8 @@ func MetricsSummaryHandler(p providers.Provider) http.Handler {
 }
 
 // KubeletServerStart starts the virtual kubelet HTTP server.
-func KubeletServerStart(p providers.Provider, l net.Listener, cert, key string) {
+func attachPodRoutes(p providers.Provider, mux ServeMux) {
+	PodHandler(p, mux)
 	if err := http.ServeTLS(l, InstrumentHandler(PodHandler(p)), cert, key); err != nil {
 		log.G(context.TODO()).WithError(err).Error("error setting up http server")
 	}

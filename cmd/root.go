@@ -91,15 +91,13 @@ This allows users to schedule kubernetes workloads on nodes that aren't running 
 	Run: func(cmd *cobra.Command, args []string) {
 		defer rootContextCancel()
 
-		f, err := vkubelet.New(rootContext, vkubelet.Config{
+		f, err := vkubelet.New(vkubelet.Config{
 			Client:          k8sClient,
 			Namespace:       kubeNamespace,
 			NodeName:        nodeName,
 			Taint:           taint,
-			MetricsAddr:     metricsAddr,
 			Provider:        p,
 			ResourceManager: rm,
-			APIConfig:       apiConfig,
 			PodSyncWorkers:  podSyncWorkers,
 			PodInformer:     podInformer,
 		})
@@ -114,7 +112,7 @@ This allows users to schedule kubernetes workloads on nodes that aren't running 
 			rootContextCancel()
 		}()
 
-		if err := f.Run(rootContext); err != nil && errors.Cause(err) != context.Canceled {
+		if err := f.Run(rootContext, apiConfig); err != nil && errors.Cause(err) != context.Canceled {
 			log.L.Fatal(err)
 		}
 	},
@@ -317,6 +315,7 @@ func initConfig() {
 	if err != nil {
 		logger.WithError(err).Fatal("Error reading API config")
 	}
+	apiConfig.MetricsAddr = metricsAddr
 
 	if podSyncWorkers <= 0 {
 		logger.Fatal("The number of pod synchronization workers should not be negative")
