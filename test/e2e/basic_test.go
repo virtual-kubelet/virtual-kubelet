@@ -189,6 +189,128 @@ func TestPodLifecycle(t *testing.T) {
 	}
 }
 
+// TestCreatePodWithOptionalInexistantSecrets tries to create a pod referencing optional, inexistant secrets.
+// It then verifies that the pod is created successfully.
+func TestCreatePodWithOptionalInexistantSecrets(t *testing.T) {
+	// Create a pod with a single container referencing optional, inexistant secrets.
+	pod, err := f.CreatePod(f.CreatePodObjectWithOptionalSecretKey())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Delete the pod after the test finishes.
+	defer func() {
+		if err := f.DeletePod(pod.Namespace, pod.Name); err != nil && !apierrors.IsNotFound(err) {
+			t.Error(err)
+		}
+	}()
+
+	// Wait for the pod to be reported as running and ready.
+	if err := f.WaitUntilPodReady(pod.Namespace, pod.Name); err != nil {
+		t.Fatal(err)
+	}
+
+	// Check that the pod is known to the provider.
+	stats, err := f.GetStatsSummary()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := findPodInPodStats(stats, pod); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// TestCreatePodWithMandatoryInexistantSecrets tries to create a pod referencing inexistant secrets.
+// It then verifies that the pod is not created.
+func TestCreatePodWithMandatoryInexistantSecrets(t *testing.T) {
+	// Create a pod with a single container referencing inexistant secrets.
+	pod, err := f.CreatePod(f.CreatePodObjectWithMandatorySecretKey())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Delete the pod after the test finishes.
+	defer func() {
+		if err := f.DeletePodImmediately(pod.Namespace, pod.Name); err != nil && !apierrors.IsNotFound(err) {
+			t.Error(err)
+		}
+	}()
+
+	// Wait for a small period so we can later assert the pod is not running.
+	// TODO (@pires) Wait for event to be reported.
+	time.Sleep(5 * time.Second)
+
+	// Check that the pod is NOT known to the provider.
+	stats, err := f.GetStatsSummary()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := findPodInPodStats(stats, pod); err == nil {
+		t.Fatalf("Expecting to NOT find pod \"%s/%s\" having mandatory, inexistant secrets.", pod.Namespace, pod.Name)
+	}
+}
+
+// TestCreatePodWithOptionalInexistantConfigMap tries to create a pod referencing optional, inexistant config map.
+// It then verifies that the pod is created successfully.
+func TestCreatePodWithOptionalInexistantConfigMap(t *testing.T) {
+	// Create a pod with a single container referencing optional, inexistant config map.
+	pod, err := f.CreatePod(f.CreatePodObjectWithOptionalConfigMapKey())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Delete the pod after the test finishes.
+	defer func() {
+		if err := f.DeletePod(pod.Namespace, pod.Name); err != nil && !apierrors.IsNotFound(err) {
+			t.Error(err)
+		}
+	}()
+
+	// Wait for the pod to be reported as running and ready.
+	if err := f.WaitUntilPodReady(pod.Namespace, pod.Name); err != nil {
+		t.Fatal(err)
+	}
+
+	// Check that the pod is known to the provider.
+	stats, err := f.GetStatsSummary()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := findPodInPodStats(stats, pod); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// TestCreatePodWithMandatoryInexistantConfigMap tries to create a pod referencing inexistant secrets.
+// It then verifies that the pod is not created.
+func TestCreatePodWithMandatoryInexistantConfigMap(t *testing.T) {
+	// Create a pod with a single container referencing inexistant config map.
+	pod, err := f.CreatePod(f.CreatePodObjectWithMandatoryConfigMapKey())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Delete the pod after the test finishes.
+	defer func() {
+		if err := f.DeletePodImmediately(pod.Namespace, pod.Name); err != nil && !apierrors.IsNotFound(err) {
+			t.Error(err)
+		}
+	}()
+
+	// Wait for a small period so we can later assert the pod is not running.
+	// TODO (@pires) Wait for event to be reported.
+	time.Sleep(5 * time.Second)
+
+	// Check that the pod is NOT known to the provider.
+	stats, err := f.GetStatsSummary()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := findPodInPodStats(stats, pod); err == nil {
+		t.Fatalf("Expecting to NOT find pod \"%s/%s\" having mandatory, inexistant config map.", pod.Namespace, pod.Name)
+	}
+}
+
 // findPodInPodStats returns the index of the specified pod in the .pods field of the specified Summary object.
 // It returns an error if the specified pod is not found.
 func findPodInPodStats(summary *v1alpha1.Summary, pod *v1.Pod) (int, error) {
