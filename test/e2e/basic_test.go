@@ -189,10 +189,10 @@ func TestPodLifecycle(t *testing.T) {
 	}
 }
 
-// TestCreatePodWithOptionalInexistantSecrets tries to create a pod referencing optional, inexistant secrets.
+// TestCreatePodWithOptionalInexistentSecrets tries to create a pod referencing optional, inexistent secrets.
 // It then verifies that the pod is created successfully.
-func TestCreatePodWithOptionalInexistantSecrets(t *testing.T) {
-	// Create a pod with a single container referencing optional, inexistant secrets.
+func TestCreatePodWithOptionalInexistentSecrets(t *testing.T) {
+	// Create a pod with a single container referencing optional, inexistent secrets.
 	pod, err := f.CreatePod(f.CreatePodObjectWithOptionalSecretKey())
 	if err != nil {
 		t.Fatal(err)
@@ -220,10 +220,10 @@ func TestCreatePodWithOptionalInexistantSecrets(t *testing.T) {
 	}
 }
 
-// TestCreatePodWithMandatoryInexistantSecrets tries to create a pod referencing inexistant secrets.
+// TestCreatePodWithMandatoryInexistentSecrets tries to create a pod referencing inexistent secrets.
 // It then verifies that the pod is not created.
-func TestCreatePodWithMandatoryInexistantSecrets(t *testing.T) {
-	// Create a pod with a single container referencing inexistant secrets.
+func TestCreatePodWithMandatoryInexistentSecrets(t *testing.T) {
+	// Create a pod with a single container referencing inexistent secrets.
 	pod, err := f.CreatePod(f.CreatePodObjectWithMandatorySecretKey())
 	if err != nil {
 		t.Fatal(err)
@@ -246,14 +246,14 @@ func TestCreatePodWithMandatoryInexistantSecrets(t *testing.T) {
 		t.Fatal(err)
 	}
 	if _, err := findPodInPodStats(stats, pod); err == nil {
-		t.Fatalf("Expecting to NOT find pod \"%s/%s\" having mandatory, inexistant secrets.", pod.Namespace, pod.Name)
+		t.Fatalf("Expecting to NOT find pod \"%s/%s\" having mandatory, inexistent secrets.", pod.Namespace, pod.Name)
 	}
 }
 
-// TestCreatePodWithOptionalInexistantConfigMap tries to create a pod referencing optional, inexistant config map.
+// TestCreatePodWithOptionalInexistentConfigMap tries to create a pod referencing optional, inexistent config map.
 // It then verifies that the pod is created successfully.
-func TestCreatePodWithOptionalInexistantConfigMap(t *testing.T) {
-	// Create a pod with a single container referencing optional, inexistant config map.
+func TestCreatePodWithOptionalInexistentConfigMap(t *testing.T) {
+	// Create a pod with a single container referencing optional, inexistent config map.
 	pod, err := f.CreatePod(f.CreatePodObjectWithOptionalConfigMapKey())
 	if err != nil {
 		t.Fatal(err)
@@ -281,10 +281,10 @@ func TestCreatePodWithOptionalInexistantConfigMap(t *testing.T) {
 	}
 }
 
-// TestCreatePodWithMandatoryInexistantConfigMap tries to create a pod referencing inexistant secrets.
+// TestCreatePodWithMandatoryInexistentConfigMap tries to create a pod referencing inexistent secrets.
 // It then verifies that the pod is not created.
-func TestCreatePodWithMandatoryInexistantConfigMap(t *testing.T) {
-	// Create a pod with a single container referencing inexistant config map.
+func TestCreatePodWithMandatoryInexistentConfigMap(t *testing.T) {
+	// Create a pod with a single container referencing inexistent config map.
 	pod, err := f.CreatePod(f.CreatePodObjectWithMandatoryConfigMapKey())
 	if err != nil {
 		t.Fatal(err)
@@ -307,7 +307,7 @@ func TestCreatePodWithMandatoryInexistantConfigMap(t *testing.T) {
 		t.Fatal(err)
 	}
 	if _, err := findPodInPodStats(stats, pod); err == nil {
-		t.Fatalf("Expecting to NOT find pod \"%s/%s\" having mandatory, inexistant config map.", pod.Namespace, pod.Name)
+		t.Fatalf("Expecting to NOT find pod \"%s/%s\" having mandatory, inexistent config map.", pod.Namespace, pod.Name)
 	}
 }
 
