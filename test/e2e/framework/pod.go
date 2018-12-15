@@ -117,3 +117,41 @@ func (f *Framework) WaitUntilPodDeleted(namespace, name string) error {
 		return event.Type == watchapi.Deleted || pod.DeletionTimestamp != nil, nil
 	})
 }
+
+// WaitUntilPodEventWithReason establishes a watch on events involving the specified pod.
+// Then, it waits for an event with the specified reason to be created/updated.
+func (f *Framework) WaitUntilPodEventWithReason(pod *corev1.Pod, reason string) error {
+	// Create a field selector that matches Event resources involving the specified pod.
+	fs := fields.ParseSelectorOrDie(fmt.Sprintf("involvedObject.kind==Pod,involvedObject.uid==%s", pod.UID))
+	// Create a ListWatch so we can receive events for the matched Event resource.
+	lw := &cache.ListWatch{
+		ListFunc: func(options metav1.ListOptions) (runtime.Object, error) {
+			options.FieldSelector = fs.String()
+			return f.KubeClient.CoreV1().Events(pod.Namespace).List(options)
+		},
+		WatchFunc: func(options metav1.ListOptions) (watchapi.Interface, error) {
+			options.FieldSelector = fs.String()
+			return f.KubeClient.CoreV1().Events(pod.Namespace).Watch(options)
+		},
+	}
+	// Watch for updates to the Event resource until fn is satisfied, or until the timeout is reached.
+	ctx, cfn := context.WithTimeout(context.Background(), defaultWatchTimeout)
+	defer cfn()
+	last, err := watch.UntilWithSync(ctx, lw, &corev1.Event{}, nil, func(event watchapi.Event) (b bool, e error) {
+		switch event.Type {
+		case watchapi.Error:
+			fallthrough
+		case watchapi.Deleted:
+			return false, fmt.Errorf("got event of unexpected type %q", event.Type)
+		default:
+			return event.Object.(*corev1.Event).Reason == reason, nil
+		}
+	})
+	if err != nil {
+		return err
+	}
+	if last == nil {
+		return fmt.Errorf("no events involving pod \"%s/%s\" have been seen", pod.Namespace, pod.Name)
+	}
+	return nil
+}

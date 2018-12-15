@@ -10,6 +10,8 @@ import (
 	"k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/kubernetes/pkg/kubelet/apis/stats/v1alpha1"
+
+	"github.com/virtual-kubelet/virtual-kubelet/vkubelet"
 )
 
 const (
@@ -210,6 +212,11 @@ func TestCreatePodWithOptionalInexistentSecrets(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	// Wait for an event concerning the missing secret to be reported on the pod.
+	if err := f.WaitUntilPodEventWithReason(pod, vkubelet.ReasonOptionalSecretNotFound); err != nil {
+		t.Fatal(err)
+	}
+
 	// Check that the pod is known to the provider.
 	stats, err := f.GetStatsSummary()
 	if err != nil {
@@ -236,9 +243,10 @@ func TestCreatePodWithMandatoryInexistentSecrets(t *testing.T) {
 		}
 	}()
 
-	// Wait for a small period so we can later assert the pod is not running.
-	// TODO (@pires) Wait for event to be reported.
-	time.Sleep(5 * time.Second)
+	// Wait for an event concerning the missing secret to be reported on the pod.
+	if err := f.WaitUntilPodEventWithReason(pod, vkubelet.ReasonMandatorySecretNotFound); err != nil {
+		t.Fatal(err)
+	}
 
 	// Check that the pod is NOT known to the provider.
 	stats, err := f.GetStatsSummary()
@@ -271,6 +279,11 @@ func TestCreatePodWithOptionalInexistentConfigMap(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	// Wait for an event concerning the missing config map to be reported on the pod.
+	if err := f.WaitUntilPodEventWithReason(pod, vkubelet.ReasonOptionalConfigMapNotFound); err != nil {
+		t.Fatal(err)
+	}
+
 	// Check that the pod is known to the provider.
 	stats, err := f.GetStatsSummary()
 	if err != nil {
@@ -297,9 +310,10 @@ func TestCreatePodWithMandatoryInexistentConfigMap(t *testing.T) {
 		}
 	}()
 
-	// Wait for a small period so we can later assert the pod is not running.
-	// TODO (@pires) Wait for event to be reported.
-	time.Sleep(5 * time.Second)
+	// Wait for an event concerning the missing config map to be reported on the pod.
+	if err := f.WaitUntilPodEventWithReason(pod, vkubelet.ReasonMandatoryConfigMapNotFound); err != nil {
+		t.Fatal(err)
+	}
 
 	// Check that the pod is NOT known to the provider.
 	stats, err := f.GetStatsSummary()
