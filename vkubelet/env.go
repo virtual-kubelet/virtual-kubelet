@@ -49,8 +49,7 @@ const (
 )
 
 // populateEnvironmentVariables populates the environment of each container (and init container) in the specified pod.
-// NOTE: No other function in this file should be called from the outside.
-// TODO: Make this the single exported function of a "pkg/environment" package in the future.
+// TODO Make this the single exported function of a "pkg/environment" package in the future.
 func populateEnvironmentVariables(ctx context.Context, pod *corev1.Pod, rm *manager.ResourceManager, recorder record.EventRecorder) error {
 	// Populate each init container's environment.
 	for idx := range pod.Spec.InitContainers {
@@ -70,29 +69,30 @@ func populateEnvironmentVariables(ctx context.Context, pod *corev1.Pod, rm *mana
 // populateContainerEnvironment populates the environment of a single container in the specified pod.
 func populateContainerEnvironment(ctx context.Context, pod *corev1.Pod, container *corev1.Container, rm *manager.ResourceManager, recorder record.EventRecorder) error {
 	// Create an "environment map" based on the value of the specified container's ".envFrom" field.
-	envOne, err := makeEnvironmentMapFromEnvFrom(ctx, pod, container, rm, recorder)
+	envFrom, err := makeEnvironmentMapBasedOnEnvFrom(ctx, pod, container, rm, recorder)
 	if err != nil {
 		return err
 	}
 	// Create an "environment map" based on the value of the specified container's ".env" field.
-	envTwo, err := makeEnvironmentMapFromEnv(ctx, pod, container, rm, recorder)
+	env, err := makeEnvironmentMapBasedOnEnv(ctx, pod, container, rm, recorder)
 	if err != nil {
 		return err
 	}
 	// Empty the container's ".envFrom" field and replace its ".env" field with the final, merged environment.
-	// Values in "envTwo" (sourced from ".env") will override any values with the same key defined in "envOne" (sourced from ".envFrom").
+	// Values in "env" (sourced from ".env") will override any values with the same key defined in "envFrom" (sourced from ".envFrom").
 	// This is in accordance with what the Kubelet itself does.
-	// https://github.com/kubernetes/kubernetes/blob/v1.13.0/pkg/kubelet/kubelet_pods.go#L557-L558
+	// https://github.com/kubernetes/kubernetes/blob/v1.13.1/pkg/kubelet/kubelet_pods.go#L557-L558
 	container.EnvFrom = []corev1.EnvFromSource{}
-	container.Env = makeEnvironment(envOne, envTwo)
+	container.Env = mergeEnvironments(envFrom, env)
 	return nil
 }
 
-// makeEnvironmentMapFromEnvFrom returns a map representing the resolved environment of the specified container after being populated from the entries in the ".envFrom" field.
-func makeEnvironmentMapFromEnvFrom(ctx context.Context, pod *corev1.Pod, container *corev1.Container, rm *manager.ResourceManager, recorder record.EventRecorder) (map[string]string, error) {
+// makeEnvironmentMapBasedOnEnvFrom returns a map representing the resolved environment of the specified container after being populated from the entries in the ".envFrom" field.
+func makeEnvironmentMapBasedOnEnvFrom(ctx context.Context, pod *corev1.Pod, container *corev1.Container, rm *manager.ResourceManager, recorder record.EventRecorder) (map[string]string, error) {
 	// Create a map to hold the resulting environment.
 	res := make(map[string]string, 0)
 	// Iterate over "envFrom" references in order to populate the environment.
+loop:
 	for _, envFrom := range container.EnvFrom {
 		switch {
 		// Handle population from a configmap.
@@ -114,7 +114,7 @@ func makeEnvironmentMapFromEnvFrom(ctx context.Context, pod *corev1.Pod, contain
 						recorder.Eventf(pod, corev1.EventTypeWarning, ReasonFailedToReadOptionalConfigMap, "failed to read configmap %q", ef.Name)
 					}
 					// Continue on to the next reference.
-					continue
+					continue loop
 				}
 				// At this point we know the configmap reference is mandatory.
 				// Hence, we should return a meaningful error.
@@ -127,7 +127,9 @@ func makeEnvironmentMapFromEnvFrom(ctx context.Context, pod *corev1.Pod, contain
 			}
 			// At this point we have successfully fetched the target configmap.
 			// Iterate over the keys defined in the configmap and populate the environment accordingly.
+			// https://github.com/kubernetes/kubernetes/blob/v1.13.1/pkg/kubelet/kubelet_pods.go#L581-L595
 			invalidKeys := make([]string, 0)
+		mKeys:
 			for key, val := range m.Data {
 				// If a prefix has been defined, prepend it to the environment variable's name.
 				if len(envFrom.Prefix) > 0 {
@@ -137,7 +139,7 @@ func makeEnvironmentMapFromEnvFrom(ctx context.Context, pod *corev1.Pod, contain
 				// If it isn't, it should be appended to the list of invalid keys and skipped.
 				if errMsgs := apivalidation.IsEnvVarName(key); len(errMsgs) != 0 {
 					invalidKeys = append(invalidKeys, key)
-					continue
+					continue mKeys
 				}
 				// Add the key and its value to the environment.
 				res[key] = val
@@ -162,24 +164,26 @@ func makeEnvironmentMapFromEnvFrom(ctx context.Context, pod *corev1.Pod, contain
 					if errors.IsNotFound(err) {
 						recorder.Eventf(pod, corev1.EventTypeWarning, ReasonOptionalSecretNotFound, "secret %q not found", ef.Name)
 					} else {
-						log.G(ctx).Warnf("failed to read configmap %q: %v", ef.Name, err)
+						log.G(ctx).Warnf("failed to read secret %q: %v", ef.Name, err)
 						recorder.Eventf(pod, corev1.EventTypeWarning, ReasonFailedToReadOptionalSecret, "failed to read secret %q", ef.Name)
 					}
 					// Continue on to the next reference.
-					continue
+					continue loop
 				}
 				// At this point we know the secret reference is mandatory.
 				// Hence, we should return a meaningful error.
 				if errors.IsNotFound(err) {
 					recorder.Eventf(pod, corev1.EventTypeWarning, ReasonMandatorySecretNotFound, "secret %q not found", ef.Name)
-					return nil, fmt.Errorf("configmap %q not found", ef.Name)
+					return nil, fmt.Errorf("secret %q not found", ef.Name)
 				}
 				recorder.Eventf(pod, corev1.EventTypeWarning, ReasonFailedToReadMandatorySecret, "failed to read secret %q", ef.Name)
-				return nil, fmt.Errorf("failed to fetch configmap %q: %v", ef.Name, err)
+				return nil, fmt.Errorf("failed to fetch secret %q: %v", ef.Name, err)
 			}
 			// At this point we have successfully fetched the target secret.
 			// Iterate over the keys defined in the secret and populate the environment accordingly.
+			// https://github.com/kubernetes/kubernetes/blob/v1.13.1/pkg/kubelet/kubelet_pods.go#L581-L595
 			invalidKeys := make([]string, 0)
+		sKeys:
 			for key, val := range s.Data {
 				// If a prefix has been defined, prepend it to the environment variable's name.
 				if len(envFrom.Prefix) > 0 {
@@ -189,7 +193,7 @@ func makeEnvironmentMapFromEnvFrom(ctx context.Context, pod *corev1.Pod, contain
 				// If it isn't, it should be appended to the list of invalid keys and skipped.
 				if errMsgs := apivalidation.IsEnvVarName(key); len(errMsgs) != 0 {
 					invalidKeys = append(invalidKeys, key)
-					continue
+					continue sKeys
 				}
 				// Add the key and its value to the environment.
 				res[key] = string(val)
@@ -205,17 +209,18 @@ func makeEnvironmentMapFromEnvFrom(ctx context.Context, pod *corev1.Pod, contain
 	return res, nil
 }
 
-// makeEnvironmentMapFromEnv returns a map representing the resolved environment of the specified container after being populated from the entries in the ".env" field.
-func makeEnvironmentMapFromEnv(ctx context.Context, pod *corev1.Pod, container *corev1.Container, rm *manager.ResourceManager, recorder record.EventRecorder) (map[string]string, error) {
+// makeEnvironmentMapBasedOnEnv returns a map representing the resolved environment of the specified container after being populated from the entries in the ".env" field.
+func makeEnvironmentMapBasedOnEnv(ctx context.Context, pod *corev1.Pod, container *corev1.Container, rm *manager.ResourceManager, recorder record.EventRecorder) (map[string]string, error) {
 	// Create a map to hold the resolved environment variables.
 	res := make(map[string]string, len(container.Env))
 	// Iterate over environment variables in order to populate the map.
+loop:
 	for _, env := range container.Env {
 		switch {
 		// Handle values that have been directly provided.
 		case env.Value != "":
 			res[env.Name] = env.Value
-			continue
+			continue loop
 		// Handle population from a configmap key.
 		case env.ValueFrom != nil && env.ValueFrom.ConfigMapKeyRef != nil:
 			// The environment variable must be set from a configmap.
@@ -223,10 +228,10 @@ func makeEnvironmentMapFromEnv(ctx context.Context, pod *corev1.Pod, container *
 			// Check whether the key reference is optional.
 			// This will control whether we fail when unable to read the requested key.
 			optional := vf != nil && *vf.Optional
-			// Try to grab the referenced secret.
+			// Try to grab the referenced configmap.
 			m, err := rm.GetConfigMap(vf.Name, pod.Namespace)
 			if err != nil {
-				// We couldn't fetch the secret.
+				// We couldn't fetch the configmap.
 				// However, if the key reference is optional we should not fail.
 				if optional {
 					if errors.IsNotFound(err) {
@@ -236,7 +241,7 @@ func makeEnvironmentMapFromEnv(ctx context.Context, pod *corev1.Pod, container *
 						recorder.Eventf(pod, corev1.EventTypeWarning, ReasonFailedToReadOptionalConfigMap, "skipping optional envvar %q: failed to read configmap %q", env.Name, vf.Name)
 					}
 					// Continue on to the next reference.
-					continue
+					continue loop
 				}
 				// At this point we know the key reference is mandatory.
 				// Hence, we should return a meaningful error.
@@ -259,7 +264,7 @@ func makeEnvironmentMapFromEnv(ctx context.Context, pod *corev1.Pod, container *
 				if optional {
 					// Continue on to the next reference.
 					recorder.Eventf(pod, corev1.EventTypeWarning, ReasonOptionalConfigMapKeyNotFound, "skipping optional envvar %q: key %q does not exist in configmap %q", env.Name, vf.Key, vf.Name)
-					continue
+					continue loop
 				}
 				// At this point we know the key reference is mandatory.
 				// Hence, we should fail.
@@ -268,7 +273,7 @@ func makeEnvironmentMapFromEnv(ctx context.Context, pod *corev1.Pod, container *
 			}
 			// Populate the environment variable and continue on to the next reference.
 			res[env.Name] = keyValue
-			continue
+			continue loop
 		// Handle population from a secret key.
 		case env.ValueFrom != nil && env.ValueFrom.SecretKeyRef != nil:
 			vf := env.ValueFrom.SecretKeyRef
@@ -288,7 +293,7 @@ func makeEnvironmentMapFromEnv(ctx context.Context, pod *corev1.Pod, container *
 						recorder.Eventf(pod, corev1.EventTypeWarning, ReasonFailedToReadOptionalSecret, "skipping optional envvar %q: failed to read secret %q", env.Name, vf.Name)
 					}
 					// Continue on to the next reference.
-					continue
+					continue loop
 				}
 				// At this point we know the key reference is mandatory.
 				// Hence, we should return a meaningful error.
@@ -311,7 +316,7 @@ func makeEnvironmentMapFromEnv(ctx context.Context, pod *corev1.Pod, container *
 				if optional {
 					// Continue on to the next reference.
 					recorder.Eventf(pod, corev1.EventTypeWarning, ReasonOptionalSecretKeyNotFound, "skipping optional envvar %q: key %q does not exist in secret %q", env.Name, vf.Key, vf.Name)
-					continue
+					continue loop
 				}
 				// At this point we know the key reference is mandatory.
 				// Hence, we should fail.
@@ -320,30 +325,33 @@ func makeEnvironmentMapFromEnv(ctx context.Context, pod *corev1.Pod, container *
 			}
 			// Populate the environment variable and continue on to the next reference.
 			res[env.Name] = string(keyValue)
-			continue
+			continue loop
 		// Handle population from a field (downward API).
 		case env.ValueFrom != nil && env.ValueFrom.FieldRef != nil:
 			// TODO Implement the downward API.
-			continue
+			// https://github.com/virtual-kubelet/virtual-kubelet/issues/123
+			continue loop
 		// Handle population from a resource request/limit.
 		case env.ValueFrom != nil && env.ValueFrom.ResourceFieldRef != nil:
 			// TODO Implement populating resource requests.
-			continue
+			continue loop
 		}
 	}
 	// Return the populated environment.
 	return res, nil
 }
 
-// makeEnvironment creates the final environment for a container by merging the two specified "environment maps".
-// Values in "envTwo" override any values with the same key defined in "envOne".
-func makeEnvironment(envOne map[string]string, envTwo map[string]string) []corev1.EnvVar {
+// mergeEnvironments creates the final environment for a container by merging "envFrom" and "env".
+// Values in "env" override any values with the same key defined in "envFrom".
+// This is in accordance with what the Kubelet itself does.
+// https://github.com/kubernetes/kubernetes/blob/v1.13.1/pkg/kubelet/kubelet_pods.go#L557-L558
+func mergeEnvironments(envFrom map[string]string, env map[string]string) []corev1.EnvVar {
 	tmp := make(map[string]string, 0)
 	res := make([]corev1.EnvVar, 0)
-	for key, val := range envOne {
+	for key, val := range envFrom {
 		tmp[key] = val
 	}
-	for key, val := range envTwo {
+	for key, val := range env {
 		tmp[key] = val
 	}
 	for key, val := range tmp {
