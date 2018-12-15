@@ -42,7 +42,7 @@ func (s *Server) createOrUpdatePod(ctx context.Context, pod *corev1.Pod, recorde
 	defer span.End()
 	addPodAttributes(span, pod)
 
-	if err := s.populateEnvironmentVariables(ctx, pod, recorder); err != nil {
+	if err := populateEnvironmentVariables(ctx, pod, s.resourceManager, recorder); err != nil {
 		span.SetStatus(trace.Status{Code: trace.StatusCodeInvalidArgument, Message: err.Error()})
 		return err
 	}
