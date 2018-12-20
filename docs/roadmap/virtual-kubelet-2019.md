@@ -26,4 +26,4 @@
 
 1. Explore what it means to use virtual kubelet in an IoT Edge usecases and work with wg-io-edge in Kubernetes to develop a standard within virtual kubelet to enable those usecases.
 2. Create provider agnostic tools to scale into virtual kubelet.
-3. 
+3. tba
