@@ -9,6 +9,7 @@ This document details configuring the Virtual Kubelet ACI provider.
 #### Table of Contents
 
 * [Prerequiste](#prerequisite)
+* [Set-up virtual node in AKS](#set-up-virtual-node-in-AKS)
 * [Quick set-up with the ACI Connector](#quick-set-up-with-the-aci-connector)
 * [Manual set-up](#manual-set-up)
 * [Create a cluster with a Virtual Network](#create-an-aks-cluster-with-vnet)
@@ -121,6 +122,12 @@ First let's identify your Azure subscription and save it for use later on in the
    az provider register -n Microsoft.ContainerInstance
    ```
 
+## Set-up virtual node in AKS
+
+Azure Kubernetes Service has easy ways of setting up virtual kubelet with the ACI provider with a feature called virtual node. You can easily install a virtual node that will deploy Linux workloads to ACI. The pods that spin out will automatically get private IPs as the experience forces you to pick "advanced networking."
+
+To install virtual node in the Azure portal go [here](https://docs.microsoft.com/en-us/azure/aks/virtual-nodes-portal). To install virtual node in the Azure CLI go [here](https://docs.microsoft.com/en-us/azure/aks/virtual-nodes-cli). 
+
 ## Quick set-up with the ACI Connector
 
 The Azure cli can be used to install the ACI provider. We like to say Azure's provider or implementation for Virtual Kubelet is the ACI Connector. Please note that this command has no Virtual Networking support. 
@@ -200,6 +207,13 @@ Run these commands to deploy the virtual kubelet which connects your Kubernetes 
 export VK_RElEASE=virtual-kubelet-latest
 ```
 
+Grab the public master URI for your Kubernetes cluster and save the value.
+
+```cli 
+kubectl cluster-info
+export MASTER_URI=<public uri>
+```
+
 If your cluster is an AKS cluster:
 ```cli
 RELEASE_NAME=virtual-kubelet
@@ -209,6 +223,7 @@ CHART_URL=https://github.com/virtual-kubelet/virtual-kubelet/raw/master/charts/$
 helm install "$CHART_URL" --name "$RELEASE_NAME" \
   --set provider=azure \
   --set providers.azure.targetAKS=true \
+  --set providers.azure.masterUri=$MASTER_URI
 ```
 
 For any other type of Kubernetes cluster:
@@ -226,10 +241,11 @@ helm install "$CHART_URL" --name "$RELEASE_NAME" \
   --set providers.azure.tenantId=$AZURE_TENANT_ID \
   --set providers.azure.subscriptionId=$AZURE_SUBSCRIPTION_ID \
   --set providers.azure.clientId=$AZURE_CLIENT_ID \
-  --set providers.azure.clientKey=$AZURE_CLIENT_SECRET
+  --set providers.azure.clientKey=$AZURE_CLIENT_SECRET \
+  --set providers.azure.masterUri=$MASTER_URI
 ```
 
-If your cluster has RBAC enabled set ```rbac.install=true```
+If your cluster has RBAC disabled set ```rbac.install=false```
 
 Output:
 

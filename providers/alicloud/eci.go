@@ -42,6 +42,7 @@ type ECIProvider struct {
 	region             string
 	nodeName           string
 	operatingSystem    string
+	clusterName        string
 	cpu                string
 	memory             string
 	pods               string
@@ -101,7 +102,12 @@ func NewECIProvider(config string, rm *manager.ResourceManager, nodeName, operat
 			return nil, err
 		}
 	}
-
+	if r := os.Getenv("ECI_CLUSTER_NAME"); r != "" {
+		p.clusterName = r
+	}
+	if p.clusterName == "" {
+		p.clusterName = "default"
+	}
 	if r := os.Getenv("ECI_REGION"); r != "" {
 		p.region = r
 	}
@@ -204,10 +210,10 @@ func (p *ECIProvider) CreatePod(ctx context.Context, pod *v1.Pod) error {
 	request.ImageRegistryCredentials = creds
 	CreationTimestamp := pod.CreationTimestamp.UTC().Format(podTagTimeFormat)
 	tags := []eci.Tag{
-		eci.Tag{Key: "PodName", Value: pod.Name},
-		eci.Tag{Key: "ClusterName", Value: pod.ClusterName},
-		eci.Tag{Key: "NodeName", Value: pod.Spec.NodeName},
+		eci.Tag{Key: "ClusterName", Value: p.clusterName},
+		eci.Tag{Key: "NodeName", Value: p.nodeName},
 		eci.Tag{Key: "NameSpace", Value: pod.Namespace},
+		eci.Tag{Key: "PodName", Value: pod.Name},
 		eci.Tag{Key: "UID", Value: string(pod.UID)},
 		eci.Tag{Key: "CreationTimestamp", Value: CreationTimestamp},
 	}
@@ -345,6 +351,13 @@ func (p *ECIProvider) GetCgs() []eci.ContainerGroup {
 
 		for _, cg := range cgsResponse.ContainerGroups {
 			if getECITagValue(&cg, "NodeName") != p.nodeName {
+				continue
+			}
+			cn := getECITagValue(&cg, "ClusterName")
+			if cn == "" {
+				cn = "default"
+			}
+			if cn != p.clusterName {
 				continue
 			}
 			cgs = append(cgs, cg)
@@ -771,7 +784,7 @@ func containerGroupToPod(cg *eci.ContainerGroup) (*v1.Pod, error) {
 			Message:           "",
 			Reason:            "",
 			HostIP:            "",
-			PodIP:             cg.InternetIp,
+			PodIP:             cg.IntranetIp,
 			StartTime:         &containerStartTime,
 			ContainerStatuses: containerStatuses,
 		},

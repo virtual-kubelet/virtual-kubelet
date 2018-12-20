@@ -68,16 +68,16 @@
   version = "1.13.38"
 
 [[constraint]]
-  name = "k8s.io/kubernetes"
-  version = "1.12.1"
+  name = "k8s.io/api"
+  version = "kubernetes-1.13.1"
 
 [[constraint]]
   name = "k8s.io/apimachinery"
-  version = "kubernetes-1.12.1"
+  version = "kubernetes-1.13.1"
 
 [[constraint]]
   name = "k8s.io/client-go"
-  version = "9.0.0"
+  version = "kubernetes-1.13.1"
 
 [[constraint]]
   name = "github.com/cpuguy83/strongerrors"
