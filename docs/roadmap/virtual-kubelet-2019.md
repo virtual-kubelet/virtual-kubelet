@@ -1,8 +1,8 @@
-#2019 Virtual Kubelet roadmap
+# 2019 Virtual Kubelet roadmap
 
-* work in progress * 
+*work in progress* 
 
-##Core ideals for next year
+## Core ideals for next year
 
 1. Reduce the barrier of entry.
 2. Create a stable community.
