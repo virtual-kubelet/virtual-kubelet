@@ -8,7 +8,7 @@
 2. Create a stable community.
 3. Release virtual kubelet 1.0.
 
-###Requirements and goals
+### Requirements and goals
 
 1. Core. Split out providers from the virtual kubelet core tree. Today the provider dependencies within the virtual kubelet cause more harm than good.
 2. Interface. Stablize the virtual kubelet interface so minimal changes to no changes will be needed in the future. 
