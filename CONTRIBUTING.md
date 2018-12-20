@@ -26,15 +26,16 @@ Otherwise for the primary Virtual Kubelet code, and overall project maintenance,
 
 Ria Bhatia (ribhatia@microsoft.com)
 
-Eric St. Martin (st.erik@microsoft.com)
-
 Robbie Zhang (junjiez@microsoft.com)
+
+Brian Goff (brian.goff@microsoft.com)
+
+Paulo Pires (Mesosphere)
+
 
 ### Provider maintainers
 
 **Azure**
-
-Eric St. Martin (st.erik@microsoft.com)
 
 Robbie Zhang (junjiez@microsoft.com)
 
@@ -45,6 +46,28 @@ Onur Filiz (onfiliz@amazon.com)
 **Hyper.sh**
 
 Harry Zhang (harryzhang@zju.edu.cn)
+
+**Alibaba Cloud**
+
+(TBA)
+
+**Service Fabric Mesh**
+
+Yaron Schneider (yaronsc@microsoft.com)
+
+**Huawei**
+
+**VIC**
+
+Loc Nguyen (nloc@vmware.com)
+
+**Azure Batch**
+
+Lawrence Gripper (lawrence.gripper@microsoft.com)
+
+**CRI**
+
+Ben Corrie (bcorrie@vmware.com)
 
 ## Support Channels
 
