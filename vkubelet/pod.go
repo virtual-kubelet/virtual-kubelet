@@ -12,6 +12,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/tools/record"
 
 	"github.com/virtual-kubelet/virtual-kubelet/log"
 )
@@ -26,7 +27,7 @@ func addPodAttributes(span *trace.Span, pod *corev1.Pod) {
 	)
 }
 
-func (s *Server) createOrUpdatePod(ctx context.Context, pod *corev1.Pod) error {
+func (s *Server) createOrUpdatePod(ctx context.Context, pod *corev1.Pod, recorder record.EventRecorder) error {
 	// Check if the pod is already known by the provider.
 	// NOTE: Some providers return a non-nil error in their GetPod implementation when the pod is not found while some other don't.
 	// Hence, we ignore the error and just act upon the pod if it is non-nil (meaning that the provider still knows about the pod).
@@ -41,7 +42,7 @@ func (s *Server) createOrUpdatePod(ctx context.Context, pod *corev1.Pod) error {
 	defer span.End()
 	addPodAttributes(span, pod)
 
-	if err := s.populateEnvironmentVariables(pod); err != nil {
+	if err := populateEnvironmentVariables(ctx, pod, s.resourceManager, recorder); err != nil {
 		span.SetStatus(trace.Status{Code: trace.StatusCodeInvalidArgument, Message: err.Error()})
 		return err
 	}

@@ -5,10 +5,18 @@ import (
 	"strings"
 
 	"github.com/virtual-kubelet/virtual-kubelet/log"
+	"github.com/virtual-kubelet/virtual-kubelet/version"
+
 	"go.opencensus.io/trace"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+)
+
+var (
+	// vkVersion is a concatenation of the Kubernetes version the VK is built against, the string "vk" and the VK release version.
+	// TODO @pires revisit after VK 1.0 is released as agreed in https://github.com/virtual-kubelet/virtual-kubelet/pull/446#issuecomment-448423176.
+	vkVersion = strings.Join([]string{"v1.13.1", "vk", version.Version}, "-")
 )
 
 // registerNode registers this virtual node with the Kubernetes API.
@@ -26,10 +34,10 @@ func (s *Server) registerNode(ctx context.Context) error {
 		ObjectMeta: metav1.ObjectMeta{
 			Name: s.nodeName,
 			Labels: map[string]string{
-				"type":                                                    "virtual-kubelet",
-				"kubernetes.io/role":                                      "agent",
-				"beta.kubernetes.io/os":                                   strings.ToLower(s.provider.OperatingSystem()),
-				"kubernetes.io/hostname":                                  s.nodeName,
+				"type":                   "virtual-kubelet",
+				"kubernetes.io/role":     "agent",
+				"beta.kubernetes.io/os":  strings.ToLower(s.provider.OperatingSystem()),
+				"kubernetes.io/hostname": s.nodeName,
 				"alpha.service-controller.kubernetes.io/exclude-balancer": "true",
 			},
 		},
@@ -40,7 +48,7 @@ func (s *Server) registerNode(ctx context.Context) error {
 			NodeInfo: corev1.NodeSystemInfo{
 				OperatingSystem: s.provider.OperatingSystem(),
 				Architecture:    "amd64",
-				KubeletVersion:  "v1.11.2",
+				KubeletVersion:  vkVersion,
 			},
 			Capacity:        s.provider.Capacity(ctx),
 			Allocatable:     s.provider.Capacity(ctx),
