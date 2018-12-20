@@ -57,6 +57,8 @@ Yaron Schneider (yaronsc@microsoft.com)
 
 **Huawei**
 
+Fei Xu (xufei40@huawei.com)
+
 **VIC**
 
 Loc Nguyen (nloc@vmware.com)
