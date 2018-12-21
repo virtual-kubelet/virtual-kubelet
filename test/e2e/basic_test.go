@@ -10,6 +10,8 @@ import (
 	"k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/kubernetes/pkg/kubelet/apis/stats/v1alpha1"
+
+	"github.com/virtual-kubelet/virtual-kubelet/vkubelet"
 )
 
 const (
@@ -186,6 +188,140 @@ func TestPodLifecycle(t *testing.T) {
 	// Make sure the "nginx-0-X" pod DOES NOT exist in the slice of PodStats anymore.
 	if _, err := findPodInPodStats(stats, pod0); err == nil {
 		t.Fatalf("expected to NOT find pod \"%s/%s\" in the slice of pod stats", pod0.Namespace, pod0.Name)
+	}
+}
+
+// TestCreatePodWithOptionalInexistentSecrets tries to create a pod referencing optional, inexistent secrets.
+// It then verifies that the pod is created successfully.
+func TestCreatePodWithOptionalInexistentSecrets(t *testing.T) {
+	// Create a pod with a single container referencing optional, inexistent secrets.
+	pod, err := f.CreatePod(f.CreatePodObjectWithOptionalSecretKey())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Delete the pod after the test finishes.
+	defer func() {
+		if err := f.DeletePod(pod.Namespace, pod.Name); err != nil && !apierrors.IsNotFound(err) {
+			t.Error(err)
+		}
+	}()
+
+	// Wait for the pod to be reported as running and ready.
+	if err := f.WaitUntilPodReady(pod.Namespace, pod.Name); err != nil {
+		t.Fatal(err)
+	}
+
+	// Wait for an event concerning the missing secret to be reported on the pod.
+	if err := f.WaitUntilPodEventWithReason(pod, vkubelet.ReasonOptionalSecretNotFound); err != nil {
+		t.Fatal(err)
+	}
+
+	// Check that the pod is known to the provider.
+	stats, err := f.GetStatsSummary()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := findPodInPodStats(stats, pod); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// TestCreatePodWithMandatoryInexistentSecrets tries to create a pod referencing inexistent secrets.
+// It then verifies that the pod is not created.
+func TestCreatePodWithMandatoryInexistentSecrets(t *testing.T) {
+	// Create a pod with a single container referencing inexistent secrets.
+	pod, err := f.CreatePod(f.CreatePodObjectWithMandatorySecretKey())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Delete the pod after the test finishes.
+	defer func() {
+		if err := f.DeletePodImmediately(pod.Namespace, pod.Name); err != nil && !apierrors.IsNotFound(err) {
+			t.Error(err)
+		}
+	}()
+
+	// Wait for an event concerning the missing secret to be reported on the pod.
+	if err := f.WaitUntilPodEventWithReason(pod, vkubelet.ReasonMandatorySecretNotFound); err != nil {
+		t.Fatal(err)
+	}
+
+	// Check that the pod is NOT known to the provider.
+	stats, err := f.GetStatsSummary()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := findPodInPodStats(stats, pod); err == nil {
+		t.Fatalf("Expecting to NOT find pod \"%s/%s\" having mandatory, inexistent secrets.", pod.Namespace, pod.Name)
+	}
+}
+
+// TestCreatePodWithOptionalInexistentConfigMap tries to create a pod referencing optional, inexistent config map.
+// It then verifies that the pod is created successfully.
+func TestCreatePodWithOptionalInexistentConfigMap(t *testing.T) {
+	// Create a pod with a single container referencing optional, inexistent config map.
+	pod, err := f.CreatePod(f.CreatePodObjectWithOptionalConfigMapKey())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Delete the pod after the test finishes.
+	defer func() {
+		if err := f.DeletePod(pod.Namespace, pod.Name); err != nil && !apierrors.IsNotFound(err) {
+			t.Error(err)
+		}
+	}()
+
+	// Wait for the pod to be reported as running and ready.
+	if err := f.WaitUntilPodReady(pod.Namespace, pod.Name); err != nil {
+		t.Fatal(err)
+	}
+
+	// Wait for an event concerning the missing config map to be reported on the pod.
+	if err := f.WaitUntilPodEventWithReason(pod, vkubelet.ReasonOptionalConfigMapNotFound); err != nil {
+		t.Fatal(err)
+	}
+
+	// Check that the pod is known to the provider.
+	stats, err := f.GetStatsSummary()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := findPodInPodStats(stats, pod); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// TestCreatePodWithMandatoryInexistentConfigMap tries to create a pod referencing inexistent secrets.
+// It then verifies that the pod is not created.
+func TestCreatePodWithMandatoryInexistentConfigMap(t *testing.T) {
+	// Create a pod with a single container referencing inexistent config map.
+	pod, err := f.CreatePod(f.CreatePodObjectWithMandatoryConfigMapKey())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Delete the pod after the test finishes.
+	defer func() {
+		if err := f.DeletePodImmediately(pod.Namespace, pod.Name); err != nil && !apierrors.IsNotFound(err) {
+			t.Error(err)
+		}
+	}()
+
+	// Wait for an event concerning the missing config map to be reported on the pod.
+	if err := f.WaitUntilPodEventWithReason(pod, vkubelet.ReasonMandatoryConfigMapNotFound); err != nil {
+		t.Fatal(err)
+	}
+
+	// Check that the pod is NOT known to the provider.
+	stats, err := f.GetStatsSummary()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := findPodInPodStats(stats, pod); err == nil {
+		t.Fatalf("Expecting to NOT find pod \"%s/%s\" having mandatory, inexistent config map.", pod.Namespace, pod.Name)
 	}
 }
 

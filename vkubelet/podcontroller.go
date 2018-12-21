@@ -195,7 +195,7 @@ func (pc *PodController) processNextWorkItem(ctx context.Context, workerId strin
 		if err := pc.syncHandler(ctx, key); err != nil {
 			if pc.workqueue.NumRequeues(key) < maxRetries {
 				// Put the item back on the work queue to handle any transient errors.
-				log.G(ctx).Warnf("requeuing %q due to failed sync", key)
+				log.G(ctx).Warnf("requeuing %q due to failed sync: %v", key, err)
 				pc.workqueue.AddRateLimited(key)
 				return nil
 			}
@@ -283,7 +283,7 @@ func (pc *PodController) syncPodInProvider(ctx context.Context, pod *corev1.Pod)
 	}
 
 	// Create or update the pod in the provider.
-	if err := pc.server.createOrUpdatePod(ctx, pod); err != nil {
+	if err := pc.server.createOrUpdatePod(ctx, pod, pc.recorder); err != nil {
 		err := pkgerrors.Wrapf(err, "failed to sync pod %q in the provider", loggablePodName(pod))
 		span.SetStatus(ocstatus.FromError(err))
 		return err

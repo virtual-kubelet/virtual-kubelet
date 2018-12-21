@@ -3,6 +3,7 @@ package vkubelet
 import (
 	"context"
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/cpuguy83/strongerrors/status/ocstatus"
@@ -11,6 +12,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/tools/record"
 
 	"github.com/virtual-kubelet/virtual-kubelet/log"
 )
@@ -25,7 +27,7 @@ func addPodAttributes(span *trace.Span, pod *corev1.Pod) {
 	)
 }
 
-func (s *Server) createOrUpdatePod(ctx context.Context, pod *corev1.Pod) error {
+func (s *Server) createOrUpdatePod(ctx context.Context, pod *corev1.Pod, recorder record.EventRecorder) error {
 	// Check if the pod is already known by the provider.
 	// NOTE: Some providers return a non-nil error in their GetPod implementation when the pod is not found while some other don't.
 	// Hence, we ignore the error and just act upon the pod if it is non-nil (meaning that the provider still knows about the pod).
@@ -40,7 +42,7 @@ func (s *Server) createOrUpdatePod(ctx context.Context, pod *corev1.Pod) error {
 	defer span.End()
 	addPodAttributes(span, pod)
 
-	if err := s.populateEnvironmentVariables(pod); err != nil {
+	if err := populateEnvironmentVariables(ctx, pod, s.resourceManager, recorder); err != nil {
 		span.SetStatus(trace.Status{Code: trace.StatusCodeInvalidArgument, Message: err.Error()})
 		return err
 	}
@@ -138,19 +140,31 @@ func (s *Server) updatePodStatuses(ctx context.Context) {
 	pods := s.resourceManager.GetPods()
 	span.AddAttributes(trace.Int64Attribute("nPods", int64(len(pods))))
 
-	for _, pod := range pods {
-		select {
-		case <-ctx.Done():
-			span.Annotate(nil, ctx.Err().Error())
-			return
-		default:
-		}
+	sema := make(chan struct{}, s.podSyncWorkers)
+	var wg sync.WaitGroup
+	wg.Add(len(pods))
 
-		if err := s.updatePodStatus(ctx, pod); err != nil {
-			logger := log.G(ctx).WithField("pod", pod.GetName()).WithField("namespace", pod.GetNamespace()).WithField("status", pod.Status.Phase).WithField("reason", pod.Status.Reason)
-			logger.Error(err)
-		}
+	for _, pod := range pods {
+		go func(pod *corev1.Pod) {
+			defer wg.Done()
+
+			select {
+			case <-ctx.Done():
+				span.SetStatus(ocstatus.FromError(ctx.Err()))
+				return
+			case sema <- struct{}{}:
+			}
+			defer func() { <-sema }()
+
+			if err := s.updatePodStatus(ctx, pod); err != nil {
+				logger := log.G(ctx).WithField("pod", pod.GetName()).WithField("namespace", pod.GetNamespace()).WithField("status", pod.Status.Phase).WithField("reason", pod.Status.Reason)
+				logger.Error(err)
+			}
+
+		}(pod)
 	}
+
+	wg.Wait()
 }
 
 func (s *Server) updatePodStatus(ctx context.Context, pod *corev1.Pod) error {

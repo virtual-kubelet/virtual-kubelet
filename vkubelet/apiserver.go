@@ -1,8 +1,6 @@
 package vkubelet
 
 import (
-	"context"
-	"net"
 	"net/http"
 
 	"github.com/Sirupsen/logrus"
@@ -14,9 +12,19 @@ import (
 	"go.opencensus.io/plugin/ochttp/propagation/b3"
 )
 
+// ServeMux defines an interface used to attach routes to an existing http
+// serve mux.
+// It is used to enable callers creating a new server to completely manage
+// their own HTTP server while allowing us to attach the required routes to
+// satisfy the Kubelet HTTP interfaces.
+type ServeMux interface {
+	Handle(path string, h http.Handler)
+}
+
 // PodHandler creates an http handler for interacting with pods/containers.
 func PodHandler(p providers.Provider) http.Handler {
 	r := mux.NewRouter()
+
 	r.HandleFunc("/containerLogs/{namespace}/{pod}/{container}", api.PodLogsHandlerFunc(p)).Methods("GET")
 	r.HandleFunc("/exec/{namespace}/{pod}/{container}", api.PodExecHandlerFunc(p)).Methods("POST")
 	r.NotFoundHandler = http.HandlerFunc(NotFound)
@@ -47,18 +55,20 @@ func MetricsSummaryHandler(p providers.Provider) http.Handler {
 	return r
 }
 
-// KubeletServerStart starts the virtual kubelet HTTP server.
-func KubeletServerStart(p providers.Provider, l net.Listener, cert, key string) {
-	if err := http.ServeTLS(l, InstrumentHandler(PodHandler(p)), cert, key); err != nil {
-		log.G(context.TODO()).WithError(err).Error("error setting up http server")
-	}
+// AttachPodRoutes adds the http routes for pod stuff to the passed in serve mux.
+//
+// Callers should take care to namespace the serve mux as they see fit, however
+// these routes get called by the Kubernetes API server.
+func AttachPodRoutes(p providers.Provider, mux ServeMux) {
+	mux.Handle("/", InstrumentHandler(PodHandler(p)))
 }
 
-// MetricsServerStart starts an HTTP server on the provided addr for serving the kubelset summary stats API.
-func MetricsServerStart(p providers.Provider, l net.Listener) {
-	if err := http.Serve(l, InstrumentHandler(MetricsSummaryHandler(p))); err != nil {
-		log.G(context.TODO()).WithError(err).Error("Error starting http server")
-	}
+// AttachMetricsRoutes adds the http routes for pod/node metrics to the passed in serve mux.
+//
+// Callers should take care to namespace the serve mux as they see fit, however
+// these routes get called by the Kubernetes API server.
+func AttachMetricsRoutes(p providers.Provider, mux ServeMux) {
+	mux.Handle("/", InstrumentHandler(MetricsSummaryHandler(p)))
 }
 
 func instrumentRequest(r *http.Request) *http.Request {
