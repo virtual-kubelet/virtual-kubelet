@@ -231,7 +231,7 @@ func initConfig() {
 		kubeConfig = filepath.Join(home, ".kube", "config")
 
 	}
-
+	fmt.Errorf(kubeConfig)
 	if kubeNamespace == "" {
 		kubeNamespace = corev1.NamespaceAll
 	}
