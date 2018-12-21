@@ -26,7 +26,6 @@ import (
 	"time"
 
 	"github.com/Sirupsen/logrus"
-	"github.com/cpuguy83/strongerrors"
 	"github.com/mitchellh/go-homedir"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
@@ -69,7 +68,7 @@ var taint *corev1.Taint
 var k8sClient *kubernetes.Clientset
 var p providers.Provider
 var rm *manager.ResourceManager
-var apiConfig vkubelet.APIConfig
+var apiConfig *apiServerConfig
 var podInformer corev1informers.PodInformer
 var kubeSharedInformerFactoryResync time.Duration
 var podSyncWorkers int
@@ -91,21 +90,16 @@ This allows users to schedule kubernetes workloads on nodes that aren't running 
 	Run: func(cmd *cobra.Command, args []string) {
 		defer rootContextCancel()
 
-		f, err := vkubelet.New(rootContext, vkubelet.Config{
+		vk := vkubelet.New(vkubelet.Config{
 			Client:          k8sClient,
 			Namespace:       kubeNamespace,
 			NodeName:        nodeName,
 			Taint:           taint,
-			MetricsAddr:     metricsAddr,
 			Provider:        p,
 			ResourceManager: rm,
-			APIConfig:       apiConfig,
 			PodSyncWorkers:  podSyncWorkers,
 			PodInformer:     podInformer,
 		})
-		if err != nil {
-			log.L.WithError(err).Fatal("Error initializing virtual kubelet")
-		}
 
 		sig := make(chan os.Signal, 1)
 		signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM)
@@ -114,8 +108,16 @@ This allows users to schedule kubernetes workloads on nodes that aren't running 
 			rootContextCancel()
 		}()
 
-		if err := f.Run(rootContext); err != nil && errors.Cause(err) != context.Canceled {
-			log.L.Fatal(err)
+		c1, c2, err := setupHTTPServer(rootContext, apiConfig)
+		if err != nil {
+			log.G(rootContext).Fatal(err)
+		}
+
+		defer c1.Close()
+		defer c2.Close()
+
+		if err := vk.Run(rootContext); err != nil && errors.Cause(err) != context.Canceled {
+			log.G(rootContext).Fatal(err)
 		}
 	},
 }
@@ -313,7 +315,7 @@ func initConfig() {
 		logger.WithError(err).Fatal("Error initializing provider")
 	}
 
-	apiConfig, err = getAPIConfig()
+	apiConfig, err = getAPIConfig(metricsAddr)
 	if err != nil {
 		logger.WithError(err).Fatal("Error reading API config")
 	}
@@ -368,19 +370,4 @@ func initConfig() {
 			)
 		}
 	}
-}
-
-func getAPIConfig() (vkubelet.APIConfig, error) {
-	config := vkubelet.APIConfig{
-		CertPath: os.Getenv("APISERVER_CERT_LOCATION"),
-		KeyPath:  os.Getenv("APISERVER_KEY_LOCATION"),
-	}
-
-	port, err := strconv.Atoi(os.Getenv("KUBELET_PORT"))
-	if err != nil {
-		return vkubelet.APIConfig{}, strongerrors.InvalidArgument(errors.Wrap(err, "error parsing KUBELET_PORT variable"))
-	}
-	config.Addr = fmt.Sprintf(":%d", port)
-
-	return config, nil
 }

@@ -590,27 +590,19 @@ func (p *ECIProvider) getContainers(pod *v1.Pod, init bool) ([]eci.CreateContain
 			c.EnvironmentVars = append(c.EnvironmentVars, eci.EnvironmentVar{Key: e.Name, Value: e.Value})
 		}
 
-		// ECI CPU request must be times of 10m
 		cpuRequest := 1.00
 		if _, ok := container.Resources.Requests[v1.ResourceCPU]; ok {
 			cpuRequest = float64(container.Resources.Requests.Cpu().MilliValue()) / 1000.00
-			if cpuRequest < 0.01 {
-				cpuRequest = 0.01
-			}
 		}
 
-		c.Cpu = requests.Float(fmt.Sprintf("%.2f", cpuRequest))
+		c.Cpu = requests.Float(fmt.Sprintf("%.3f", cpuRequest))
 
-		// ECI memory request must be times of 0.1 GB
 		memoryRequest := 2.0
 		if _, ok := container.Resources.Requests[v1.ResourceMemory]; ok {
-			memoryRequest = float64(container.Resources.Requests.Memory().Value()) / 1000000000.0
-			if memoryRequest < 2.0 {
-				memoryRequest = 2.0
-			}
+			memoryRequest = float64(container.Resources.Requests.Memory().Value()) / 1024.0 / 1024.0 / 1024.0
 		}
 
-		c.Memory = requests.Float(fmt.Sprintf("%.1f", memoryRequest))
+		c.Memory = requests.Float(fmt.Sprintf("%.3f", memoryRequest))
 
 		c.ImagePullPolicy = string(container.ImagePullPolicy)
 		c.WorkingDir = container.WorkingDir
