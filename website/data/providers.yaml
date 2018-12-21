@@ -1,0 +1,18 @@
+- name: Alibaba Cloud Elastic Container Instance (**ECI**)
+  tag: alicloud
+- name: AWS Fargate
+  tag: aws
+- name: Azure Batch
+  tag: azurebatch
+- name: Azure Container Instances (**ACI**)
+  tag: azure
+- name: Kubernetes Container Runtime Interface (**CRI**)
+  tag: cri
+- name: Huawei Cloud Container Instance (**CCI**)
+  tag: huawei
+- name: Hyper.sh
+  tag: hypersh
+- name: Service Fabric Mesh
+  tag: sfmesh
+- name: vSphere Integrated Containers (**VIC**)
+  tag: vic
