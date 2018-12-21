@@ -76,24 +76,25 @@ func (s *Server) Run(ctx context.Context) error {
 
 // providerSyncLoop syncronizes pod states from the provider back to kubernetes
 func (s *Server) providerSyncLoop(ctx context.Context) {
-	// TODO(@cpuguy83): Ticker does not seem like the right thing to use here. A
-	// ticker keeps ticking while we are updating state, which can be a long
-	// operation. This would lead to just a constant re-sync rather than sleeping
-	// for 5 seconds between each loop.
-	//
-	// Leaving this note here as fixing is out of scope for my current changeset.
-	tick := time.NewTicker(5 * time.Second)
-	defer tick.Stop()
+	const sleepTime = 5 * time.Second
+
+	t := time.NewTimer(sleepTime)
+	defer t.Stop()
 
 	for {
 		select {
 		case <-ctx.Done():
 			return
-		case <-tick.C:
+		case <-t.C:
+			t.Stop()
+
 			ctx, span := trace.StartSpan(ctx, "syncActualState")
 			s.updateNode(ctx)
 			s.updatePodStatuses(ctx)
 			span.End()
+
+			// restart the timer
+			t.Reset(sleepTime)
 		}
 	}
 }
