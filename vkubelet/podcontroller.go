@@ -283,7 +283,7 @@ func (pc *PodController) syncPodInProvider(ctx context.Context, pod *corev1.Pod)
 	}
 
 	// Create or update the pod in the provider.
-	if err := pc.server.createOrUpdatePod(ctx, pod); err != nil {
+	if err := pc.server.createOrUpdatePod(ctx, pod, pc.recorder); err != nil {
 		err := pkgerrors.Wrapf(err, "failed to sync pod %q in the provider", loggablePodName(pod))
 		span.SetStatus(ocstatus.FromError(err))
 		return err
