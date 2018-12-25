@@ -557,6 +557,22 @@
   version = "v0.1.0"
 
 [[projects]]
+  digest = "1:7c8ca3162a7a53f11ef5a0fd82a74a3b81c35961dc0dac9a81c80aa8a1bf7ad8"
+  name = "github.com/gophercloud/gophercloud"
+  packages = [
+    ".",
+    "openstack",
+    "openstack/container/v1/capsules",
+    "openstack/identity/v2/tenants",
+    "openstack/identity/v2/tokens",
+    "openstack/identity/v3/tokens",
+    "openstack/utils",
+    "pagination",
+  ]
+  pruneopts = "NUT"
+  revision = "ea2f0eefdc4eeac2e4db99e1a37ede0314efbff4"
+
+[[projects]]
   digest = "1:dbd86d229eacaa86a98b10f8fb3e3fc69a1913e0f4e010e7cc1f92bf12edca92"
   name = "github.com/gorilla/context"
   packages = ["."]
@@ -1681,6 +1697,10 @@
     "github.com/docker/go-connections/sockets",
     "github.com/docker/go-connections/tlsconfig",
     "github.com/google/uuid",
+    "github.com/gophercloud/gophercloud",
+    "github.com/gophercloud/gophercloud/openstack",
+    "github.com/gophercloud/gophercloud/openstack/container/v1/capsules",
+    "github.com/gophercloud/gophercloud/pagination",
     "github.com/gorilla/mux",
     "github.com/gorilla/websocket",
     "github.com/hyperhq/hyper-api/client",
