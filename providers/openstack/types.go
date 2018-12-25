@@ -2,16 +2,16 @@ package openstack
 
 // CapsuleSpec
 type CapsuleSpec struct {
-	Volumes        []Volume            `json:"volumes,omitempty"`
-	Containers     []Container         `json:"containers,omitempty"`
-	RestartPolicy  string              `json:"restartPolicy,omitempty"`
+	Volumes       []Volume    `json:"volumes,omitempty"`
+	Containers    []Container `json:"containers,omitempty"`
+	RestartPolicy string      `json:"restartPolicy,omitempty"`
 }
 
 type CapsuleTemplate struct {
-	Spec       CapsuleSpec   `json:"spec,omitempty"`
-	ApiVersion string   `json:"apiVersion,omitempty"`
-	Kind       string        `json:"kind,omitempty"`
-	Metadata   Metadata   `json:"metadata,omitempty"`
+	Spec       CapsuleSpec `json:"spec,omitempty"`
+	ApiVersion string      `json:"apiVersion,omitempty"`
+	Kind       string      `json:"kind,omitempty"`
+	Metadata   Metadata    `json:"metadata,omitempty"`
 }
 
 type Metadata struct {
@@ -20,21 +20,21 @@ type Metadata struct {
 }
 
 type Volume struct {
-	Name string     `json:"name,omitempty"`
+	Name string `json:"name,omitempty"`
 }
 
 type Container struct {
-//	Name    string `json:"name" protobuf:"bytes,1,opt,name=name"`
-	Image   string `json:"image,omitempty" protobuf:"bytes,2,opt,name=image"`
-	Command []string `json:"command,omitempty" protobuf:"bytes,3,rep,name=command"`
-	Args    []string `json:"args,omitempty" protobuf:"bytes,4,rep,name=args"`
-	WorkingDir string `json:"workDir,omitempty" protobuf:"bytes,5,opt,name=workingDir"`
-//	Ports   []ContainerPort `json:"ports,omitempty" patchStrategy:"merge" patchMergeKey:"containerPort" protobuf:"bytes,6,rep,name=ports"`
-	Env     map[string]string `json:"env,omitempty"`
-//ENV is different with Kubernetes
-//	Env     []EnvVar `json:"env,omitempty" patchStrategy:"merge" patchMergeKey:"name" protobuf:"bytes,6,rep,name=env"`
+	//	Name    string `json:"name" protobuf:"bytes,1,opt,name=name"`
+	Image      string   `json:"image,omitempty" protobuf:"bytes,2,opt,name=image"`
+	Command    []string `json:"command,omitempty" protobuf:"bytes,3,rep,name=command"`
+	Args       []string `json:"args,omitempty" protobuf:"bytes,4,rep,name=args"`
+	WorkingDir string   `json:"workDir,omitempty" protobuf:"bytes,5,opt,name=workingDir"`
+	//	Ports   []ContainerPort `json:"ports,omitempty" patchStrategy:"merge" patchMergeKey:"containerPort" protobuf:"bytes,6,rep,name=ports"`
+	Env map[string]string `json:"env,omitempty"`
+	//ENV is different with Kubernetes
+	//	Env     []EnvVar `json:"env,omitempty" patchStrategy:"merge" patchMergeKey:"name" protobuf:"bytes,6,rep,name=env"`
 	Resources ResourceRequirements `json:"resources,omitempty" protobuf:"bytes,7,opt,name=resources"`
-//	VolumeMounts []VolumeMount `json:"volumeMounts,omitempty" patchStrategy:"merge" patchMergeKey:"mountPath" protobuf:"bytes,8,rep,name=volumeMounts"`
+	//	VolumeMounts []VolumeMount `json:"volumeMounts,omitempty" patchStrategy:"merge" patchMergeKey:"mountPath" protobuf:"bytes,8,rep,name=volumeMounts"`
 	ImagePullPolicy string `json:"imagePullPolicy,omitempty" protobuf:"bytes,8,opt,name=imagePullPolicy"`
 
 	//	Stdin bool `json:"stdin,omitempty" protobuf:"varint,16,opt,name=stdin"`
@@ -43,7 +43,6 @@ type Container struct {
 
 	//	TTY bool `json:"tty,omitempty" protobuf:"varint,18,opt,name=tty"`
 }
-
 
 //type EnvVar struct {
 //	Name string `json:"name" protobuf:"bytes,1,opt,name=name"`

@@ -1,18 +1,18 @@
 package openstack
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"log"
 	"os"
 	"strconv"
 	"time"
-	"encoding/json"
 
 	"github.com/gophercloud/gophercloud"
 	"github.com/gophercloud/gophercloud/openstack"
-	"github.com/gophercloud/gophercloud/pagination"
 	"github.com/gophercloud/gophercloud/openstack/container/v1/capsules"
+	"github.com/gophercloud/gophercloud/pagination"
 	"github.com/virtual-kubelet/virtual-kubelet/manager"
 	"github.com/virtual-kubelet/virtual-kubelet/providers"
 	"k8s.io/api/core/v1"
@@ -43,7 +43,7 @@ func NewZunProvider(config string, rm *manager.ResourceManager, nodeName, operat
 	p.resourceManager = rm
 
 	AuthOptions, err := openstack.AuthOptionsFromEnv()
-	if err != nil{
+	if err != nil {
 		return nil, fmt.Errorf("Unable to get the Auth options from environment variables: %s", err)
 	}
 
@@ -88,42 +88,42 @@ func (p *ZunProvider) GetPod(namespace, name string) (*v1.Pod, error) {
 
 // GetPods returns a list of all pods known to be running within Zun.
 func (p *ZunProvider) GetPods() ([]*v1.Pod, error) {
-    pager := capsules.List(p.ZunClient, nil)
+	pager := capsules.List(p.ZunClient, nil)
 
 	pages := 0
 	err := pager.EachPage(func(page pagination.Page) (bool, error) {
 		pages++
 		return true, nil
 	})
-        if err != nil {
-                return nil, err
-        }
+	if err != nil {
+		return nil, err
+	}
 
-        pods := make([]*v1.Pod, 0, pages)
-        err = pager.EachPage(func(page pagination.Page) (bool, error) {
-                CapsuleList, err := capsules.ExtractCapsules(page)
-                if err != nil {
-                        return false, err
-                }
+	pods := make([]*v1.Pod, 0, pages)
+	err = pager.EachPage(func(page pagination.Page) (bool, error) {
+		CapsuleList, err := capsules.ExtractCapsules(page)
+		if err != nil {
+			return false, err
+		}
 
-                for _, m := range CapsuleList {
+		for _, m := range CapsuleList {
 			c := m
 			if m.MetaLabels["NodeName"] != p.nodeName {
 				continue
 			}
 			p, err := capsuleToPod(&c)
 			if err != nil {
-		                log.Println(err)
+				log.Println(err)
 				continue
-	                }
+			}
 			pods = append(pods, p)
 		}
 		return true, nil
-        })
-        if err != nil {
-                return nil, err
-        }
-        return pods, nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return pods, nil
 }
 
 // CreatePod accepts a Pod definition and creates
@@ -159,10 +159,10 @@ func (p *ZunProvider) CreatePod(pod *v1.Pod) error {
 	template := new(capsules.Template)
 	template.Bin = []byte(data)
 	createOpts := capsules.CreateOpts{
-		TemplateOpts:    template,
+		TemplateOpts: template,
 	}
 	_, err = capsules.Create(p.ZunClient, createOpts).Extract()
-	if err != nil{
+	if err != nil {
 		return err
 	}
 	return err
@@ -172,10 +172,10 @@ func (p *ZunProvider) getContainers(pod *v1.Pod) ([]Container, error) {
 	containers := make([]Container, 0, len(pod.Spec.Containers))
 	for _, container := range pod.Spec.Containers {
 		c := Container{
-		//	Name: container.Name,
-			Image: container.Image,
-			Command: append(container.Command, container.Args...),
-			WorkingDir: container.WorkingDir,
+			//	Name: container.Name,
+			Image:           container.Image,
+			Command:         append(container.Command, container.Args...),
+			WorkingDir:      container.WorkingDir,
 			ImagePullPolicy: string(container.ImagePullPolicy),
 		}
 
@@ -198,7 +198,7 @@ func (p *ZunProvider) getContainers(pod *v1.Pod) ([]Container, error) {
 			}
 
 			c.Resources.Limits["cpu"] = cpuLimit
-			c.Resources.Limits["memory"] = memoryLimit*1024
+			c.Resources.Limits["memory"] = memoryLimit * 1024
 		}
 
 		//TODO: Add Sync with Resource requirement
@@ -312,7 +312,7 @@ func capsuleToPod(capsule *capsules.Capsule) (*v1.Pod, error) {
 	var containerStartTime metav1.Time
 
 	podCreationTimestamp = metav1.NewTime(capsule.CreatedAt)
-	if len(capsule.Containers) > 1{
+	if len(capsule.Containers) > 1 {
 		containerStartTime = metav1.NewTime(capsule.Containers[1].StartedAt)
 	}
 	containerStartTime = metav1.NewTime(time.Time{})
@@ -322,9 +322,9 @@ func capsuleToPod(capsule *capsules.Capsule) (*v1.Pod, error) {
 	// First container is sandbox
 	for _, c := range capsule.Containers[1:] {
 		containerMemoryMB := 0
-		if c.Memory != ""{
+		if c.Memory != "" {
 			containerMemory, err := strconv.Atoi(c.Memory)
-			if err != nil{
+			if err != nil {
 				log.Println(err)
 			}
 			containerMemoryMB = containerMemory
@@ -423,7 +423,7 @@ func zunContainerStausToContainerStatus(cs *capsules.Container) v1.ContainerStat
 	//'Deleted', 'Deleting', 'Rebuilding', 'Dead', 'Restarting'
 
 	// Handle the case where the container is running.
-	if cs.Status == "Running" || cs.Status == "Stopped"{
+	if cs.Status == "Running" || cs.Status == "Stopped" {
 		return v1.ContainerState{
 			Running: &v1.ContainerStateRunning{
 				StartedAt: metav1.NewTime(time.Time(cs.StartedAt)),
@@ -506,4 +506,3 @@ func (p *ZunProvider) Capacity() v1.ResourceList {
 		"pods":   resource.MustParse(p.pods),
 	}
 }
-
