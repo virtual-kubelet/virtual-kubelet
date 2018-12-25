@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/Azure/go-autorest/autorest"
 	"io"
 	"io/ioutil"
 	"log"
@@ -12,6 +11,8 @@ import (
 	"os"
 	"strings"
 	"time"
+
+	"github.com/Azure/go-autorest/autorest"
 
 	"github.com/Azure/go-autorest/autorest/azure"
 
@@ -157,7 +158,7 @@ func NewBatchProviderFromConfig(config *Config, rm *manager.ResourceManager, nod
 }
 
 // CreatePod accepts a Pod definition
-func (p *Provider) CreatePod(pod *v1.Pod) error {
+func (p *Provider) CreatePod(ctx context.Context, pod *v1.Pod) error {
 	log.Println("Creating pod...")
 	podCommand, err := pod2docker.GetBashCommand(pod2docker.PodComponents{
 		InitContainers: pod.Spec.InitContainers,
@@ -200,9 +201,9 @@ func (p *Provider) CreatePod(pod *v1.Pod) error {
 }
 
 // GetPodStatus retrieves the status of a given pod by name.
-func (p *Provider) GetPodStatus(namespace, name string) (*v1.PodStatus, error) {
+func (p *Provider) GetPodStatus(ctx context.Context, namespace, name string) (*v1.PodStatus, error) {
 	log.Println("Getting pod status ....")
-	pod, err := p.GetPod(namespace, name)
+	pod, err := p.GetPod(ctx, namespace, name)
 
 	if err != nil {
 		return nil, err
@@ -214,19 +215,19 @@ func (p *Provider) GetPodStatus(namespace, name string) (*v1.PodStatus, error) {
 }
 
 // UpdatePod accepts a Pod definition
-func (p *Provider) UpdatePod(pod *v1.Pod) error {
+func (p *Provider) UpdatePod(ctx context.Context, pod *v1.Pod) error {
 	log.Println("Pod Update called: No-op as not implemented")
 	return nil
 }
 
 // DeletePod accepts a Pod definition
-func (p *Provider) DeletePod(pod *v1.Pod) error {
+func (p *Provider) DeletePod(ctx context.Context, pod *v1.Pod) error {
 	taskID := getTaskIDForPod(pod.Namespace, pod.Name)
 	task, err := p.deleteTask(taskID)
 	if err != nil {
 		log.Println(task)
 		log.Println(err)
-		return err
+		return wrapError(err)
 	}
 
 	log.Printf(fmt.Sprintf("Deleting task: %v", taskID))
@@ -234,7 +235,7 @@ func (p *Provider) DeletePod(pod *v1.Pod) error {
 }
 
 // GetPod returns a pod by name
-func (p *Provider) GetPod(namespace, name string) (*v1.Pod, error) {
+func (p *Provider) GetPod(ctx context.Context, namespace, name string) (*v1.Pod, error) {
 	log.Println("Getting Pod ...")
 	task, err := p.getTask(getTaskIDForPod(namespace, name))
 	if err != nil {
@@ -257,7 +258,7 @@ func (p *Provider) GetPod(namespace, name string) (*v1.Pod, error) {
 }
 
 // GetContainerLogs returns the logs of a container running in a pod by name.
-func (p *Provider) GetContainerLogs(namespace, podName, containerName string, tail int) (string, error) {
+func (p *Provider) GetContainerLogs(ctx context.Context, namespace, podName, containerName string, tail int) (string, error) {
 	log.Println("Getting pod logs ....")
 
 	taskID := getTaskIDForPod(namespace, podName)
@@ -318,7 +319,7 @@ func (p *Provider) ExecInContainer(name string, uid types.UID, container string,
 }
 
 // GetPods retrieves a list of all pods scheduled to run.
-func (p *Provider) GetPods() ([]*v1.Pod, error) {
+func (p *Provider) GetPods(ctx context.Context) ([]*v1.Pod, error) {
 	log.Println("Getting pods...")
 	tasksPtr, err := p.listTasks()
 	if err != nil {
@@ -342,7 +343,7 @@ func (p *Provider) GetPods() ([]*v1.Pod, error) {
 }
 
 // Capacity returns a resource list containing the capacity limits
-func (p *Provider) Capacity() v1.ResourceList {
+func (p *Provider) Capacity(ctx context.Context) v1.ResourceList {
 	return v1.ResourceList{
 		"cpu":            resource.MustParse(p.cpu),
 		"memory":         resource.MustParse(p.memory),
@@ -353,7 +354,7 @@ func (p *Provider) Capacity() v1.ResourceList {
 
 // NodeConditions returns a list of conditions (Ready, OutOfDisk, etc), for updates to the node status
 // within Kubernetes.
-func (p *Provider) NodeConditions() []v1.NodeCondition {
+func (p *Provider) NodeConditions(ctx context.Context) []v1.NodeCondition {
 	return []v1.NodeCondition{
 		{
 			Type:               "Ready",
@@ -400,7 +401,7 @@ func (p *Provider) NodeConditions() []v1.NodeCondition {
 
 // NodeAddresses returns a list of addresses for the node status
 // within Kubernetes.
-func (p *Provider) NodeAddresses() []v1.NodeAddress {
+func (p *Provider) NodeAddresses(ctx context.Context) []v1.NodeAddress {
 	// TODO: Make these dynamic and augment with custom ACI specific conditions of interest
 	return []v1.NodeAddress{
 		{
@@ -412,7 +413,7 @@ func (p *Provider) NodeAddresses() []v1.NodeAddress {
 
 // NodeDaemonEndpoints returns NodeDaemonEndpoints for the node status
 // within Kubernetes.
-func (p *Provider) NodeDaemonEndpoints() *v1.NodeDaemonEndpoints {
+func (p *Provider) NodeDaemonEndpoints(ctx context.Context) *v1.NodeDaemonEndpoints {
 	return &v1.NodeDaemonEndpoints{
 		KubeletEndpoint: v1.DaemonEndpoint{
 			Port: p.daemonEndpointPort,

@@ -57,7 +57,7 @@
 
 [[constraint]]
   name = "github.com/Azure/azure-sdk-for-go"
-  version = "19.1.0"
+  version = "21.1.0"
 
 [[constraint]]
   name = "github.com/lawrencegripper/pod2docker"
@@ -68,21 +68,26 @@
   version = "1.13.38"
 
 [[constraint]]
-  name = "k8s.io/kubernetes"
-  version = "1.10.0"
+  name = "k8s.io/api"
+  version = "kubernetes-1.13.1"
 
 [[constraint]]
   name = "k8s.io/apimachinery"
-  version = "kubernetes-1.10.0"
+  version = "kubernetes-1.13.1"
 
 [[constraint]]
   name = "k8s.io/client-go"
-  version = "7.0.0"
+  version = "kubernetes-1.13.1"
 
 # These are required for Zun
 [[constraint]]
   name = "github.com/gophercloud/gophercloud"
   revision = "ea2f0eefdc4eeac2e4db99e1a37ede0314efbff4"
+
+[[constraint]]
+  name = "github.com/cpuguy83/strongerrors"
+  version = "0.2.1"
+
 
 # These are required for HyperHQ
 [[override]]
@@ -136,3 +141,15 @@
 [[override]]
   name = "github.com/go-openapi/validate"
   revision = "035dcd74f1f61e83debe1c22950dc53556e7e4b2"
+
+[[constraint]]
+  name = "github.com/Azure/go-autorest"
+  version = "10.8.1"
+
+[[constraint]]
+  name = "github.com/aliyun/alibaba-cloud-sdk-go"
+  version = "1.27.7"
+
+[[override]]
+  name = "github.com/json-iterator/go"
+  version = "v1.1.5"

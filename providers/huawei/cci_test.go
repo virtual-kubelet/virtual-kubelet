@@ -1,6 +1,7 @@
 package huawei
 
 import (
+	"context"
 	"net/http"
 	"os"
 	"testing"
@@ -81,7 +82,7 @@ func TestCreatePod(t *testing.T) {
 		},
 	}
 
-	if err := provider.CreatePod(pod); err != nil {
+	if err := provider.CreatePod(context.Background(), pod); err != nil {
 		t.Fatal("Failed to create pod", err)
 	}
 }
@@ -121,7 +122,7 @@ func TestGetPod(t *testing.T) {
 			},
 		}
 	}
-	pod, err := provider.GetPod(podNamespace, podName)
+	pod, err := provider.GetPod(context.Background(), podNamespace, podName)
 	if err != nil {
 		t.Fatal("Failed to get pod", err)
 	}
@@ -172,7 +173,7 @@ func TestGetPods(t *testing.T) {
 		}
 		return http.StatusOK, []v1.Pod{pod}
 	}
-	pods, err := provider.GetPods()
+	pods, err := provider.GetPods(context.Background())
 	if err != nil {
 		t.Fatal("Failed to get pods", err)
 	}

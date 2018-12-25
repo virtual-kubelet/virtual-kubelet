@@ -404,7 +404,7 @@ func (p *SFMeshProvider) getEndpointFromContainerPort(port v1.ContainerPort) ser
 }
 
 // CreatePod accepts a Pod definition and creates a SF Mesh App.
-func (p *SFMeshProvider) CreatePod(pod *v1.Pod) error {
+func (p *SFMeshProvider) CreatePod(ctx context.Context, pod *v1.Pod) error {
 	log.Printf("receive CreatePod %q\n", pod.Name)
 
 	meshApp, err := p.getMeshApplication(pod)
@@ -440,7 +440,7 @@ func (p *SFMeshProvider) CreatePod(pod *v1.Pod) error {
 }
 
 // UpdatePod updates the pod running inside SF Mesh.
-func (p *SFMeshProvider) UpdatePod(pod *v1.Pod) error {
+func (p *SFMeshProvider) UpdatePod(ctx context.Context, pod *v1.Pod) error {
 	log.Printf("receive UpdatePod %q\n", pod.Name)
 
 	app, err := p.getMeshApplication(pod)
@@ -457,12 +457,12 @@ func (p *SFMeshProvider) UpdatePod(pod *v1.Pod) error {
 }
 
 // DeletePod deletes the specified pod out of SF Mesh.
-func (p *SFMeshProvider) DeletePod(pod *v1.Pod) (err error) {
+func (p *SFMeshProvider) DeletePod(ctx context.Context, pod *v1.Pod) (err error) {
 	log.Printf("receive DeletePod %q\n", pod.Name)
 
-	_, err = p.appClient.Delete(context.Background(), p.resourceGroup, pod.Name)
+	_, err = p.appClient.Delete(ctx, p.resourceGroup, pod.Name)
 	if err != nil {
-		return err
+		return wrapError(err)
 	}
 
 	return nil
@@ -470,10 +470,10 @@ func (p *SFMeshProvider) DeletePod(pod *v1.Pod) (err error) {
 
 // GetPod returns a pod by name that is running inside SF Mesh.
 // returns nil if a pod by that name is not found.
-func (p *SFMeshProvider) GetPod(namespace, name string) (pod *v1.Pod, err error) {
+func (p *SFMeshProvider) GetPod(ctx context.Context, namespace, name string) (pod *v1.Pod, err error) {
 	log.Printf("receive GetPod %q\n", name)
 
-	resp, err := p.appClient.Get(context.Background(), p.resourceGroup, name)
+	resp, err := p.appClient.Get(ctx, p.resourceGroup, name)
 	httpResponse := resp.Response.Response
 
 	if err != nil {
@@ -694,7 +694,7 @@ func (p *SFMeshProvider) applicationDescriptionToPod(app servicefabricmesh.Appli
 }
 
 // GetContainerLogs retrieves the logs of a container by name.
-func (p *SFMeshProvider) GetContainerLogs(namespace, podName, containerName string, tail int) (string, error) {
+func (p *SFMeshProvider) GetContainerLogs(ctx context.Context, namespace, podName, containerName string, tail int) (string, error) {
 	log.Printf("receive GetContainerLogs %q\n", podName)
 	return "", nil
 }
@@ -713,8 +713,8 @@ func (p *SFMeshProvider) ExecInContainer(name string, uid types.UID, container s
 
 // GetPodStatus returns the status of a pod by name that is "running".
 // returns nil if a pod by that name is not found.
-func (p *SFMeshProvider) GetPodStatus(namespace, name string) (*v1.PodStatus, error) {
-	pod, err := p.GetPod(namespace, name)
+func (p *SFMeshProvider) GetPodStatus(ctx context.Context, namespace, name string) (*v1.PodStatus, error) {
+	pod, err := p.GetPod(ctx, namespace, name)
 	if err != nil {
 		return nil, err
 	}
@@ -727,12 +727,12 @@ func (p *SFMeshProvider) GetPodStatus(namespace, name string) (*v1.PodStatus, er
 }
 
 // GetPods returns a list of all pods known to be running within SF Mesh.
-func (p *SFMeshProvider) GetPods() ([]*v1.Pod, error) {
+func (p *SFMeshProvider) GetPods(ctx context.Context) ([]*v1.Pod, error) {
 	log.Printf("receive GetPods\n")
 
 	var pods []*v1.Pod
 
-	list, err := p.appClient.ListByResourceGroup(context.Background(), p.resourceGroup)
+	list, err := p.appClient.ListByResourceGroup(ctx, p.resourceGroup)
 	if err != nil {
 		return pods, err
 	}
@@ -766,7 +766,7 @@ func (p *SFMeshProvider) GetPods() ([]*v1.Pod, error) {
 }
 
 // Capacity returns a resource list containing the capacity limits set for SF Mesh.
-func (p *SFMeshProvider) Capacity() v1.ResourceList {
+func (p *SFMeshProvider) Capacity(ctx context.Context) v1.ResourceList {
 	return v1.ResourceList{
 		"cpu":    resource.MustParse(defaultCPUCapacity),
 		"memory": resource.MustParse(defaultMemoryCapacity),
@@ -776,7 +776,7 @@ func (p *SFMeshProvider) Capacity() v1.ResourceList {
 
 // NodeConditions returns a list of conditions (Ready, OutOfDisk, etc), for updates to the node status
 // within Kubernetes.
-func (p *SFMeshProvider) NodeConditions() []v1.NodeCondition {
+func (p *SFMeshProvider) NodeConditions(ctx context.Context) []v1.NodeCondition {
 	// TODO: Make this configurable
 	return []v1.NodeCondition{
 		{
@@ -825,7 +825,7 @@ func (p *SFMeshProvider) NodeConditions() []v1.NodeCondition {
 
 // NodeAddresses returns a list of addresses for the node status
 // within Kubernetes.
-func (p *SFMeshProvider) NodeAddresses() []v1.NodeAddress {
+func (p *SFMeshProvider) NodeAddresses(ctx context.Context) []v1.NodeAddress {
 	return []v1.NodeAddress{
 		{
 			Type:    "InternalIP",
@@ -836,7 +836,7 @@ func (p *SFMeshProvider) NodeAddresses() []v1.NodeAddress {
 
 // NodeDaemonEndpoints returns NodeDaemonEndpoints for the node status
 // within Kubernetes.
-func (p *SFMeshProvider) NodeDaemonEndpoints() *v1.NodeDaemonEndpoints {
+func (p *SFMeshProvider) NodeDaemonEndpoints(ctx context.Context) *v1.NodeDaemonEndpoints {
 	return &v1.NodeDaemonEndpoints{
 		KubeletEndpoint: v1.DaemonEndpoint{
 			Port: p.daemonEndpointPort,

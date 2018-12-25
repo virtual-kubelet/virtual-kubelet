@@ -1,0 +1,6 @@
+Region = "cn-hangzhou"
+OperatingSystem = "Linux"
+CPU = "20"
+Memory = "100Gi"
+Pods = "20"
+ClusterName = "default"

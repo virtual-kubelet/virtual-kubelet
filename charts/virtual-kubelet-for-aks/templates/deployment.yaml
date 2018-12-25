@@ -41,13 +41,29 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: status.podIP
+        - name: ACI_EXTRA_USER_AGENT
+          value: {{ printf "helm-chart/aks/%s/%s" .Chart.Name .Chart.Version }}
+        - name: ACI_SUBNET_NAME
+          value: {{ .Values.env.aciVnetSubnetName }}
+        - name: ACI_SUBNET_CIDR
+          value: {{ .Values.env.aciVnetSubnetCIDR }}
+        - name: MASTER_URI
+          value: {{ .Values.env.masterUri }}
+        - name: CLUSTER_CIDR
+          value: {{ .Values.env.clusterCIDR }}
+        - name: KUBE_DNS_IP
+          value: {{ .Values.env.kubeDnsIP }}
+        {{ if .Values.loganalytics.enabled }}
+        - name: LOG_ANALYTICS_AUTH_LOCATION
+          value: /etc/virtual-kubelet/loganalytics.json
+        {{ end }}
         volumeMounts:
         - name: credentials
           mountPath: "/etc/virtual-kubelet"
         - name: acs-credential
           mountPath: "/etc/acs/azure.json"
         command: ["virtual-kubelet"]
-        args: ["--provider", "azure", "--namespace", {{ default "" .Values.env.monitoredNamespace | quote }}, "--nodename", {{ default "virtual-kubelet" .Values.env.nodeName | quote }} , "--os", {{ default "Linux" .Values.env.nodeOsType | quote }}, "--taint", {{ default "azure.com/aci" .Values.env.nodeTaint | quote }}]
+        args: ["--provider", "azure", "--namespace", {{ default "" .Values.env.monitoredNamespace | quote }}, "--nodename", {{ default "virtual-kubelet" .Values.env.nodeName | quote }} , "--os", {{ default "Linux" .Values.env.nodeOsType | quote }} ]
       volumes:
       - name: credentials
         secret:

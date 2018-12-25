@@ -10,6 +10,7 @@ import (
 	"runtime"
 	"time"
 
+	"github.com/cpuguy83/strongerrors"
 	"github.com/virtual-kubelet/virtual-kubelet/manager"
 	"github.com/virtual-kubelet/virtual-kubelet/providers"
 
@@ -198,7 +199,7 @@ func newHTTPClient(host string, tlsOptions *tlsconfig.Options) (*http.Client, er
 
 // CreatePod accepts a Pod definition and creates
 // a hyper.sh deployment
-func (p *HyperProvider) CreatePod(pod *v1.Pod) error {
+func (p *HyperProvider) CreatePod(ctx context.Context, pod *v1.Pod) error {
 	log.Printf("receive CreatePod %q\n", pod.Name)
 
 	//Ignore daemonSet Pod
@@ -254,12 +255,12 @@ func (p *HyperProvider) CreatePod(pod *v1.Pod) error {
 }
 
 // UpdatePod is a noop, hyper.sh currently does not support live updates of a pod.
-func (p *HyperProvider) UpdatePod(pod *v1.Pod) error {
+func (p *HyperProvider) UpdatePod(ctx context.Context, pod *v1.Pod) error {
 	return nil
 }
 
 // DeletePod deletes the specified pod out of hyper.sh.
-func (p *HyperProvider) DeletePod(pod *v1.Pod) (err error) {
+func (p *HyperProvider) DeletePod(ctx context.Context, pod *v1.Pod) (err error) {
 	log.Printf("receive DeletePod %q\n", pod.Name)
 	var (
 		containerName = fmt.Sprintf("pod-%s-%s", pod.Name, pod.Name)
@@ -268,6 +269,9 @@ func (p *HyperProvider) DeletePod(pod *v1.Pod) (err error) {
 	// Inspect hyper container
 	container, err = p.hyperClient.ContainerInspect(context.Background(), containerName)
 	if err != nil {
+		if hyper.IsErrContainerNotFound(err) {
+			return strongerrors.NotFound(err)
+		}
 		return err
 	}
 	// Check container label
@@ -298,7 +302,7 @@ func (p *HyperProvider) DeletePod(pod *v1.Pod) (err error) {
 
 // GetPod returns a pod by name that is running inside hyper.sh
 // returns nil if a pod by that name is not found.
-func (p *HyperProvider) GetPod(namespace, name string) (pod *v1.Pod, err error) {
+func (p *HyperProvider) GetPod(ctx context.Context, namespace, name string) (pod *v1.Pod, err error) {
 	var (
 		containerName = fmt.Sprintf("pod-%s-%s", name, name)
 		container     types.ContainerJSON
@@ -318,7 +322,7 @@ func (p *HyperProvider) GetPod(namespace, name string) (pod *v1.Pod, err error) 
 }
 
 // GetContainerLogs retrieves the logs of a container by name from the provider.
-func (p *HyperProvider) GetContainerLogs(namespace, podName, containerName string, tail int) (string, error) {
+func (p *HyperProvider) GetContainerLogs(ctx context.Context, namespace, podName, containerName string, tail int) (string, error) {
 	return "", nil
 }
 
@@ -338,8 +342,8 @@ func (p *HyperProvider) ExecInContainer(name string, uid apitypes.UID, container
 
 // GetPodStatus returns the status of a pod by name that is running inside hyper.sh
 // returns nil if a pod by that name is not found.
-func (p *HyperProvider) GetPodStatus(namespace, name string) (*v1.PodStatus, error) {
-	pod, err := p.GetPod(namespace, name)
+func (p *HyperProvider) GetPodStatus(ctx context.Context, namespace, name string) (*v1.PodStatus, error) {
+	pod, err := p.GetPod(ctx, namespace, name)
 	if err != nil {
 		return nil, err
 	}
@@ -347,7 +351,7 @@ func (p *HyperProvider) GetPodStatus(namespace, name string) (*v1.PodStatus, err
 }
 
 // GetPods returns a list of all pods known to be running within hyper.sh.
-func (p *HyperProvider) GetPods() ([]*v1.Pod, error) {
+func (p *HyperProvider) GetPods(ctx context.Context) ([]*v1.Pod, error) {
 	log.Printf("receive GetPods\n")
 	filter, err := filters.FromParam(fmt.Sprintf("{\"label\":{\"%s=%s\":true}}", nodeLabel, p.nodeName))
 	if err != nil {
@@ -376,7 +380,7 @@ func (p *HyperProvider) GetPods() ([]*v1.Pod, error) {
 }
 
 // Capacity returns a resource list containing the capacity limits set for hyper.sh.
-func (p *HyperProvider) Capacity() v1.ResourceList {
+func (p *HyperProvider) Capacity(ctx context.Context) v1.ResourceList {
 	// TODO: These should be configurable
 	return v1.ResourceList{
 		"cpu":    resource.MustParse("20"),
@@ -387,7 +391,7 @@ func (p *HyperProvider) Capacity() v1.ResourceList {
 
 // NodeConditions returns a list of conditions (Ready, OutOfDisk, etc), for updates to the node status
 // within Kubernetes.
-func (p *HyperProvider) NodeConditions() []v1.NodeCondition {
+func (p *HyperProvider) NodeConditions(ctx context.Context) []v1.NodeCondition {
 	// TODO: Make these dynamic and augment with custom hyper.sh specific conditions of interest
 	return []v1.NodeCondition{
 		{
@@ -436,13 +440,13 @@ func (p *HyperProvider) NodeConditions() []v1.NodeCondition {
 
 // NodeAddresses returns a list of addresses for the node status
 // within Kubernetes.
-func (p *HyperProvider) NodeAddresses() []v1.NodeAddress {
+func (p *HyperProvider) NodeAddresses(ctx context.Context) []v1.NodeAddress {
 	return nil
 }
 
 // NodeDaemonEndpoints returns NodeDaemonEndpoints for the node status
 // within Kubernetes.
-func (p *HyperProvider) NodeDaemonEndpoints() *v1.NodeDaemonEndpoints {
+func (p *HyperProvider) NodeDaemonEndpoints(ctx context.Context) *v1.NodeDaemonEndpoints {
 	return &v1.NodeDaemonEndpoints{}
 }
 

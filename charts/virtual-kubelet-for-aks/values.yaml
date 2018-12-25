@@ -15,6 +15,15 @@ env:
   apiserverCert: 
   apiserverKey: 
   monitoredNamespace:
+  aciVnetSubnetName:
+  aciVnetSubnetCidr:
+  masterUri:
+  clusterCidr:
+  kubeDnsIp:
+loganalytics:
+  enabled: false
+  workspaceID:
+  workspaceKey:
 
 # Install Default RBAC roles and bindings
 rbac:

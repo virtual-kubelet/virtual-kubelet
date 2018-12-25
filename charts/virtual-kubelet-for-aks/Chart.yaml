@@ -1,5 +1,5 @@
 name: virtual-kubelet-for-aks
-version: 0.1.6
+version: 0.1.10
 description: a Helm chart to install virtual kubelet in an AKS or ACS cluster.
 sources:
   - https://github.com/virtual-kubelet/virtual-kubelet

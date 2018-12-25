@@ -1,6 +1,6 @@
 name: virtual-kubelet
-version: 0.3.0
-appVersion: 0.3
+version: 0.5.0
+appVersion: 0.5
 description: A Helm chart to install virtual kubelet inside a Kubernetes cluster.
 icon: https://avatars2.githubusercontent.com/u/34250142
 sources:

@@ -19,7 +19,7 @@ func TestCollectMetrics(t *testing.T) {
 		{desc: "no containers"}, // this is just for sort of fuzzing things, make sure there's no panics
 		{desc: "zeroed stats", stats: [][2]float64{{0, 0}}, rx: 0, tx: 0, collected: time.Now()},
 		{desc: "normal", stats: [][2]float64{{400.0, 1000.0}}, rx: 100.0, tx: 5000.0, collected: time.Now()},
-		{desc: "multiple containers", stats: [][2]float64{{100.0, 250.0}, {400.0, 1000.0}}, rx: 100.0, tx: 439833.0, collected: time.Now()},
+		{desc: "multiple containers", stats: [][2]float64{{100.0, 250.0}, {400.0, 1000.0}, {103.0, 3992.0}}, rx: 100.0, tx: 439833.0, collected: time.Now()},
 	}
 
 	for _, test := range cases {
@@ -29,6 +29,30 @@ func TestCollectMetrics(t *testing.T) {
 
 			system, net := fakeACIMetrics(pod, test)
 			actual := collectMetrics(pod, system, net)
+
+			if len(actual.Containers) != len(expected.Containers) {
+				t.Fatalf("got unexpected results\nexpected:\n%+v\nactual:\n%+v", expected, actual)
+			}
+
+			for _, actualContainer := range actual.Containers {
+				found := false
+				for _, expectedContainer := range expected.Containers {
+					if expectedContainer.Name == actualContainer.Name {
+						if !reflect.DeepEqual(expectedContainer, actualContainer) {
+							t.Fatalf("got unexpected container\nexpected:\n%+v\nactual:\n%+v", expectedContainer, actualContainer)
+						}
+						found = true
+						break;
+					}
+				}
+
+				if !found {
+					t.Fatalf("Unexpected container:\n%+v", actualContainer)
+				}
+			}
+
+			expected.Containers = nil
+			actual.Containers = nil
 
 			if !reflect.DeepEqual(expected, actual) {
 				t.Fatalf("got unexpected results\nexpected:\n%+v\nactual:\n%+v", expected, actual)

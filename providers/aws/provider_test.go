@@ -212,7 +212,7 @@ func TestAWSFargateProviderPodLifecycle(t *testing.T) {
 		}
 
 		// Confirm that there are no pods on the cluster.
-		pods, err := provider.GetPods()
+		pods, err := provider.GetPods(context.Background())
 		if err != nil {
 			t.Error(err)
 		}
@@ -259,13 +259,13 @@ func TestAWSFargateProviderPodLifecycle(t *testing.T) {
 			},
 		}
 
-		err = provider.CreatePod(pod)
+		err = provider.CreatePod(context.Background(), pod)
 		if err != nil {
 			t.Fatal(err)
 		}
 
 		// Now there should be exactly one pod.
-		pods, err = provider.GetPods()
+		pods, err = provider.GetPods(context.Background())
 		if err != nil {
 			t.Error(err)
 		}
@@ -282,7 +282,7 @@ func TestAWSFargateProviderPodLifecycle(t *testing.T) {
 		// Wait a few seconds for the logs to settle.
 		time.Sleep(10 * time.Second)
 
-		logs, err := provider.GetContainerLogs("default", podName, "echo-container", 100)
+		logs, err := provider.GetContainerLogs(context.Background(), "default", podName, "echo-container", 100)
 		if err != nil {
 			t.Error(err)
 		}
@@ -302,7 +302,7 @@ func TestAWSFargateProviderPodLifecycle(t *testing.T) {
 		}
 
 		// Delete the pod.
-		err = provider.DeletePod(pod)
+		err = provider.DeletePod(context.Background(), pod)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -313,7 +313,7 @@ func TestAWSFargateProviderPodLifecycle(t *testing.T) {
 		}
 
 		// The cluster should be empty again.
-		pods, err = provider.GetPods()
+		pods, err = provider.GetPods(context.Background())
 		if err != nil {
 			t.Error(err)
 		}
@@ -340,7 +340,7 @@ func waitUntilPodStatus(provider *vkAWS.FargateProvider, podName string, desired
 		case <-ctx.Done():
 			return ctx.Err()
 		default:
-			status, err := provider.GetPodStatus("default", podName)
+			status, err := provider.GetPodStatus(context.Background(), "default", podName)
 			if err != nil {
 				if strings.Contains(err.Error(), "is not found") {
 					return nil

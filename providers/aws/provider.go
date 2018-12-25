@@ -1,6 +1,7 @@
 package aws
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"log"
@@ -108,7 +109,7 @@ func NewFargateProvider(
 }
 
 // CreatePod takes a Kubernetes Pod and deploys it within the Fargate provider.
-func (p *FargateProvider) CreatePod(pod *corev1.Pod) error {
+func (p *FargateProvider) CreatePod(ctx context.Context, pod *corev1.Pod) error {
 	log.Printf("Received CreatePod request for %+v.\n", pod)
 
 	fgPod, err := fargate.NewPod(p.cluster, pod)
@@ -127,13 +128,13 @@ func (p *FargateProvider) CreatePod(pod *corev1.Pod) error {
 }
 
 // UpdatePod takes a Kubernetes Pod and updates it within the provider.
-func (p *FargateProvider) UpdatePod(pod *corev1.Pod) error {
+func (p *FargateProvider) UpdatePod(ctx context.Context, pod *corev1.Pod) error {
 	log.Printf("Received UpdatePod request for %s/%s.\n", pod.Namespace, pod.Name)
 	return errNotImplemented
 }
 
 // DeletePod takes a Kubernetes Pod and deletes it from the provider.
-func (p *FargateProvider) DeletePod(pod *corev1.Pod) error {
+func (p *FargateProvider) DeletePod(ctx context.Context, pod *corev1.Pod) error {
 	log.Printf("Received DeletePod request for %s/%s.\n", pod.Namespace, pod.Name)
 
 	fgPod, err := p.cluster.GetPod(pod.Namespace, pod.Name)
@@ -152,7 +153,7 @@ func (p *FargateProvider) DeletePod(pod *corev1.Pod) error {
 }
 
 // GetPod retrieves a pod by name from the provider (can be cached).
-func (p *FargateProvider) GetPod(namespace, name string) (*corev1.Pod, error) {
+func (p *FargateProvider) GetPod(ctx context.Context, namespace, name string) (*corev1.Pod, error) {
 	log.Printf("Received GetPod request for %s/%s.\n", namespace, name)
 
 	pod, err := p.cluster.GetPod(namespace, name)
@@ -173,7 +174,7 @@ func (p *FargateProvider) GetPod(namespace, name string) (*corev1.Pod, error) {
 }
 
 // GetContainerLogs retrieves the logs of a container by name from the provider.
-func (p *FargateProvider) GetContainerLogs(namespace, podName, containerName string, tail int) (string, error) {
+func (p *FargateProvider) GetContainerLogs(ctx context.Context, namespace, podName, containerName string, tail int) (string, error) {
 	log.Printf("Received GetContainerLogs request for %s/%s/%s.\n", namespace, podName, containerName)
 	return p.cluster.GetContainerLogs(namespace, podName, containerName, tail)
 }
@@ -193,7 +194,7 @@ func (p *FargateProvider) ExecInContainer(
 }
 
 // GetPodStatus retrieves the status of a pod by name from the provider.
-func (p *FargateProvider) GetPodStatus(namespace, name string) (*corev1.PodStatus, error) {
+func (p *FargateProvider) GetPodStatus(ctx context.Context, namespace, name string) (*corev1.PodStatus, error) {
 	log.Printf("Received GetPodStatus request for %s/%s.\n", namespace, name)
 
 	pod, err := p.cluster.GetPod(namespace, name)
@@ -210,7 +211,7 @@ func (p *FargateProvider) GetPodStatus(namespace, name string) (*corev1.PodStatu
 }
 
 // GetPods retrieves a list of all pods running on the provider (can be cached).
-func (p *FargateProvider) GetPods() ([]*corev1.Pod, error) {
+func (p *FargateProvider) GetPods(ctx context.Context) ([]*corev1.Pod, error) {
 	log.Println("Received GetPods request.")
 
 	pods, err := p.cluster.GetPods()
@@ -237,7 +238,7 @@ func (p *FargateProvider) GetPods() ([]*corev1.Pod, error) {
 }
 
 // Capacity returns a resource list with the capacity constraints of the provider.
-func (p *FargateProvider) Capacity() corev1.ResourceList {
+func (p *FargateProvider) Capacity(ctx context.Context) corev1.ResourceList {
 	log.Println("Received Capacity request.")
 
 	return corev1.ResourceList{
@@ -250,7 +251,7 @@ func (p *FargateProvider) Capacity() corev1.ResourceList {
 
 // NodeConditions returns a list of conditions (Ready, OutOfDisk, etc), which is polled
 // periodically to update the node status within Kubernetes.
-func (p *FargateProvider) NodeConditions() []corev1.NodeCondition {
+func (p *FargateProvider) NodeConditions(ctx context.Context) []corev1.NodeCondition {
 	log.Println("Received NodeConditions request.")
 
 	lastHeartbeatTime := metav1.Now()
@@ -301,7 +302,7 @@ func (p *FargateProvider) NodeConditions() []corev1.NodeCondition {
 			Message:            lastTransitionMessage,
 		},
 		{
-			Type:               corev1.NodeKubeletConfigOk,
+			Type:               "KubeletConfigOk",
 			Status:             corev1.ConditionTrue,
 			LastHeartbeatTime:  lastHeartbeatTime,
 			LastTransitionTime: lastTransitionTime,
@@ -312,7 +313,7 @@ func (p *FargateProvider) NodeConditions() []corev1.NodeCondition {
 }
 
 // NodeAddresses returns a list of addresses for the node status within Kubernetes.
-func (p *FargateProvider) NodeAddresses() []corev1.NodeAddress {
+func (p *FargateProvider) NodeAddresses(ctx context.Context) []corev1.NodeAddress {
 	log.Println("Received NodeAddresses request.")
 
 	return []corev1.NodeAddress{
@@ -324,7 +325,7 @@ func (p *FargateProvider) NodeAddresses() []corev1.NodeAddress {
 }
 
 // NodeDaemonEndpoints returns NodeDaemonEndpoints for the node status within Kubernetes.
-func (p *FargateProvider) NodeDaemonEndpoints() *corev1.NodeDaemonEndpoints {
+func (p *FargateProvider) NodeDaemonEndpoints(ctx context.Context) *corev1.NodeDaemonEndpoints {
 	log.Println("Received NodeDaemonEndpoints request.")
 
 	return &corev1.NodeDaemonEndpoints{

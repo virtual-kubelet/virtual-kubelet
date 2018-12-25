@@ -39,6 +39,8 @@ spec:
 {{- if .loganalytics.enabled }}
         - name: LOG_ANALYTICS_AUTH_LOCATION
           value: /etc/virtual-kubelet/loganalytics.json
+        - name: CLUSTER_RESOURCE_ID
+          value:  {{ .loganalytics.clusterResourceId }}
 {{- end }}
 {{- if .targetAKS }}
         - name: ACS_CREDENTIAL_LOCATION
@@ -58,6 +60,8 @@ spec:
           value: {{ .aciResourceGroup }}
         - name: ACI_REGION
           value: {{ .aciRegion }}
+        - name: ACI_EXTRA_USER_AGENT
+          value: {{ printf "helm-chart/aks/%s/%s" $.Chart.Name $.Chart.Version }}
 {{- else }}
         - name: AZURE_AUTH_LOCATION
           value: /etc/virtual-kubelet/credentials.json
@@ -65,7 +69,24 @@ spec:
           value: {{ required "aciResourceGroup is required" .aciResourceGroup }}
         - name: ACI_REGION
           value: {{ required "aciRegion is required" .aciRegion }}
+        - name: ACI_EXTRA_USER_AGENT
+          value: {{ printf "helm-chart/other/%s/%s" $.Chart.Name $.Chart.Version }}
 {{- end }}
+{{- if .vnet.enabled }}
+        - name: ACI_SUBNET_NAME
+          value: {{ required "subnetName is required" .vnet.subnetName }}
+        - name: ACI_SUBNET_CIDR
+          value: {{ .vnet.subnetCidr }}
+        - name: MASTER_URI
+          value: {{ required "masterUri is required" .masterUri }}
+        - name: CLUSTER_CIDR
+          value: {{ required "clusterCidr is required" .vnet.clusterCidr }}
+        - name: KUBE_DNS_IP
+          value: {{ required "kubeDnsIp is required" .vnet.kubeDnsIp }}
+{{- else }}
+        - name: MASTER_URI
+          value: {{ .masterUri }}
+{{- end }}          
 {{- end }}
 {{- end }}
         volumeMounts:

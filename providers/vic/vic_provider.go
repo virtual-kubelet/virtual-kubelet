@@ -193,7 +193,7 @@ func initLogger() {
 }
 
 // CreatePod takes a Kubernetes Pod and deploys it within the provider.
-func (v *VicProvider) CreatePod(pod *v1.Pod) error {
+func (v *VicProvider) CreatePod(ctx context.Context, pod *v1.Pod) error {
 	op := trace.NewOperation(context.Background(), "CreatePod - %s", pod.Name)
 	defer trace.End(trace.Begin(pod.Name, op))
 
@@ -216,14 +216,14 @@ func (v *VicProvider) CreatePod(pod *v1.Pod) error {
 }
 
 // UpdatePod takes a Kubernetes Pod and updates it within the provider.
-func (v *VicProvider) UpdatePod(pod *v1.Pod) error {
+func (v *VicProvider) UpdatePod(ctx context.Context, pod *v1.Pod) error {
 	op := trace.NewOperation(context.Background(), "UpdatePod - %s", pod.Name)
 	defer trace.End(trace.Begin(pod.Name, op))
 	return nil
 }
 
 // DeletePod takes a Kubernetes Pod and deletes it from the provider.
-func (v *VicProvider) DeletePod(pod *v1.Pod) error {
+func (v *VicProvider) DeletePod(ctx context.Context, pod *v1.Pod) error {
 	op := trace.NewOperation(context.Background(), "DeletePod - %s", pod.Name)
 	defer trace.End(trace.Begin(pod.Name, op))
 
@@ -240,7 +240,7 @@ func (v *VicProvider) DeletePod(pod *v1.Pod) error {
 }
 
 // GetPod retrieves a pod by name from the provider (can be cached).
-func (v *VicProvider) GetPod(namespace, name string) (*v1.Pod, error) {
+func (v *VicProvider) GetPod(ctx context.Context, namespace, name string) (*v1.Pod, error) {
 	op := trace.NewOperation(context.Background(), "GetPod - %s", name)
 	defer trace.End(trace.Begin(name, op))
 
@@ -254,7 +254,7 @@ func (v *VicProvider) GetPod(namespace, name string) (*v1.Pod, error) {
 }
 
 // GetContainerLogs retrieves the logs of a container by name from the provider.
-func (v *VicProvider) GetContainerLogs(namespace, podName, containerName string, tail int) (string, error) {
+func (v *VicProvider) GetContainerLogs(ctx context.Context, namespace, podName, containerName string, tail int) (string, error) {
 	op := trace.NewOperation(context.Background(), "GetContainerLogs - pod[%s], container[%s]", podName, containerName)
 	defer trace.End(trace.Begin("", op))
 
@@ -276,7 +276,7 @@ func (p *VicProvider) ExecInContainer(name string, uid types.UID, container stri
 
 // GetPodStatus retrieves the status of a pod by name from the provider.
 // This function needs to return a status or the reconcile loop will stop running.
-func (v *VicProvider) GetPodStatus(namespace, name string) (*v1.PodStatus, error) {
+func (v *VicProvider) GetPodStatus(ctx context.Context, namespace, name string) (*v1.PodStatus, error) {
 	op := trace.NewOperation(context.Background(), "GetPodStatus - pod[%s], namespace", name, namespace)
 	defer trace.End(trace.Begin("GetPodStatus", op))
 
@@ -313,7 +313,7 @@ func (v *VicProvider) GetPodStatus(namespace, name string) (*v1.PodStatus, error
 	}
 
 	var nodeAddress string
-	nodeAddresses := v.NodeAddresses()
+	nodeAddresses := v.NodeAddresses(ctx)
 	if len(nodeAddresses) > 0 {
 		nodeAddress = nodeAddresses[0].Address
 	} else {
@@ -348,7 +348,7 @@ func (v *VicProvider) GetPodStatus(namespace, name string) (*v1.PodStatus, error
 }
 
 // GetPods retrieves a list of all pods running on the provider (can be cached).
-func (v *VicProvider) GetPods() ([]*v1.Pod, error) {
+func (v *VicProvider) GetPods(ctx context.Context) ([]*v1.Pod, error) {
 	op := trace.NewOperation(context.Background(), "GetPods")
 	defer trace.End(trace.Begin("GetPods", op))
 
@@ -362,7 +362,7 @@ func (v *VicProvider) GetPods() ([]*v1.Pod, error) {
 }
 
 // Capacity returns a resource list with the capacity constraints of the provider.
-func (v *VicProvider) Capacity() v1.ResourceList {
+func (v *VicProvider) Capacity(ctx context.Context) v1.ResourceList {
 	op := trace.NewOperation(context.Background(), "VicProvider.Capacity")
 	defer trace.End(trace.Begin("", op))
 
@@ -382,7 +382,7 @@ func (v *VicProvider) Capacity() v1.ResourceList {
 
 // NodeConditions returns a list of conditions (Ready, OutOfDisk, etc), which is polled periodically to update the node status
 // within Kubernetes.
-func (v *VicProvider) NodeConditions() []v1.NodeCondition {
+func (v *VicProvider) NodeConditions(ctx context.Context) []v1.NodeCondition {
 	// TODO: Make these dynamic and augment with custom ACI specific conditions of interest
 	return []v1.NodeCondition{
 		{
@@ -430,7 +430,7 @@ func (v *VicProvider) NodeConditions() []v1.NodeCondition {
 
 // NodeAddresses returns a list of addresses for the node status
 // within Kubernetes.
-func (v *VicProvider) NodeAddresses() []v1.NodeAddress {
+func (v *VicProvider) NodeAddresses(ctx context.Context) []v1.NodeAddress {
 	addrs, err := net.InterfaceAddrs()
 	if err != nil {
 		return []v1.NodeAddress{}
@@ -454,7 +454,7 @@ func (v *VicProvider) NodeAddresses() []v1.NodeAddress {
 
 // NodeDaemonEndpoints returns NodeDaemonEndpoints for the node status
 // within Kubernetes.
-func (v *VicProvider) NodeDaemonEndpoints() *v1.NodeDaemonEndpoints {
+func (v *VicProvider) NodeDaemonEndpoints(ctx context.Context) *v1.NodeDaemonEndpoints {
 	return &v1.NodeDaemonEndpoints{
 		KubeletEndpoint: v1.DaemonEndpoint{
 			Port: 80,
