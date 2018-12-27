@@ -1,4 +1,4 @@
-package alicloud
+package alibabacloud
 
 import (
 	"io"
