@@ -1,18 +1,18 @@
-// +build !no_alicloud_provider
+// +build !no_alibabacloud_provider
 
 package register
 
 import (
 	"github.com/virtual-kubelet/virtual-kubelet/providers"
-	"github.com/virtual-kubelet/virtual-kubelet/providers/alicloud"
+	"github.com/virtual-kubelet/virtual-kubelet/providers/alibabacloud"
 )
 
 func init() {
-	register("alicloud", aliCloudInit)
+	register("alibabacloud", aliCloudInit)
 }
 
 func aliCloudInit(cfg InitConfig) (providers.Provider, error) {
-	return alicloud.NewECIProvider(
+	return alibabacloud.NewECIProvider(
 		cfg.ConfigPath,
 		cfg.ResourceManager,
 		cfg.NodeName,

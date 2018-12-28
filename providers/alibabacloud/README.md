@@ -21,7 +21,7 @@ export ECI_VSWITCH=vsw-123
 export ECI_ACCESS_KEY=123
 export ECI_SECRET_KEY=123
 
-VKUBELET_TAINT_KEY=alibabacloud.com/eci virtual-kubelet --provider alicloud
+VKUBELET_TAINT_KEY=alibabacloud.com/eci virtual-kubelet --provider alibabacloud
 ```
 confirm the virtual kubelet is connected to k8s cluster
 ```
