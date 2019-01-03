@@ -25,6 +25,7 @@ The best description is "Kubernetes API on top, programmable back."
     + [AWS Fargate Provider](#aws-fargate-provider)
     + [Hyper.sh Provider](#hypersh-provider)
     + [Service Fabric Mesh Provider](#service-fabric-mesh-provider)
+	+ [HashiCorp Nomad](#hashicorp-nomad-provider)
     + [Adding a New Provider via the Provider Interface](#adding-a-new-provider-via-the-provider-interface)
 * [Testing](#testing)
     + [Unit tests](#unit-tests)
@@ -199,6 +200,20 @@ Service Fabric Mesh is a fully managed service that lets developers deploy micro
 ```
 
 More detailed instructions can be found [here](providers/sfmesh/README.md).
+
+### HashiCorp Nomad Provider
+
+HashiCorp Nomad provider for Virtual Kubelet connects your Kubernetes cluster
+with Nomad cluster by exposing the Nomad cluster as a node in Kubernetes. By
+using the provider, pods that are scheduled on the virtual Nomad node
+registered on Kubernetes will run as jobs on Nomad clients as they
+would on a Kubernetes node.
+
+```bash
+./bin/virtual-kubelet --provider="nomad"
+```
+
+For detailed instrustions, follow the guide [here](providers/nomad/README.md).
 
 ### Adding a New Provider via the Provider Interface
 
