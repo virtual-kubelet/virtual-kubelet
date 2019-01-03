@@ -32,6 +32,16 @@ jobs:
           echo 'export AZURE_AUTH_LOCATION=${outputPathCredsfile}' >> $BASH_ENV
       - run: |
           echo 'export KUBECONFIG=${outputPathKubeConfigFile}' >> $BASH_ENV
+      - run: |
+          curl \
+            --silent \
+            --location \
+            --output nomad.zip \
+            https://releases.hashicorp.com/nomad/0.8.6/nomad_0.8.6_linux_amd64.zip && \
+          unzip nomad.zip && \
+          chmod +x nomad && \
+          mv nomad /go/bin/nomad && \
+          rm nomad.zip
       - run:
           name: Build
           command: V=1 make build
