@@ -213,7 +213,7 @@ would on a Kubernetes node.
 ./bin/virtual-kubelet --provider="nomad"
 ```
 
-For detailed instrustions, follow the guide [here](providers/nomad/README.md).
+For detailed instructions, follow the guide [here](providers/nomad/README.md).
 
 ### Adding a New Provider via the Provider Interface
 
