@@ -8,6 +8,10 @@ would on a Kubernetes node.
 
 **This is an experimental project. This project isn't production ready.**
 
+## Demo
+
+![Virtual Kubelet Nomad Provider Demo](./images/virtual-kubelet-nomad-provider-showcase.gif "Virtual Kubelet Nomad Provider Demo")
+
 ## Prerequisites
 
 This guide assumes the following:
