@@ -132,3 +132,31 @@ func TestPodResourceRequirements(t *testing.T) {
 			})
 	}
 }
+
+// TestGetVolumesFrom tests whether annotations in the form user1=sharer1, user2=sharer2 are parsed correctly
+func TestGetVolumesFrom(t *testing.T) {
+	type testCase struct {
+		annotation string
+		container  string
+		expected   []string
+	}
+
+	testCases := []testCase{
+		{annotation: "user=sharer", container: "user", expected: []string{"sharer"}},
+		{annotation: "user=sharer1, user=sharer2", container: "user", expected: []string{"sharer1", "sharer2"}},
+		{annotation: "userx=sharer1, userx=sharer2", container: "user", expected: nil},
+		{annotation: "userx=sharer1, user=sharer2", container: "user", expected: []string{"sharer2"}},
+		{annotation: "userx=sharer1,user=sharer2, ignore this", container: "user", expected: []string{"sharer2"}},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.annotation, func(t *testing.T) {
+			result := getVolumesFrom(tc.container, tc.annotation)
+			var actual []string
+			for _, v := range result {
+				actual = append(actual, *v.SourceContainer)
+			}
+			assert.Equal(t, tc.expected, actual, "volumesFrom expected (%v), got (%v)", tc.expected, actual)
+		})
+	}
+}

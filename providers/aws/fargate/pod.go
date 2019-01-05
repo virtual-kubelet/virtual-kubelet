@@ -88,6 +88,37 @@ func NewPod(cluster *Cluster, pod *corev1.Pod) (*Pod, error) {
 			return nil, err
 		}
 
+		// Volumes from could be defined in an annotation in the form volumesFrom: user1=sharer1,user2=sharer2
+		cntr.definition.VolumesFrom = getVolumesFrom(*cntr.definition.Name, pod.Annotations["volumesFrom"])
+
+		// Configure container logs to be sent to CloudWatch Logs if enabled.
+		if cluster.cloudWatchLogGroupName != "" {
+			cntr.configureLogs(cluster.region, cluster.cloudWatchLogGroupName, tag)
+		}
+
+		// Add the container's resource requirements to its pod's total resource requirements.
+		fgPod.taskCPU += *cntr.definition.Cpu
+		fgPod.taskMemory += *cntr.definition.Memory
+
+		// Insert the container to its pod.
+		fgPod.containers[containerSpec.Name] = cntr
+
+		// Insert container definition to the task definition.
+		taskDef.ContainerDefinitions = append(taskDef.ContainerDefinitions, &cntr.definition)
+	}
+
+	// This is something of a hack - it merely marks initContainers as not "essential"
+	// so the Fargate task won't stop when these stop. There's no guarantee an initContainer will start up first.
+	for _, containerSpec := range pod.Spec.InitContainers {
+		// Create a container definition.
+		cntr, err := newContainer(&containerSpec)
+		if err != nil {
+			return nil, err
+		}
+
+		// Set the Essential flag off for init Containers
+		cntr.definition.Essential = aws.Bool(false)
+
 		// Configure container logs to be sent to CloudWatch Logs if enabled.
 		if cluster.cloudWatchLogGroupName != "" {
 			cntr.configureLogs(cluster.region, cluster.cloudWatchLogGroupName, tag)
@@ -141,6 +172,26 @@ func NewPod(cluster *Cluster, pod *corev1.Pod) (*Pod, error) {
 	}
 
 	return fgPod, nil
+}
+
+// getVolumesFrom finds any VolumesFrom annotations relating to the container with this name
+func getVolumesFrom(name string, annotation string) (v []*ecs.VolumeFrom) {
+	for _, vfItem := range strings.Split(annotation, ",") {
+		vf := strings.Split(vfItem, "=")
+		if len(vf) != 2 {
+			log.Printf("Ignoring unparseable volumesFrom annotation: %s", vf)
+		} else {
+			user := strings.TrimSpace(vf[0])
+			sharer := strings.TrimSpace(vf[1])
+			if user == name {
+				log.Printf("Container %s shares volumes from %s", user, sharer)
+				volumeFrom := ecs.VolumeFrom{SourceContainer: aws.String(sharer)}
+				v = append(v, &volumeFrom)
+			}
+		}
+	}
+
+	return v
 }
 
 // NewPodFromTag creates a new pod identified by a tag.
