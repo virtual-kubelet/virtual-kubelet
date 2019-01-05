@@ -32,7 +32,7 @@ export NOMAD_REGION="global"
 ### Run Virtual Kubelet with Nomad Provider
 
 ```bash
-./virtual-kubelet --provider="nomad"
+VK_TAINT_KEY="hashicorp.com/nomad" ./virtual-kubelet --provider="nomad"
 ```
 
 Validate that the virtual kubelet node is registered.
@@ -107,4 +107,9 @@ spec:
     kubernetes.io/role: agent
     beta.kubernetes.io/os: linux
     type: virtual-kubelet
+  tolerations:
+  - key: virtual-kubelet.io/provider
+    operator: Exists
+  - key: hashicorp.com/nomad
+    effect: NoSchedule
 ```
