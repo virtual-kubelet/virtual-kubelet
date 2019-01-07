@@ -71,6 +71,10 @@ Lawrence Gripper (lawrence.gripper@microsoft.com)
 
 Ben Corrie (bcorrie@vmware.com)
 
+**HashiCorp Nomad**
+
+Anubhav Mishra (mishra@hashicorp.com)
+
 ## Support Channels
 
 This is an open source project and as such no formal support is available.
