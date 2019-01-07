@@ -110,6 +110,7 @@ func (p *Provider) UpdatePod(ctx context.Context, pod *v1.Pod) error {
 	return nil
 }
 
+// DeletePod accepts a Pod definition and deletes a Nomad job.
 func (p *Provider) DeletePod(ctx context.Context, pod *v1.Pod) (err error) {
 	// Deregister job
 	response, _, err := p.nomadClient.Jobs().Deregister(pod.Name, true, nil)
