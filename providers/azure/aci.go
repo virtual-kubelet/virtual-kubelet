@@ -95,17 +95,25 @@ type AuthConfig struct {
 
 // See https://azure.microsoft.com/en-us/status/ for valid regions.
 var validAciRegions = []string{
+	"australiaeast",
+	"canadacentral",
+	"centralindia",
 	"centralus",
+	"eastasia",
 	"eastus",
 	"eastus2",
+	"eastus2euap",
+	"japaneast",
+	"northcentralus",
+	"northeurope",
+	"southcentralus",
+	"southeastasia",
+	"southindia",
+	"uksouth",
+	"westcentralus",
 	"westus",
 	"westus2",
-	"northeurope",
 	"westeurope",
-	"southeastasia",
-	"australiaeast",
-	"eastus2euap",
-	"westcentralus",
 }
 
 // isValidACIRegion checks to make sure we're using a valid ACI region
