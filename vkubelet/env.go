@@ -227,7 +227,7 @@ loop:
 			vf := env.ValueFrom.ConfigMapKeyRef
 			// Check whether the key reference is optional.
 			// This will control whether we fail when unable to read the requested key.
-			optional := vf != nil && *vf.Optional
+			optional := vf != nil && vf.Optional != nil && *vf.Optional
 			// Try to grab the referenced configmap.
 			m, err := rm.GetConfigMap(vf.Name, pod.Namespace)
 			if err != nil {
@@ -279,7 +279,7 @@ loop:
 			vf := env.ValueFrom.SecretKeyRef
 			// Check whether the key reference is optional.
 			// This will control whether we fail when unable to read the requested key.
-			optional := vf != nil && *vf.Optional
+			optional := vf != nil && vf.Optional != nil && *vf.Optional
 			// Try to grab the referenced secret.
 			s, err := rm.GetSecret(vf.Name, pod.Namespace)
 			if err != nil {
