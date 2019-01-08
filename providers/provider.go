@@ -61,3 +61,14 @@ type Provider interface {
 type PodMetricsProvider interface {
 	GetStatsSummary(context.Context) (*stats.Summary, error)
 }
+
+// PodNotifier notifies callers of pod changes.
+// Providers should implement this interface to enable callers to be notified
+// of pod status updates asyncronously.
+type PodNotifier interface {
+	// NotifyPods instructs the notifier to call the passed in function when
+	// the pod status changes.
+	//
+	// NotifyPods should not block callers.
+	NotifyPods(context.Context, func(*v1.Pod))
+}

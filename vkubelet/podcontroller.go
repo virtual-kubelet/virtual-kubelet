@@ -39,11 +39,6 @@ import (
 	"github.com/virtual-kubelet/virtual-kubelet/log"
 )
 
-const (
-	// maxRetries is the number of times we try to process a given key before permanently forgetting it.
-	maxRetries = 20
-)
-
 // PodController is the controller implementation for Pod resources.
 type PodController struct {
 	// server is the instance to which this controller belongs.
@@ -158,11 +153,6 @@ func (pc *PodController) runWorker(ctx context.Context, workerId string) {
 
 // processNextWorkItem will read a single work item off the work queue and attempt to process it,by calling the syncHandler.
 func (pc *PodController) processNextWorkItem(ctx context.Context, workerId string) bool {
-	obj, shutdown := pc.workqueue.Get()
-
-	if shutdown {
-		return false
-	}
 
 	// We create a span only after popping from the queue so that we can get an adequate picture of how long it took to process the item.
 	ctx, span := trace.StartSpan(ctx, "processNextWorkItem")
@@ -170,52 +160,7 @@ func (pc *PodController) processNextWorkItem(ctx context.Context, workerId strin
 
 	// Add the ID of the current worker as an attribute to the current span.
 	ctx = span.WithField(ctx, "workerId", workerId)
-
-	// We wrap this block in a func so we can defer pc.workqueue.Done.
-	err := func(obj interface{}) error {
-		// We call Done here so the work queue knows we have finished processing this item.
-		// We also must remember to call Forget if we do not want this work item being re-queued.
-		// For example, we do not call Forget if a transient error occurs.
-		// Instead, the item is put back on the work queue and attempted again after a back-off period.
-		defer pc.workqueue.Done(obj)
-		var key string
-		var ok bool
-		// We expect strings to come off the work queue.
-		// These are of the form namespace/name.
-		// We do this as the delayed nature of the work queue means the items in the informer cache may actually be more up to date that when the item was initially put onto the workqueue.
-		if key, ok = obj.(string); !ok {
-			// As the item in the work queue is actually invalid, we call Forget here else we'd go into a loop of attempting to process a work item that is invalid.
-			pc.workqueue.Forget(obj)
-			log.G(ctx).Warnf("expected string in work queue but got %#v", obj)
-			return nil
-		}
-		// Add the current key as an attribute to the current span.
-		ctx = span.WithField(ctx, "key", key)
-		// Run the syncHandler, passing it the namespace/name string of the Pod resource to be synced.
-		if err := pc.syncHandler(ctx, key); err != nil {
-			if pc.workqueue.NumRequeues(key) < maxRetries {
-				// Put the item back on the work queue to handle any transient errors.
-				log.G(ctx).Warnf("requeuing %q due to failed sync: %v", key, err)
-				pc.workqueue.AddRateLimited(key)
-				return nil
-			}
-			// We've exceeded the maximum retries, so we must forget the key.
-			pc.workqueue.Forget(key)
-			return pkgerrors.Wrapf(err, "forgetting %q due to maximum retries reached", key)
-		}
-		// Finally, if no error occurs we Forget this item so it does not get queued again until another change happens.
-		pc.workqueue.Forget(obj)
-		return nil
-	}(obj)
-
-	if err != nil {
-		// We've actually hit an error, so we set the span's status based on the error.
-		span.SetStatus(ocstatus.FromError(err))
-		log.G(ctx).Error(err)
-		return true
-	}
-
-	return true
+	return handleQueueItem(ctx, pc.workqueue, pc.syncHandler)
 }
 
 // syncHandler compares the actual state with the desired, and attempts to converge the two.
