@@ -1344,10 +1344,11 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:4ad75195b51cdd9b2a075c389e9d507394bc33b82d3ff8d9a32107e8fe9a391e"
+  digest = "1:4906a472dae724cd9a033dd55eba6e3ad0deb45e76e054697b2739786459a62f"
   name = "golang.org/x/crypto"
   packages = [
     "blake2b",
+    "internal/subtle",
     "nacl/secretbox",
     "pkcs12",
     "pkcs12/internal/rc2",
@@ -1356,7 +1357,7 @@
     "ssh/terminal",
   ]
   pruneopts = "NUT"
-  revision = "94eea52f7b742c7cbe0b03b22f0c4c8631ece122"
+  revision = "ff983b9c42bc9fbf91556e191cc8efb585c16908"
 
 [[projects]]
   branch = "master"
@@ -1402,9 +1403,10 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:ee40f9506736b3b55162b22d82911b797301904848b1f1ae5db49f561ad48a79"
+  digest = "1:e20cbdb894c1abfe36062069599289d5b8b1d77be5e940eae0cb02f3f4b92377"
   name = "golang.org/x/sys"
   packages = [
+    "cpu",
     "unix",
     "windows",
   ]
