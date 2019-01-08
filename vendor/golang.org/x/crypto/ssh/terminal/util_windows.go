@@ -26,7 +26,7 @@ type State struct {
 	mode uint32
 }
 
-// IsTerminal returns true if the given file descriptor is a terminal.
+// IsTerminal returns whether the given file descriptor is a terminal.
 func IsTerminal(fd int) bool {
 	var st uint32
 	err := windows.GetConsoleMode(windows.Handle(fd), &st)
@@ -89,9 +89,15 @@ func ReadPassword(fd int) ([]byte, error) {
 		return nil, err
 	}
 
-	defer func() {
-		windows.SetConsoleMode(windows.Handle(fd), old)
-	}()
+	defer windows.SetConsoleMode(windows.Handle(fd), old)
 
-	return readPasswordLine(os.NewFile(uintptr(fd), "stdin"))
+	var h windows.Handle
+	p, _ := windows.GetCurrentProcess()
+	if err := windows.DuplicateHandle(p, windows.Handle(fd), p, &h, 0, false, windows.DUPLICATE_SAME_ACCESS); err != nil {
+		return nil, err
+	}
+
+	f := os.NewFile(uintptr(h), "stdin")
+	defer f.Close()
+	return readPasswordLine(f)
 }
