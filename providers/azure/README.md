@@ -8,8 +8,8 @@ This document details configuring the Virtual Kubelet ACI provider.
 
 #### Table of Contents
 
-* [Prerequiste](#prerequisite)
 * [Feature set](#current-feature-set)
+* [Prerequiste](#prerequisite)
 * [Set-up virtual node in AKS](#set-up-virtual-node-in-AKS)
 * [Quick set-up with the ACI Connector](#quick-set-up-with-the-aci-connector)
 * [Manual set-up](#manual-set-up)
@@ -19,17 +19,6 @@ This document details configuring the Virtual Kubelet ACI provider.
 * [Work arounds](#work-arounds-for-the-aci-connector)
 * [Upgrade the ACI Connector ](#upgrade-the-aci-connector)
 * [Remove the Virtual Kubelet](#remove-the-virtual-kubelet)
-
-## Prerequisite
-
-This guide assumes that you have a Kubernetes cluster up and running (can be `minikube`) and that `kubectl` is already configured to talk to it.
-
-Other pre-requesites are:
-
-* A [Microsoft Azure account](https://azure.microsoft.com/en-us/free/).
-* Install the [Azure CLI](#install-the-azure-cli).
-* Install the [Kubernetes CLI](#install-the-kubernetes-cli).
-* Install the [Helm CLI](#install-the-helm-cli).
 
 ## Current feature set
 
@@ -47,7 +36,6 @@ Virtual Kubelet's ACI provider relies heavily on the feature set that Azure Cont
 * [Exec support](https://docs.microsoft.com/en-us/azure/container-instances/container-instances-exec) for container instances 
 * Azure Monitoring integration or formally OMS
 
-
 **Limitations**
 * Using service principal credentials to pull ACR images 
 * Liveness and readiness probes (WIP)
@@ -56,9 +44,16 @@ Virtual Kubelet's ACI provider relies heavily on the feature set that Azure Cont
 * Argument support for exec 
 * [Host aliases](https://kubernetes.io/docs/concepts/services-networking/add-entries-to-pod-etc-hosts-with-host-aliases/) support 
 
+## Prerequisite
 
+This guide assumes that you have a Kubernetes cluster up and running (can be `minikube`) and that `kubectl` is already configured to talk to it.
 
+Other pre-requesites are:
 
+* A [Microsoft Azure account](https://azure.microsoft.com/en-us/free/).
+* Install the [Azure CLI](#install-the-azure-cli).
+* Install the [Kubernetes CLI](#install-the-kubernetes-cli).
+* Install the [Helm CLI](#install-the-helm-cli).
 
 ### Install the Azure CLI
 
