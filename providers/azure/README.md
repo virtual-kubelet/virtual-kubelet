@@ -37,23 +37,23 @@ Virtual Kubelet's ACI provider relies heavily on the feature set that Azure Cont
 
 *WIP*
 
-*Features*
+**Features**
 * Volumes: empty dir, github repo, Azure Files
 * Secure env variables, config maps
 * Bring your own virtual network (VNet)
-* Deploy to GPU enabled container instances (documentation in progress)
+* Deploy to GPU enabled container instances *(documentation in progress)*
 * Network security group support 
 * Basic Azure Networking support within AKS virtual node 
 * [Exec support](https://docs.microsoft.com/en-us/azure/container-instances/container-instances-exec) for container instances 
 * Azure Monitoring integration or formally OMS
 
 
-*Limitations*
+**Limitations**
 * Using service principal credentials to pull ACR images 
 * Liveness and readiness probes (WIP)
 * [Limitations](https://docs.microsoft.com/en-us/azure/container-instances/container-instances-vnet) with VNet 
 * VNet peering
-* Arguement support for exec 
+* Argument support for exec 
 * [Host aliases](https://kubernetes.io/docs/concepts/services-networking/add-entries-to-pod-etc-hosts-with-host-aliases/) support 
 
 
