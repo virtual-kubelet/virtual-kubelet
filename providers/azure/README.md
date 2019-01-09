@@ -9,6 +9,7 @@ This document details configuring the Virtual Kubelet ACI provider.
 #### Table of Contents
 
 * [Prerequiste](#prerequisite)
+* [Feature set](#current-feature-set)
 * [Set-up virtual node in AKS](#set-up-virtual-node-in-AKS)
 * [Quick set-up with the ACI Connector](#quick-set-up-with-the-aci-connector)
 * [Manual set-up](#manual-set-up)
@@ -29,6 +30,35 @@ Other pre-requesites are:
 * Install the [Azure CLI](#install-the-azure-cli).
 * Install the [Kubernetes CLI](#install-the-kubernetes-cli).
 * Install the [Helm CLI](#install-the-helm-cli).
+
+## Current feature set
+
+Virtual Kubelet's ACI provider relies heavily on the feature set that Azure Container Instances provide. Please check the Azure documentation accurate details on region avaliability, pricing and new features. The list here attempts to give an accurate reference for the features we support in ACI and the ACI provider within Virtual Kubelet. 
+
+*WIP*
+
+*Features*
+* Volumes: empty dir, github repo, Azure Files
+* Secure env variables, config maps
+* Bring your own virtual network (VNet)
+* Deploy to GPU enabled container instances (documentation in progress)
+* Network security group support 
+* Basic Azure Networking support within AKS virtual node 
+* [Exec support](https://docs.microsoft.com/en-us/azure/container-instances/container-instances-exec) for container instances 
+* Azure Monitoring integration or formally OMS
+
+
+*Limitations*
+* Using service principal credentials to pull ACR images 
+* Liveness and readiness probes (WIP)
+* [Limitations](https://docs.microsoft.com/en-us/azure/container-instances/container-instances-vnet) with VNet 
+* VNet peering
+* Arguement support for exec 
+* [Host aliases](https://kubernetes.io/docs/concepts/services-networking/add-entries-to-pod-etc-hosts-with-host-aliases/) support 
+
+
+
+
 
 ### Install the Azure CLI
 
