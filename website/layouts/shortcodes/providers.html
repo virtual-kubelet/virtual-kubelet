@@ -1,11 +1,35 @@
 {{- $providers := .Site.Data.providers }}
-<ul>
-  {{- range $providers }}
-  {{- $url := printf "https://github.com/virtual-kubelet/virtual-kubelet/tree/master/providers/%s" .tag }}
-  <li>
-    <a href="{{ $url }}">
-      {{ .name | markdownify }}
-    </a>
-  </li>
-  {{- end }}
-</ul>
+<table>
+  <thead>
+    <tr>
+      <th>
+        Provider
+      </th>
+      <th>
+        Go package
+      </th>
+    </tr>
+  </thead>
+  <tbody>
+    {{ range $providers }}
+    {{ $name     := .name | markdownify }}
+    {{ $pkgName  := printf "github.com/virtual-kubelet/virtual-kubelet/providers/%s" .tag }}
+    {{ $pkgUrl   := printf "https://github.com/virtual-kubelet/virtual-kubelet/tree/master/providers/%s" .tag }}
+    {{ $godocUrl := printf "https://godoc.org/%s" $pkgName }}
+    <tr>
+      <td>
+        <a href="{{ $pkgUrl }}" target="_blank">
+          {{ $name }}
+        </a>
+      </td>
+      <td>
+        <a href="{{ $godocUrl }}" target="_blank">
+          <code>
+            {{ $pkgName }}
+          </code>
+        </a>
+      </td>
+    </tr>
+    {{ end }}
+  </tbody>
+</table>
