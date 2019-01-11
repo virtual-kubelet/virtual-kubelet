@@ -17,6 +17,7 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"github.com/virtual-kubelet/virtual-kubelet/version"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -87,6 +88,7 @@ var RootCmd = &cobra.Command{
 	Long: `virtual-kubelet implements the Kubelet interface with a pluggable
 backend implementation allowing users to create kubernetes nodes without running the kubelet.
 This allows users to schedule kubernetes workloads on nodes that aren't running Kubernetes.`,
+	Version: version.Version,
 	Run: func(cmd *cobra.Command, args []string) {
 		defer rootContextCancel()
 
@@ -164,6 +166,13 @@ func (mv mapVar) Type() string {
 
 func init() {
 	cobra.OnInitialize(initConfig)
+
+	RootCmd.SetHelpCommand(&cobra.Command{
+		Use: "hidden-help-command",
+		Hidden: true,
+	})
+
+	RootCmd.SetVersionTemplate("Virtual Kubelet: {{ .Version }}")
 
 	// read default node name from environment variable.
 	// it can be overwritten by cli flags if specified.
