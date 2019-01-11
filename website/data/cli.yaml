@@ -1,0 +1,8 @@
+commands:
+- name: help
+  description: Display help about any command
+  arg: command
+flags:
+- name: [--disable-taint]
+  description: Disable the Virtual Kubelet [Node taint](https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/)
+  default: "false"

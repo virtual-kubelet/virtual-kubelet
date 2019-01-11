@@ -1,6 +1,6 @@
 ---
 title: Setup
-description: Install Virtual Kubelet using one of a variety of methods
+description: Install Virtual Kubelet using one of several methods
 weight: 1
 ---
 
@@ -30,7 +30,7 @@ To run the executable:
 ${GOPATH}/bin
 ```
 
-Or if `${GOPATH}/bin` is in your path:
+Or if `${GOPATH}/bin` is in your `PATH`:
 
 ```bash
 virtual-kubelet
