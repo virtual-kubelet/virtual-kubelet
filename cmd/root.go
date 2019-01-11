@@ -176,7 +176,7 @@ func init() {
 		Hidden: true,
 	})
 
-	RootCmd.SetVersionTemplate("Virtual Kubelet: {{ .Version }}")
+	RootCmd.SetVersionTemplate("Virtual Kubelet: {{ .Version }}\n")
 
 	// read default node name from environment variable.
 	// it can be overwritten by cli flags if specified.
