@@ -36,4 +36,5 @@ mkdir providers/my-provider
 
 In that created directory, implement the [`Provider`](https://godoc.org/github.com/virtual-kubelet/virtual-kubelet/providers#Provider) interface in [Go](https://golang.org).
 
-For a basic example, see the [Virtual Kubelet CRI Provider](https://github.com/virtual-kubelet/virtual-kubelet/tree/master/providers/cri).
+
+> For an example implementation of the Virtual Kubelet `Provider` interface, see the [Virtual Kubelet CRI Provider](https://github.com/virtual-kubelet/virtual-kubelet/tree/master/providers/cri), especially [`cri.go`](https://github.com/virtual-kubelet/virtual-kubelet/blob/master/providers/cri/cri.go).
