@@ -1,4 +1,4 @@
-description: A command-line tool for running Virtual Kubelets
+description: The command-line tool for running Virtual Kubelets
 flags:
 - name: --disable-taint
   description: Disable the Virtual Kubelet [Node taint](https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/)
