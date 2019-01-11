@@ -90,6 +90,10 @@ backend implementation allowing users to create kubernetes nodes without running
 This allows users to schedule kubernetes workloads on nodes that aren't running Kubernetes.`,
 	Version: version.Version,
 	Run: func(cmd *cobra.Command, args []string) {
+		if provider == "" {
+			log.G(context.TODO()).Fatal("You must supply a cloud provider option: use --provider")
+		}
+
 		defer rootContextCancel()
 
 		vk := vkubelet.New(vkubelet.Config{
@@ -212,10 +216,6 @@ func init() {
 
 // initConfig reads in config file and ENV variables if set.
 func initConfig() {
-	if provider == "" {
-		log.G(context.TODO()).Fatal("You must supply a cloud provider option: use --provider")
-	}
-
 	// Find home directory.
 	home, err := homedir.Dir()
 	if err != nil {
