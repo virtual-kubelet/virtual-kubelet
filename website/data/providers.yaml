@@ -1,5 +1,5 @@
 - name: Alibaba Cloud Elastic Container Instance (**ECI**)
-  tag: alicloud
+  tag: alibabacloud
 - name: AWS Fargate
   tag: aws
 - name: Azure Batch
