@@ -46,3 +46,13 @@ cd ${GOPATH}/src/github.com/virtual-kubelet
 git clone https://github.com/virtual-kubelet/virtual-kubelet
 make build
 ```
+
+This method adds a `virtual-kubelet` executable to the `bin` folder. To run it:
+
+```bash
+bin/virtual-kubelet
+```
+
+## Using Virtual Kubelet
+
+Once you have Virtual Kubelet installed, you can move on to the [Usage](../usage) documentation.
