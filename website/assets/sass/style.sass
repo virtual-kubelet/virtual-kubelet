@@ -32,7 +32,7 @@ $link-hover: $dark
 $code: $primary
 
 $family-sans-serif: "{{ $sansSerifFont }}", BlinkMacSystemFont, -apple-system, "Segoe UI", "Roboto", "Oxygen", "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue", "Helvetica", "Arial", sans-serif
-//$family-code: "{{ $monospaceFont }}", monospace
+$family-code: "{{ $monospaceFont }}", monospace
 $section-padding: 3rem 4rem
 
 $navbar-height: 5rem
@@ -52,6 +52,8 @@ $colors: mergeColorMaps(("twitter-blue": ($twitter-blue, $white), "slack-green":
 @import "bulma/bulma"
 @import "bulma-dashboard/bulma-dashboard.sass"
 @import "bulma-toc/bulma-toc.sass"
+
+@import "cli"
 
 // Ensure sticky footer at the bottom of the page
 .page

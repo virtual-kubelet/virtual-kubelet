@@ -1,0 +1,43 @@
+=border
+  border: 1px solid $grey-light
+  
+.cli
+  +border
+  padding: 1.5rem
+
+  &-title
+    font-size: 1.2rem
+    margin-bottom: 3rem
+    font-family: $family-code
+    
+    h2
+      color: $primary
+  
+  &-description
+    font-size: 1.25rem
+  
+  &-example
+    background-color: $black
+    padding: 1.25rem
+    font-family: $family-code
+    color: $white-bis
+    font-size: 1.25rem
+    margin: 1rem 0
+    font-weight: 700
+
+    .dollar
+      color: $primary
+
+    .flags
+      color: $red
+    
+  &-flags
+    +border
+    padding: 1rem
+
+    .flag
+      font-family: $family-code
+      color: $primary
+
+      .arg
+        color: $dark
