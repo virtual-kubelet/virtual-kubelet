@@ -34,7 +34,7 @@ Virtual Kubelet's ACI provider relies heavily on the feature set that Azure Cont
 * Network security group support 
 * Basic Azure Networking support within AKS virtual node 
 * [Exec support](https://docs.microsoft.com/en-us/azure/container-instances/container-instances-exec) for container instances 
-* Azure Monitoring integration or formally OMS
+* Azure Monitoring integration or formally known as OMS
 
 **Limitations**
 * Using service principal credentials to pull ACR images 
@@ -236,14 +236,15 @@ Grab the public master URI for your Kubernetes cluster and save the value.
 
 ```cli 
 kubectl cluster-info
-export MASTER_URI=<public uri>
+export MASTER_URI=<Kubernetes Master>
 ```
 
 If your cluster is an AKS cluster:
 ```cli
-RELEASE_NAME=virtual-kubelet
-NODE_NAME=virtual-kubelet
-CHART_URL=https://github.com/virtual-kubelet/virtual-kubelet/raw/master/charts/$VK_RELEASE.tgz
+export RELEASE_NAME=virtual-kubelet
+export VK_RELEASE=virtual-kubelet-latest
+export NODE_NAME=virtual-kubelet
+export CHART_URL=https://github.com/virtual-kubelet/virtual-kubelet/raw/master/charts/$VK_RELEASE.tgz
 
 helm install "$CHART_URL" --name "$RELEASE_NAME" \
   --set provider=azure \
