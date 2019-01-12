@@ -17,7 +17,6 @@ package cmd
 import (
 	"context"
 	"fmt"
-	"github.com/virtual-kubelet/virtual-kubelet/version"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -25,6 +24,8 @@ import (
 	"strings"
 	"syscall"
 	"time"
+
+	"github.com/virtual-kubelet/virtual-kubelet/version"
 
 	"github.com/Sirupsen/logrus"
 	"github.com/mitchellh/go-homedir"
@@ -172,7 +173,7 @@ func init() {
 	cobra.OnInitialize(initConfig)
 
 	RootCmd.SetHelpCommand(&cobra.Command{
-		Use: "hidden-help-command",
+		Use:    "hidden-help-command",
 		Hidden: true,
 	})
 
