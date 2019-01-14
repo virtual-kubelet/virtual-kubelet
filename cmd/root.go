@@ -91,9 +91,7 @@ backend implementation allowing users to create kubernetes nodes without running
 This allows users to schedule kubernetes workloads on nodes that aren't running Kubernetes.`,
 	Version: version.Version,
 	Run: func(cmd *cobra.Command, args []string) {
-		if provider == "" {
-			log.G(context.TODO()).Fatal("You must supply a cloud provider option: use --provider")
-		}
+		requireProvider()
 
 		defer rootContextCancel()
 
@@ -127,6 +125,13 @@ This allows users to schedule kubernetes workloads on nodes that aren't running 
 			log.G(rootContext).Fatal(err)
 		}
 	},
+}
+
+// Require that the --provider flag be provided if the executable is run by itself
+func requireProvider() {
+	if provider == "" {
+		log.G(context.TODO()).Fatal("You must supply a cloud provider option: use --provider")
+	}
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.
