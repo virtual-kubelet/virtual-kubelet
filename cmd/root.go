@@ -108,13 +108,11 @@ This allows users to schedule kubernetes workloads on nodes that aren't running 
 			rootContextCancel()
 		}()
 
-		c1, c2, err := setupHTTPServer(rootContext, apiConfig)
+		cancelHTTP, err := setupHTTPServer(rootContext, apiConfig)
 		if err != nil {
 			log.G(rootContext).Fatal(err)
 		}
-
-		defer c1.Close()
-		defer c2.Close()
+		defer cancelHTTP()
 
 		if err := vk.Run(rootContext); err != nil && errors.Cause(err) != context.Canceled {
 			log.G(rootContext).Fatal(err)
