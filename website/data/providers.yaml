@@ -1,5 +1,5 @@
 - name: Alibaba Cloud Elastic Container Instance (**ECI**)
-  tag: alicloud
+  tag: alibabacloud
 - name: AWS Fargate
   tag: aws
 - name: Azure Batch
@@ -12,6 +12,8 @@
   tag: huawei
 - name: Hyper.sh
   tag: hypersh
+- name: HashiCorp Nomad
+  tag: nomad
 - name: Service Fabric Mesh
   tag: sfmesh
 - name: vSphere Integrated Containers (**VIC**)

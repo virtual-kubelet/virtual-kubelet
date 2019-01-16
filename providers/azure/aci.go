@@ -95,17 +95,25 @@ type AuthConfig struct {
 
 // See https://azure.microsoft.com/en-us/status/ for valid regions.
 var validAciRegions = []string{
+	"australiaeast",
+	"canadacentral",
+	"centralindia",
 	"centralus",
+	"eastasia",
 	"eastus",
 	"eastus2",
+	"eastus2euap",
+	"japaneast",
+	"northcentralus",
+	"northeurope",
+	"southcentralus",
+	"southeastasia",
+	"southindia",
+	"uksouth",
+	"westcentralus",
 	"westus",
 	"westus2",
-	"northeurope",
 	"westeurope",
-	"southeastasia",
-	"australiaeast",
-	"eastus2euap",
-	"westcentralus",
 }
 
 // isValidACIRegion checks to make sure we're using a valid ACI region
@@ -337,9 +345,6 @@ func (p *ACIProvider) setupNetworkProfile(auth *client.Authentication) error {
 		}
 		if p.subnetCIDR != *subnet.SubnetPropertiesFormat.AddressPrefix {
 			return fmt.Errorf("found subnet '%s' using different CIDR: '%s'. desired: '%s'", p.subnetName, *subnet.SubnetPropertiesFormat.AddressPrefix, p.subnetCIDR)
-		}
-		if subnet.SubnetPropertiesFormat.NetworkSecurityGroup != nil {
-			return fmt.Errorf("unable to delegate subnet '%s' to Azure Container Instance since it references the network security group '%s'.", p.subnetName, *subnet.SubnetPropertiesFormat.NetworkSecurityGroup.ID)
 		}
 		if subnet.SubnetPropertiesFormat.RouteTable != nil {
 			return fmt.Errorf("unable to delegate subnet '%s' to Azure Container Instance since it references the route table '%s'.", p.subnetName, *subnet.SubnetPropertiesFormat.RouteTable.ID)

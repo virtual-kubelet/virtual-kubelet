@@ -14,6 +14,12 @@ import (
 const (
 	// defaultEventRecorderBufferSize is the default buffer size to use when creating fake event recorders.
 	defaultEventRecorderBufferSize = 5
+	// envVarName1 is a string that can be used as the name of an environment value.
+	envVarName1 = "FOO"
+	// envVarValue1 is a string meant to be used as the value of the "envVarName1" environment value.
+	envVarValue1 = "foo_value"
+	// envVarName1 is a string that can be used as the name of an environment value.
+	envVarName2 = "BAR"
 	// invalidKey1 is a key that cannot be used as the name of an environment variable (since it starts with a digit).
 	invalidKey1 = "1INVALID"
 	// invalidKey2 is a key that cannot be used as the name of an environment variable (since it starts with a digit).
@@ -79,9 +85,159 @@ var (
 	})
 )
 
-// TestPopulatePodWithInitContainers populates the environment of a pod with four containers (two init containers, two containers).
+// TestPopulatePodWithInitContainersUsingEnv populates the environment of a pod with four containers (two init containers, two containers) using ".env".
 // Then, it checks that the resulting environment for each container contains the expected environment variables.
-func TestPopulatePodWithInitContainers(t *testing.T) {
+func TestPopulatePodWithInitContainersUsingEnv(t *testing.T) {
+	rm := testutil.FakeResourceManager(configMap1, configMap2, secret1, secret2)
+	er := testutil.FakeEventRecorder(defaultEventRecorderBufferSize)
+
+	// Create a pod object having two init containers and two containers.
+	// The containers' environment is to be populated both from directly-provided values and from keys in two configmaps and two secrets.
+	pod := &corev1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: namespace,
+			Name:      "pod-0",
+		},
+		Spec: corev1.PodSpec{
+			InitContainers: []corev1.Container{
+				{
+					Env: []corev1.EnvVar{
+						{
+							Name:  envVarName1,
+							Value: envVarValue1,
+						},
+						{
+							Name: envVarName2,
+							ValueFrom: &corev1.EnvVarSource{
+								ConfigMapKeyRef: &corev1.ConfigMapKeySelector{
+									LocalObjectReference: corev1.LocalObjectReference{
+										Name: configMap1.Name,
+									},
+									Key:      keyFoo,
+									// This scenario has been observed before https://github.com/virtual-kubelet/virtual-kubelet/issues/444#issuecomment-449611851.
+									Optional: nil,
+								},
+							},
+						},
+					},
+				},
+				{
+					Env: []corev1.EnvVar{
+						{
+							Name:  envVarName1,
+							Value: envVarValue1,
+						},
+						{
+							Name: envVarName2,
+							ValueFrom: &corev1.EnvVarSource{
+								SecretKeyRef: &corev1.SecretKeySelector{
+									LocalObjectReference: corev1.LocalObjectReference{
+										Name: secret1.Name,
+									},
+									Key:      keyBaz,
+									Optional: &bFalse,
+								},
+							},
+						},
+					},
+				},
+			},
+			Containers: []corev1.Container{
+				{
+					Env: []corev1.EnvVar{
+						{
+							Name:  envVarName1,
+							Value: envVarValue1,
+						},
+						{
+							Name: envVarName2,
+							ValueFrom: &corev1.EnvVarSource{
+								ConfigMapKeyRef: &corev1.ConfigMapKeySelector{
+									LocalObjectReference: corev1.LocalObjectReference{
+										Name: configMap1.Name,
+									},
+									Key:      keyFoo,
+									// This scenario has been observed before https://github.com/virtual-kubelet/virtual-kubelet/issues/444#issuecomment-449611851.
+									Optional: nil,
+								},
+							},
+						},
+					},
+				},
+				{
+					Env: []corev1.EnvVar{
+						{
+							Name:  envVarName1,
+							Value: envVarValue1,
+						},
+						{
+							Name: envVarName2,
+							ValueFrom: &corev1.EnvVarSource{
+								SecretKeyRef: &corev1.SecretKeySelector{
+									LocalObjectReference: corev1.LocalObjectReference{
+										Name: secret1.Name,
+									},
+									Key:      keyBaz,
+									Optional: &bFalse,
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	// Populate the pod's environment.
+	err := populateEnvironmentVariables(context.Background(), pod, rm, er)
+	assert.NoError(t, err)
+
+	// Make sure that all the containers' environments contain all the expected keys and values.
+	assert.ElementsMatch(t, pod.Spec.InitContainers[0].Env, []corev1.EnvVar{
+		{
+			Name:  envVarName1,
+			Value: envVarValue1,
+		},
+		{
+			Name:  envVarName2,
+			Value: configMap1.Data[keyFoo],
+		},
+	})
+	assert.ElementsMatch(t, pod.Spec.InitContainers[1].Env, []corev1.EnvVar{
+		{
+			Name:  envVarName1,
+			Value: envVarValue1,
+		},
+		{
+			Name:  envVarName2,
+			Value: string(secret1.Data[keyBaz]),
+		},
+	})
+	assert.ElementsMatch(t, pod.Spec.Containers[0].Env, []corev1.EnvVar{
+		{
+			Name:  envVarName1,
+			Value: envVarValue1,
+		},
+		{
+			Name:  envVarName2,
+			Value: configMap1.Data[keyFoo],
+		},
+	})
+	assert.ElementsMatch(t, pod.Spec.Containers[1].Env, []corev1.EnvVar{
+		{
+			Name:  envVarName1,
+			Value: envVarValue1,
+		},
+		{
+			Name:  envVarName2,
+			Value: string(secret1.Data[keyBaz]),
+		},
+	})
+}
+
+// TestPopulatePodWithInitContainersUsingEnvFrom populates the environment of a pod with four containers (two init containers, two containers) using ".envFrom".
+// Then, it checks that the resulting environment for each container contains the expected environment variables.
+func TestPopulatePodWithInitContainersUsingEnvFrom(t *testing.T) {
 	rm := testutil.FakeResourceManager(configMap1, configMap2, secret1, secret2)
 	er := testutil.FakeEventRecorder(defaultEventRecorderBufferSize)
 
@@ -489,4 +645,102 @@ func TestEnvFromInexistentSecrets(t *testing.T) {
 	event2 := <-er.Events
 	assert.Contains(t, event2, ReasonMandatorySecretNotFound)
 	assert.Contains(t, event2, missingSecret2Name)
+}
+
+// TestEnvReferencingInexistentConfigMapKey tries populates the environment of a container using a keys from a configmaps that does not exist.
+// Then, it checks that the expected event has been recorded.
+func TestEnvReferencingInexistentConfigMapKey(t *testing.T) {
+	rm := testutil.FakeResourceManager()
+	er := testutil.FakeEventRecorder(defaultEventRecorderBufferSize)
+
+	missingConfigMapName := "missing-config-map"
+
+	// Create a pod object having a single container and referencing a key from a configmap that does not exist.
+	pod := &corev1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: namespace,
+			Name:      "pod-0",
+		},
+		Spec: corev1.PodSpec{
+			Containers: []corev1.Container{
+				{
+					Env: []corev1.EnvVar{
+						{
+							Name: "envvar",
+							ValueFrom: &corev1.EnvVarSource{
+								ConfigMapKeyRef: &corev1.ConfigMapKeySelector{
+									LocalObjectReference: corev1.LocalObjectReference{
+										Name: missingConfigMapName,
+									},
+									Key: "key",
+									// This scenario has been observed before https://github.com/virtual-kubelet/virtual-kubelet/issues/444#issuecomment-449611851.
+									// A nil value of optional means "mandatory", hence we should expect "populateEnvironmentVariables" to return an error.
+									Optional: nil,
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	// Populate the pods's environment.
+	err := populateEnvironmentVariables(context.Background(), pod, rm, er)
+	assert.Error(t, err)
+
+	// Make sure that two events have been recorded with the correct reason and message.
+	assert.Len(t, er.Events, 1)
+	event1 := <-er.Events
+	assert.Contains(t, event1, ReasonMandatoryConfigMapNotFound)
+	assert.Contains(t, event1, missingConfigMapName)
+}
+
+// TestEnvReferencingInexistentSecretKey tries populates the environment of a container using a keys from a secret that does not exist.
+// Then, it checks that the expected event has been recorded.
+func TestEnvReferencingInexistentSecretKey(t *testing.T) {
+	rm := testutil.FakeResourceManager()
+	er := testutil.FakeEventRecorder(defaultEventRecorderBufferSize)
+
+	missingSecretName := "missing-secret"
+
+	// Create a pod object having a single container and referencing a key from a secret that does not exist.
+	pod := &corev1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: namespace,
+			Name:      "pod-0",
+		},
+		Spec: corev1.PodSpec{
+			Containers: []corev1.Container{
+				{
+					Env: []corev1.EnvVar{
+						{
+							Name: "envvar",
+							ValueFrom: &corev1.EnvVarSource{
+								SecretKeyRef: &corev1.SecretKeySelector{
+									LocalObjectReference: corev1.LocalObjectReference{
+										Name: missingSecretName,
+									},
+									Key: "key",
+									// This scenario has been observed before https://github.com/virtual-kubelet/virtual-kubelet/issues/444#issuecomment-449611851.
+									// A nil value of optional means "mandatory", hence we should expect "populateEnvironmentVariables" to return an error.
+									Optional: nil,
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	// Populate the pods's environment.
+	err := populateEnvironmentVariables(context.Background(), pod, rm, er)
+	assert.Error(t, err)
+
+	// Make sure that two events have been recorded with the correct reason and message.
+	assert.Len(t, er.Events, 1)
+	event1 := <-er.Events
+	assert.Contains(t, event1, ReasonMandatorySecretNotFound)
+	assert.Contains(t, event1, missingSecretName)
 }
