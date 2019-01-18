@@ -1,6 +1,7 @@
 package openstack
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -36,7 +37,7 @@ type ZunProvider struct {
 }
 
 // NewZunProvider creates a new ZunProvider.
-func NewZunProvider(config string, rm *manager.ResourceManager, nodeName, operatingSystem string, daemonEndpointPort int32) (*ZunProvider, error) {
+func NewZunProvider(config string, rm *manager.ResourceManager, nodeName string, operatingSystem string, daemonEndpointPort int32) (*ZunProvider, error) {
 	var p ZunProvider
 	var err error
 
@@ -73,7 +74,7 @@ func NewZunProvider(config string, rm *manager.ResourceManager, nodeName, operat
 
 // GetPod returns a pod by name that is running inside Zun
 // returns nil if a pod by that name is not found.
-func (p *ZunProvider) GetPod(namespace, name string) (*v1.Pod, error) {
+func (p *ZunProvider) GetPod(ctx context.Context, namespace, name string) (*v1.Pod, error) {
 	capsule, err := capsules.Get(p.ZunClient, fmt.Sprintf("%s-%s", namespace, name)).Extract()
 	if err != nil {
 		return nil, err
@@ -87,7 +88,7 @@ func (p *ZunProvider) GetPod(namespace, name string) (*v1.Pod, error) {
 }
 
 // GetPods returns a list of all pods known to be running within Zun.
-func (p *ZunProvider) GetPods() ([]*v1.Pod, error) {
+func (p *ZunProvider) GetPods(ctx context.Context) ([]*v1.Pod, error) {
 	pager := capsules.List(p.ZunClient, nil)
 
 	pages := 0
@@ -128,7 +129,7 @@ func (p *ZunProvider) GetPods() ([]*v1.Pod, error) {
 
 // CreatePod accepts a Pod definition and creates
 // an Zun deployment
-func (p *ZunProvider) CreatePod(pod *v1.Pod) error {
+func (p *ZunProvider) CreatePod(ctx context.Context, pod *v1.Pod) error {
 	var capsuleTemplate CapsuleTemplate
 	capsuleTemplate.ApiVersion = "beta"
 	capsuleTemplate.Kind = "capsule"
@@ -168,7 +169,7 @@ func (p *ZunProvider) CreatePod(pod *v1.Pod) error {
 	return err
 }
 
-func (p *ZunProvider) getContainers(pod *v1.Pod) ([]Container, error) {
+func (p *ZunProvider) getContainers(ctx context.Context, pod *v1.Pod) ([]Container, error) {
 	containers := make([]Container, 0, len(pod.Spec.Containers))
 	for _, container := range pod.Spec.Containers {
 		c := Container{
@@ -220,8 +221,8 @@ func (p *ZunProvider) ExecInContainer(name string, uid types.UID, container stri
 
 // GetPodStatus returns the status of a pod by name that is running inside Zun
 // returns nil if a pod by that name is not found.
-func (p *ZunProvider) GetPodStatus(namespace, name string) (*v1.PodStatus, error) {
-	pod, err := p.GetPod(namespace, name)
+func (p *ZunProvider) GetPodStatus(ctx context.Context, namespace, name string) (*v1.PodStatus, error) {
+	pod, err := p.GetPod(ctx, namespace, name)
 	if err != nil {
 		return nil, err
 	}
@@ -233,13 +234,13 @@ func (p *ZunProvider) GetPodStatus(namespace, name string) (*v1.PodStatus, error
 	return &pod.Status, nil
 }
 
-func (p *ZunProvider) GetContainerLogs(namespace, podName, containerName string, tail int) (string, error) {
+func (p *ZunProvider) GetContainerLogs(ctx context.Context, namespace, podName, containerName string, tail int) (string, error) {
 	return "not support in Zun Provider", nil
 }
 
 // NodeConditions returns a list of conditions (Ready, OutOfDisk, etc), for updates to the node status
 // within Kubernetes.
-func (p *ZunProvider) NodeConditions() []v1.NodeCondition {
+func (p *ZunProvider) NodeConditions(ctx context.Context) []v1.NodeCondition {
 	// TODO: Make these dynamic and augment with custom Zun specific conditions of interest
 	return []v1.NodeCondition{
 		{
@@ -287,13 +288,13 @@ func (p *ZunProvider) NodeConditions() []v1.NodeCondition {
 
 // NodeAddresses returns a list of addresses for the node status
 // within Kubernetes.
-func (p *ZunProvider) NodeAddresses() []v1.NodeAddress {
+func (p *ZunProvider) NodeAddresses(ctx context.Context) []v1.NodeAddress {
 	return nil
 }
 
 // NodeDaemonEndpoints returns NodeDaemonEndpoints for the node status
 // within Kubernetes.
-func (p *ZunProvider) NodeDaemonEndpoints() *v1.NodeDaemonEndpoints {
+func (p *ZunProvider) NodeDaemonEndpoints(ctx context.Context) *v1.NodeDaemonEndpoints {
 	return &v1.NodeDaemonEndpoints{
 		KubeletEndpoint: v1.DaemonEndpoint{
 			Port: p.daemonEndpointPort,
@@ -405,12 +406,12 @@ func capsuleToPod(capsule *capsules.Capsule) (*v1.Pod, error) {
 }
 
 // UpdatePod is a noop, Zun currently does not support live updates of a pod.
-func (p *ZunProvider) UpdatePod(pod *v1.Pod) error {
+func (p *ZunProvider) UpdatePod(ctx context.Context, pod *v1.Pod) error {
 	return nil
 }
 
 // DeletePod deletes the specified pod out of Zun.
-func (p *ZunProvider) DeletePod(pod *v1.Pod) error {
+func (p *ZunProvider) DeletePod(ctx context.Context, pod *v1.Pod) error {
 	return capsules.Delete(p.ZunClient, fmt.Sprintf("%s-%s", pod.Namespace, pod.Name)).ExtractErr()
 }
 
@@ -499,7 +500,7 @@ func zunCapStatusToPodPhase(status string) v1.PodPhase {
 }
 
 // Capacity returns a resource list containing the capacity limits set for Zun.
-func (p *ZunProvider) Capacity() v1.ResourceList {
+func (p *ZunProvider) Capacity(ctx context.Context) v1.ResourceList {
 	return v1.ResourceList{
 		"cpu":    resource.MustParse(p.cpu),
 		"memory": resource.MustParse(p.memory),
