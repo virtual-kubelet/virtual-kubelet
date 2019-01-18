@@ -148,7 +148,7 @@ func (p *ZunProvider) CreatePod(ctx context.Context, pod *v1.Pod) error {
 	metadata.Name = pod.Namespace + "-" + pod.Name
 	capsuleTemplate.Metadata = metadata
 	// get containers
-	containers, err := p.getContainers(pod)
+	containers, err := p.getContainers(ctx, pod)
 	if err != nil {
 		return err
 	}
