@@ -153,3 +153,11 @@
 [[override]]
   name = "github.com/json-iterator/go"
   version = "v1.1.5"
+
+[[constraint]]
+  name = "github.com/hashicorp/nomad"
+  revision = "v0.8.6"
+
+[[override]]
+  name = "github.com/ugorji/go"
+  revision = "0053ebfd9d0ee06ccefbfe17072021e1d4acebee"

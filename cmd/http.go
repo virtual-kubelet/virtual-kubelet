@@ -44,11 +44,19 @@ func loadTLSConfig(certPath, keyPath string) (*tls.Config, error) {
 	}, nil
 }
 
-func setupHTTPServer(ctx context.Context, cfg *apiServerConfig) (io.Closer, io.Closer, error) {
-	var (
-		podS     *http.Server
-		metricsS *http.Server
-	)
+func setupHTTPServer(ctx context.Context, cfg *apiServerConfig) (cancel func(), retErr error) {
+	var closers []io.Closer
+	cancel = func() {
+		for _, c := range closers {
+			c.Close()
+		}
+	}
+	defer func() {
+		if retErr != nil {
+			cancel()
+		}
+	}()
+
 	if cfg.CertPath == "" || cfg.KeyPath == "" {
 		log.G(ctx).
 			WithField("certPath", cfg.CertPath).
@@ -57,21 +65,22 @@ func setupHTTPServer(ctx context.Context, cfg *apiServerConfig) (io.Closer, io.C
 	} else {
 		tlsCfg, err := loadTLSConfig(cfg.CertPath, cfg.KeyPath)
 		if err != nil {
-			return nil, nil, err
+			return nil, err
 		}
 		l, err := tls.Listen("tcp", cfg.Addr, tlsCfg)
 		if err != nil {
-			return nil, nil, errors.Wrap(err, "error setting up listener for pod http server")
+			return nil, errors.Wrap(err, "error setting up listener for pod http server")
 		}
 
 		mux := http.NewServeMux()
 		vkubelet.AttachPodRoutes(p, mux)
 
-		podS = &http.Server{
+		s := &http.Server{
 			Handler:   mux,
 			TLSConfig: tlsCfg,
 		}
-		go serveHTTP(ctx, podS, l, "pods")
+		go serveHTTP(ctx, s, l, "pods")
+		closers = append(closers, s)
 	}
 
 	if cfg.MetricsAddr == "" {
@@ -79,21 +88,19 @@ func setupHTTPServer(ctx context.Context, cfg *apiServerConfig) (io.Closer, io.C
 	} else {
 		l, err := net.Listen("tcp", cfg.MetricsAddr)
 		if err != nil {
-			if l != nil {
-				podS.Close()
-			}
-			return nil, nil, errors.Wrap(err, "could not setup listenr for pod metrics http server")
+			return nil, errors.Wrap(err, "could not setup listener for pod metrics http server")
 		}
 
 		mux := http.NewServeMux()
 		vkubelet.AttachMetricsRoutes(p, mux)
-		metricsS = &http.Server{
+		s := &http.Server{
 			Handler: mux,
 		}
-		go serveHTTP(ctx, metricsS, l, "pod metrics")
+		go serveHTTP(ctx, s, l, "pod metrics")
+		closers = append(closers, s)
 	}
 
-	return podS, metricsS, nil
+	return cancel, nil
 }
 
 func serveHTTP(ctx context.Context, s *http.Server, l net.Listener, name string) {

@@ -6,7 +6,7 @@ The Virtual kubelet integration allows you to take advantage of this from within
 
 Azure Batch allows for [low priority nodes](https://docs.microsoft.com/en-us/azure/batch/batch-low-pri-vms) which can also help to reduce cost for non-time sensitive workloads.
 
-__The [ACI provider](../azure/README.MD) is the best option unless you're looking to utilise some specific features of Azure Batch__.
+__The [ACI provider](../azure/README.md) is the best option unless you're looking to utilise some specific features of Azure Batch__.
 
 ## Status: Experimental
 
