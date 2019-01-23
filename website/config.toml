@@ -1,6 +1,6 @@
 # Basic site config
 title           = "Virtual Kubelet"
-baseURL         = "https://virtual-kubelet.netlify.com"
+baseURL         = "https://virtual-kubelet.io"
 languageCode    = "en-us"
 enableRobotsTxt = true
 
