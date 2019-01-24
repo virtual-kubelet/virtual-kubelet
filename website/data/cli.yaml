@@ -1,0 +1,60 @@
+description: The command-line tool for running Virtual Kubelets
+flags:
+- name: --disable-taint
+  description: Disable the Virtual Kubelet [Node taint](https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/)
+  default: "false"
+- name: --full-resync-period
+  arg: duration
+  description: How often to perform a full resync of Pods between Kubernetes and the provider
+  default: 1m0s
+- name: --kubeconfig
+  arg: string
+  description: kubectl config file
+  default: $HOME/.kube/config
+- name: --log-level
+  arg: string
+  description: The log level, e.g. `trace` `debug`, `info`, `warn`, or `error`
+  default: info
+- name: --metrics-addr
+  arg: string
+  description: The address to listen on for metrics and stats
+  default: ":10255"
+- name: --namespace
+  arg: string
+  description: The Kubernetes namespace
+  default: all
+- name: --nodename
+  arg: string
+  description: The Kubernetes Node name
+  default: virtual-kubelet
+- name: --os
+  arg: string
+  description: The operating system (must be `Linux` or `Windows`)
+  default: Linux
+- name: --pod-sync-workers
+  arg: int
+  description: The number of Pod synchronization workers
+  default: 10
+- name: --provider
+  arg: string
+  description: The Virtual Kubelet [provider](/docs/providers)
+- name: --provider-config
+  arg: string
+  description: The Virtual Kubelet [provider](/docs/providers) configuration file
+- name: --trace-exporter
+  arg: strings
+  description: The tracing exporter to use. Available exporters are `jaeger` and `ocagent`.
+- name: --trace-sample-rate
+  arg: string
+  description: The probability of tracing samples
+- name: --trace-service-name
+  arg: string
+  description: The name of the services used to register with the trace exporter
+  default: virtual-kubelet
+- name: --trace-tag
+  arg: map
+  description: Tags to include with traces, in `key=value` form
+- name: --version
+  description: The Virtual Kubelet version
+- name: --help
+  description: Command help information
