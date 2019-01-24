@@ -17,7 +17,7 @@ flags:
   default: info
 - name: --metrics-addr
   arg: string
-  description: The address to listen on form metrics and stats
+  description: The address to listen on for metrics and stats
   default: ":10255"
 - name: --namespace
   arg: string
