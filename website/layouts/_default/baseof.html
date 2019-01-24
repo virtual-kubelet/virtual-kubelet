@@ -1,11 +1,11 @@
-{{- .Scratch.Set "numFigures" 1 }}
-{{- $pageType := cond .IsHome "home" .Section }}
+{{ .Scratch.Set "numFigures" 1 }}
+{{ $pageType := cond .IsHome "home" .Section }}
 <!DOCTYPE html>
-<html lang="{{ .Site.LanguageCode }}">
+<html lang="{{ site.LanguageCode }}">
   <head>
     {{ partial "meta.html" . }}
     <title>
-      {{ block "title" . }}{{ .Site.Title }}{{ end }}
+      {{ block "title" . }}{{ site.Title }}{{ end }}
     </title>
     {{ partial "css.html" . }}
   </head>
