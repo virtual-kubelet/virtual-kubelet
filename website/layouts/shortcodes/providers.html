@@ -1,11 +1,11 @@
-{{- $providers := .Site.Data.providers }}
+{{ $providers := site.Data.providers }}
 <ul>
-  {{- range $providers }}
-  {{- $url := printf "https://github.com/virtual-kubelet/virtual-kubelet/tree/master/providers/%s" .tag }}
+  {{ range $providers }}
+  {{ $url := printf "https://github.com/virtual-kubelet/virtual-kubelet/tree/master/providers/%s" .tag }}
   <li>
     <a href="{{ $url }}">
       {{ .name | markdownify }}
     </a>
   </li>
-  {{- end }}
+  {{ end }}
 </ul>
