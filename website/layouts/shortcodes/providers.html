@@ -1,15 +1,5 @@
 {{- $providers := .Site.Data.providers }}
 <table>
-  <thead>
-    <tr>
-      <th>
-        Provider
-      </th>
-      <th>
-        Go package
-      </th>
-    </tr>
-  </thead>
   <tbody>
     {{ range $providers }}
     {{ $name     := .name | markdownify }}
@@ -18,15 +8,16 @@
     {{ $godocUrl := printf "https://godoc.org/%s" $pkgName }}
     <tr>
       <td>
+        {{ $name }}
+      </td>
+      <td>
         <a href="{{ $pkgUrl }}" target="_blank">
-          {{ $name }}
+          Docs
         </a>
       </td>
       <td>
         <a href="{{ $godocUrl }}" target="_blank">
-          <code>
-            {{ $pkgName }}
-          </code>
+          GoDoc
         </a>
       </td>
     </tr>
