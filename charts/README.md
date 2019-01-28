@@ -7,8 +7,8 @@ Each version of Virtual Kubelet has a dedicated [Helm](https://helm.sh) chart. T
 This subdirectory has an `index.yaml` file, which is necessary for it to act as a Helm chart repository. To re-generate the `index.yaml` file (assuming that you have Helm installed):
 
 ```shell
-cd /path/to/virtual-kubelet/charts
-helm repo index
+cd /path/to/virtual-kubelet
+helm repo index charts
 ```
 
 The `index.yaml` then needs to be committed to Git and merged to `master`.
