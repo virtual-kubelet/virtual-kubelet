@@ -4,7 +4,7 @@ function anchorJs() {
       icon: '#'
     }
 
-    anchors.add('.content h2, .content h3, .content h4');
+    anchors.add('.cli h2, .content h2, .content h3, .content h4');
   }
 }
 
