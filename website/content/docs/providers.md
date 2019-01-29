@@ -1,7 +1,7 @@
 ---
 title: Providers
 description: Extend the Virtual Kubelet interface
-weight: 2
+weight: 4
 ---
 
 The Virtual Kubelet provides a pluggable **provider interface** that developers can implement to define the actions of a typical kubelet.
