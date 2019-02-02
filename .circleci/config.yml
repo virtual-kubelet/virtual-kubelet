@@ -15,9 +15,6 @@ jobs:
       - run:
           name: Lint
           command: golangci-lint run --new-from-rev "HEAD~$(git rev-list master.. --count)" ./...
-      - run:
-          name: Dependencies
-          command: scripts/validate/dep.sh
 
   test:
     docker:
