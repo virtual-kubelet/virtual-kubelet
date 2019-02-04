@@ -53,3 +53,26 @@ make skaffold MODE=run
 ```
 
 This will build and deploy the Virtual Kubelet and return.
+
+## Helm
+
+```bash
+helm repo add virtual-kubelet \
+  https://raw.githubusercontent.com/virtual-kubelet/virtual-kubelet/master/charts
+```
+
+```bash
+helm install --dry-run virtual-kubelet/virtual-kubelet
+```
+
+```bash
+helm install virtual-kubelet/virtual-kubelet \
+  --name virtual-kubelet-azure \
+  --namespace virtual-kubelet \
+  --set provider=azure
+```
+
+```bash
+kubectl get nodes \
+  --namespace virtual-kubelet
+```
