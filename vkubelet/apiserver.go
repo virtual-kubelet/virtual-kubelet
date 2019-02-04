@@ -3,7 +3,6 @@ package vkubelet
 import (
 	"net/http"
 
-	"github.com/Sirupsen/logrus"
 	"github.com/gorilla/mux"
 	"github.com/virtual-kubelet/virtual-kubelet/log"
 	"github.com/virtual-kubelet/virtual-kubelet/providers"
@@ -73,7 +72,7 @@ func AttachMetricsRoutes(p providers.Provider, mux ServeMux) {
 
 func instrumentRequest(r *http.Request) *http.Request {
 	ctx := r.Context()
-	logger := log.G(ctx).WithFields(logrus.Fields{
+	logger := log.G(ctx).WithFields(log.Fields{
 		"uri":  r.RequestURI,
 		"vars": mux.Vars(r),
 	})
@@ -96,14 +95,12 @@ func InstrumentHandler(h http.Handler) http.Handler {
 
 // NotFound provides a handler for cases where the requested endpoint doesn't exist
 func NotFound(w http.ResponseWriter, r *http.Request) {
-	logger := log.G(r.Context())
-	log.Trace(logger, "404 request not found")
+	log.G(r.Context()).Debug("404 request not found")
 	http.Error(w, "404 request not found", http.StatusNotFound)
 }
 
 // NotImplemented provides a handler for cases where a provider does not implement a given API
 func NotImplemented(w http.ResponseWriter, r *http.Request) {
-	logger := log.G(r.Context())
-	log.Trace(logger, "501 not implemented")
+	log.G(r.Context()).Debug("501 not implemented")
 	http.Error(w, "501 not implemented", http.StatusNotImplemented)
 }

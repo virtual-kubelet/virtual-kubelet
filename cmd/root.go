@@ -39,6 +39,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 
 	"github.com/virtual-kubelet/virtual-kubelet/log"
+	logruslogger "github.com/virtual-kubelet/virtual-kubelet/log/logrus"
 	"github.com/virtual-kubelet/virtual-kubelet/manager"
 	"github.com/virtual-kubelet/virtual-kubelet/providers"
 	"github.com/virtual-kubelet/virtual-kubelet/providers/register"
@@ -161,6 +162,9 @@ func (mv mapVar) Type() string {
 }
 
 func init() {
+	// make sure the default logger is initialized
+	log.L = logruslogger.FromLogrus(logrus.NewEntry(logrus.StandardLogger()))
+
 	cobra.OnInitialize(initConfig)
 
 	// read default node name from environment variable.
@@ -242,19 +246,21 @@ func initConfig() {
 		log.G(context.TODO()).WithField("OperatingSystem", operatingSystem).Fatalf("Operating system not supported. Valid options are: %s", strings.Join(providers.ValidOperatingSystems.Names(), " | "))
 	}
 
-	level, err := log.ParseLevel(logLevel)
+	level, err := logrus.ParseLevel(logLevel)
 	if err != nil {
 		log.G(context.TODO()).WithField("logLevel", logLevel).Fatal("log level is not supported")
 	}
 
 	logrus.SetLevel(level)
-
-	logger := log.L.WithFields(logrus.Fields{
+	logger := logruslogger.FromLogrus(logrus.WithFields(logrus.Fields{
 		"provider":        provider,
 		"operatingSystem": operatingSystem,
 		"node":            nodeName,
 		"namespace":       kubeNamespace,
-	})
+	}))
+
+	rootContext = log.WithLogger(rootContext, logger)
+
 	log.L = logger
 
 	if !disableTaint {

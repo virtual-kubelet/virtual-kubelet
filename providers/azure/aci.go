@@ -19,7 +19,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/Sirupsen/logrus"
 	"github.com/gorilla/websocket"
 	"github.com/virtual-kubelet/virtual-kubelet/log"
 	"github.com/virtual-kubelet/virtual-kubelet/manager"
@@ -875,7 +874,7 @@ func (p *ACIProvider) GetPods(ctx context.Context) ([]*v1.Pod, error) {
 
 		p, err := containerGroupToPod(&c)
 		if err != nil {
-			log.G(context.TODO()).WithFields(logrus.Fields{
+			log.G(ctx).WithFields(log.Fields{
 				"name": c.Name,
 				"id":   c.ID,
 			}).WithError(err).Error("error converting container group to pod")
