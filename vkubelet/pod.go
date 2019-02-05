@@ -2,29 +2,27 @@ package vkubelet
 
 import (
 	"context"
-	"fmt"
 	"sync"
 	"time"
 
 	"github.com/cpuguy83/strongerrors/status/ocstatus"
 	pkgerrors "github.com/pkg/errors"
-	"go.opencensus.io/trace"
+	"github.com/virtual-kubelet/virtual-kubelet/log"
+	"github.com/virtual-kubelet/virtual-kubelet/trace"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/tools/record"
-
-	"github.com/virtual-kubelet/virtual-kubelet/log"
 )
 
-func addPodAttributes(span *trace.Span, pod *corev1.Pod) {
-	span.AddAttributes(
-		trace.StringAttribute("uid", string(pod.GetUID())),
-		trace.StringAttribute("namespace", pod.GetNamespace()),
-		trace.StringAttribute("name", pod.GetName()),
-		trace.StringAttribute("phase", string(pod.Status.Phase)),
-		trace.StringAttribute("reason", pod.Status.Reason),
-	)
+func addPodAttributes(ctx context.Context, span trace.Span, pod *corev1.Pod) context.Context {
+	return span.WithFields(ctx, log.Fields{
+		"uid":       string(pod.GetUID()),
+		"namespace": pod.GetNamespace(),
+		"name":      pod.GetName(),
+		"phase":     string(pod.Status.Phase),
+		"reason":    pod.Status.Reason,
+	})
 }
 
 func (s *Server) createOrUpdatePod(ctx context.Context, pod *corev1.Pod, recorder record.EventRecorder) error {
@@ -40,14 +38,17 @@ func (s *Server) createOrUpdatePod(ctx context.Context, pod *corev1.Pod, recorde
 
 	ctx, span := trace.StartSpan(ctx, "createOrUpdatePod")
 	defer span.End()
-	addPodAttributes(span, pod)
+	addPodAttributes(ctx, span, pod)
 
 	if err := populateEnvironmentVariables(ctx, pod, s.resourceManager, recorder); err != nil {
-		span.SetStatus(trace.Status{Code: trace.StatusCodeInvalidArgument, Message: err.Error()})
+		span.SetStatus(ocstatus.FromError(err))
 		return err
 	}
 
-	logger := log.G(ctx).WithField("pod", pod.GetName()).WithField("namespace", pod.GetNamespace())
+	ctx = span.WithFields(ctx, log.Fields{
+		"pod":       pod.GetName(),
+		"namespace": pod.GetNamespace(),
+	})
 
 	if origErr := s.provider.CreatePod(ctx, pod); origErr != nil {
 		podPhase := corev1.PodPending
@@ -60,19 +61,23 @@ func (s *Server) createOrUpdatePod(ctx context.Context, pod *corev1.Pod, recorde
 		pod.Status.Reason = podStatusReasonProviderFailed
 		pod.Status.Message = origErr.Error()
 
+		logger := log.G(ctx).WithFields(log.Fields{
+			"podPhase": podPhase,
+			"reason":   pod.Status.Reason,
+		})
+
 		_, err := s.k8sClient.CoreV1().Pods(pod.Namespace).UpdateStatus(pod)
 		if err != nil {
 			logger.WithError(err).Warn("Failed to update pod status")
 		} else {
-			span.Annotate(nil, "Updated k8s pod status")
+			logger.Info("Updated k8s pod status")
 		}
 
-		span.SetStatus(trace.Status{Code: trace.StatusCodeUnknown, Message: origErr.Error()})
+		span.SetStatus(ocstatus.FromError(origErr))
 		return origErr
 	}
-	span.Annotate(nil, "Created pod in provider")
 
-	logger.Info("Pod created")
+	log.G(ctx).Info("Created pod in provider")
 
 	return nil
 }
@@ -89,23 +94,22 @@ func (s *Server) deletePod(ctx context.Context, namespace, name string) error {
 
 	ctx, span := trace.StartSpan(ctx, "deletePod")
 	defer span.End()
-	addPodAttributes(span, pod)
+	ctx = addPodAttributes(ctx, span, pod)
 
 	var delErr error
 	if delErr = s.provider.DeletePod(ctx, pod); delErr != nil && errors.IsNotFound(delErr) {
-		span.SetStatus(trace.Status{Code: trace.StatusCodeUnknown, Message: delErr.Error()})
+		span.SetStatus(ocstatus.FromError(delErr))
 		return delErr
 	}
-	span.Annotate(nil, "Deleted pod from provider")
 
-	logger := log.G(ctx).WithField("pod", pod.GetName()).WithField("namespace", pod.GetNamespace())
+	log.G(ctx).Debug("Deleted pod from provider")
+
 	if !errors.IsNotFound(delErr) {
 		if err := s.forceDeletePodResource(ctx, namespace, name); err != nil {
 			span.SetStatus(ocstatus.FromError(err))
 			return err
 		}
-		span.Annotate(nil, "Deleted pod from k8s")
-		logger.Info("Pod deleted")
+		log.G(ctx).Info("Deleted pod from Kubernetes")
 	}
 
 	return nil
@@ -114,19 +118,19 @@ func (s *Server) deletePod(ctx context.Context, namespace, name string) error {
 func (s *Server) forceDeletePodResource(ctx context.Context, namespace, name string) error {
 	ctx, span := trace.StartSpan(ctx, "forceDeletePodResource")
 	defer span.End()
-	span.AddAttributes(
-		trace.StringAttribute("namespace", namespace),
-		trace.StringAttribute("name", name),
-	)
+	ctx = span.WithFields(ctx, log.Fields{
+		"namespace": namespace,
+		"name":      name,
+	})
 
 	var grace int64
 	if err := s.k8sClient.CoreV1().Pods(namespace).Delete(name, &metav1.DeleteOptions{GracePeriodSeconds: &grace}); err != nil {
 		if errors.IsNotFound(err) {
-			span.Annotate(nil, "Pod does not exist in Kubernetes, nothing to delete")
+			log.G(ctx).Debug("Pod does not exist in Kubernetes, nothing to delete")
 			return nil
 		}
-		span.SetStatus(trace.Status{Code: trace.StatusCodeUnknown, Message: err.Error()})
-		return fmt.Errorf("Failed to delete Kubernetes pod: %s", err)
+		span.SetStatus(ocstatus.FromError(err))
+		return pkgerrors.Wrap(err, "Failed to delete Kubernetes pod")
 	}
 	return nil
 }
@@ -138,7 +142,8 @@ func (s *Server) updatePodStatuses(ctx context.Context) {
 
 	// Update all the pods with the provider status.
 	pods := s.resourceManager.GetPods()
-	span.AddAttributes(trace.Int64Attribute("nPods", int64(len(pods))))
+
+	ctx = span.WithField(ctx, "nPods", int64(len(pods)))
 
 	sema := make(chan struct{}, s.podSyncWorkers)
 	var wg sync.WaitGroup
@@ -157,8 +162,12 @@ func (s *Server) updatePodStatuses(ctx context.Context) {
 			defer func() { <-sema }()
 
 			if err := s.updatePodStatus(ctx, pod); err != nil {
-				logger := log.G(ctx).WithField("pod", pod.GetName()).WithField("namespace", pod.GetNamespace()).WithField("status", pod.Status.Phase).WithField("reason", pod.Status.Reason)
-				logger.Error(err)
+				log.G(ctx).WithFields(log.Fields{
+					"pod":       pod.GetName(),
+					"namespace": pod.GetNamespace(),
+					"status":    pod.Status.Phase,
+					"reason":    pod.Status.Reason,
+				}).Error(err)
 			}
 
 		}(pod)
@@ -170,7 +179,7 @@ func (s *Server) updatePodStatuses(ctx context.Context) {
 func (s *Server) updatePodStatus(ctx context.Context, pod *corev1.Pod) error {
 	ctx, span := trace.StartSpan(ctx, "updatePodStatus")
 	defer span.End()
-	addPodAttributes(span, pod)
+	ctx = addPodAttributes(ctx, span, pod)
 
 	if pod.Status.Phase == corev1.PodSucceeded ||
 		pod.Status.Phase == corev1.PodFailed ||
@@ -214,9 +223,10 @@ func (s *Server) updatePodStatus(ctx context.Context, pod *corev1.Pod) error {
 		return pkgerrors.Wrap(err, "error while updating pod status in kubernetes")
 	}
 
-	span.Annotate([]trace.Attribute{
-		trace.StringAttribute("new phase", string(pod.Status.Phase)),
-		trace.StringAttribute("new reason", pod.Status.Reason),
-	}, "updated pod status in kubernetes")
+	log.G(ctx).WithFields(log.Fields{
+		"new phase":  string(pod.Status.Phase),
+		"new reason": pod.Status.Reason,
+	}).Debug("Updated pod status in kubernetes")
+
 	return nil
 }

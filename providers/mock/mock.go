@@ -6,13 +6,14 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"log"
 	"math/rand"
 	"time"
 
 	"github.com/cpuguy83/strongerrors"
-	"go.opencensus.io/trace"
-	"k8s.io/api/core/v1"
+	"github.com/cpuguy83/strongerrors/status/ocstatus"
+	"github.com/virtual-kubelet/virtual-kubelet/log"
+	"github.com/virtual-kubelet/virtual-kubelet/trace"
+	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -114,9 +115,9 @@ func (p *MockProvider) CreatePod(ctx context.Context, pod *v1.Pod) error {
 	defer span.End()
 
 	// Add the pod's coordinates to the current span.
-	addAttributes(span, namespaceKey, pod.Namespace, nameKey, pod.Name)
+	ctx = addAttributes(ctx, span, namespaceKey, pod.Namespace, nameKey, pod.Name)
 
-	log.Printf("receive CreatePod %q\n", pod.Name)
+	log.G(ctx).Info("receive CreatePod %q", pod.Name)
 
 	key, err := buildKey(pod)
 	if err != nil {
@@ -134,9 +135,9 @@ func (p *MockProvider) UpdatePod(ctx context.Context, pod *v1.Pod) error {
 	defer span.End()
 
 	// Add the pod's coordinates to the current span.
-	addAttributes(span, namespaceKey, pod.Namespace, nameKey, pod.Name)
+	ctx = addAttributes(ctx, span, namespaceKey, pod.Namespace, nameKey, pod.Name)
 
-	log.Printf("receive UpdatePod %q\n", pod.Name)
+	log.G(ctx).Info("receive UpdatePod %q", pod.Name)
 
 	key, err := buildKey(pod)
 	if err != nil {
@@ -154,9 +155,9 @@ func (p *MockProvider) DeletePod(ctx context.Context, pod *v1.Pod) (err error) {
 	defer span.End()
 
 	// Add the pod's coordinates to the current span.
-	addAttributes(span, namespaceKey, pod.Namespace, nameKey, pod.Name)
+	ctx = addAttributes(ctx, span, namespaceKey, pod.Namespace, nameKey, pod.Name)
 
-	log.Printf("receive DeletePod %q\n", pod.Name)
+	log.G(ctx).Info("receive DeletePod %q", pod.Name)
 
 	key, err := buildKey(pod)
 	if err != nil {
@@ -175,12 +176,15 @@ func (p *MockProvider) DeletePod(ctx context.Context, pod *v1.Pod) (err error) {
 // GetPod returns a pod by name that is stored in memory.
 func (p *MockProvider) GetPod(ctx context.Context, namespace, name string) (pod *v1.Pod, err error) {
 	ctx, span := trace.StartSpan(ctx, "GetPod")
-	defer span.End()
+	defer func() {
+		span.SetStatus(ocstatus.FromError(err))
+		span.End()
+	}()
 
 	// Add the pod's coordinates to the current span.
-	addAttributes(span, namespaceKey, namespace, nameKey, name)
+	ctx = addAttributes(ctx, span, namespaceKey, namespace, nameKey, name)
 
-	log.Printf("receive GetPod %q\n", name)
+	log.G(ctx).Info("receive GetPod %q", name)
 
 	key, err := buildKeyFromNames(namespace, name)
 	if err != nil {
@@ -199,9 +203,9 @@ func (p *MockProvider) GetContainerLogs(ctx context.Context, namespace, podName,
 	defer span.End()
 
 	// Add pod and container attributes to the current span.
-	addAttributes(span, namespaceKey, namespace, nameKey, podName, containerNameKey, containerName)
+	ctx = addAttributes(ctx, span, namespaceKey, namespace, nameKey, podName, containerNameKey, containerName)
 
-	log.Printf("receive GetContainerLogs %q\n", podName)
+	log.G(ctx).Info("receive GetContainerLogs %q", podName)
 	return "", nil
 }
 
@@ -214,7 +218,7 @@ func (p *MockProvider) GetPodFullName(namespace string, pod string) string {
 // ExecInContainer executes a command in a container in the pod, copying data
 // between in/out/err and the container's stdin/stdout/stderr.
 func (p *MockProvider) ExecInContainer(name string, uid types.UID, container string, cmd []string, in io.Reader, out, err io.WriteCloser, tty bool, resize <-chan remotecommand.TerminalSize, timeout time.Duration) error {
-	log.Printf("receive ExecInContainer %q\n", container)
+	log.G(context.TODO()).Info("receive ExecInContainer %q", container)
 	return nil
 }
 
@@ -225,9 +229,9 @@ func (p *MockProvider) GetPodStatus(ctx context.Context, namespace, name string)
 	defer span.End()
 
 	// Add namespace and name as attributes to the current span.
-	addAttributes(span, namespaceKey, namespace, nameKey, name)
+	ctx = addAttributes(ctx, span, namespaceKey, namespace, nameKey, name)
 
-	log.Printf("receive GetPodStatus %q\n", name)
+	log.G(ctx).Info("receive GetPodStatus %q", name)
 
 	now := metav1.NewTime(time.Now())
 
@@ -279,7 +283,7 @@ func (p *MockProvider) GetPods(ctx context.Context) ([]*v1.Pod, error) {
 	ctx, span := trace.StartSpan(ctx, "GetPods")
 	defer span.End()
 
-	log.Printf("receive GetPods\n")
+	log.G(ctx).Info("receive GetPods")
 
 	var pods []*v1.Pod
 
@@ -485,11 +489,12 @@ func buildKey(pod *v1.Pod) (string, error) {
 // attrs must be an even-sized list of string arguments.
 // Otherwise, the span won't be modified.
 // TODO: Refactor and move to a "tracing utilities" package.
-func addAttributes(span *trace.Span, attrs ...string) {
+func addAttributes(ctx context.Context, span trace.Span, attrs ...string) context.Context {
 	if len(attrs)%2 == 1 {
-		return
+		return ctx
 	}
 	for i := 0; i < len(attrs); i += 2 {
-		span.AddAttributes(trace.StringAttribute(attrs[i], attrs[i+1]))
+		ctx = span.WithField(ctx, attrs[i], attrs[i+1])
 	}
+	return ctx
 }

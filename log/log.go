@@ -31,7 +31,7 @@ var (
 	// L is the default logger. It should be initialized before using `G` or `GetLogger`
 	// If L is unitialized and no logger is available in a provided context, a
 	// panic will occur.
-	L Logger
+	L Logger = nopLogger{}
 )
 
 type (
