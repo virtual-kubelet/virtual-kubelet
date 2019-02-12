@@ -36,7 +36,10 @@
   &-flags
     +border
     padding: 1rem
-    overflow: scroll     
+    overflow: scroll
+
+    table thead tr th:first-of-type
+      min-width: 30%
 
     .flag
       font-family: $family-code
@@ -44,3 +47,4 @@
 
       .arg
         color: $dark
+        font-weight: 700
