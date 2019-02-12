@@ -4,7 +4,7 @@ description: Run a Virtual Kubelet inside or outside of your Kubernetes cluster
 weight: 2
 ---
 
-You can Virtual Kubelet either [outside](#outside-k8s) or [inside](#inside-k8s) of a Kubernetes cluster using the [`virtual-kubelet`](#virtual-kubelet-cli) command-line tool.
+You can Virtual Kubelet either [outside](#outside-k8s) or [inside](#inside-k8s) of a Kubernetes cluster using the [`virtual-kubelet`](#virtual-kubelet-cli) command-line tool. If you run Kubernetes inside of a Kubernetes cluster, you can also deploy it using [Helm](#helm).
 
 > For `virtual-kubelet` installation instructions, see the [Setup](../setup) guide.
 
@@ -56,14 +56,24 @@ This will build and deploy the Virtual Kubelet and return.
 
 ## Helm
 
+{{< info >}}
+[Helm](https://helm.sh) is a package manager that enables you to easily deploy complex systems on Kubernetes using configuration bundles called [Charts](https://docs.helm.sh/developing_charts/).
+{{< /info >}}
+
+You can use the Virtual Kubelet [Helm chart](https://github.com/virtual-kubelet/virtual-kubelet/tree/master/charts) to deploy Virtual Kubelet on Kubernetes.
+
+First, add the Chart repository (the Chart is currently hosted on [GitHub](https://github.com)):
+
 ```bash
 helm repo add virtual-kubelet \
   https://raw.githubusercontent.com/virtual-kubelet/virtual-kubelet/master/charts
 ```
 
-```bash
-helm install --dry-run virtual-kubelet/virtual-kubelet
-```
+{{< success >}}
+You can check to make sure that the repo is listed amongst your current repos using `helm repo list`.
+{{< /success >}}
+
+Now you can install Virtual Kubelet using `helm install`. Here's an example command:
 
 ```bash
 helm install virtual-kubelet/virtual-kubelet \
@@ -72,7 +82,12 @@ helm install virtual-kubelet/virtual-kubelet \
   --set provider=azure
 ```
 
+This would install the [Azure Container Instances Virtual Kubelet](https://github.com/virtual-kubelet/virtual-kubelet/tree/master/providers/azure) in the `virtual-kubelet` namespace.
+
+To verify that Virtual Kubelet has been installed, run this command, which will list the available nodes and watch for changes:
+
 ```bash
 kubectl get nodes \
-  --namespace virtual-kubelet
+  --namespace virtual-kubelet \
+  --watch
 ```
