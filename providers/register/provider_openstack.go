@@ -1,3 +1,5 @@
+// +build !no_openstack_provider
+
 package register
 
 import (
