@@ -1,6 +1,6 @@
 # Basic site config
 title           = "Virtual Kubelet"
-baseURL         = "https://virtual-kubelet.netlify.com"
+baseURL         = "https://virtual-kubelet.io"
 languageCode    = "en-us"
 enableRobotsTxt = true
 
@@ -19,15 +19,17 @@ hrefTargetBlank = true
 [params]
 favicon            = "https://raw.githubusercontent.com/cncf/artwork/master/virtualkubelet/icon/color/virtualkubelet-icon-color.png"
 sansSerifFont      = "Noto Sans TC"
-#monospaceFont      = "Fira Mono"
+monospaceFont      = "Fira Mono"
 fontAwesomeVersion = "5.5.0"
-description        = """
+description        = "Virtual Kubelet is an open-source Kubernetes kubelet implementation that masquerades as a kubelet"
+intro              = """
 **Virtual Kubelet** is an open-source [Kubernetes kubelet](https://kubernetes.io/docs/reference/generated/kubelet/) implementation that *masquerades* as a kubelet. 
 
 This allows Kubernetes nodes to be backed by Virtual Kubelet [**providers**](/docs/providers) such as serverless cloud container platforms.
 """
 
 [params.logos]
+site    = "https://raw.githubusercontent.com/cncf/artwork/master/virtualkubelet/horizontal/color/virtualkubelet-horizontal-color.png"
 hero    = "https://raw.githubusercontent.com/cncf/artwork/master/virtualkubelet/horizontal/white/virtualkubelet-horizontal-white.png"
 navbar  = "https://raw.githubusercontent.com/cncf/artwork/master/virtualkubelet/horizontal/white/virtualkubelet-horizontal-white.png"
 sidebar = "https://raw.githubusercontent.com/cncf/artwork/master/virtualkubelet/stacked/white/virtualkubelet-stacked-white.png"
@@ -36,6 +38,10 @@ sidebar = "https://raw.githubusercontent.com/cncf/artwork/master/virtualkubelet/
 name  = "Noto Sans TC"
 sizes = [300,400,600,700]
 
+[[params.fonts]]
+name  = "Fira Mono"
+sizes = [400]
+
 [[params.social]]
 name  = "GitHub"
 color = "black"
@@ -43,10 +49,11 @@ url   = "https://github.com/virtual-kubelet/virtual-kubelet"
 icon  = "github"
 
 [[params.social]]
-name  = "Twitter"
-color = "twitter-blue"
-url   = "https://twitter.com/virtualkubelet"
-icon  = "twitter"
+name   = "Twitter"
+color  = "twitter-blue"
+url    = "https://twitter.com/virtualkubelet"
+icon   = "twitter"
+handle = "virtualkubelet"
 
 [[params.social]]
 name  = "Slack"

@@ -1,13 +1,13 @@
-{{- $fonts    := .Site.Params.fonts }}
-{{- $fontSlice := (slice) }}
-{{- range $fonts }}
-{{- $fontSlice = $fontSlice | append (printf "%s:%s" (replace .name " " "+") (delimit .sizes ",")) }}
-{{- end }}
-{{- $fontsUrl := printf "https://fonts.googleapis.com/css?family=%s" (delimit $fontSlice "|") }}
-{{- $sansSerifFont := .Site.Params.sansSerifFont }}
-//{{- $monospaceFont := .Site.Params.monospaceFont }}
-{{- $fontAwesomeVersion := .Site.Params.fontAwesomeVersion }}
-{{- $fontAwesomeUrl     := printf "https://use.fontawesome.com/releases/v%s/css/all.css" $fontAwesomeVersion }}
+{{ $fonts    := .Site.Params.fonts }}
+{{ $fontSlice := (slice) }}
+{{ range $fonts }}
+{{ $fontSlice = $fontSlice | append (printf "%s:%s" (replace .name " " "+") (delimit .sizes ",")) }}
+{{ end }}
+{{ $fontsUrl := printf "https://fonts.googleapis.com/css?family=%s" (delimit $fontSlice "|") }}
+{{ $sansSerifFont := .Site.Params.sansSerifFont }}
+{{ $monospaceFont := .Site.Params.monospaceFont }}
+{{ $fontAwesomeVersion := .Site.Params.fontAwesomeVersion }}
+{{ $fontAwesomeUrl     := printf "https://use.fontawesome.com/releases/v%s/css/all.css" $fontAwesomeVersion }}
 
 @charset "utf-8"
 @import url({{ $fontsUrl }})
@@ -32,7 +32,7 @@ $link-hover: $dark
 $code: $primary
 
 $family-sans-serif: "{{ $sansSerifFont }}", BlinkMacSystemFont, -apple-system, "Segoe UI", "Roboto", "Oxygen", "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue", "Helvetica", "Arial", sans-serif
-//$family-code: "{{ $monospaceFont }}", monospace
+$family-code: "{{ $monospaceFont }}", monospace
 $section-padding: 3rem 4rem
 
 $navbar-height: 5rem
@@ -52,6 +52,8 @@ $colors: mergeColorMaps(("twitter-blue": ($twitter-blue, $white), "slack-green":
 @import "bulma/bulma"
 @import "bulma-dashboard/bulma-dashboard.sass"
 @import "bulma-toc/bulma-toc.sass"
+
+@import "cli"
 
 // Ensure sticky footer at the bottom of the page
 .page
