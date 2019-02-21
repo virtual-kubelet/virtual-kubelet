@@ -199,14 +199,6 @@
   version = "v0.0.2"
 
 [[projects]]
-  branch = "master"
-  digest = "1:dadd2829b5206df1b19eca11995ff94f8a0e1164ed0c54ff7335000aa08840cb"
-  name = "github.com/cloudfoundry-incubator/candiedyaml"
-  packages = ["."]
-  pruneopts = "NUT"
-  revision = "a41693b7b7afb422c7ecb1028458ab27da047bbb"
-
-[[projects]]
   digest = "1:62e5b997b5ada9b5f71e759c3474f2a0de8de1b21473bab9e4f98c5aa69c05eb"
   name = "github.com/cpuguy83/strongerrors"
   packages = [
@@ -243,20 +235,13 @@
   revision = "6c6132ff69f0f6c088739067407b5d32c52e1d0f"
 
 [[projects]]
-  digest = "1:42656cdee7408cbc2209cbe071acd8e17cae4f06d6c3830422ebd5d65d845acc"
+  digest = "1:182a67996c78d0ee343dbba889378c35513d428ac31432cd0cf3c9e902abc3c4"
   name = "github.com/docker/distribution"
   packages = [
     ".",
     "context",
     "digest",
     "reference",
-    "registry/api/errcode",
-    "registry/api/v2",
-    "registry/client",
-    "registry/client/auth/challenge",
-    "registry/client/transport",
-    "registry/storage/cache",
-    "registry/storage/cache/memory",
     "uuid",
   ]
   pruneopts = "NUT"
@@ -315,14 +300,6 @@
   revision = "49bf474f9ed7ce7143a59d1964ff7b7fd9b52178"
 
 [[projects]]
-  digest = "1:dcfbd4e9931536ef74fa509eaa0cf905980b527a76ad9d5e52f9dd38a1c9793c"
-  name = "github.com/docker/engine-api"
-  packages = ["types/strslice"]
-  pruneopts = "NUT"
-  revision = "3d1601b9d2436a70b0dfc045a23f6503d19195df"
-  version = "v0.4.0"
-
-[[projects]]
   digest = "1:f133477f38c590bdcd6fc534617df17983f7a21e5b686d4a3495abeb21c631ec"
   name = "github.com/docker/go-connections"
   packages = [
@@ -371,14 +348,6 @@
   pruneopts = "NUT"
   revision = "72bf35d0ff611848c1dc9df0f976c81192392fa5"
   version = "v4.1.0"
-
-[[projects]]
-  branch = "master"
-  digest = "1:1ccd7321e62f680a988bba496f0f5a9c80410b8104d55b0f6b8ecf84ad328476"
-  name = "github.com/flynn/go-shlex"
-  packages = ["."]
-  pruneopts = "NUT"
-  revision = "3f9db97f856818214da2e1057f8ad84803971cff"
 
 [[projects]]
   digest = "1:1b91ae0dc69a41d4c2ed23ea5cffb721ea63f5037ca4b81e6d6771fbb8f45129"
@@ -779,78 +748,6 @@
   pruneopts = "NUT"
   revision = "08df121c8b9adcc2b8fd55fc8506c3f9714c7e61"
   version = "v1.0.1"
-
-[[projects]]
-  digest = "1:ce7c38372fe019fffddf72f1201c4e25548fb2594b813c923bf6d04705581de2"
-  name = "github.com/hyperhq/hyper-api"
-  packages = [
-    "client",
-    "client/transport",
-    "client/transport/cancellable",
-    "signature",
-    "types",
-    "types/blkiodev",
-    "types/container",
-    "types/filters",
-    "types/network",
-    "types/reference",
-    "types/registry",
-    "types/strslice",
-    "types/time",
-    "types/versions",
-  ]
-  pruneopts = "NUT"
-  revision = "18c77d3f9fe0abebb41b45c12f383ecac46f4ff1"
-
-[[projects]]
-  digest = "1:127e065c02cbc9fa48f0b798db8a5ed679c8e3434cd4d9cbd7c3d8a1b01d204e"
-  name = "github.com/hyperhq/hypercli"
-  packages = [
-    "cliconfig",
-    "daemon/graphdriver",
-    "image",
-    "image/v1",
-    "layer",
-    "opts",
-    "pkg/archive",
-    "pkg/chrootarchive",
-    "pkg/fileutils",
-    "pkg/homedir",
-    "pkg/httputils",
-    "pkg/idtools",
-    "pkg/ioutils",
-    "pkg/jsonlog",
-    "pkg/jsonmessage",
-    "pkg/longpath",
-    "pkg/mflag",
-    "pkg/plugins",
-    "pkg/pools",
-    "pkg/promise",
-    "pkg/random",
-    "pkg/reexec",
-    "pkg/stringid",
-    "pkg/system",
-    "pkg/tarsum",
-    "pkg/term",
-    "pkg/term/windows",
-    "pkg/urlutil",
-    "pkg/version",
-    "reference",
-    "registry",
-  ]
-  pruneopts = "NUT"
-  revision = "29217d318cab52815518a1126d57ca010de83e4d"
-
-[[projects]]
-  digest = "1:7158b13e667602ac37f7f9e2567feec50f31ebb2cb5cab49d2fb4c036e1e0003"
-  name = "github.com/hyperhq/libcompose"
-  packages = [
-    "config",
-    "utils",
-    "yaml",
-  ]
-  pruneopts = "NUT"
-  revision = "15d3a105140f968f5d4f62d2f44afd22a24a98fb"
 
 [[projects]]
   digest = "1:f0818bc212054788d1086e015b5ba32d01ef8e12c615bbb625570eefbe684a1e"
@@ -1304,29 +1201,6 @@
   ]
   pruneopts = "NUT"
   revision = "25eff159a728be87e103a0b8045e08273f4dbec4"
-
-[[projects]]
-  branch = "master"
-  digest = "1:f15121220068fb01e71ad08b0fdbd1bfaa926be774e7634e8e332c82134079b0"
-  name = "github.com/xeipuuv/gojsonpointer"
-  packages = ["."]
-  pruneopts = "NUT"
-  revision = "4e3ac2762d5f479393488629ee9370b50873b3a6"
-
-[[projects]]
-  branch = "master"
-  digest = "1:131db546a264d76defd7a4ce233796316b2ab856991cb4b7d6ced2a3c7294ad3"
-  name = "github.com/xeipuuv/gojsonreference"
-  packages = ["."]
-  pruneopts = "NUT"
-  revision = "bd5ef7bd5415a7ac448318e64f11a24cd21e594b"
-
-[[projects]]
-  digest = "1:60e24d485a33cb9bffc041de6a5f1596b8ef8d9a9bb9e9f3834c72fd5a96e76a"
-  name = "github.com/xeipuuv/gojsonschema"
-  packages = ["."]
-  pruneopts = "NUT"
-  revision = "0c8571ac0ce161a5feb57375a9cdf148c98c0f70"
 
 [[projects]]
   digest = "1:a3cb0432171318ddfe4c7cc40c6edf94cb6a61859ffa5cec27f4d5162dfc4db7"
@@ -1908,26 +1782,11 @@
     "github.com/cpuguy83/strongerrors/status",
     "github.com/cpuguy83/strongerrors/status/ocstatus",
     "github.com/docker/docker/api/types/strslice",
-    "github.com/docker/go-connections/nat",
-    "github.com/docker/go-connections/sockets",
-    "github.com/docker/go-connections/tlsconfig",
     "github.com/google/uuid",
     "github.com/gorilla/mux",
     "github.com/gorilla/websocket",
     "github.com/hashicorp/nomad/api",
     "github.com/hashicorp/nomad/testutil",
-    "github.com/hyperhq/hyper-api/client",
-    "github.com/hyperhq/hyper-api/types",
-    "github.com/hyperhq/hyper-api/types/container",
-    "github.com/hyperhq/hyper-api/types/filters",
-    "github.com/hyperhq/hyper-api/types/network",
-    "github.com/hyperhq/hyper-api/types/registry",
-    "github.com/hyperhq/hypercli/cliconfig",
-    "github.com/hyperhq/hypercli/opts",
-    "github.com/hyperhq/hypercli/pkg/jsonmessage",
-    "github.com/hyperhq/hypercli/pkg/term",
-    "github.com/hyperhq/hypercli/reference",
-    "github.com/hyperhq/hypercli/registry",
     "github.com/kr/pretty",
     "github.com/lawrencegripper/pod2docker",
     "github.com/mitchellh/go-homedir",

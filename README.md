@@ -2,7 +2,7 @@
 
 Virtual Kubelet is an open source [Kubernetes kubelet](https://kubernetes.io/docs/reference/generated/kubelet/)
 implementation that masquerades as a kubelet for the purposes of connecting Kubernetes to other APIs.
-This allows the nodes to be backed by other services like ACI, AWS Fargate, Hyper.sh, [IoT Edge](https://github.com/Azure/iot-edge-virtual-kubelet-provider) etc. The primary scenario for VK is enabling the extension of the Kubernetes API into serverless container platforms like ACI, Fargate, and Hyper.sh, though we are open to others. However, it should be noted that VK is explicitly not intended to be an alternative to Kubernetes federation.
+This allows the nodes to be backed by other services like ACI, AWS Fargate, [IoT Edge](https://github.com/Azure/iot-edge-virtual-kubelet-provider) etc. The primary scenario for VK is enabling the extension of the Kubernetes API into serverless container platforms like ACI and Fargate, though we are open to others. However, it should be noted that VK is explicitly not intended to be an alternative to Kubernetes federation.
  
 Virtual Kubelet features a pluggable architecture and direct use of Kubernetes primitives, making it much easier to build on.
 
@@ -23,7 +23,6 @@ The best description is "Kubernetes API on top, programmable back."
     + [Azure Container Instances Provider](#azure-container-instances-provider)
 	+ [Azure Batch GPU Provider](./providers/azurebatch/README.md)
     + [AWS Fargate Provider](#aws-fargate-provider)
-    + [Hyper.sh Provider](#hypersh-provider)
     + [Service Fabric Mesh Provider](#service-fabric-mesh-provider)
 	+ [HashiCorp Nomad](#hashicorp-nomad-provider)
     + [Adding a New Provider via the Provider Interface](#adding-a-new-provider-via-the-provider-interface)
@@ -177,16 +176,6 @@ security groups, IAM roles, CloudWatch Logs and many other AWS services. Pods on
 co-exist with pods on regular worker nodes in the same Kubernetes cluster.
 
 Easy instructions and a sample configuration file is available in the [AWS Fargate provider documentation](providers/aws/README.md).
-
-### Hyper.sh Provider
-
-The Hyper.sh Provider allows Kubernetes clusters to deploy Hyper.sh containers
-and manage both typical pods on VMs and Hyper.sh containers in the same
-Kubernetes cluster.
-
-```bash
-./bin/virtual-kubelet --provider hyper
-```
 
 ### Service Fabric Mesh Provider
 
