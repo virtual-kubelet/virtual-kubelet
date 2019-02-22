@@ -30,19 +30,21 @@ import (
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-	"go.opencensus.io/trace"
+	"github.com/virtual-kubelet/virtual-kubelet/log"
+	logruslogger "github.com/virtual-kubelet/virtual-kubelet/log/logrus"
+	"github.com/virtual-kubelet/virtual-kubelet/manager"
+	"github.com/virtual-kubelet/virtual-kubelet/providers"
+	"github.com/virtual-kubelet/virtual-kubelet/providers/register"
+	"github.com/virtual-kubelet/virtual-kubelet/trace"
+	"github.com/virtual-kubelet/virtual-kubelet/trace/opencensus"
+	"github.com/virtual-kubelet/virtual-kubelet/vkubelet"
+	octrace "go.opencensus.io/trace"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	kubeinformers "k8s.io/client-go/informers"
 	corev1informers "k8s.io/client-go/informers/core/v1"
 	"k8s.io/client-go/kubernetes"
-
-	"github.com/virtual-kubelet/virtual-kubelet/log"
-	"github.com/virtual-kubelet/virtual-kubelet/manager"
-	"github.com/virtual-kubelet/virtual-kubelet/providers"
-	"github.com/virtual-kubelet/virtual-kubelet/providers/register"
-	"github.com/virtual-kubelet/virtual-kubelet/vkubelet"
 )
 
 const (
@@ -161,6 +163,10 @@ func (mv mapVar) Type() string {
 }
 
 func init() {
+	// make sure the default logger/tracer is initialized
+	log.L = logruslogger.FromLogrus(logrus.NewEntry(logrus.StandardLogger()))
+	trace.T = opencensus.Adapter{}
+
 	cobra.OnInitialize(initConfig)
 
 	// read default node name from environment variable.
@@ -242,19 +248,21 @@ func initConfig() {
 		log.G(context.TODO()).WithField("OperatingSystem", operatingSystem).Fatalf("Operating system not supported. Valid options are: %s", strings.Join(providers.ValidOperatingSystems.Names(), " | "))
 	}
 
-	level, err := log.ParseLevel(logLevel)
+	level, err := logrus.ParseLevel(logLevel)
 	if err != nil {
 		log.G(context.TODO()).WithField("logLevel", logLevel).Fatal("log level is not supported")
 	}
 
 	logrus.SetLevel(level)
-
-	logger := log.L.WithFields(logrus.Fields{
+	logger := logruslogger.FromLogrus(logrus.WithFields(logrus.Fields{
 		"provider":        provider,
 		"operatingSystem": operatingSystem,
 		"node":            nodeName,
 		"namespace":       kubeNamespace,
-	})
+	}))
+
+	rootContext = log.WithLogger(rootContext, logger)
+
 	log.L = logger
 
 	if !disableTaint {
@@ -339,16 +347,16 @@ func initConfig() {
 		if err != nil {
 			log.L.WithError(err).WithField("exporter", e).Fatal("Cannot initialize exporter")
 		}
-		trace.RegisterExporter(exporter)
+		octrace.RegisterExporter(exporter)
 	}
 	if len(userTraceExporters) > 0 {
-		var s trace.Sampler
+		var s octrace.Sampler
 		switch strings.ToLower(traceSampler) {
 		case "":
 		case "always":
-			s = trace.AlwaysSample()
+			s = octrace.AlwaysSample()
 		case "never":
-			s = trace.NeverSample()
+			s = octrace.NeverSample()
 		default:
 			rate, err := strconv.Atoi(traceSampler)
 			if err != nil {
@@ -357,12 +365,12 @@ func initConfig() {
 			if rate < 0 || rate > 100 {
 				logger.WithField("rate", traceSampler).Fatal("trace sample rate must not be less than zero or greater than 100")
 			}
-			s = trace.ProbabilitySampler(float64(rate) / 100)
+			s = octrace.ProbabilitySampler(float64(rate) / 100)
 		}
 
 		if s != nil {
-			trace.ApplyConfig(
-				trace.Config{
+			octrace.ApplyConfig(
+				octrace.Config{
 					DefaultSampler: s,
 				},
 			)

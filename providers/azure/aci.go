@@ -19,15 +19,14 @@ import (
 	"sync"
 	"time"
 
-	"github.com/Sirupsen/logrus"
 	"github.com/gorilla/websocket"
 	"github.com/virtual-kubelet/virtual-kubelet/log"
 	"github.com/virtual-kubelet/virtual-kubelet/manager"
 	client "github.com/virtual-kubelet/virtual-kubelet/providers/azure/client"
 	"github.com/virtual-kubelet/virtual-kubelet/providers/azure/client/aci"
 	"github.com/virtual-kubelet/virtual-kubelet/providers/azure/client/network"
-	"go.opencensus.io/trace"
-	"k8s.io/api/core/v1"
+	"github.com/virtual-kubelet/virtual-kubelet/trace"
+	v1 "k8s.io/api/core/v1"
 	k8serr "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -480,11 +479,11 @@ func getKubeProxyExtension(secretPath, masterURI, clusterCIDR string) (*aci.Exte
 	return &extension, nil
 }
 
-func addAzureAttributes(span *trace.Span, p *ACIProvider) {
-	span.AddAttributes(
-		trace.StringAttribute("azure.resourceGroup", p.resourceGroup),
-		trace.StringAttribute("azure.region", p.region),
-	)
+func addAzureAttributes(ctx context.Context, span trace.Span, p *ACIProvider) context.Context {
+	return span.WithFields(ctx, log.Fields{
+		"azure.resourceGroup": p.resourceGroup,
+		"azure.region":        p.region,
+	})
 }
 
 // CreatePod accepts a Pod definition and creates
@@ -492,7 +491,7 @@ func addAzureAttributes(span *trace.Span, p *ACIProvider) {
 func (p *ACIProvider) CreatePod(ctx context.Context, pod *v1.Pod) error {
 	ctx, span := trace.StartSpan(ctx, "aci.CreatePod")
 	defer span.End()
-	addAzureAttributes(span, p)
+	ctx = addAzureAttributes(ctx, span, p)
 
 	var containerGroup aci.ContainerGroup
 	containerGroup.Location = p.region
@@ -694,7 +693,7 @@ func (p *ACIProvider) UpdatePod(ctx context.Context, pod *v1.Pod) error {
 func (p *ACIProvider) DeletePod(ctx context.Context, pod *v1.Pod) error {
 	ctx, span := trace.StartSpan(ctx, "aci.DeletePod")
 	defer span.End()
-	addAzureAttributes(span, p)
+	ctx = addAzureAttributes(ctx, span, p)
 
 	err := p.aciClient.DeleteContainerGroup(ctx, p.resourceGroup, fmt.Sprintf("%s-%s", pod.Namespace, pod.Name))
 	return wrapError(err)
@@ -705,7 +704,7 @@ func (p *ACIProvider) DeletePod(ctx context.Context, pod *v1.Pod) error {
 func (p *ACIProvider) GetPod(ctx context.Context, namespace, name string) (*v1.Pod, error) {
 	ctx, span := trace.StartSpan(ctx, "aci.GetPod")
 	defer span.End()
-	addAzureAttributes(span, p)
+	ctx = addAzureAttributes(ctx, span, p)
 
 	cg, err, status := p.aciClient.GetContainerGroup(ctx, p.resourceGroup, fmt.Sprintf("%s-%s", namespace, name))
 	if err != nil {
@@ -726,7 +725,7 @@ func (p *ACIProvider) GetPod(ctx context.Context, namespace, name string) (*v1.P
 func (p *ACIProvider) GetContainerLogs(ctx context.Context, namespace, podName, containerName string, tail int) (string, error) {
 	ctx, span := trace.StartSpan(ctx, "aci.GetContainerLogs")
 	defer span.End()
-	addAzureAttributes(span, p)
+	ctx = addAzureAttributes(ctx, span, p)
 
 	logContent := ""
 	cg, err, _ := p.aciClient.GetContainerGroup(ctx, p.resourceGroup, fmt.Sprintf("%s-%s", namespace, podName))
@@ -744,7 +743,6 @@ func (p *ACIProvider) GetContainerLogs(ctx context.Context, namespace, podName, 
 		cLogs, err := p.aciClient.GetContainerLogs(ctx, p.resourceGroup, cg.Name, containerName, tail)
 		if err != nil {
 			log.G(ctx).WithField("method", "GetContainerLogs").WithError(err).Debug("Error getting container logs, retrying")
-			span.Annotate(nil, "Error getting container logs, retrying")
 			time.Sleep(5000 * time.Millisecond)
 		} else {
 			logContent = cLogs.Content
@@ -841,7 +839,7 @@ func (p *ACIProvider) ExecInContainer(name string, uid types.UID, container stri
 func (p *ACIProvider) GetPodStatus(ctx context.Context, namespace, name string) (*v1.PodStatus, error) {
 	ctx, span := trace.StartSpan(ctx, "aci.GetPodStatus")
 	defer span.End()
-	addAzureAttributes(span, p)
+	ctx = addAzureAttributes(ctx, span, p)
 
 	pod, err := p.GetPod(ctx, namespace, name)
 	if err != nil {
@@ -859,7 +857,7 @@ func (p *ACIProvider) GetPodStatus(ctx context.Context, namespace, name string) 
 func (p *ACIProvider) GetPods(ctx context.Context) ([]*v1.Pod, error) {
 	ctx, span := trace.StartSpan(ctx, "aci.GetPods")
 	defer span.End()
-	addAzureAttributes(span, p)
+	ctx = addAzureAttributes(ctx, span, p)
 
 	cgs, err := p.aciClient.ListContainerGroups(ctx, p.resourceGroup)
 	if err != nil {
@@ -875,7 +873,7 @@ func (p *ACIProvider) GetPods(ctx context.Context) ([]*v1.Pod, error) {
 
 		p, err := containerGroupToPod(&c)
 		if err != nil {
-			log.G(context.TODO()).WithFields(logrus.Fields{
+			log.G(ctx).WithFields(log.Fields{
 				"name": c.Name,
 				"id":   c.ID,
 			}).WithError(err).Error("error converting container group to pod")

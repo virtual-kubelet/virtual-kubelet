@@ -25,7 +25,7 @@ func handleError(f handlerFunc) http.HandlerFunc {
 		if code >= 500 {
 			logger.Error("Internal server error on request")
 		} else {
-			log.Trace(logger, "Error on request")
+			logger.Debug("Error on request")
 		}
 	}
 }

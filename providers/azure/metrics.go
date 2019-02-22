@@ -7,10 +7,11 @@ import (
 
 	"github.com/cpuguy83/strongerrors/status/ocstatus"
 	"github.com/pkg/errors"
+	"github.com/virtual-kubelet/virtual-kubelet/log"
 	"github.com/virtual-kubelet/virtual-kubelet/providers/azure/client/aci"
-	"go.opencensus.io/trace"
+	"github.com/virtual-kubelet/virtual-kubelet/trace"
 	"golang.org/x/sync/errgroup"
-	"k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	stats "k8s.io/kubernetes/pkg/kubelet/apis/stats/v1alpha1"
 )
@@ -19,17 +20,24 @@ import (
 func (p *ACIProvider) GetStatsSummary(ctx context.Context) (summary *stats.Summary, err error) {
 	ctx, span := trace.StartSpan(ctx, "GetSummaryStats")
 	defer span.End()
-	addAzureAttributes(span, p)
+	ctx = addAzureAttributes(ctx, span, p)
 
 	p.metricsSync.Lock()
 	defer p.metricsSync.Unlock()
-	span.Annotate(nil, "acquired metrics mutex")
+
+	log.G(ctx).Debug("acquired metrics mutex")
 
 	if time.Now().Sub(p.metricsSyncTime) < time.Minute {
-		span.AddAttributes(trace.BoolAttribute("preCachedResult", true), trace.StringAttribute("cachedResultSampleTime", p.metricsSyncTime.String()))
+		span.WithFields(ctx, log.Fields{
+			"preCachedResult":        true,
+			"cachedResultSampleTime": p.metricsSyncTime.String(),
+		})
 		return p.lastMetric, nil
 	}
-	span.AddAttributes(trace.BoolAttribute("preCachedResult", false), trace.StringAttribute("cachedResultSampleTime", p.metricsSyncTime.String()))
+	ctx = span.WithFields(ctx, log.Fields{
+		"preCachedResult":        false,
+		"cachedResultSampleTime": p.metricsSyncTime.String(),
+	})
 
 	select {
 	case <-ctx.Done():
@@ -62,11 +70,11 @@ func (p *ACIProvider) GetStatsSummary(ctx context.Context) (summary *stats.Summa
 		errGroup.Go(func() error {
 			ctx, span := trace.StartSpan(ctx, "getPodMetrics")
 			defer span.End()
-			span.AddAttributes(
-				trace.StringAttribute("UID", string(pod.UID)),
-				trace.StringAttribute("Name", pod.Name),
-				trace.StringAttribute("Namespace", pod.Namespace),
-			)
+			logger := log.G(ctx).WithFields(log.Fields{
+				"UID":       string(pod.UID),
+				"Name":      pod.Name,
+				"Namespace": pod.Namespace,
+			})
 
 			select {
 			case <-ctx.Done():
@@ -77,7 +85,7 @@ func (p *ACIProvider) GetStatsSummary(ctx context.Context) (summary *stats.Summa
 				<-sema
 			}()
 
-			span.Annotate(nil, "Acquired semaphore")
+			logger.Debug("Acquired semaphore")
 
 			cgName := containerGroupName(pod)
 			// cpu/mem and net stats are split because net stats do not support container level detail
@@ -92,7 +100,7 @@ func (p *ACIProvider) GetStatsSummary(ctx context.Context) (summary *stats.Summa
 				span.SetStatus(ocstatus.FromError(err))
 				return errors.Wrapf(err, "error fetching cpu/mem stats for container group %s", cgName)
 			}
-			span.Annotate(nil, "Got system stats")
+			logger.Debug("Got system stats")
 
 			netStats, err := p.aciClient.GetContainerGroupMetrics(ctx, p.resourceGroup, cgName, aci.MetricsRequest{
 				Start:        start,
@@ -104,7 +112,7 @@ func (p *ACIProvider) GetStatsSummary(ctx context.Context) (summary *stats.Summa
 				span.SetStatus(ocstatus.FromError(err))
 				return errors.Wrapf(err, "error fetching network stats for container group %s", cgName)
 			}
-			span.Annotate(nil, "Got network stats")
+			logger.Debug("Got network stats")
 
 			chResult <- collectMetrics(pod, systemStats, netStats)
 			return nil
@@ -112,10 +120,11 @@ func (p *ACIProvider) GetStatsSummary(ctx context.Context) (summary *stats.Summa
 	}
 
 	if err := errGroup.Wait(); err != nil {
+		span.SetStatus(ocstatus.FromError(err))
 		return nil, errors.Wrap(err, "error in request to fetch container group metrics")
 	}
 	close(chResult)
-	span.Annotate([]trace.Attribute{trace.Int64Attribute("nPods", int64(len(pods)))}, "Collected stats from Azure")
+	log.G(ctx).Debugf("Collected status from azure for %d pods", len(pods))
 
 	var s stats.Summary
 	s.Node = stats.NodeStats{
