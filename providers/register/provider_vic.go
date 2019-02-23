@@ -1,4 +1,4 @@
-// +build linux,!no_vic_provider
+// +build linux,vic_provider
 
 package register
 

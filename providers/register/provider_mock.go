@@ -1,4 +1,4 @@
-// +build !no_mock_provider
+// +build mock_provider
 
 package register
 

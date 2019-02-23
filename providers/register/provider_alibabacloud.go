@@ -1,4 +1,4 @@
-// +build !no_alibabacloud_provider
+// +build alibabacloud_provider
 
 package register
 
