@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/virtual-kubelet/virtual-kubelet/providers/vic/pod"
+	"github.com/iofog/virtual-kubelet/providers/vic/pod"
 	"k8s.io/api/core/v1"
 
 	"github.com/vmware/vic/pkg/trace"

@@ -18,8 +18,8 @@ import (
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/cpuguy83/strongerrors"
-	"github.com/virtual-kubelet/virtual-kubelet/manager"
-	"github.com/virtual-kubelet/virtual-kubelet/providers"
+	"github.com/iofog/virtual-kubelet/manager"
+	"github.com/iofog/virtual-kubelet/providers"
 	"google.golang.org/grpc"
 	"k8s.io/api/core/v1"
 	k8serr "k8s.io/apimachinery/pkg/api/errors"

@@ -5,7 +5,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/virtual-kubelet/virtual-kubelet/providers/vic/proxy/mocks"
+	"github.com/iofog/virtual-kubelet/providers/vic/proxy/mocks"
 	"github.com/vmware/vic/lib/apiservers/portlayer/client"
 )
 

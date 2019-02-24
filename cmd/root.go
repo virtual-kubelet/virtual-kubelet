@@ -26,18 +26,18 @@ import (
 	"time"
 
 	"github.com/Sirupsen/logrus"
+	"github.com/iofog/virtual-kubelet/log"
+	logruslogger "github.com/iofog/virtual-kubelet/log/logrus"
+	"github.com/iofog/virtual-kubelet/manager"
+	"github.com/iofog/virtual-kubelet/providers"
+	"github.com/iofog/virtual-kubelet/providers/register"
+	"github.com/iofog/virtual-kubelet/trace"
+	"github.com/iofog/virtual-kubelet/trace/opencensus"
+	"github.com/iofog/virtual-kubelet/vkubelet"
 	"github.com/mitchellh/go-homedir"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-	"github.com/virtual-kubelet/virtual-kubelet/log"
-	logruslogger "github.com/virtual-kubelet/virtual-kubelet/log/logrus"
-	"github.com/virtual-kubelet/virtual-kubelet/manager"
-	"github.com/virtual-kubelet/virtual-kubelet/providers"
-	"github.com/virtual-kubelet/virtual-kubelet/providers/register"
-	"github.com/virtual-kubelet/virtual-kubelet/trace"
-	"github.com/virtual-kubelet/virtual-kubelet/trace/opencensus"
-	"github.com/virtual-kubelet/virtual-kubelet/vkubelet"
 	octrace "go.opencensus.io/trace"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -55,6 +55,7 @@ const (
 	kubeSharedInformerFactoryDefaultResync = 1 * time.Minute
 )
 
+var controllerToken string
 var kubeletConfig string
 var kubeConfig string
 var kubeNamespace string
@@ -179,11 +180,13 @@ func init() {
 	// Cobra supports persistent flags, which, if defined here,
 	// will be global for your application.
 	//RootCmd.PersistentFlags().StringVar(&kubeletConfig, "config", "", "config file (default is $HOME/.virtual-kubelet.yaml)")
+	RootCmd.PersistentFlags().StringVar(&controllerToken, "iofog-token", "", "ioFog Controller token")
 	RootCmd.PersistentFlags().StringVar(&kubeConfig, "kubeconfig", "", "config file (default is $HOME/.kube/config)")
 	RootCmd.PersistentFlags().StringVar(&kubeNamespace, "namespace", "", "kubernetes namespace (default is 'all')")
 	RootCmd.PersistentFlags().StringVar(&nodeName, "nodename", defaultNodeName, "kubernetes node name")
 	RootCmd.PersistentFlags().StringVar(&operatingSystem, "os", "Linux", "Operating System (Linux/Windows)")
-	RootCmd.PersistentFlags().StringVar(&provider, "provider", "", "cloud provider")
+	//RootCmd.PersistentFlags().StringVar(&provider, "provider", "", "cloud provider")
+	provider = "web"
 	RootCmd.PersistentFlags().BoolVar(&disableTaint, "disable-taint", false, "disable the virtual-kubelet node taint")
 	RootCmd.PersistentFlags().StringVar(&providerConfig, "provider-config", "", "cloud provider configuration file")
 	RootCmd.PersistentFlags().StringVar(&metricsAddr, "metrics-addr", ":10255", "address to listen for metrics/stats requests")
@@ -314,6 +317,7 @@ func initConfig() {
 		ResourceManager: rm,
 		DaemonPort:      int32(daemonPort),
 		InternalIP:      os.Getenv("VKUBELET_POD_IP"),
+		ControllerToken: controllerToken,
 	}
 
 	p, err = register.GetProvider(provider, initConfig)

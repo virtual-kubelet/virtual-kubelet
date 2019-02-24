@@ -18,7 +18,7 @@ import (
 	"fmt"
 
 	"github.com/spf13/cobra"
-	"github.com/virtual-kubelet/virtual-kubelet/version"
+	"github.com/iofog/virtual-kubelet/version"
 )
 
 // versionCmd represents the version command

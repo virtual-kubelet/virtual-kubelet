@@ -26,14 +26,14 @@ Virtual Kubelet currently has a wide variety of providers:
 
 ## Adding new providers {#adding}
 
-To add a new Virtual Kubelet provider, create a new directory for your provider in the [`providers`](https://github.com/virtual-kubelet/virtual-kubelet/tree/master/providers) directory.
+To add a new Virtual Kubelet provider, create a new directory for your provider in the [`providers`](https://github.com/iofog/virtual-kubelet/tree/master/providers) directory.
 
 ```shell
-git clone https://github.com/virtual-kubelet/virtual-kubelet
+git clone https://github.com/iofog/virtual-kubelet
 cd virtual-kubelet
 mkdir providers/my-provider
 ```
 
-In that created directory, implement the [`Provider`](https://godoc.org/github.com/virtual-kubelet/virtual-kubelet/providers#Provider) interface in [Go](https://golang.org).
+In that created directory, implement the [`Provider`](https://godoc.org/github.com/iofog/virtual-kubelet/providers#Provider) interface in [Go](https://golang.org).
 
-For a basic example, see the [Virtual Kubelet CRI Provider](https://github.com/virtual-kubelet/virtual-kubelet/tree/master/providers/cri).
+For a basic example, see the [Virtual Kubelet CRI Provider](https://github.com/iofog/virtual-kubelet/tree/master/providers/cri).

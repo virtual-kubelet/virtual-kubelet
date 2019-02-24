@@ -6,7 +6,7 @@ import (
 
 	"github.com/vmware/vic/pkg/trace"
 
-	vicpod "github.com/virtual-kubelet/virtual-kubelet/providers/vic/pod"
+	vicpod "github.com/iofog/virtual-kubelet/providers/vic/pod"
 )
 
 type PodCache interface {

@@ -11,7 +11,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/kubernetes/pkg/kubelet/apis/stats/v1alpha1"
 
-	"github.com/virtual-kubelet/virtual-kubelet/vkubelet"
+	"github.com/iofog/virtual-kubelet/vkubelet"
 )
 
 const (

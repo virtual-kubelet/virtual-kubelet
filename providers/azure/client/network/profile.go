@@ -8,7 +8,7 @@ import (
 
 	"github.com/Azure/azure-sdk-for-go/services/network/mgmt/2018-08-01/network"
 	"github.com/pkg/errors"
-	"github.com/virtual-kubelet/virtual-kubelet/providers/azure/client/api"
+	"github.com/iofog/virtual-kubelet/providers/azure/client/api"
 )
 
 const (

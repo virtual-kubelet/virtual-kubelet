@@ -24,7 +24,7 @@ import (
 
 	"github.com/cpuguy83/strongerrors/status/ocstatus"
 	pkgerrors "github.com/pkg/errors"
-	"github.com/virtual-kubelet/virtual-kubelet/trace"
+	"github.com/iofog/virtual-kubelet/trace"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -36,7 +36,7 @@ import (
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/workqueue"
 
-	"github.com/virtual-kubelet/virtual-kubelet/log"
+	"github.com/iofog/virtual-kubelet/log"
 )
 
 const (

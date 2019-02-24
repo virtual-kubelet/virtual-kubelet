@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/virtual-kubelet/virtual-kubelet/providers/vic/proxy"
+	"github.com/iofog/virtual-kubelet/providers/vic/proxy"
 
 	vicerrors "github.com/vmware/vic/lib/apiservers/engine/errors"
 	"github.com/vmware/vic/lib/apiservers/portlayer/client"

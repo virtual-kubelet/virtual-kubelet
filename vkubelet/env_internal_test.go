@@ -8,7 +8,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	testutil "github.com/virtual-kubelet/virtual-kubelet/test/util"
+	testutil "github.com/iofog/virtual-kubelet/test/util"
 )
 
 const (
@@ -114,7 +114,7 @@ func TestPopulatePodWithInitContainersUsingEnv(t *testing.T) {
 										Name: configMap1.Name,
 									},
 									Key:      keyFoo,
-									// This scenario has been observed before https://github.com/virtual-kubelet/virtual-kubelet/issues/444#issuecomment-449611851.
+									// This scenario has been observed before https://github.com/iofog/virtual-kubelet/issues/444#issuecomment-449611851.
 									Optional: nil,
 								},
 							},
@@ -157,7 +157,7 @@ func TestPopulatePodWithInitContainersUsingEnv(t *testing.T) {
 										Name: configMap1.Name,
 									},
 									Key:      keyFoo,
-									// This scenario has been observed before https://github.com/virtual-kubelet/virtual-kubelet/issues/444#issuecomment-449611851.
+									// This scenario has been observed before https://github.com/iofog/virtual-kubelet/issues/444#issuecomment-449611851.
 									Optional: nil,
 								},
 							},
@@ -673,7 +673,7 @@ func TestEnvReferencingInexistentConfigMapKey(t *testing.T) {
 										Name: missingConfigMapName,
 									},
 									Key: "key",
-									// This scenario has been observed before https://github.com/virtual-kubelet/virtual-kubelet/issues/444#issuecomment-449611851.
+									// This scenario has been observed before https://github.com/iofog/virtual-kubelet/issues/444#issuecomment-449611851.
 									// A nil value of optional means "mandatory", hence we should expect "populateEnvironmentVariables" to return an error.
 									Optional: nil,
 								},
@@ -722,7 +722,7 @@ func TestEnvReferencingInexistentSecretKey(t *testing.T) {
 										Name: missingSecretName,
 									},
 									Key: "key",
-									// This scenario has been observed before https://github.com/virtual-kubelet/virtual-kubelet/issues/444#issuecomment-449611851.
+									// This scenario has been observed before https://github.com/iofog/virtual-kubelet/issues/444#issuecomment-449611851.
 									// A nil value of optional means "mandatory", hence we should expect "populateEnvironmentVariables" to return an error.
 									Optional: nil,
 								},

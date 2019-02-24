@@ -18,8 +18,8 @@ import (
 
 	"github.com/docker/docker/api/types/strslice"
 
-	"github.com/virtual-kubelet/virtual-kubelet/providers/vic/cache"
-	"github.com/virtual-kubelet/virtual-kubelet/providers/vic/constants"
+	"github.com/iofog/virtual-kubelet/providers/vic/cache"
+	"github.com/iofog/virtual-kubelet/providers/vic/constants"
 )
 
 type IsolationProxy interface {

@@ -13,8 +13,8 @@ import (
 
 	"github.com/Azure/azure-sdk-for-go/profiles/preview/preview/servicefabricmesh/mgmt/servicefabricmesh"
 	"github.com/Azure/go-autorest/autorest/azure/auth"
-	"github.com/virtual-kubelet/virtual-kubelet/manager"
-	"github.com/virtual-kubelet/virtual-kubelet/providers"
+	"github.com/iofog/virtual-kubelet/manager"
+	"github.com/iofog/virtual-kubelet/providers"
 	"k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"

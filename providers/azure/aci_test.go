@@ -18,9 +18,9 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
-	"github.com/virtual-kubelet/virtual-kubelet/manager"
-	"github.com/virtual-kubelet/virtual-kubelet/providers/azure/client"
-	"github.com/virtual-kubelet/virtual-kubelet/providers/azure/client/aci"
+	"github.com/iofog/virtual-kubelet/manager"
+	"github.com/iofog/virtual-kubelet/providers/azure/client"
+	"github.com/iofog/virtual-kubelet/providers/azure/client/aci"
 	"k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"

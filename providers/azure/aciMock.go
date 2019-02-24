@@ -7,7 +7,7 @@ import (
 	"net/http/httptest"
 
 	"github.com/gorilla/mux"
-	"github.com/virtual-kubelet/virtual-kubelet/providers/azure/client/aci"
+	"github.com/iofog/virtual-kubelet/providers/azure/client/aci"
 )
 
 // ACIMock implements a Azure Container Instance mock server.

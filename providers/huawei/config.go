@@ -4,7 +4,7 @@ import (
 	"io"
 
 	"github.com/BurntSushi/toml"
-	"github.com/virtual-kubelet/virtual-kubelet/providers"
+	"github.com/iofog/virtual-kubelet/providers"
 	"k8s.io/apimachinery/pkg/util/uuid"
 )
 

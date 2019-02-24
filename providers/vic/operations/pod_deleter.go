@@ -3,9 +3,9 @@ package operations
 import (
 	"fmt"
 
-	"github.com/virtual-kubelet/virtual-kubelet/providers/vic/cache"
-	vicpod "github.com/virtual-kubelet/virtual-kubelet/providers/vic/pod"
-	"github.com/virtual-kubelet/virtual-kubelet/providers/vic/proxy"
+	"github.com/iofog/virtual-kubelet/providers/vic/cache"
+	vicpod "github.com/iofog/virtual-kubelet/providers/vic/pod"
+	"github.com/iofog/virtual-kubelet/providers/vic/proxy"
 
 	vicerrors "github.com/vmware/vic/lib/apiservers/engine/errors"
 	"github.com/vmware/vic/lib/apiservers/portlayer/client"

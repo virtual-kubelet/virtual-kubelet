@@ -3,8 +3,8 @@
 package register
 
 import (
-	"github.com/virtual-kubelet/virtual-kubelet/providers"
-	"github.com/virtual-kubelet/virtual-kubelet/providers/nomad"
+	"github.com/iofog/virtual-kubelet/providers"
+	"github.com/iofog/virtual-kubelet/providers/nomad"
 )
 
 func init() {

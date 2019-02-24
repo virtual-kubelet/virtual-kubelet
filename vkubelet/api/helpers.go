@@ -5,7 +5,7 @@ import (
 	"net/http"
 
 	"github.com/cpuguy83/strongerrors/status"
-	"github.com/virtual-kubelet/virtual-kubelet/log"
+	"github.com/iofog/virtual-kubelet/log"
 )
 
 type handlerFunc func(http.ResponseWriter, *http.Request) error

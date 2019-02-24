@@ -1,6 +1,6 @@
 package resourcegroups
 
-import "github.com/virtual-kubelet/virtual-kubelet/providers/azure/client/api"
+import "github.com/iofog/virtual-kubelet/providers/azure/client/api"
 
 // Group holds resource group information.
 type Group struct {

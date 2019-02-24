@@ -2,9 +2,9 @@ package register
 
 import (
 	"github.com/cpuguy83/strongerrors"
+	"github.com/iofog/virtual-kubelet/manager"
+	"github.com/iofog/virtual-kubelet/providers"
 	"github.com/pkg/errors"
-	"github.com/virtual-kubelet/virtual-kubelet/manager"
-	"github.com/virtual-kubelet/virtual-kubelet/providers"
 )
 
 var providerInits = make(map[string]initFunc)
@@ -17,6 +17,7 @@ type InitConfig struct {
 	InternalIP      string
 	DaemonPort      int32
 	ResourceManager *manager.ResourceManager
+	ControllerToken string
 }
 
 type initFunc func(InitConfig) (providers.Provider, error)

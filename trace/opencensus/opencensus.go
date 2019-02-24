@@ -1,4 +1,4 @@
-// Package opencensus implements a github.com/virtual-kubelet/virtual-kubelet/trace.Tracer
+// Package opencensus implements a github.com/iofog/virtual-kubelet/trace.Tracer
 // using opencensus as a backend.
 //
 // Use this by setting `trace.T = Adapter{}`
@@ -9,8 +9,8 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/virtual-kubelet/virtual-kubelet/log"
-	"github.com/virtual-kubelet/virtual-kubelet/trace"
+	"github.com/iofog/virtual-kubelet/log"
+	"github.com/iofog/virtual-kubelet/trace"
 	octrace "go.opencensus.io/trace"
 )
 

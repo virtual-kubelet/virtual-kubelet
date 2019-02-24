@@ -39,7 +39,7 @@ First, ensure golang 1.8.x and git are installed on your machine.  The vSphere I
     * $> `mkdir -p go/src/github.com/virtual-kubelet`
 1. get and build the virtual kubelet
     * $> `cd go/src/github.com/virtual-kubelet`
-    * $> `git clone https://github.com/virtual-kubelet/virtual-kubelet.git`
+    * $> `git clone https://github.com/iofog/virtual-kubelet.git`
     * $> `cd virtual-kubelet`
     * $> `go build .`
 1. get wolfpack feature branch of vSphere Integrated Containers
@@ -54,7 +54,7 @@ First, ensure golang 1.8.x and git are installed on your machine.  The vSphere I
     * $> `sudo su`
     * $> `export GOPATH=/home/[user]/go`
     * $> `export PATH=$PATH:/usr/local/go/bin:/home/[user]/go/bin`
-    * $> `export VIRTUAL_KUBELET_PATH=$GOPATH/src/github.com/virtual-kubelet/virtual-kubelet/virtual-kubelet`
+    * $> `export VIRTUAL_KUBELET_PATH=$GOPATH/src/github.com/iofog/virtual-kubelet/virtual-kubelet`
     * $> `make most-vkubelet`
     * $> `chown -R user:user *`
     * $> `exit` (exit root)

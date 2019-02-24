@@ -15,7 +15,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/ecs"
 	"github.com/aws/aws-sdk-go/service/iam"
-	vkAWS "github.com/virtual-kubelet/virtual-kubelet/providers/aws"
+	vkAWS "github.com/iofog/virtual-kubelet/providers/aws"
 	"k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"

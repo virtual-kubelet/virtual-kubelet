@@ -3,8 +3,8 @@
 package register
 
 import (
-	"github.com/virtual-kubelet/virtual-kubelet/providers"
-	"github.com/virtual-kubelet/virtual-kubelet/providers/mock"
+	"github.com/iofog/virtual-kubelet/providers"
+	"github.com/iofog/virtual-kubelet/providers/mock"
 )
 
 func init() {

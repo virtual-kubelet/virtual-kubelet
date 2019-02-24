@@ -38,3 +38,5 @@ loganalytics.json
 **/terraform-provider-kubernetes
 **/*.tfstate*
 debug
+
+/.idea

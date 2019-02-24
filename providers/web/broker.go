@@ -42,16 +42,18 @@ type BrokerProvider struct {
 	endpoint           *url.URL
 	client             *http.Client
 	daemonEndpointPort int32
+	controllerToken    string
 }
 
 // NewBrokerProvider creates a new BrokerProvider
-func NewBrokerProvider(nodeName, operatingSystem string, daemonEndpointPort int32) (*BrokerProvider, error) {
+func NewBrokerProvider(nodeName, operatingSystem string, daemonEndpointPort int32, controllerToken string) (*BrokerProvider, error) {
 	var provider BrokerProvider
 
 	provider.nodeName = nodeName
 	provider.operatingSystem = operatingSystem
 	provider.client = &http.Client{}
 	provider.daemonEndpointPort = daemonEndpointPort
+	provider.controllerToken = controllerToken
 
 	if ep := os.Getenv("WEB_ENDPOINT_URL"); ep != "" {
 		epurl, err := url.Parse(ep)

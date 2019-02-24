@@ -1,11 +1,11 @@
-// Package logrus implements a github.com/virtual-kubelet/virtual-kubelet/log.Logger using Logrus as a backend
+// Package logrus implements a github.com/iofog/virtual-kubelet/log.Logger using Logrus as a backend
 // You can use this by creating a logrus logger and calling `FromLogrus(entry)`.
 // If you want this to be the default logger for virtual-kubelet, set `log.L` to the value returned by `FromLogrus`
 package logrus
 
 import (
 	"github.com/Sirupsen/logrus"
-	"github.com/virtual-kubelet/virtual-kubelet/log"
+	"github.com/iofog/virtual-kubelet/log"
 )
 
 // Adapter implements the `log.Logger` interface for logrus

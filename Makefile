@@ -1,5 +1,5 @@
 SHELL := /bin/bash
-IMPORT_PATH := github.com/virtual-kubelet/virtual-kubelet
+IMPORT_PATH := github.com/iofog/virtual-kubelet
 DOCKER_IMAGE := virtual-kubelet
 exec := $(DOCKER_IMAGE)
 github_repo := virtual-kubelet/virtual-kubelet
@@ -178,7 +178,7 @@ setup: clean
 
 VERSION          := $(shell git describe --tags --always --dirty="-dev")
 DATE             := $(shell date -u '+%Y-%m-%d-%H:%M UTC')
-VERSION_FLAGS    := -ldflags='-X "github.com/virtual-kubelet/virtual-kubelet/version.Version=$(VERSION)" -X "github.com/virtual-kubelet/virtual-kubelet/version.BuildTime=$(DATE)"'
+VERSION_FLAGS    := -ldflags='-X "github.com/iofog/virtual-kubelet/version.Version=$(VERSION)" -X "github.com/iofog/virtual-kubelet/version.BuildTime=$(DATE)"'
 
 # assuming go 1.9 here!!
 _allpackages = $(shell go list ./...)

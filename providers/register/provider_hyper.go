@@ -3,8 +3,8 @@
 package register
 
 import (
-	"github.com/virtual-kubelet/virtual-kubelet/providers"
-	"github.com/virtual-kubelet/virtual-kubelet/providers/hypersh"
+	"github.com/iofog/virtual-kubelet/providers"
+	"github.com/iofog/virtual-kubelet/providers/hypersh"
 )
 
 func init() {

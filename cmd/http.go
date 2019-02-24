@@ -12,8 +12,8 @@ import (
 
 	"github.com/cpuguy83/strongerrors"
 	"github.com/pkg/errors"
-	"github.com/virtual-kubelet/virtual-kubelet/log"
-	"github.com/virtual-kubelet/virtual-kubelet/vkubelet"
+	"github.com/iofog/virtual-kubelet/log"
+	"github.com/iofog/virtual-kubelet/vkubelet"
 )
 
 // AcceptedCiphers is the list of accepted TLS ciphers, with known weak ciphers elided

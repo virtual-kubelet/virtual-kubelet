@@ -3,7 +3,7 @@ package trace
 import (
 	"context"
 
-	"github.com/virtual-kubelet/virtual-kubelet/log"
+	"github.com/iofog/virtual-kubelet/log"
 	"go.opencensus.io/trace"
 )
 

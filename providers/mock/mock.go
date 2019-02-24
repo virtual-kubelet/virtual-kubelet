@@ -11,8 +11,8 @@ import (
 
 	"github.com/cpuguy83/strongerrors"
 	"github.com/cpuguy83/strongerrors/status/ocstatus"
-	"github.com/virtual-kubelet/virtual-kubelet/log"
-	"github.com/virtual-kubelet/virtual-kubelet/trace"
+	"github.com/iofog/virtual-kubelet/log"
+	"github.com/iofog/virtual-kubelet/trace"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -20,7 +20,7 @@ import (
 	"k8s.io/client-go/tools/remotecommand"
 	stats "k8s.io/kubernetes/pkg/kubelet/apis/stats/v1alpha1"
 
-	"github.com/virtual-kubelet/virtual-kubelet/providers"
+	"github.com/iofog/virtual-kubelet/providers"
 )
 
 const (

@@ -5,8 +5,8 @@ import (
 	"io"
 	"os"
 
-	"github.com/virtual-kubelet/virtual-kubelet/providers"
-	"github.com/virtual-kubelet/virtual-kubelet/providers/aws/fargate"
+	"github.com/iofog/virtual-kubelet/providers"
+	"github.com/iofog/virtual-kubelet/providers/aws/fargate"
 
 	"github.com/BurntSushi/toml"
 	"k8s.io/apimachinery/pkg/api/resource"

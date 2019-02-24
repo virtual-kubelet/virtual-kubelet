@@ -13,8 +13,8 @@ RUN apk add --no-cache \
 	make \
 	bash
 
-COPY . /go/src/github.com/virtual-kubelet/virtual-kubelet
-WORKDIR /go/src/github.com/virtual-kubelet/virtual-kubelet
+COPY . /go/src/github.com/iofog/virtual-kubelet
+WORKDIR /go/src/github.com/iofog/virtual-kubelet
 ARG BUILD_TAGS="netgo osusergo"
 RUN make VK_BUILD_TAGS="${BUILD_TAGS}" build
 RUN cp bin/virtual-kubelet /usr/bin/virtual-kubelet

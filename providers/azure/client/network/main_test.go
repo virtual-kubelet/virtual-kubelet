@@ -8,8 +8,8 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/pkg/errors"
-	azure "github.com/virtual-kubelet/virtual-kubelet/providers/azure/client"
-	"github.com/virtual-kubelet/virtual-kubelet/providers/azure/client/resourcegroups"
+	azure "github.com/iofog/virtual-kubelet/providers/azure/client"
+	"github.com/iofog/virtual-kubelet/providers/azure/client/resourcegroups"
 )
 
 var (

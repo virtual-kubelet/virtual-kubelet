@@ -4,7 +4,7 @@ import (
 	"net/http"
 
 	"github.com/cpuguy83/strongerrors"
-	"github.com/virtual-kubelet/virtual-kubelet/providers/azure/client/api"
+	"github.com/iofog/virtual-kubelet/providers/azure/client/api"
 )
 
 func wrapError(err error) error {

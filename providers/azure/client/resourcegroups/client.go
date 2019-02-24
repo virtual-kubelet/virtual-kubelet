@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"net/http"
 
-	azure "github.com/virtual-kubelet/virtual-kubelet/providers/azure/client"
+	azure "github.com/iofog/virtual-kubelet/providers/azure/client"
 )
 
 const (

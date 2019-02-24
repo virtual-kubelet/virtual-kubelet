@@ -8,7 +8,7 @@ import (
 
 	"go.opencensus.io/plugin/ochttp"
 
-	azure "github.com/virtual-kubelet/virtual-kubelet/providers/azure/client"
+	azure "github.com/iofog/virtual-kubelet/providers/azure/client"
 )
 
 const (

@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/virtual-kubelet/virtual-kubelet/providers/azure/client/aci"
+	"github.com/iofog/virtual-kubelet/providers/azure/client/aci"
 	"k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"

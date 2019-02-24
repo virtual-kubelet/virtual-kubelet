@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	vicpod "github.com/virtual-kubelet/virtual-kubelet/providers/vic/pod"
+	vicpod "github.com/iofog/virtual-kubelet/providers/vic/pod"
 
 	"github.com/vmware/vic/lib/metadata"
 	"github.com/vmware/vic/pkg/trace"
@@ -13,9 +13,9 @@ import (
 
 	"fmt"
 
-	"github.com/virtual-kubelet/virtual-kubelet/providers/vic/cache"
-	"github.com/virtual-kubelet/virtual-kubelet/providers/vic/proxy"
-	proxymocks "github.com/virtual-kubelet/virtual-kubelet/providers/vic/proxy/mocks"
+	"github.com/iofog/virtual-kubelet/providers/vic/cache"
+	"github.com/iofog/virtual-kubelet/providers/vic/proxy"
+	proxymocks "github.com/iofog/virtual-kubelet/providers/vic/proxy/mocks"
 )
 
 var (

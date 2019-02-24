@@ -14,7 +14,7 @@
 
 package main
 
-import "github.com/virtual-kubelet/virtual-kubelet/cmd"
+import "github.com/iofog/virtual-kubelet/cmd"
 
 func main() {
 	cmd.Execute()

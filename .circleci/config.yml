@@ -3,7 +3,7 @@ jobs:
   validate:
     docker:
       - image: circleci/golang:1.10
-    working_directory: /go/src/github.com/virtual-kubelet/virtual-kubelet
+    working_directory: /go/src/github.com/iofog/virtual-kubelet
     steps:
       - checkout
       - run:
@@ -22,7 +22,7 @@ jobs:
   test:
     docker:
       - image: circleci/golang:1.10
-    working_directory: /go/src/github.com/virtual-kubelet/virtual-kubelet
+    working_directory: /go/src/github.com/iofog/virtual-kubelet
     steps:
       - checkout
       - run:
@@ -54,7 +54,7 @@ jobs:
   e2e:
     machine:
       image: circleci/classic:201808-01
-    working_directory: /home/circleci/go/src/github.com/virtual-kubelet/virtual-kubelet
+    working_directory: /home/circleci/go/src/github.com/iofog/virtual-kubelet
     environment:
       CHANGE_MINIKUBE_NONE_USER: true
       GOPATH: /home/circleci/go

@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"net/url"
 
-	"github.com/virtual-kubelet/virtual-kubelet/providers/azure/client/api"
+	"github.com/iofog/virtual-kubelet/providers/azure/client/api"
 )
 
 // DeleteContainerGroup deletes an Azure Container Instance in the provided

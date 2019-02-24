@@ -23,11 +23,11 @@ import (
 	"github.com/vmware/vic/pkg/retry"
 	"github.com/vmware/vic/pkg/trace"
 
-	"github.com/virtual-kubelet/virtual-kubelet/manager"
-	"github.com/virtual-kubelet/virtual-kubelet/providers/vic/cache"
-	"github.com/virtual-kubelet/virtual-kubelet/providers/vic/operations"
-	"github.com/virtual-kubelet/virtual-kubelet/providers/vic/proxy"
-	"github.com/virtual-kubelet/virtual-kubelet/providers/vic/utils"
+	"github.com/iofog/virtual-kubelet/manager"
+	"github.com/iofog/virtual-kubelet/providers/vic/cache"
+	"github.com/iofog/virtual-kubelet/providers/vic/operations"
+	"github.com/iofog/virtual-kubelet/providers/vic/proxy"
+	"github.com/iofog/virtual-kubelet/providers/vic/utils"
 
 	"net"
 

@@ -9,8 +9,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/virtual-kubelet/virtual-kubelet/manager"
-	"github.com/virtual-kubelet/virtual-kubelet/providers"
+	"github.com/iofog/virtual-kubelet/manager"
+	"github.com/iofog/virtual-kubelet/providers"
 
 	nomad "github.com/hashicorp/nomad/api"
 	v1 "k8s.io/api/core/v1"
