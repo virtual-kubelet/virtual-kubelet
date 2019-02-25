@@ -46,6 +46,9 @@
   revision = "18c77d3f9fe0abebb41b45c12f383ecac46f4ff1"
 
 
+[[constraint]]
+  name = "github.com/virtual-kubelet/azure-aci"
+  version = "v0.1.0"
 
 [[constraint]]
   name = "github.com/gorilla/mux"

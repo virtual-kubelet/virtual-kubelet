@@ -1185,6 +1185,19 @@
   version = "v0.10.2"
 
 [[projects]]
+  digest = "1:9a98ebb3ee9bb59770d26639de8f2c9a65d695daaa1c1957d34de84a6f40c282"
+  name = "github.com/virtual-kubelet/azure-aci"
+  packages = [
+    "client",
+    "client/aci",
+    "client/api",
+    "client/network",
+  ]
+  pruneopts = "NUT"
+  revision = "97883416cb6b6d9bafac89a550bd90ea44d509fa"
+  version = "v0.1.0"
+
+[[projects]]
   digest = "1:a707ec1c12a88afc978307bca7f40bde7bd6b6434ceee41f8d7c6985e245dbdb"
   name = "github.com/vishvananda/netlink"
   packages = [
@@ -1870,7 +1883,6 @@
     "contrib.go.opencensus.io/exporter/ocagent",
     "github.com/Azure/azure-sdk-for-go/profiles/preview/preview/servicefabricmesh/mgmt/servicefabricmesh",
     "github.com/Azure/azure-sdk-for-go/services/batch/2017-09-01.6.0/batch",
-    "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2018-08-01/network",
     "github.com/Azure/go-autorest/autorest",
     "github.com/Azure/go-autorest/autorest/adal",
     "github.com/Azure/go-autorest/autorest/azure",
@@ -1895,7 +1907,6 @@
     "github.com/cpuguy83/strongerrors",
     "github.com/cpuguy83/strongerrors/status",
     "github.com/cpuguy83/strongerrors/status/ocstatus",
-    "github.com/dimchansky/utfbom",
     "github.com/docker/docker/api/types/strslice",
     "github.com/docker/go-connections/nat",
     "github.com/docker/go-connections/sockets",
@@ -1926,6 +1937,10 @@
     "github.com/stretchr/testify/assert",
     "github.com/stretchr/testify/mock",
     "github.com/stretchr/testify/require",
+    "github.com/virtual-kubelet/azure-aci/client",
+    "github.com/virtual-kubelet/azure-aci/client/aci",
+    "github.com/virtual-kubelet/azure-aci/client/api",
+    "github.com/virtual-kubelet/azure-aci/client/network",
     "github.com/vmware/vic/lib/apiservers/engine/backends/cache",
     "github.com/vmware/vic/lib/apiservers/engine/errors",
     "github.com/vmware/vic/lib/apiservers/engine/proxy",
