@@ -7,8 +7,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/virtual-kubelet/virtual-kubelet/providers/azure/client/aci"
-	"k8s.io/api/core/v1"
+	"github.com/virtual-kubelet/azure-aci/client/aci"
+	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	stats "k8s.io/kubernetes/pkg/kubelet/apis/stats/v1alpha1"
@@ -42,7 +42,7 @@ func TestCollectMetrics(t *testing.T) {
 							t.Fatalf("got unexpected container\nexpected:\n%+v\nactual:\n%+v", expectedContainer, actualContainer)
 						}
 						found = true
-						break;
+						break
 					}
 				}
 

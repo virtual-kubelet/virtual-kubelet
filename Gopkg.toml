@@ -45,11 +45,6 @@
   name = "github.com/hyperhq/hyper-api"
   revision = "18c77d3f9fe0abebb41b45c12f383ecac46f4ff1"
 
-
-[[constraint]]
-  name = "github.com/virtual-kubelet/azure-aci"
-  version = "v0.1.0"
-
 [[constraint]]
   name = "github.com/gorilla/mux"
   version = "1.6.0"
@@ -158,3 +153,8 @@
 [[override]]
   name = "github.com/ugorji/go"
   revision = "0053ebfd9d0ee06ccefbfe17072021e1d4acebee"
+
+[[constraint]]
+  name = "github.com/virtual-kubelet/azure-aci"
+  version = "v0.1.0"
+
