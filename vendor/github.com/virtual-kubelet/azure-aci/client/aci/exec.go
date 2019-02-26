@@ -8,8 +8,7 @@ import (
 	"net/http"
 	"net/url"
 
-	"github.com/virtual-kubelet/virtual-kubelet/providers/azure/client/api"
-	"k8s.io/client-go/tools/remotecommand"
+	"github.com/virtual-kubelet/azure-aci/client/api"
 )
 
 type TerminalSizeRequest struct {
@@ -19,7 +18,7 @@ type TerminalSizeRequest struct {
 
 // Starts the exec command for a specified container instance in a specified resource group and container group.
 // From: https://docs.microsoft.com/en-us/rest/api/container-instances/startcontainer/launchexec
-func (c *Client) LaunchExec(resourceGroup, containerGroupName, containerName, command string, terminalSize remotecommand.TerminalSize) (ExecResponse, error) {
+func (c *Client) LaunchExec(resourceGroup, containerGroupName, containerName, command string, terminalSize TerminalSizeRequest) (ExecResponse, error) {
 	urlParams := url.Values{
 		"api-version": []string{apiVersion},
 	}
@@ -31,8 +30,8 @@ func (c *Client) LaunchExec(resourceGroup, containerGroupName, containerName, co
 	var xc ExecRequest
 
 	xc.Command = command
-	xc.TerminalSize.Rows = int(terminalSize.Height)
-	xc.TerminalSize.Cols = int(terminalSize.Width)
+	xc.TerminalSize.Rows = terminalSize.Height
+	xc.TerminalSize.Cols = terminalSize.Width
 
 	var xcrsp ExecResponse
 	xcrsp.Password = ""

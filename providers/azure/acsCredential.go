@@ -25,7 +25,7 @@ type AcsCredential struct {
 // NewAcsCredential returns an AcsCredential struct from file path
 func NewAcsCredential(p string) (*AcsCredential, error) {
 	logger := log.G(context.TODO()).WithField("method", "NewAcsCredential").WithField("file", p)
-	log.Trace(logger, "Reading ACS credential file")
+	logger.Debug("Reading ACS credential file")
 
 	b, err := ioutil.ReadFile(p)
 	if err != nil {
@@ -38,6 +38,6 @@ func NewAcsCredential(p string) (*AcsCredential, error) {
 		return nil, err
 	}
 
-	log.Trace(logger, "Load ACS credential file successfully")
+	logger.Debug("Load ACS credential file successfully")
 	return &cred, nil
 }

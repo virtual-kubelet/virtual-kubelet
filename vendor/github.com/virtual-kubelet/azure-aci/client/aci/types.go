@@ -3,7 +3,7 @@ package aci
 import (
 	"time"
 
-	"github.com/virtual-kubelet/virtual-kubelet/providers/azure/client/api"
+	"github.com/virtual-kubelet/azure-aci/client/api"
 )
 
 // ContainerGroupNetworkProtocol enumerates the values for container group network protocol.

@@ -8,12 +8,12 @@ import (
 
 	"github.com/Azure/azure-sdk-for-go/services/network/mgmt/2018-08-01/network"
 	"github.com/pkg/errors"
-	"github.com/virtual-kubelet/virtual-kubelet/providers/azure/client/api"
+	"github.com/virtual-kubelet/azure-aci/client/api"
 )
 
 const (
-	subnetPath = "subscriptions/{{.subscriptionId}}/resourcegroups/{{.resourceGroupName}}/providers/Microsoft.Network/virtualNetworks/{{.vnetName}}/subnets/{{.subnetName}}"
-	subnetAction   = "Microsoft.Network/virtualNetworks/subnets/action"
+	subnetPath   = "subscriptions/{{.subscriptionId}}/resourcegroups/{{.resourceGroupName}}/providers/Microsoft.Network/virtualNetworks/{{.vnetName}}/subnets/{{.subnetName}}"
+	subnetAction = "Microsoft.Network/virtualNetworks/subnets/action"
 )
 
 var (

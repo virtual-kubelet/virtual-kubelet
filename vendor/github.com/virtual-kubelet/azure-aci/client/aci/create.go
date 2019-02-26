@@ -9,7 +9,7 @@ import (
 	"net/http"
 	"net/url"
 
-	"github.com/virtual-kubelet/virtual-kubelet/providers/azure/client/api"
+	"github.com/virtual-kubelet/azure-aci/client/api"
 )
 
 // CreateContainerGroup creates a new Azure Container Instance with the

@@ -224,8 +224,8 @@ Create a new directory for your provider under `providers` and implement the
 following interface. Then add register your provider in
 `providers/register/<provider_name>_provider.go`. Make sure to add a build tag so that
 your provider can be excluded from being built. The format for this build tag
-should be `no_<provider_name>_provider`. Also make sure your provdider has all
-neccessary platform build tags, e.g. "linux" if your provider only compiles on Linux.
+should be `no_<provider_name>_provider`. Also make sure your provider has all
+necessary platform build tags, e.g. "linux" if your provider only compiles on Linux.
 
 ```go
 // Provider contains the methods required to implement a virtual-kubelet provider.
