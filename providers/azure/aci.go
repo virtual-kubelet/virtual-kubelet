@@ -20,11 +20,11 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
+	client "github.com/virtual-kubelet/azure-aci/client"
+	"github.com/virtual-kubelet/azure-aci/client/aci"
+	"github.com/virtual-kubelet/azure-aci/client/network"
 	"github.com/virtual-kubelet/virtual-kubelet/log"
 	"github.com/virtual-kubelet/virtual-kubelet/manager"
-	client "github.com/virtual-kubelet/virtual-kubelet/providers/azure/client"
-	"github.com/virtual-kubelet/virtual-kubelet/providers/azure/client/aci"
-	"github.com/virtual-kubelet/virtual-kubelet/providers/azure/client/network"
 	"github.com/virtual-kubelet/virtual-kubelet/trace"
 	v1 "k8s.io/api/core/v1"
 	k8serr "k8s.io/apimachinery/pkg/api/errors"
@@ -783,7 +783,8 @@ func (p *ACIProvider) ExecInContainer(name string, uid types.UID, container stri
 		terminalSize = <-resize // Receive terminal resize event if resize stream is present
 	}
 
-	xcrsp, err := p.aciClient.LaunchExec(p.resourceGroup, cg.Name, container, cmd[0], terminalSize)
+	ts := aci.TerminalSizeRequest{Height: int(terminalSize.Height), Width: int(terminalSize.Width)}
+	xcrsp, err := p.aciClient.LaunchExec(p.resourceGroup, cg.Name, container, cmd[0], ts)
 	if err != nil {
 		return err
 	}

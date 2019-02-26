@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	"github.com/virtual-kubelet/virtual-kubelet/providers/azure/client/api"
+	"github.com/virtual-kubelet/azure-aci/client/api"
 )
 
 // GetContainerGroupMetrics gets metrics for the provided container group

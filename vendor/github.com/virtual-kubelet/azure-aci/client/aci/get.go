@@ -8,7 +8,7 @@ import (
 	"net/http"
 	"net/url"
 
-	"github.com/virtual-kubelet/virtual-kubelet/providers/azure/client/api"
+	"github.com/virtual-kubelet/azure-aci/client/api"
 )
 
 // GetContainerGroup gets an Azure Container Instance in the provided
