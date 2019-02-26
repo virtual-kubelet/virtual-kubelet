@@ -1194,7 +1194,7 @@
     "client/network",
   ]
   pruneopts = "NUT"
-  revision = "97883416cb6b6d9bafac89a550bd90ea44d509fa"
+  revision = "2e12def8b355625e62ffdb319e7c0b26d1d9c15d"
   version = "v0.1.0"
 
 [[projects]]
