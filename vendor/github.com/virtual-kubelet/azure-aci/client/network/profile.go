@@ -8,7 +8,7 @@ import (
 
 	"github.com/Azure/azure-sdk-for-go/services/network/mgmt/2018-08-01/network"
 	"github.com/pkg/errors"
-	"github.com/virtual-kubelet/virtual-kubelet/providers/azure/client/api"
+	"github.com/virtual-kubelet/azure-aci/client/api"
 )
 
 const (
@@ -21,7 +21,7 @@ var (
 )
 
 // NewNetworkProfile creates a new instance of network profile
-func NewNetworkProfile(name, location, subnetID string ) *network.Profile {
+func NewNetworkProfile(name, location, subnetID string) *network.Profile {
 	p := network.Profile{
 		Name:     &name,
 		Location: &location,
@@ -132,20 +132,20 @@ func (c *Client) CreateOrUpdateProfile(resourceGroup string, p *network.Profile)
 	}
 	defer resp.Body.Close()
 
-        // 200 (OK) is a success response.
-        if err := api.CheckResponse(resp); err != nil {
-                return nil, err
-        }
+	// 200 (OK) is a success response.
+	if err := api.CheckResponse(resp); err != nil {
+		return nil, err
+	}
 
-        // Decode the body from the response.
-        if resp.Body == nil {
-                return nil, errors.New("create network profile returned an empty body in the response")
-        }
+	// Decode the body from the response.
+	if resp.Body == nil {
+		return nil, errors.New("create network profile returned an empty body in the response")
+	}
 
-        var profile network.Profile
-        if err := json.NewDecoder(resp.Body).Decode(&profile); err != nil {
-                return nil, errors.Wrap(err, "decoding create network profile response body failed")
-        }
+	var profile network.Profile
+	if err := json.NewDecoder(resp.Body).Decode(&profile); err != nil {
+		return nil, errors.Wrap(err, "decoding create network profile response body failed")
+	}
 
 	return &profile, nil
 }
