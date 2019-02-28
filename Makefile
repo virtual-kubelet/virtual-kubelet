@@ -123,7 +123,7 @@ format: $(GOPATH)/bin/goimports
 .PHONY: skaffold
 skaffold: MODE ?= dev
 skaffold: PROFILE := local
-skaffold: VK_BUILD_TAGS ?= no_alibabacloud_provider no_aws_provider no_azure_provider no_azurebatch_provider no_cri_provider no_huawei_provider no_hyper_provider no_vic_provider no_web_provider
+skaffold: VK_BUILD_TAGS ?= no_alibabacloud_provider no_aws_provider no_azure_provider no_azurebatch_provider no_cri_provider no_huawei_provider no_vic_provider no_web_provider
 skaffold:
 	@if [[ ! "minikube,docker-for-desktop" =~ .*"$(kubectl_context)".* ]]; then \
 		echo current-context is [$(kubectl_context)]. Must be one of [minikube,docker-for-desktop]; false; \
