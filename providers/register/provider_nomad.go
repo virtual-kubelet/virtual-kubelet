@@ -1,4 +1,4 @@
-// +build !no_nomad_provider
+// +build nomad_provider
 
 package register
 

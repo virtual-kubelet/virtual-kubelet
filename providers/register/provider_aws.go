@@ -1,4 +1,4 @@
-// +build !no_aws_provider
+// +build aws_provider
 
 package register
 
