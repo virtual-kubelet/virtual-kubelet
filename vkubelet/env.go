@@ -10,6 +10,8 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	apivalidation "k8s.io/apimachinery/pkg/util/validation"
 	"k8s.io/client-go/tools/record"
+	podshelper "k8s.io/kubernetes/pkg/apis/core/pods"
+	fieldpath "k8s.io/kubernetes/pkg/fieldpath"
 
 	"github.com/virtual-kubelet/virtual-kubelet/log"
 	"github.com/virtual-kubelet/virtual-kubelet/manager"
@@ -330,6 +332,15 @@ loop:
 		case env.ValueFrom != nil && env.ValueFrom.FieldRef != nil:
 			// TODO Implement the downward API.
 			// https://github.com/virtual-kubelet/virtual-kubelet/issues/123
+			vf := env.ValueFrom.FieldRef
+
+			runtimeVal, err := podFieldSelectorRuntimeValue(vf, pod)
+			if err != nil {
+				return res, err
+			}
+
+			res[env.Name]=runtimeVal
+
 			continue loop
 		// Handle population from a resource request/limit.
 		case env.ValueFrom != nil && env.ValueFrom.ResourceFieldRef != nil:
@@ -340,6 +351,24 @@ loop:
 	// Return the populated environment.
 	return res, nil
 }
+
+// podFieldSelectorRuntimeValue returns the runtime value of the given
+// selector for a pod.
+func  podFieldSelectorRuntimeValue(fs *corev1.ObjectFieldSelector, pod *corev1.Pod) (string, error) {
+	internalFieldPath, _, err := podshelper.ConvertDownwardAPIFieldLabel(fs.APIVersion, fs.FieldPath, "")
+	if err != nil {
+		return "", err
+	}
+	switch internalFieldPath {
+	case "spec.nodeName":
+		return pod.Spec.NodeName, nil
+	case "spec.serviceAccountName":
+		return pod.Spec.ServiceAccountName, nil
+
+	}
+	return fieldpath.ExtractFieldPathAsString(pod, internalFieldPath)
+}
+
 
 // mergeEnvironments creates the final environment for a container by merging "envFrom" and "env".
 // Values in "env" override any values with the same key defined in "envFrom".
