@@ -14,77 +14,71 @@
    limitations under the License.
 */
 
+// Package log defines the interfaces used for logging in virtual-kubelet.
+// It uses a context.Context to store logger details. Additionally you can set
+// the default logger to use by setting log.L. This is used when no logger is
+// stored in the passed in context.
 package log
 
 import (
 	"context"
-	"sync/atomic"
-
-	"github.com/Sirupsen/logrus"
 )
 
 var (
 	// G is an alias for GetLogger.
-	//
-	// We may want to define this locally to a package to get package tagged log
-	// messages.
 	G = GetLogger
 
-	// L is an alias for the the standard logger.
-	L = logrus.NewEntry(logrus.StandardLogger())
+	// L is the default logger. It should be initialized before using `G` or `GetLogger`
+	// If L is unitialized and no logger is available in a provided context, a
+	// panic will occur.
+	L Logger = nopLogger{}
 )
 
 type (
 	loggerKey struct{}
 )
 
-// TraceLevel is the log level for tracing. Trace level is lower than debug level,
-// and is usually used to trace detailed behavior of the program.
-const TraceLevel = logrus.Level(uint32(logrus.DebugLevel + 1))
+// Logger is the interface used for logging in virtual-kubelet
+//
+// virtual-kubelet will access the logger via context using `GetLogger` (or its alias, `G`)
+// You can set the default logger to use by setting the `L` variable.
+type Logger interface {
+	Debug(...interface{})
+	Debugf(string, ...interface{})
+	Info(...interface{})
+	Infof(string, ...interface{})
+	Warn(...interface{})
+	Warnf(string, ...interface{})
+	Error(...interface{})
+	Errorf(string, ...interface{})
+	Fatal(...interface{})
+	Fatalf(string, ...interface{})
 
-// RFC3339NanoFixed is time.RFC3339Nano with nanoseconds padded using zeros to
-// ensure the formatted time is always the same number of characters.
-const RFC3339NanoFixed = "2006-01-02T15:04:05.000000000Z07:00"
-
-// ParseLevel takes a string level and returns the Logrus log level constant.
-// It supports trace level.
-func ParseLevel(lvl string) (logrus.Level, error) {
-	if lvl == "trace" {
-		return TraceLevel, nil
-	}
-	return logrus.ParseLevel(lvl)
+	WithField(string, interface{}) Logger
+	WithFields(Fields) Logger
+	WithError(error) Logger
 }
+
+// Fields allows setting multiple fields on a logger at one time.
+type Fields map[string]interface{}
 
 // WithLogger returns a new context with the provided logger. Use in
 // combination with logger.WithField(s) for great effect.
-func WithLogger(ctx context.Context, logger *logrus.Entry) context.Context {
+func WithLogger(ctx context.Context, logger Logger) context.Context {
 	return context.WithValue(ctx, loggerKey{}, logger)
 }
 
 // GetLogger retrieves the current logger from the context. If no logger is
 // available, the default logger is returned.
-func GetLogger(ctx context.Context) *logrus.Entry {
+func GetLogger(ctx context.Context) Logger {
 	logger := ctx.Value(loggerKey{})
 
 	if logger == nil {
+		if L == nil {
+			panic("default logger not initialized")
+		}
 		return L
 	}
 
-	return logger.(*logrus.Entry)
-}
-
-// Trace logs a message at level Trace with the log entry passed-in.
-func Trace(e *logrus.Entry, args ...interface{}) {
-	level := logrus.Level(atomic.LoadUint32((*uint32)(&e.Logger.Level)))
-	if level >= TraceLevel {
-		e.Debug(args...)
-	}
-}
-
-// Tracef logs a message at level Trace with the log entry passed-in.
-func Tracef(e *logrus.Entry, format string, args ...interface{}) {
-	level := logrus.Level(atomic.LoadUint32((*uint32)(&e.Logger.Level)))
-	if level >= TraceLevel {
-		e.Debugf(format, args...)
-	}
+	return logger.(Logger)
 }

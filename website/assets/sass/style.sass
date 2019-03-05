@@ -5,7 +5,7 @@
 {{ end }}
 {{ $fontsUrl := printf "https://fonts.googleapis.com/css?family=%s" (delimit $fontSlice "|") }}
 {{ $sansSerifFont := .Site.Params.sansSerifFont }}
-//{{ $monospaceFont := .Site.Params.monospaceFont }}
+{{ $monospaceFont := .Site.Params.monospaceFont }}
 {{ $fontAwesomeVersion := .Site.Params.fontAwesomeVersion }}
 {{ $fontAwesomeUrl     := printf "https://use.fontawesome.com/releases/v%s/css/all.css" $fontAwesomeVersion }}
 

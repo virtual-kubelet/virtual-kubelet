@@ -26,12 +26,25 @@ func PodExecHandlerFunc(backend remotecommand.Executor) http.HandlerFunc {
 		q := req.URL.Query()
 		command := q["command"]
 
-		// TODO: tty flag causes remotecommand.createStreams to wait for the wrong number of streams
+		var stdin, stdout, stderr, tty bool
+		if q.Get("stdin") == "true" {
+			stdin = true
+		}
+		if q.Get("stdout") == "true" {
+			stdout = true
+		}
+		if q.Get("stderr") == "true" {
+			stderr = true
+		}
+		if q.Get("tty") == "true" {
+			tty = true
+		}
+		
 		streamOpts := &remotecommand.Options{
-			Stdin:  true,
-			Stdout: true,
-			Stderr: true,
-			TTY:    false,
+			Stdin:  stdin,
+			Stdout: stdout,
+			Stderr: stderr,
+			TTY:    tty,
 		}
 
 		idleTimeout := time.Second * 30

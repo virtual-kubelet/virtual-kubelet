@@ -4,10 +4,10 @@ import (
 	"context"
 	"strings"
 
+	"github.com/cpuguy83/strongerrors/status/ocstatus"
 	"github.com/virtual-kubelet/virtual-kubelet/log"
+	"github.com/virtual-kubelet/virtual-kubelet/trace"
 	"github.com/virtual-kubelet/virtual-kubelet/version"
-
-	"go.opencensus.io/trace"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -57,12 +57,11 @@ func (s *Server) registerNode(ctx context.Context) error {
 			DaemonEndpoints: *s.provider.NodeDaemonEndpoints(ctx),
 		},
 	}
-	addNodeAttributes(span, node)
+	ctx = addNodeAttributes(ctx, span, node)
 	if _, err := s.k8sClient.CoreV1().Nodes().Create(node); err != nil && !errors.IsAlreadyExists(err) {
-		span.SetStatus(trace.Status{Code: trace.StatusCodeUnknown, Message: err.Error()})
+		span.SetStatus(ocstatus.FromError(err))
 		return err
 	}
-	span.Annotate(nil, "Registered node with k8s")
 
 	log.G(ctx).Info("Registered node")
 
@@ -77,19 +76,20 @@ func (s *Server) updateNode(ctx context.Context) {
 	opts := metav1.GetOptions{}
 	n, err := s.k8sClient.CoreV1().Nodes().Get(s.nodeName, opts)
 	if err != nil && !errors.IsNotFound(err) {
-		log.G(ctx).WithError(err).Error("Failed to retrieve node")
-		span.SetStatus(trace.Status{Code: trace.StatusCodeUnknown, Message: err.Error()})
+		log.G(ctx).WithError(err).Error("Failed to retrive node")
+		span.SetStatus(ocstatus.FromError(err))
 		return
 	}
-	addNodeAttributes(span, n)
-	span.Annotate(nil, "Fetched node details from k8s")
+
+	ctx = addNodeAttributes(ctx, span, n)
+	log.G(ctx).Debug("Fetched node details from k8s")
 
 	if errors.IsNotFound(err) {
 		if err = s.registerNode(ctx); err != nil {
 			log.G(ctx).WithError(err).Error("Failed to register node")
-			span.SetStatus(trace.Status{Code: trace.StatusCodeUnknown, Message: err.Error()})
+			span.SetStatus(ocstatus.FromError(err))
 		} else {
-			span.Annotate(nil, "Registered node in k8s")
+			log.G(ctx).Debug("Registered node in k8s")
 		}
 		return
 	}
@@ -106,7 +106,7 @@ func (s *Server) updateNode(ctx context.Context) {
 	n, err = s.k8sClient.CoreV1().Nodes().UpdateStatus(n)
 	if err != nil {
 		log.G(ctx).WithError(err).Error("Failed to update node")
-		span.SetStatus(trace.Status{Code: trace.StatusCodeUnknown, Message: err.Error()})
+		span.SetStatus(ocstatus.FromError(err))
 		return
 	}
 }
@@ -125,13 +125,11 @@ func (t taintsStringer) String() string {
 	return s
 }
 
-func addNodeAttributes(span *trace.Span, n *corev1.Node) {
-	span.AddAttributes(
-		trace.StringAttribute("UID", string(n.UID)),
-		trace.StringAttribute("name", n.Name),
-		trace.StringAttribute("cluster", n.ClusterName),
-	)
-	if span.IsRecordingEvents() {
-		span.AddAttributes(trace.StringAttribute("taints", taintsStringer(n.Spec.Taints).String()))
-	}
+func addNodeAttributes(ctx context.Context, span trace.Span, n *corev1.Node) context.Context {
+	return span.WithFields(ctx, log.Fields{
+		"UID":     string(n.UID),
+		"name":    n.Name,
+		"cluster": n.ClusterName,
+		"tains":   taintsStringer(n.Spec.Taints),
+	})
 }
