@@ -330,7 +330,6 @@ loop:
 			continue loop
 		// Handle population from a field (downward API).
 		case env.ValueFrom != nil && env.ValueFrom.FieldRef != nil:
-			// TODO Implement the downward API.
 			// https://github.com/virtual-kubelet/virtual-kubelet/issues/123
 			vf := env.ValueFrom.FieldRef
 
