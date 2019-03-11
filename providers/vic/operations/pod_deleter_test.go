@@ -87,7 +87,7 @@ func TestDeletePodErrorHandle(t *testing.T) {
 	ip.On("Handle", op, podID, podName).Return("", fakeErr)
 
 	err = d.DeletePod(op, &pod)
-	assert.Check(t, is.DeepEqual(err, fakeErr), "Expected invalid handle error")
+	assert.Check(t, is.Error(err, fakeErr.Error()), "Expected invalid handle error")
 }
 
 func TestDeletePodErrorUnbindScope(t *testing.T) {
@@ -114,7 +114,7 @@ func TestDeletePodErrorUnbindScope(t *testing.T) {
 	ip.On("UnbindScope", op, podHandle, podName).Return("", nil, fakeErr)
 
 	err = d.DeletePod(op, &pod)
-	assert.Check(t, is.DeepEqual(err, fakeErr), "Expected failed UnbindScope error")
+	assert.Check(t, is.Error(err, fakeErr.Error()), "Expected failed UnbindScope error")
 }
 
 func TestDeletePodErrorSetState(t *testing.T) {
@@ -141,7 +141,7 @@ func TestDeletePodErrorSetState(t *testing.T) {
 	fakeErr := fakeError("failed SetState")
 	ip.On("SetState", op, podHandle, podName, "STOPPED").Return("", fakeErr)
 	err = d.DeletePod(op, &pod)
-	assert.Check(t, is.DeepEqual(err, fakeErr), "Expected failed SetState error")
+	assert.Check(t, is.Error(err, fakeErr.Error()), "Expected failed SetState error")
 }
 
 func TestDeletePodErrorCommitHandle(t *testing.T) {
@@ -167,7 +167,7 @@ func TestDeletePodErrorCommitHandle(t *testing.T) {
 	fakeErr := fakeError("failed Commit")
 	ip.On("CommitHandle", op, podHandle, podID, int32(-1)).Return(fakeErr)
 	err = d.DeletePod(op, &pod)
-	assert.Check(t, is.DeepEqual(err, fakeErr), "Expected failed Commit error")
+	assert.Check(t, is.Error(err, fakeErr.Error()), "Expected failed Commit error")
 }
 
 func TestDeletePodErrorRemove(t *testing.T) {
@@ -194,7 +194,7 @@ func TestDeletePodErrorRemove(t *testing.T) {
 	fakeErr := fakeError("failed Remove")
 	ip.On("Remove", op, podID, true).Return(fakeErr)
 	err = d.DeletePod(op, &pod)
-	assert.Check(t, is.DeepEqual(err, fakeErr), "Expected failed Remove error")
+	assert.Check(t, is.Error(err, fakeErr.Error()), "Expected failed Remove error")
 }
 
 func TestDeletePodErrorBadArgs(t *testing.T) {

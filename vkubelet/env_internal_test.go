@@ -356,10 +356,10 @@ func TestPopulatePodWithInitContainersUsingEnvWithFieldRef(t *testing.T) {
 
 	// Populate the pod's environment.
 	err := populateEnvironmentVariables(context.Background(), pod, rm, er)
-	assert.NoError(t, err)
+	assert.NilError(t, err)
 
 	// Make sure that all the containers' environments contain all the expected keys and values.
-	assert.ElementsMatch(t, pod.Spec.InitContainers[0].Env, []corev1.EnvVar{
+	assert.Check(t, is.DeepEqual(pod.Spec.InitContainers[0].Env, []corev1.EnvVar{
 
 		{
 			Name:  envVarName1,
@@ -377,9 +377,9 @@ func TestPopulatePodWithInitContainersUsingEnvWithFieldRef(t *testing.T) {
 			Name:  envVarName4,
 			Value: "serviceaccount",
 		},
-	})
+	}, sortOpt))
 
-	assert.ElementsMatch(t, pod.Spec.Containers[0].Env, []corev1.EnvVar{
+	assert.Check(t, is.DeepEqual(pod.Spec.Containers[0].Env, []corev1.EnvVar{
 
 		{
 			Name:  envVarName1,
@@ -397,7 +397,7 @@ func TestPopulatePodWithInitContainersUsingEnvWithFieldRef(t *testing.T) {
 			Name:  envVarName4,
 			Value: "serviceaccount",
 		},
-	})
+	}, sortOpt))
 }
 
 // TestPopulatePodWithInitContainersUsingEnvFrom populates the environment of a pod with four containers (two init containers, two containers) using ".envFrom".
