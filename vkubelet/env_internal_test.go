@@ -2,9 +2,12 @@ package vkubelet
 
 import (
 	"context"
+	"sort"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
+	gocmp "github.com/google/go-cmp/cmp"
+	"gotest.tools/assert"
+	is "gotest.tools/assert/cmp"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -194,10 +197,10 @@ func TestPopulatePodWithInitContainersUsingEnv(t *testing.T) {
 
 	// Populate the pod's environment.
 	err := populateEnvironmentVariables(context.Background(), pod, rm, er)
-	assert.NoError(t, err)
+	assert.Check(t, err)
 
 	// Make sure that all the containers' environments contain all the expected keys and values.
-	assert.ElementsMatch(t, pod.Spec.InitContainers[0].Env, []corev1.EnvVar{
+	assert.Check(t, is.DeepEqual(pod.Spec.InitContainers[0].Env, []corev1.EnvVar{
 		{
 			Name:  envVarName1,
 			Value: envVarValue1,
@@ -206,8 +209,8 @@ func TestPopulatePodWithInitContainersUsingEnv(t *testing.T) {
 			Name:  envVarName2,
 			Value: configMap1.Data[keyFoo],
 		},
-	})
-	assert.ElementsMatch(t, pod.Spec.InitContainers[1].Env, []corev1.EnvVar{
+	}, sortOpt))
+	assert.Check(t, is.DeepEqual(pod.Spec.InitContainers[1].Env, []corev1.EnvVar{
 		{
 			Name:  envVarName1,
 			Value: envVarValue1,
@@ -216,8 +219,8 @@ func TestPopulatePodWithInitContainersUsingEnv(t *testing.T) {
 			Name:  envVarName2,
 			Value: string(secret1.Data[keyBaz]),
 		},
-	})
-	assert.ElementsMatch(t, pod.Spec.Containers[0].Env, []corev1.EnvVar{
+	}, sortOpt))
+	assert.Check(t, is.DeepEqual(pod.Spec.Containers[0].Env, []corev1.EnvVar{
 		{
 			Name:  envVarName1,
 			Value: envVarValue1,
@@ -226,8 +229,8 @@ func TestPopulatePodWithInitContainersUsingEnv(t *testing.T) {
 			Name:  envVarName2,
 			Value: configMap1.Data[keyFoo],
 		},
-	})
-	assert.ElementsMatch(t, pod.Spec.Containers[1].Env, []corev1.EnvVar{
+	}, sortOpt))
+	assert.Check(t, is.DeepEqual(pod.Spec.Containers[1].Env, []corev1.EnvVar{
 		{
 			Name:  envVarName1,
 			Value: envVarValue1,
@@ -236,7 +239,7 @@ func TestPopulatePodWithInitContainersUsingEnv(t *testing.T) {
 			Name:  envVarName2,
 			Value: string(secret1.Data[keyBaz]),
 		},
-	})
+	}, sortOpt))
 }
 
 // TestPopulatePodWithInitContainersUsingEnv populates the environment of a pod with four containers (two init containers, two containers) using ".env".
@@ -468,33 +471,33 @@ func TestPopulatePodWithInitContainersUsingEnvFrom(t *testing.T) {
 
 	// Populate the pod's environment.
 	err := populateEnvironmentVariables(context.Background(), pod, rm, er)
-	assert.NoError(t, err)
+	assert.Check(t, err)
 
 	// Make sure that all the containers' environments contain all the expected keys and values.
-	assert.ElementsMatch(t, pod.Spec.InitContainers[0].Env, []corev1.EnvVar{
+	assert.Check(t, is.DeepEqual(pod.Spec.InitContainers[0].Env, []corev1.EnvVar{
 		{
 			Name:  prefixConfigMap1 + keyFoo,
 			Value: configMap1.Data[keyFoo],
 		},
-	})
-	assert.ElementsMatch(t, pod.Spec.InitContainers[1].Env, []corev1.EnvVar{
+	}, sortOpt))
+	assert.Check(t, is.DeepEqual(pod.Spec.InitContainers[1].Env, []corev1.EnvVar{
 		{
 			Name:  prefixConfigMap2 + keyBar,
 			Value: configMap2.Data[keyBar],
 		},
-	})
-	assert.ElementsMatch(t, pod.Spec.Containers[0].Env, []corev1.EnvVar{
+	}, sortOpt))
+	assert.Check(t, is.DeepEqual(pod.Spec.Containers[0].Env, []corev1.EnvVar{
 		{
 			Name:  prefixSecret1 + keyBaz,
 			Value: string(secret1.Data[keyBaz]),
 		},
-	})
-	assert.ElementsMatch(t, pod.Spec.Containers[1].Env, []corev1.EnvVar{
+	}, sortOpt))
+	assert.Check(t, is.DeepEqual(pod.Spec.Containers[1].Env, []corev1.EnvVar{
 		{
 			Name:  prefixSecret2 + keyFoo,
 			Value: string(secret2.Data[keyFoo]),
 		},
-	})
+	}, sortOpt))
 }
 
 // TestEnvFromTwoConfigMapsAndOneSecret populates the environment of a container from two configmaps and one secret.
@@ -546,10 +549,10 @@ func TestEnvFromTwoConfigMapsAndOneSecret(t *testing.T) {
 
 	// Populate the container's environment.
 	err := populateContainerEnvironment(context.Background(), pod, &pod.Spec.Containers[0], rm, er)
-	assert.NoError(t, err)
+	assert.Check(t, err)
 
 	// Make sure that the container's environment contains all the expected keys and values.
-	assert.ElementsMatch(t, pod.Spec.Containers[0].Env, []corev1.EnvVar{
+	assert.Check(t, is.DeepEqual(pod.Spec.Containers[0].Env, []corev1.EnvVar{
 		{
 			Name:  prefixConfigMap1 + keyFoo,
 			Value: configMap1.Data[keyFoo],
@@ -562,10 +565,10 @@ func TestEnvFromTwoConfigMapsAndOneSecret(t *testing.T) {
 			Name:  prefixSecret1 + keyBaz,
 			Value: string(secret1.Data[keyBaz]),
 		},
-	})
+	}, sortOpt))
 
 	// Make sure that no events have been recorded, as the configmaps and secrets are valid.
-	assert.Len(t, er.Events, 0)
+	assert.Check(t, is.Len(er.Events, 0))
 }
 
 // TestEnvFromConfigMapAndSecretWithInvalidKeys populates the environment of a container from a configmap and a secret containing invalid keys.
@@ -607,10 +610,10 @@ func TestEnvFromConfigMapAndSecretWithInvalidKeys(t *testing.T) {
 
 	// Populate the pods's environment.
 	err := populateEnvironmentVariables(context.Background(), pod, rm, er)
-	assert.NoError(t, err)
+	assert.Check(t, err)
 
 	// Make sure that the container's environment has two variables (corresponding to the single valid key in both the configmap and the secret).
-	assert.ElementsMatch(t, pod.Spec.Containers[0].Env, []corev1.EnvVar{
+	assert.Check(t, is.DeepEqual(pod.Spec.Containers[0].Env, []corev1.EnvVar{
 		{
 			Name:  keyFoo,
 			Value: invalidConfigMap1.Data[keyFoo],
@@ -619,21 +622,21 @@ func TestEnvFromConfigMapAndSecretWithInvalidKeys(t *testing.T) {
 			Name:  keyBaz,
 			Value: string(invalidSecret1.Data[keyBaz]),
 		},
-	})
+	}, sortOpt))
 
 	// Make sure that two events have been received (one for the configmap and one for the secret).
-	assert.Len(t, er.Events, 2)
+	assert.Check(t, is.Len(er.Events, 2))
 
 	// Grab the first event (which should correspond to the configmap) and make sure it has the correct reason and message.
 	event1 := <-er.Events
-	assert.Contains(t, event1, ReasonInvalidEnvironmentVariableNames)
-	assert.Contains(t, event1, invalidKey1)
-	assert.Contains(t, event1, invalidKey2)
+	assert.Check(t, is.Contains(event1, ReasonInvalidEnvironmentVariableNames))
+	assert.Check(t, is.Contains(event1, invalidKey1))
+	assert.Check(t, is.Contains(event1, invalidKey2))
 
 	// Grab the second event (which should correspond to the secret) and make sure it has the correct reason and message.
 	event2 := <-er.Events
-	assert.Contains(t, event2, ReasonInvalidEnvironmentVariableNames)
-	assert.Contains(t, event2, invalidKey3)
+	assert.Check(t, is.Contains(event2, ReasonInvalidEnvironmentVariableNames))
+	assert.Check(t, is.Contains(event2, invalidKey3))
 }
 
 // TestEnvOverridesEnvFrom populates the environment of a container from a configmap, and from another configmap's key with a "conflicting" key.
@@ -677,10 +680,10 @@ func TestEnvOverridesEnvFrom(t *testing.T) {
 
 	// Populate the pods's environment.
 	err := populateEnvironmentVariables(context.Background(), pod, rm, er)
-	assert.NoError(t, err)
+	assert.Check(t, err)
 
 	// Make sure that the container's environment contains all the expected keys and values.
-	assert.ElementsMatch(t, pod.Spec.Containers[0].Env, []corev1.EnvVar{
+	assert.Check(t, is.DeepEqual(pod.Spec.Containers[0].Env, []corev1.EnvVar{
 		{
 			Name:  keyFoo,
 			Value: override,
@@ -689,10 +692,22 @@ func TestEnvOverridesEnvFrom(t *testing.T) {
 			Name:  keyBar,
 			Value: configMap3.Data[keyBar],
 		},
-	})
+	},
+		sortOpt,
+	))
 
 	// Make sure that no events have been recorded, as the configmaps and secrets are valid.
-	assert.Len(t, er.Events, 0)
+	assert.Check(t, is.Len(er.Events, 0))
+}
+
+var sortOpt gocmp.Option = gocmp.Transformer("Sort", sortEnv)
+
+func sortEnv(in []corev1.EnvVar) []corev1.EnvVar {
+	out := append([]corev1.EnvVar(nil), in...)
+	sort.Slice(out, func(i, j int) bool {
+		return out[i].Name < out[j].Name
+	})
+	return out
 }
 
 // TestEnvFromInexistentConfigMaps populates the environment of a container from two configmaps (one of them optional) that do not exist.
@@ -741,16 +756,16 @@ func TestEnvFromInexistentConfigMaps(t *testing.T) {
 
 	// Populate the pods's environment.
 	err := populateEnvironmentVariables(context.Background(), pod, rm, er)
-	assert.Error(t, err)
+	assert.Check(t, is.ErrorContains(err, ""))
 
 	// Make sure that two events have been recorded with the correct reason and message.
-	assert.Len(t, er.Events, 2)
+	assert.Check(t, is.Len(er.Events, 2))
 	event1 := <-er.Events
-	assert.Contains(t, event1, ReasonOptionalConfigMapNotFound)
-	assert.Contains(t, event1, missingConfigMap1Name)
+	assert.Check(t, is.Contains(event1, ReasonOptionalConfigMapNotFound))
+	assert.Check(t, is.Contains(event1, missingConfigMap1Name))
 	event2 := <-er.Events
-	assert.Contains(t, event2, ReasonMandatoryConfigMapNotFound)
-	assert.Contains(t, event2, missingConfigMap2Name)
+	assert.Check(t, is.Contains(event2, ReasonMandatoryConfigMapNotFound))
+	assert.Check(t, is.Contains(event2, missingConfigMap2Name))
 }
 
 func TestEnvFromInexistentSecrets(t *testing.T) {
@@ -797,16 +812,16 @@ func TestEnvFromInexistentSecrets(t *testing.T) {
 
 	// Populate the pods's environment.
 	err := populateEnvironmentVariables(context.Background(), pod, rm, er)
-	assert.Error(t, err)
+	assert.Check(t, is.ErrorContains(err, ""))
 
 	// Make sure that two events have been recorded with the correct reason and message.
-	assert.Len(t, er.Events, 2)
+	assert.Check(t, is.Len(er.Events, 2))
 	event1 := <-er.Events
-	assert.Contains(t, event1, ReasonOptionalSecretNotFound)
-	assert.Contains(t, event1, missingSecret1Name)
+	assert.Check(t, is.Contains(event1, ReasonOptionalSecretNotFound))
+	assert.Check(t, is.Contains(event1, missingSecret1Name))
 	event2 := <-er.Events
-	assert.Contains(t, event2, ReasonMandatorySecretNotFound)
-	assert.Contains(t, event2, missingSecret2Name)
+	assert.Check(t, is.Contains(event2, ReasonMandatorySecretNotFound))
+	assert.Check(t, is.Contains(event2, missingSecret2Name))
 }
 
 // TestEnvReferencingInexistentConfigMapKey tries populates the environment of a container using a keys from a configmaps that does not exist.
@@ -849,13 +864,13 @@ func TestEnvReferencingInexistentConfigMapKey(t *testing.T) {
 
 	// Populate the pods's environment.
 	err := populateEnvironmentVariables(context.Background(), pod, rm, er)
-	assert.Error(t, err)
+	assert.Check(t, is.ErrorContains(err, ""))
 
 	// Make sure that two events have been recorded with the correct reason and message.
-	assert.Len(t, er.Events, 1)
+	assert.Check(t, is.Len(er.Events, 1))
 	event1 := <-er.Events
-	assert.Contains(t, event1, ReasonMandatoryConfigMapNotFound)
-	assert.Contains(t, event1, missingConfigMapName)
+	assert.Check(t, is.Contains(event1, ReasonMandatoryConfigMapNotFound))
+	assert.Check(t, is.Contains(event1, missingConfigMapName))
 }
 
 // TestEnvReferencingInexistentSecretKey tries populates the environment of a container using a keys from a secret that does not exist.
@@ -898,11 +913,11 @@ func TestEnvReferencingInexistentSecretKey(t *testing.T) {
 
 	// Populate the pods's environment.
 	err := populateEnvironmentVariables(context.Background(), pod, rm, er)
-	assert.Error(t, err)
+	assert.Check(t, is.ErrorContains(err, ""))
 
 	// Make sure that two events have been recorded with the correct reason and message.
-	assert.Len(t, er.Events, 1)
+	assert.Check(t, is.Len(er.Events, 1))
 	event1 := <-er.Events
-	assert.Contains(t, event1, ReasonMandatorySecretNotFound)
-	assert.Contains(t, event1, missingSecretName)
+	assert.Check(t, is.Contains(event1, ReasonMandatorySecretNotFound))
+	assert.Check(t, is.Contains(event1, missingSecretName))
 }
