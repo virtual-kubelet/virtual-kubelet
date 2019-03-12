@@ -19,7 +19,7 @@ hrefTargetBlank = true
 [params]
 favicon            = "https://raw.githubusercontent.com/cncf/artwork/master/virtualkubelet/icon/color/virtualkubelet-icon-color.png"
 sansSerifFont      = "Noto Sans TC"
-#monospaceFont      = "Fira Mono"
+monospaceFont      = "Fira Mono"
 fontAwesomeVersion = "5.5.0"
 description        = "Virtual Kubelet is an open-source Kubernetes kubelet implementation that masquerades as a kubelet"
 intro              = """
@@ -37,6 +37,10 @@ sidebar = "https://raw.githubusercontent.com/cncf/artwork/master/virtualkubelet/
 [[params.fonts]]
 name  = "Noto Sans TC"
 sizes = [300,400,600,700]
+
+[[params.fonts]]
+name  = "Fira Mono"
+sizes = [400]
 
 [[params.social]]
 name  = "GitHub"

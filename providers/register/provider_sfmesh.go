@@ -1,4 +1,4 @@
-// +build !no_sfmesh_provider
+// +build sfmesh_provider
 
 package register
 

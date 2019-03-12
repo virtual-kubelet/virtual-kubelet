@@ -1,4 +1,4 @@
-// +build !no_azurebatch_provider
+// +build azurebatch_provider
 
 package register
 

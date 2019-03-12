@@ -1,0 +1,231 @@
+apiVersion: v1
+entries:
+  virtual-kubelet:
+  - appVersion: "0.5"
+    created: 2019-01-28T11:18:23.622097-08:00
+    description: A Helm chart to install virtual kubelet inside a Kubernetes cluster.
+    digest: b4af3cc07e1a914b862ebcd05facbf155b16e098a138fcd7f5dc8ac715aabfa2
+    icon: https://avatars2.githubusercontent.com/u/34250142
+    maintainers:
+    - email: junjiez@microsoft.com
+      name: Robbie Zhang
+    name: virtual-kubelet
+    sources:
+    - https://github.com/virtual-kubelet/virtual-kubelet
+    urls:
+    - virtual-kubelet-0.5.0.tgz
+    version: 0.5.0
+  - appVersion: "0.5"
+    created: 2019-01-28T11:18:23.62762-08:00
+    description: A Helm chart to install virtual kubelet inside a Kubernetes cluster.
+    digest: b4af3cc07e1a914b862ebcd05facbf155b16e098a138fcd7f5dc8ac715aabfa2
+    icon: https://avatars2.githubusercontent.com/u/34250142
+    maintainers:
+    - email: junjiez@microsoft.com
+      name: Robbie Zhang
+    name: virtual-kubelet
+    sources:
+    - https://github.com/virtual-kubelet/virtual-kubelet
+    urls:
+    - virtual-kubelet-latest.tgz
+    version: 0.5.0
+  - appVersion: "0.4"
+    created: 2019-01-28T11:18:23.62156-08:00
+    description: A Helm chart to install virtual kubelet inside a Kubernetes cluster.
+    digest: ae4b8be9d69129f1002ea2228848ec790ea1280d9ff0f7dd99d0d6e3e13922f2
+    icon: https://avatars2.githubusercontent.com/u/34250142
+    maintainers:
+    - email: junjiez@microsoft.com
+      name: Robbie Zhang
+    name: virtual-kubelet
+    sources:
+    - https://github.com/virtual-kubelet/virtual-kubelet
+    urls:
+    - virtual-kubelet-0.4.0.tgz
+    version: 0.4.0
+  - appVersion: "0.3"
+    created: 2019-01-28T11:18:23.620905-08:00
+    description: A Helm chart to install virtual kubelet inside a Kubernetes cluster.
+    digest: f472f181c0724420d4f12218f8fc7f65d09fa02a8292f418d1537bf71231d643
+    icon: https://avatars2.githubusercontent.com/u/34250142
+    maintainers:
+    - email: junjiez@microsoft.com
+      name: Robbie Zhang
+    name: virtual-kubelet
+    sources:
+    - https://github.com/virtual-kubelet/virtual-kubelet
+    urls:
+    - virtual-kubelet-0.3.0.tgz
+    version: 0.3.0
+  - appVersion: "0.3"
+    created: 2019-01-28T11:18:23.6202-08:00
+    description: A Helm chart to install virtual kubelet inside a Kubernetes cluster.
+    digest: 5a2d0a269620ffe49498686161e853f49761ca4f905577fe1b8e552ab85fcaca
+    icon: https://avatars2.githubusercontent.com/u/34250142
+    maintainers:
+    - email: junjiez@microsoft.com
+      name: Robbie Zhang
+    name: virtual-kubelet
+    sources:
+    - https://github.com/virtual-kubelet/virtual-kubelet
+    urls:
+    - virtual-kubelet-0.2.0.tgz
+    version: 0.2.0
+  - created: 2019-01-28T11:18:23.619614-08:00
+    description: a Helm chart to install virtual kubelet inside a Kubernetes cluster.
+    digest: be2778949548cfb0cebe638cbe044d89045eb34ffc8d62180b86ff2f0f30b323
+    maintainers:
+    - email: junjiez@microsoft.com
+      name: Robbie Zhang
+    name: virtual-kubelet
+    sources:
+    - https://github.com/virtual-kubelet/virtual-kubelet
+    urls:
+    - virtual-kubelet-0.1.3.tgz
+    version: 0.1.3
+  - created: 2019-01-28T11:18:23.618974-08:00
+    description: a Helm chart to install virtual kubelet inside a Kubernetes cluster.
+    digest: b8519c66766d06a68671a2b8940cf44cccdf9321f144dead543f62d16325331e
+    maintainers:
+    - email: junjiez@microsoft.com
+      name: Robbie Zhang
+    name: virtual-kubelet
+    sources:
+    - https://github.com/virtual-kubelet/virtual-kubelet
+    urls:
+    - virtual-kubelet-0.1.2.tgz
+    version: 0.1.2
+  - created: 2019-01-28T11:18:23.618406-08:00
+    description: a Helm chart to install virtual kubelet inside a Kubernetes cluster.
+    digest: b15b3d5acde2cc264b5e8624c3bafcc249440c662ae353ef7012493eb0b6abf6
+    maintainers:
+    - email: junjiez@microsoft.com
+      name: Robbie Zhang
+    name: virtual-kubelet
+    sources:
+    - https://github.com/virtual-kubelet/virtual-kubelet
+    urls:
+    - virtual-kubelet-0.1.1.tgz
+    version: 0.1.1
+  - created: 2019-01-28T11:18:23.617865-08:00
+    description: a Helm chart to install virtual kubelet inside a Kubernetes cluster.
+    digest: 22c60ad2f7ea71abf58d65e52b91c2b9feca1ad6a15091321f7f12e5c43ecf81
+    maintainers:
+    - email: junjiez@microsoft.com
+      name: Robbie Zhang
+    name: virtual-kubelet
+    sources:
+    - https://github.com/virtual-kubelet/virtual-kubelet
+    urls:
+    - virtual-kubelet-0.1.0.tgz
+    version: 0.1.0
+  virtual-kubelet-for-aks:
+  - created: 2019-01-28T11:18:23.622632-08:00
+    description: a Helm chart to install virtual kubelet in an AKS or ACS cluster.
+    digest: 345cda5aeb537129e1ecc3d23c0cf47651454f672694a4402a7bbb5d3f3a91ba
+    maintainers:
+    - email: junjiez@microsoft.com
+      name: Robbie Zhang
+    name: virtual-kubelet-for-aks
+    sources:
+    - https://github.com/virtual-kubelet/virtual-kubelet
+    urls:
+    - virtual-kubelet-for-aks-0.1.10.tgz
+    version: 0.1.10
+  - created: 2019-01-28T11:18:23.627017-08:00
+    description: a Helm chart to install virtual kubelet in an AKS or ACS cluster.
+    digest: 345cda5aeb537129e1ecc3d23c0cf47651454f672694a4402a7bbb5d3f3a91ba
+    maintainers:
+    - email: junjiez@microsoft.com
+      name: Robbie Zhang
+    name: virtual-kubelet-for-aks
+    sources:
+    - https://github.com/virtual-kubelet/virtual-kubelet
+    urls:
+    - virtual-kubelet-for-aks-latest.tgz
+    version: 0.1.10
+  - created: 2019-01-28T11:18:23.626524-08:00
+    description: a Helm chart to install virtual kubelet in an AKS or ACS cluster.
+    digest: 4a30821657ff4ef4522060c9905e5659656c035126a7a9e650dd9bb54621b9eb
+    maintainers:
+    - email: junjiez@microsoft.com
+      name: Robbie Zhang
+    name: virtual-kubelet-for-aks
+    sources:
+    - https://github.com/virtual-kubelet/virtual-kubelet
+    urls:
+    - virtual-kubelet-for-aks-0.1.9.tgz
+    version: 0.1.9
+  - created: 2019-01-28T11:18:23.626081-08:00
+    description: a Helm chart to install virtual kubelet in an AKS or ACS cluster.
+    digest: 18d988bfb4d24b3674c6c690c0445b85cf3969471cfce74f7c49e87483cb497d
+    maintainers:
+    - email: junjiez@microsoft.com
+      name: Robbie Zhang
+    name: virtual-kubelet-for-aks
+    sources:
+    - https://github.com/virtual-kubelet/virtual-kubelet
+    urls:
+    - virtual-kubelet-for-aks-0.1.8.tgz
+    version: 0.1.8
+  - created: 2019-01-28T11:18:23.625442-08:00
+    description: a Helm chart to install virtual kubelet in an AKS or ACS cluster.
+    digest: 21c0719fe330981a170810ee4c3e84375106c176de08894827c8208a66f52112
+    maintainers:
+    - email: junjiez@microsoft.com
+      name: Robbie Zhang
+    name: virtual-kubelet-for-aks
+    sources:
+    - https://github.com/virtual-kubelet/virtual-kubelet
+    urls:
+    - virtual-kubelet-for-aks-0.1.7.tgz
+    version: 0.1.7
+  - created: 2019-01-28T11:18:23.624524-08:00
+    description: a Helm chart to install virtual kubelet in an AKS or ACS cluster.
+    digest: b5e72d03f04113a46350fa800135a67f5af9b4ffe3d6650bdeebd271b885e5aa
+    maintainers:
+    - email: junjiez@microsoft.com
+      name: Robbie Zhang
+    name: virtual-kubelet-for-aks
+    sources:
+    - https://github.com/virtual-kubelet/virtual-kubelet
+    urls:
+    - virtual-kubelet-for-aks-0.1.6.tgz
+    version: 0.1.6
+  - created: 2019-01-28T11:18:23.624071-08:00
+    description: a Helm chart to install virtual kubelet in an AKS or ACS cluster.
+    digest: 5b04abcc63dcc71b5ad25c8368ad1b114accf721e9c475c5a7f962a48fb0ed65
+    maintainers:
+    - email: junjiez@microsoft.com
+      name: Robbie Zhang
+    name: virtual-kubelet-for-aks
+    sources:
+    - https://github.com/virtual-kubelet/virtual-kubelet
+    urls:
+    - virtual-kubelet-for-aks-0.1.5.tgz
+    version: 0.1.5
+  - created: 2019-01-28T11:18:23.623547-08:00
+    description: a Helm chart to install virtual kubelet in an AKS or ACS cluster.
+    digest: b639126041dc4f3d0307f6a678d22021ba149f28612eb0bfc3903c75cf1ea414
+    maintainers:
+    - email: junjiez@microsoft.com
+      name: Robbie Zhang
+    name: virtual-kubelet-for-aks
+    sources:
+    - https://github.com/virtual-kubelet/virtual-kubelet
+    urls:
+    - virtual-kubelet-for-aks-0.1.4.tgz
+    version: 0.1.4
+  - created: 2019-01-28T11:18:23.623097-08:00
+    description: a Helm chart to install virtual kubelet in an AKS or ACS cluster.
+    digest: 1b428fd99c667482681c83b61753e7327b85ec2644ef4fa0e9366492a0e73cd7
+    maintainers:
+    - email: junjiez@microsoft.com
+      name: Robbie Zhang
+    name: virtual-kubelet-for-aks
+    sources:
+    - https://github.com/virtual-kubelet/virtual-kubelet
+    urls:
+    - virtual-kubelet-for-aks-0.1.3.tgz
+    version: 0.1.3
+generated: 2019-01-28T11:18:23.615432-08:00

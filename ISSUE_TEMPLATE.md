@@ -3,7 +3,7 @@
 
 ### Environment summary
 
-Provider (e.g. ACI, AWS Fargate, Hyper)
+Provider (e.g. ACI, AWS Fargate)
 
 Version (e.g. 0.1, 0.2-beta)
 

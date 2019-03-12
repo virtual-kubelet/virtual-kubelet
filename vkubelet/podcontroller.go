@@ -24,11 +24,11 @@ import (
 
 	"github.com/cpuguy83/strongerrors/status/ocstatus"
 	pkgerrors "github.com/pkg/errors"
-	"go.opencensus.io/trace"
+	"github.com/virtual-kubelet/virtual-kubelet/trace"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/util/wait"
-	"k8s.io/client-go/informers/core/v1"
+	v1 "k8s.io/client-go/informers/core/v1"
 	"k8s.io/client-go/kubernetes/scheme"
 	typedcorev1 "k8s.io/client-go/kubernetes/typed/core/v1"
 	corev1listers "k8s.io/client-go/listers/core/v1"
@@ -169,7 +169,7 @@ func (pc *PodController) processNextWorkItem(ctx context.Context, workerId strin
 	defer span.End()
 
 	// Add the ID of the current worker as an attribute to the current span.
-	span.AddAttributes(trace.StringAttribute("workerId", workerId))
+	ctx = span.WithField(ctx, "workerId", workerId)
 
 	// We wrap this block in a func so we can defer pc.workqueue.Done.
 	err := func(obj interface{}) error {
@@ -190,7 +190,7 @@ func (pc *PodController) processNextWorkItem(ctx context.Context, workerId strin
 			return nil
 		}
 		// Add the current key as an attribute to the current span.
-		span.AddAttributes(trace.StringAttribute("key", key))
+		ctx = span.WithField(ctx, "key", key)
 		// Run the syncHandler, passing it the namespace/name string of the Pod resource to be synced.
 		if err := pc.syncHandler(ctx, key); err != nil {
 			if pc.workqueue.NumRequeues(key) < maxRetries {
@@ -224,7 +224,7 @@ func (pc *PodController) syncHandler(ctx context.Context, key string) error {
 	defer span.End()
 
 	// Add the current key as an attribute to the current span.
-	span.AddAttributes(trace.StringAttribute("key", key))
+	ctx = span.WithField(ctx, "key", key)
 
 	// Convert the namespace/name string into a distinct namespace and name.
 	namespace, name, err := cache.SplitMetaNamespaceKey(key)
@@ -263,7 +263,7 @@ func (pc *PodController) syncPodInProvider(ctx context.Context, pod *corev1.Pod)
 	defer span.End()
 
 	// Add the pod's attributes to the current span.
-	addPodAttributes(span, pod)
+	ctx = addPodAttributes(ctx, span, pod)
 
 	// Check whether the pod has been marked for deletion.
 	// If it does, guarantee it is deleted in the provider and Kubernetes.
@@ -344,7 +344,7 @@ func (pc *PodController) deleteDanglingPods(ctx context.Context, threadiness int
 			}()
 
 			// Add the pod's attributes to the current span.
-			addPodAttributes(span, pod)
+			ctx = addPodAttributes(ctx, span, pod)
 			// Actually delete the pod.
 			if err := pc.server.deletePod(ctx, pod.Namespace, pod.Name); err != nil {
 				span.SetStatus(ocstatus.FromError(err))

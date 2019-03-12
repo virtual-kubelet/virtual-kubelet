@@ -43,10 +43,6 @@ Robbie Zhang (junjiez@microsoft.com)
 
 Onur Filiz (onfiliz@amazon.com)
 
-**Hyper.sh**
-
-Harry Zhang (harryzhang@zju.edu.cn)
-
 **Alibaba Cloud**
 
 (TBA)
