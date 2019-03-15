@@ -10,8 +10,6 @@
   tag: cri
 - name: Huawei Cloud Container Instance (**CCI**)
   tag: huawei
-- name: Hyper.sh
-  tag: hypersh
 - name: HashiCorp Nomad
   tag: nomad
 - name: Service Fabric Mesh

@@ -1,4 +1,4 @@
-// +build !no_web_provider
+// +build web_provider
 
 package register
 
