@@ -131,7 +131,6 @@ func (p *ZunProvider) GetPods(ctx context.Context) ([]*v1.Pod, error) {
 // an Zun deployment
 func (p *ZunProvider) CreatePod(ctx context.Context, pod *v1.Pod) error {
 	var capsuleTemplate CapsuleTemplate
-	capsuleTemplate.ApiVersion = "beta"
 	capsuleTemplate.Kind = "capsule"
 
 	podUID := string(pod.UID)
@@ -313,15 +312,14 @@ func capsuleToPod(capsule *capsules.Capsule) (*v1.Pod, error) {
 	var containerStartTime metav1.Time
 
 	podCreationTimestamp = metav1.NewTime(capsule.CreatedAt)
-	if len(capsule.Containers) > 1 {
-		containerStartTime = metav1.NewTime(capsule.Containers[1].StartedAt)
+	if len(capsule.Containers) > 0 {
+		containerStartTime = metav1.NewTime(capsule.Containers[0].StartedAt)
 	}
 	containerStartTime = metav1.NewTime(time.Time{})
 	// Deal with container inside capsule
 	containers := make([]v1.Container, 0, len(capsule.Containers))
 	containerStatuses := make([]v1.ContainerStatus, 0, len(capsule.Containers))
-	// First container is sandbox
-	for _, c := range capsule.Containers[1:] {
+	for _, c := range capsule.Containers {
 		containerMemoryMB := 0
 		if c.Memory != "" {
 			containerMemory, err := strconv.Atoi(c.Memory)
@@ -391,7 +389,7 @@ func capsuleToPod(capsule *capsules.Capsule) (*v1.Pod, error) {
 		},
 
 		Status: v1.PodStatus{
-			Phase:             zunCapStatusToPodPhase(capsule.Status),
+			Phase:             zunStatusToPodPhase(capsule.Status),
 			Conditions:        []v1.PodCondition{},
 			Message:           "",
 			Reason:            "",
@@ -478,21 +476,6 @@ func zunStatusToPodPhase(status string) v1.PodPhase {
 	case "Deleting":
 		return v1.PodPending
 	case "Deleted":
-		return v1.PodPending
-	}
-
-	return v1.PodUnknown
-}
-
-func zunCapStatusToPodPhase(status string) v1.PodPhase {
-	switch status {
-	case "Running":
-		return v1.PodRunning
-	case "Succeeded":
-		return v1.PodSucceeded
-	case "Failed":
-		return v1.PodFailed
-	case "Pending":
 		return v1.PodPending
 	}
 
