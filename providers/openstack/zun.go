@@ -59,6 +59,7 @@ func NewZunProvider(config string, rm *manager.ResourceManager, nodeName string,
 	if err != nil {
 		return nil, fmt.Errorf("Unable to get zun client")
 	}
+	p.ZunClient.Microversion = "1.32"
 
 	// Set sane defaults for Capacity in case config is not supplied
 	p.cpu = "20"
@@ -75,7 +76,7 @@ func NewZunProvider(config string, rm *manager.ResourceManager, nodeName string,
 // GetPod returns a pod by name that is running inside Zun
 // returns nil if a pod by that name is not found.
 func (p *ZunProvider) GetPod(ctx context.Context, namespace, name string) (*v1.Pod, error) {
-	capsule, err := capsules.Get(p.ZunClient, fmt.Sprintf("%s-%s", namespace, name)).Extract()
+	capsule, err := capsules.Get(p.ZunClient, fmt.Sprintf("%s-%s", namespace, name)).ExtractV132()
 	if err != nil {
 		return nil, err
 	}
@@ -102,7 +103,7 @@ func (p *ZunProvider) GetPods(ctx context.Context) ([]*v1.Pod, error) {
 
 	pods := make([]*v1.Pod, 0, pages)
 	err = pager.EachPage(func(page pagination.Page) (bool, error) {
-		CapsuleList, err := capsules.ExtractCapsules(page)
+		CapsuleList, err := capsules.ExtractCapsulesV132(page)
 		if err != nil {
 			return false, err
 		}
@@ -161,7 +162,7 @@ func (p *ZunProvider) CreatePod(ctx context.Context, pod *v1.Pod) error {
 	createOpts := capsules.CreateOpts{
 		TemplateOpts: template,
 	}
-	_, err = capsules.Create(p.ZunClient, createOpts).Extract()
+	_, err = capsules.Create(p.ZunClient, createOpts).ExtractV132()
 	if err != nil {
 		return err
 	}
@@ -307,7 +308,7 @@ func (p *ZunProvider) OperatingSystem() string {
 	return providers.OperatingSystemLinux
 }
 
-func capsuleToPod(capsule *capsules.Capsule) (*v1.Pod, error) {
+func capsuleToPod(capsule *capsules.CapsuleV132) (*v1.Pod, error) {
 	var podCreationTimestamp metav1.Time
 	var containerStartTime metav1.Time
 
