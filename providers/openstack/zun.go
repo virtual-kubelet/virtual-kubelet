@@ -411,7 +411,31 @@ func (p *ZunProvider) UpdatePod(ctx context.Context, pod *v1.Pod) error {
 
 // DeletePod deletes the specified pod out of Zun.
 func (p *ZunProvider) DeletePod(ctx context.Context, pod *v1.Pod) error {
-	return capsules.Delete(p.ZunClient, fmt.Sprintf("%s-%s", pod.Namespace, pod.Name)).ExtractErr()
+	err := capsules.Delete(p.ZunClient, fmt.Sprintf("%s-%s", pod.Namespace, pod.Name)).ExtractErr()
+	if err != nil {
+		return err
+	}
+
+	// wait for the capsule deletion
+	for i := 0; i < 300; i++ {
+		time.Sleep(1 * time.Second)
+
+		capsule, err := capsules.Get(p.ZunClient, fmt.Sprintf("%s-%s", pod.Namespace, pod.Name)).ExtractV132()
+		if _, ok := err.(gophercloud.ErrDefault404); ok {
+			// deletion complete
+			return nil
+		}
+
+		if err != nil {
+			return err
+		}
+
+		if capsule.Status == "Error" {
+			return fmt.Errorf("Capsule in ERROR state")
+		}
+	}
+
+	return fmt.Errorf("Timed out on waiting capsule deletion")
 }
 
 func zunContainerStausToContainerStatus(cs *capsules.Container) v1.ContainerState {
