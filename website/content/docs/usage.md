@@ -4,7 +4,7 @@ description: Run a Virtual Kubelet inside or outside of your Kubernetes cluster
 weight: 2
 ---
 
-You can Virtual Kubelet either [outside](#outside-k8s) or [inside](#inside-k8s) of a Kubernetes cluster using the [`virtual-kubelet`](#virtual-kubelet-cli) command-line tool. If you run Kubernetes inside of a Kubernetes cluster, you can also deploy it using [Helm](#helm).
+You can Virtual Kubelet either [outside](#outside-k8s) or [inside](#inside-k8s) of a Kubernetes cluster using the [`virtual-kubelet`](#virtual-kubelet-cli) command-line tool. If you run Virtual Kubelet inside of a Kubernetes cluster, you can also deploy it using [Helm](#helm).
 
 > For `virtual-kubelet` installation instructions, see the [Setup](../setup) guide.
 
