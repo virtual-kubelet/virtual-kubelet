@@ -18,8 +18,12 @@ const (
 	envVarName1 = "FOO"
 	// envVarValue1 is a string meant to be used as the value of the "envVarName1" environment value.
 	envVarValue1 = "foo_value"
-	// envVarName1 is a string that can be used as the name of an environment value.
+	// envVarName2 is a string that can be used as the name of an environment value.
 	envVarName2 = "BAR"
+	// envVarName3 is a string that can be used as the name of an environment value.
+	envVarName3 = "CHO"
+	// envVarName4 is a string that can be used as the name of an environment value.
+	envVarName4 = "CAR"
 	// invalidKey1 is a key that cannot be used as the name of an environment variable (since it starts with a digit).
 	invalidKey1 = "1INVALID"
 	// invalidKey2 is a key that cannot be used as the name of an environment variable (since it starts with a digit).
@@ -113,7 +117,7 @@ func TestPopulatePodWithInitContainersUsingEnv(t *testing.T) {
 									LocalObjectReference: corev1.LocalObjectReference{
 										Name: configMap1.Name,
 									},
-									Key:      keyFoo,
+									Key: keyFoo,
 									// This scenario has been observed before https://github.com/virtual-kubelet/virtual-kubelet/issues/444#issuecomment-449611851.
 									Optional: nil,
 								},
@@ -156,7 +160,7 @@ func TestPopulatePodWithInitContainersUsingEnv(t *testing.T) {
 									LocalObjectReference: corev1.LocalObjectReference{
 										Name: configMap1.Name,
 									},
-									Key:      keyFoo,
+									Key: keyFoo,
 									// This scenario has been observed before https://github.com/virtual-kubelet/virtual-kubelet/issues/444#issuecomment-449611851.
 									Optional: nil,
 								},
@@ -231,6 +235,164 @@ func TestPopulatePodWithInitContainersUsingEnv(t *testing.T) {
 		{
 			Name:  envVarName2,
 			Value: string(secret1.Data[keyBaz]),
+		},
+	})
+}
+
+// TestPopulatePodWithInitContainersUsingEnv populates the environment of a pod with four containers (two init containers, two containers) using ".env".
+// Then, it checks that the resulting environment for each container contains the expected environment variables.
+func TestPopulatePodWithInitContainersUsingEnvWithFieldRef(t *testing.T) {
+	rm := testutil.FakeResourceManager(configMap1, configMap2, secret1, secret2)
+	er := testutil.FakeEventRecorder(defaultEventRecorderBufferSize)
+
+	// Create a pod object having two init containers and two containers.
+	// The containers' environment is to be populated both from directly-provided values and from keys in two configmaps and two secrets.
+	pod := &corev1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: namespace,
+			Name:      "pod-0",
+			Labels: map[string]string{
+				"zone":    "us-est-coast",
+				"cluster": "test-cluster1",
+				"rack":    "rack-22",
+			},
+			Annotations: map[string]string{
+				"build":   "two",
+				"builder": "john-doe",
+			},
+		},
+		Spec: corev1.PodSpec{
+			NodeName:           "namenode",
+			ServiceAccountName: "serviceaccount",
+			InitContainers: []corev1.Container{
+				{
+					Env: []corev1.EnvVar{
+						{
+							Name: envVarName1,
+							ValueFrom: &corev1.EnvVarSource{
+								FieldRef: &corev1.ObjectFieldSelector{
+									APIVersion: "v1",
+									FieldPath:  "spec.nodeName",
+								},
+							},
+						},
+						{
+							Name: envVarName2,
+							ValueFrom: &corev1.EnvVarSource{
+								FieldRef: &corev1.ObjectFieldSelector{
+									APIVersion: "v1",
+									FieldPath:  "metadata.labels",
+								},
+							},
+						},
+						{
+							Name: envVarName3,
+							ValueFrom: &corev1.EnvVarSource{
+								FieldRef: &corev1.ObjectFieldSelector{
+									APIVersion: "v1",
+									FieldPath:  "metadata.annotations",
+								},
+							},
+						},
+						{
+							Name: envVarName4,
+							ValueFrom: &corev1.EnvVarSource{
+								FieldRef: &corev1.ObjectFieldSelector{
+									APIVersion: "v1",
+									FieldPath:  "spec.serviceAccountName",
+								},
+							},
+						},
+					},
+				},
+			},
+			Containers: []corev1.Container{
+				{
+					Env: []corev1.EnvVar{
+						{
+							Name: envVarName1,
+							ValueFrom: &corev1.EnvVarSource{
+								FieldRef: &corev1.ObjectFieldSelector{
+									APIVersion: "v1",
+									FieldPath:  "spec.nodeName",
+								},
+							},
+						},
+						{
+							Name: envVarName2,
+							ValueFrom: &corev1.EnvVarSource{
+								FieldRef: &corev1.ObjectFieldSelector{
+									APIVersion: "v1",
+									FieldPath:  "metadata.labels",
+								},
+							},
+						},
+						{
+							Name: envVarName3,
+							ValueFrom: &corev1.EnvVarSource{
+								FieldRef: &corev1.ObjectFieldSelector{
+									APIVersion: "v1",
+									FieldPath:  "metadata.annotations",
+								},
+							},
+						},
+						{
+							Name: envVarName4,
+							ValueFrom: &corev1.EnvVarSource{
+								FieldRef: &corev1.ObjectFieldSelector{
+									APIVersion: "v1",
+									FieldPath:  "spec.serviceAccountName",
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	// Populate the pod's environment.
+	err := populateEnvironmentVariables(context.Background(), pod, rm, er)
+	assert.NoError(t, err)
+
+	// Make sure that all the containers' environments contain all the expected keys and values.
+	assert.ElementsMatch(t, pod.Spec.InitContainers[0].Env, []corev1.EnvVar{
+
+		{
+			Name:  envVarName1,
+			Value: "namenode",
+		},
+		{
+			Name:  envVarName2,
+			Value: "cluster=\"test-cluster1\"\nrack=\"rack-22\"\nzone=\"us-est-coast\"",
+		},
+		{
+			Name:  envVarName3,
+			Value: "build=\"two\"\nbuilder=\"john-doe\"",
+		},
+		{
+			Name:  envVarName4,
+			Value: "serviceaccount",
+		},
+	})
+
+	assert.ElementsMatch(t, pod.Spec.Containers[0].Env, []corev1.EnvVar{
+
+		{
+			Name:  envVarName1,
+			Value: "namenode",
+		},
+		{
+			Name:  envVarName2,
+			Value: "cluster=\"test-cluster1\"\nrack=\"rack-22\"\nzone=\"us-est-coast\"",
+		},
+		{
+			Name:  envVarName3,
+			Value: "build=\"two\"\nbuilder=\"john-doe\"",
+		},
+		{
+			Name:  envVarName4,
+			Value: "serviceaccount",
 		},
 	})
 }
