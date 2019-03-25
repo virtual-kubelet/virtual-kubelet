@@ -197,13 +197,7 @@ Run these commands to deploy the virtual kubelet which connects your Kubernetes 
 If your cluster is an AKS cluster:
 
 ```cli
-export VK_RELEASE=virtual-kubelet-for-aks-0.1.6
-````
-
-For any other type of Kubernetes cluster:
-
-```cli
-export VK_RELEASE=virtual-kubelet-0.1.3
+export VK_RELEASE=virtual-kubelet-<VERSION>
 ```
 
 ```cli
