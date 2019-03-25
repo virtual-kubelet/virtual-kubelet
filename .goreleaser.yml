@@ -26,7 +26,7 @@ archive:
   - README*
   - changelog*
   - CHANGELOG*
-fpm:
+nfpm:
   bindir: /usr/local/bin
 snapshot:
   name_template: SNAPSHOT-{{.Commit }}
