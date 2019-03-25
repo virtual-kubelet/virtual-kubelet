@@ -91,6 +91,8 @@ var RootCmd = &cobra.Command{
 backend implementation allowing users to create kubernetes nodes without running the kubelet.
 This allows users to schedule kubernetes workloads on nodes that aren't running Kubernetes.`,
 	Run: func(cmd *cobra.Command, args []string) {
+		initConfig()
+
 		defer rootContextCancel()
 
 		pNode := NodeFromProvider(rootContext, nodeName, taint, p)
@@ -187,8 +189,6 @@ func init() {
 	// make sure the default logger/tracer is initialized
 	log.L = logruslogger.FromLogrus(logrus.NewEntry(logrus.StandardLogger()))
 	trace.T = opencensus.Adapter{}
-
-	cobra.OnInitialize(initConfig)
 
 	// read default node name from environment variable.
 	// it can be overwritten by cli flags if specified.

@@ -4,10 +4,11 @@ DOCKER_IMAGE := virtual-kubelet
 exec := $(DOCKER_IMAGE)
 github_repo := virtual-kubelet/virtual-kubelet
 binary := virtual-kubelet
-build_tags := "netgo osusergo $(VK_BUILD_TAGS)"
+build_tags := netgo osusergo $(VK_BUILD_TAGS)
+
 
 # comment this line out for quieter things
-#V := 1 # When V is set, print commands and build progress.
+# V := 1 # When V is set, print commands and build progress.
 
 # Space separated patterns of packages to skip in list, test, format.
 IGNORED_PACKAGES := /vendor/
@@ -22,9 +23,10 @@ safebuild:
 	$Q docker build --build-arg BUILD_TAGS=$(build_tags) -t $(DOCKER_IMAGE):$(VERSION) .
 
 .PHONY: build
+build: build_tags_actual := $(shell scripts/process_build_tags.sh $(build_tags))
 build: authors
 	@echo "Building..."
-	$Q CGO_ENABLED=0 go build -a --tags $(build_tags) -ldflags '-extldflags "-static"' -o bin/$(binary) $(if $V,-v) $(VERSION_FLAGS) $(IMPORT_PATH)
+	$Q CGO_ENABLED=0 go build -a --tags '$(build_tags_actual)' -ldflags '-extldflags "-static"' -o bin/$(binary) $(if $V,-v) $(VERSION_FLAGS) $(IMPORT_PATH)
 
 .PHONY: tags
 tags:
@@ -117,20 +119,26 @@ format: $(GOPATH)/bin/goimports
 	$Q find . -iname \*.go | grep -v \
         -e "^$$" $(addprefix -e ,$(IGNORED_PACKAGES)) | xargs goimports -w
 
+.PHONY: skaffold-validate
+skaffold-validate:
+	@if [[ ! "minikube,docker-for-desktop" =~ .*"$(kubectl_context)".* ]]; then \
+		echo current-context is [$(kubectl_context)]. Must be one of [minikube,docker-for-desktop]; false; \
+	fi
+
+.PHONY: skaffold-build
+skaffold-build: tags_with_mock := $(VK_BUILD_TAGS) mock_provider
+skaffold-build:
+	@if [[ ! "$(MODE)" == "delete" ]]; then \
+		GOOS=linux GOARCH=amd64 $(MAKE) VK_BUILD_TAGS="$(tags_with_mock)" build; \
+	fi
+
 # skaffold deploys the virtual-kubelet to the Kubernetes cluster targeted by the current kubeconfig using skaffold.
 # The current context (as indicated by "kubectl config current-context") must be one of "minikube" or "docker-for-desktop".
 # MODE must be set to one of "dev" (default), "delete" or "run", and is used as the skaffold command to be run.
 .PHONY: skaffold
 skaffold: MODE ?= dev
 skaffold: PROFILE := local
-skaffold: VK_BUILD_TAGS ?= no_alibabacloud_provider no_aws_provider no_azure_provider no_azurebatch_provider no_cri_provider no_huawei_provider no_hyper_provider no_vic_provider no_web_provider
-skaffold:
-	@if [[ ! "minikube,docker-for-desktop" =~ .*"$(kubectl_context)".* ]]; then \
-		echo current-context is [$(kubectl_context)]. Must be one of [minikube,docker-for-desktop]; false; \
-	fi
-	@if [[ ! "$(MODE)" == "delete" ]]; then \
-		GOOS=linux GOARCH=amd64 VK_BUILD_TAGS="$(VK_BUILD_TAGS)" $(MAKE) build; \
-	fi
+skaffold: skaffold-validate skaffold-build
 	@skaffold $(MODE) \
 		-f $(PWD)/hack/skaffold/virtual-kubelet/skaffold.yml \
 		-p $(PROFILE)

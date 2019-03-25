@@ -1,4 +1,4 @@
-// +build linux,!no_cri_provider
+// +build linux,cri_provider
 
 package register
 
