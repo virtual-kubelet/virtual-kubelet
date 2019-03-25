@@ -229,7 +229,7 @@ resources on your account on behalf of Kubernetes. This step is optional if you 
 Run these commands to deploy the virtual kubelet which connects your Kubernetes cluster to Azure Container Instances.
 
 ```cli
-export VK_RElEASE=virtual-kubelet-latest
+export VK_RELEASE=virtual-kubelet-latest
 ```
 
 Grab the public master URI for your Kubernetes cluster and save the value.

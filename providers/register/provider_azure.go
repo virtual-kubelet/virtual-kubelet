@@ -1,4 +1,4 @@
-// +build !no_azure_provider
+// +build azure_provider
 
 package register
 

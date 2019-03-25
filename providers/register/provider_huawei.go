@@ -1,4 +1,4 @@
-// +build !no_huawei_provider
+// +build huawei_provider
 
 package register
 
