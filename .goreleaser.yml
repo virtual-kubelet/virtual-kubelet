@@ -26,6 +26,15 @@ archive:
   - README*
   - changelog*
   - CHANGELOG*
+brew:
+  name: virtual-kubelet
+  github:
+    owner: virtual-kubelet
+    name: homebrew-tap
+  homepage: "https://virtual-kubelet.io"
+  description: "Kubernetes kubelet implementation that masquerades as a kubelet"
+  test: |
+    system "#{bin}/virtual-kubelet --version"
 fpm:
   bindir: /usr/local/bin
 snapshot:
