@@ -23,25 +23,36 @@ import (
 	"strconv"
 	"strings"
 	"syscall"
+	"time"
 
 	"github.com/Sirupsen/logrus"
-	"github.com/cpuguy83/strongerrors"
-	homedir "github.com/mitchellh/go-homedir"
+	"github.com/mitchellh/go-homedir"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"github.com/virtual-kubelet/virtual-kubelet/log"
+	logruslogger "github.com/virtual-kubelet/virtual-kubelet/log/logrus"
 	"github.com/virtual-kubelet/virtual-kubelet/manager"
 	"github.com/virtual-kubelet/virtual-kubelet/providers"
 	"github.com/virtual-kubelet/virtual-kubelet/providers/register"
-	vkubelet "github.com/virtual-kubelet/virtual-kubelet/vkubelet"
-	"go.opencensus.io/trace"
+	"github.com/virtual-kubelet/virtual-kubelet/trace"
+	"github.com/virtual-kubelet/virtual-kubelet/trace/opencensus"
+	"github.com/virtual-kubelet/virtual-kubelet/vkubelet"
+	octrace "go.opencensus.io/trace"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/fields"
+	kubeinformers "k8s.io/client-go/informers"
+	corev1informers "k8s.io/client-go/informers/core/v1"
 	"k8s.io/client-go/kubernetes"
 )
 
 const (
 	defaultDaemonPort = "10250"
+	// kubeSharedInformerFactoryDefaultResync is the default resync period used by the shared informer factories for Kubernetes resources.
+	// It is set to the same value used by the Kubelet, and can be overridden via the "--full-resync-period" flag.
+	// https://github.com/kubernetes/kubernetes/blob/v1.12.2/pkg/kubelet/apis/config/v1beta1/defaults.go#L51
+	kubeSharedInformerFactoryDefaultResync = 1 * time.Minute
 )
 
 var kubeletConfig string
@@ -59,12 +70,17 @@ var taint *corev1.Taint
 var k8sClient *kubernetes.Clientset
 var p providers.Provider
 var rm *manager.ResourceManager
-var apiConfig vkubelet.APIConfig
+var apiConfig *apiServerConfig
+var podInformer corev1informers.PodInformer
+var kubeSharedInformerFactoryResync time.Duration
 var podSyncWorkers int
 
 var userTraceExporters []string
 var userTraceConfig = TracingExporterOptions{Tags: make(map[string]string)}
 var traceSampler string
+
+// Create a root context to be used by the pod controller and by the shared informer factories.
+var rootContext, rootContextCancel = context.WithCancel(context.Background())
 
 // RootCmd represents the base command when called without any subcommands
 var RootCmd = &cobra.Command{
@@ -74,32 +90,36 @@ var RootCmd = &cobra.Command{
 backend implementation allowing users to create kubernetes nodes without running the kubelet.
 This allows users to schedule kubernetes workloads on nodes that aren't running Kubernetes.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		ctx, cancel := context.WithCancel(context.Background())
+		initConfig()
 
-		f, err := vkubelet.New(ctx, vkubelet.Config{
+		defer rootContextCancel()
+
+		vk := vkubelet.New(vkubelet.Config{
 			Client:          k8sClient,
 			Namespace:       kubeNamespace,
 			NodeName:        nodeName,
 			Taint:           taint,
-			MetricsAddr:     metricsAddr,
 			Provider:        p,
 			ResourceManager: rm,
-			APIConfig:       apiConfig,
 			PodSyncWorkers:  podSyncWorkers,
+			PodInformer:     podInformer,
 		})
-		if err != nil {
-			log.L.WithError(err).Fatal("Error initializing virtual kubelet")
-		}
 
 		sig := make(chan os.Signal, 1)
 		signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM)
 		go func() {
 			<-sig
-			cancel()
+			rootContextCancel()
 		}()
 
-		if err := f.Run(ctx); err != nil && errors.Cause(err) != context.Canceled {
-			log.L.Fatal(err)
+		cancelHTTP, err := setupHTTPServer(rootContext, apiConfig)
+		if err != nil {
+			log.G(rootContext).Fatal(err)
+		}
+		defer cancelHTTP()
+
+		if err := vk.Run(rootContext); err != nil && errors.Cause(err) != context.Canceled {
+			log.G(rootContext).Fatal(err)
 		}
 	},
 }
@@ -145,7 +165,9 @@ func (mv mapVar) Type() string {
 }
 
 func init() {
-	cobra.OnInitialize(initConfig)
+	// make sure the default logger/tracer is initialized
+	log.L = logruslogger.FromLogrus(logrus.NewEntry(logrus.StandardLogger()))
+	trace.T = opencensus.Adapter{}
 
 	// read default node name from environment variable.
 	// it can be overwritten by cli flags if specified.
@@ -169,12 +191,14 @@ func init() {
 	RootCmd.PersistentFlags().StringVar(&taintKey, "taint", "", "Set node taint key")
 	RootCmd.PersistentFlags().MarkDeprecated("taint", "Taint key should now be configured using the VK_TAINT_KEY environment variable")
 	RootCmd.PersistentFlags().StringVar(&logLevel, "log-level", "info", `set the log level, e.g. "trace", debug", "info", "warn", "error"`)
-	RootCmd.PersistentFlags().IntVar(&podSyncWorkers, "pod-sync-workers", 1, `set the number of pod synchronization workers`)
+	RootCmd.PersistentFlags().IntVar(&podSyncWorkers, "pod-sync-workers", 10, `set the number of pod synchronization workers`)
 
 	RootCmd.PersistentFlags().StringSliceVar(&userTraceExporters, "trace-exporter", nil, fmt.Sprintf("sets the tracing exporter to use, available exporters: %s", AvailableTraceExporters()))
 	RootCmd.PersistentFlags().StringVar(&userTraceConfig.ServiceName, "trace-service-name", "virtual-kubelet", "sets the name of the service used to register with the trace exporter")
 	RootCmd.PersistentFlags().Var(mapVar(userTraceConfig.Tags), "trace-tag", "add tags to include with traces in key=value form")
 	RootCmd.PersistentFlags().StringVar(&traceSampler, "trace-sample-rate", "", "set probability of tracing samples")
+
+	RootCmd.PersistentFlags().DurationVar(&kubeSharedInformerFactoryResync, "full-resync-period", kubeSharedInformerFactoryDefaultResync, "how often to perform a full resync of pods between kubernetes and the provider")
 
 	// Cobra also supports local flags, which will only run
 	// when this action is called directly.
@@ -224,19 +248,21 @@ func initConfig() {
 		log.G(context.TODO()).WithField("OperatingSystem", operatingSystem).Fatalf("Operating system not supported. Valid options are: %s", strings.Join(providers.ValidOperatingSystems.Names(), " | "))
 	}
 
-	level, err := log.ParseLevel(logLevel)
+	level, err := logrus.ParseLevel(logLevel)
 	if err != nil {
 		log.G(context.TODO()).WithField("logLevel", logLevel).Fatal("log level is not supported")
 	}
 
 	logrus.SetLevel(level)
-
-	logger := log.L.WithFields(logrus.Fields{
+	logger := logruslogger.FromLogrus(logrus.WithFields(logrus.Fields{
 		"provider":        provider,
 		"operatingSystem": operatingSystem,
 		"node":            nodeName,
 		"namespace":       kubeNamespace,
-	})
+	}))
+
+	rootContext = log.WithLogger(rootContext, logger)
+
 	log.L = logger
 
 	if !disableTaint {
@@ -251,10 +277,29 @@ func initConfig() {
 		logger.WithError(err).Fatal("Error creating kubernetes client")
 	}
 
-	rm, err = manager.NewResourceManager(k8sClient)
+	// Create a shared informer factory for Kubernetes pods in the current namespace (if specified) and scheduled to the current node.
+	podInformerFactory := kubeinformers.NewSharedInformerFactoryWithOptions(k8sClient, kubeSharedInformerFactoryResync, kubeinformers.WithNamespace(kubeNamespace), kubeinformers.WithTweakListOptions(func(options *metav1.ListOptions) {
+		options.FieldSelector = fields.OneTermEqualSelector("spec.nodeName", nodeName).String()
+	}))
+	// Create a pod informer so we can pass its lister to the resource manager.
+	podInformer = podInformerFactory.Core().V1().Pods()
+
+	// Create another shared informer factory for Kubernetes secrets and configmaps (not subject to any selectors).
+	scmInformerFactory := kubeinformers.NewSharedInformerFactoryWithOptions(k8sClient, kubeSharedInformerFactoryResync)
+	// Create a secret informer and a config map informer so we can pass their listers to the resource manager.
+	secretInformer := scmInformerFactory.Core().V1().Secrets()
+	configMapInformer := scmInformerFactory.Core().V1().ConfigMaps()
+
+	// Create a new instance of the resource manager that uses the listers above for pods, secrets and config maps.
+	rm, err = manager.NewResourceManager(podInformer.Lister(), secretInformer.Lister(), configMapInformer.Lister())
 	if err != nil {
 		logger.WithError(err).Fatal("Error initializing resource manager")
 	}
+
+	// Start the shared informer factory for pods.
+	go podInformerFactory.Start(rootContext.Done())
+	// Start the shared informer factory for secrets and configmaps.
+	go scmInformerFactory.Start(rootContext.Done())
 
 	daemonPortEnv := getEnv("KUBELET_PORT", defaultDaemonPort)
 	daemonPort, err := strconv.ParseInt(daemonPortEnv, 10, 32)
@@ -276,7 +321,7 @@ func initConfig() {
 		logger.WithError(err).Fatal("Error initializing provider")
 	}
 
-	apiConfig, err = getAPIConfig()
+	apiConfig, err = getAPIConfig(metricsAddr)
 	if err != nil {
 		logger.WithError(err).Fatal("Error reading API config")
 	}
@@ -302,16 +347,16 @@ func initConfig() {
 		if err != nil {
 			log.L.WithError(err).WithField("exporter", e).Fatal("Cannot initialize exporter")
 		}
-		trace.RegisterExporter(exporter)
+		octrace.RegisterExporter(exporter)
 	}
 	if len(userTraceExporters) > 0 {
-		var s trace.Sampler
+		var s octrace.Sampler
 		switch strings.ToLower(traceSampler) {
 		case "":
 		case "always":
-			s = trace.AlwaysSample()
+			s = octrace.AlwaysSample()
 		case "never":
-			s = trace.NeverSample()
+			s = octrace.NeverSample()
 		default:
 			rate, err := strconv.Atoi(traceSampler)
 			if err != nil {
@@ -320,30 +365,15 @@ func initConfig() {
 			if rate < 0 || rate > 100 {
 				logger.WithField("rate", traceSampler).Fatal("trace sample rate must not be less than zero or greater than 100")
 			}
-			s = trace.ProbabilitySampler(float64(rate) / 100)
+			s = octrace.ProbabilitySampler(float64(rate) / 100)
 		}
 
 		if s != nil {
-			trace.ApplyConfig(
-				trace.Config{
+			octrace.ApplyConfig(
+				octrace.Config{
 					DefaultSampler: s,
 				},
 			)
 		}
 	}
-}
-
-func getAPIConfig() (vkubelet.APIConfig, error) {
-	config := vkubelet.APIConfig{
-		CertPath: os.Getenv("APISERVER_CERT_LOCATION"),
-		KeyPath:  os.Getenv("APISERVER_KEY_LOCATION"),
-	}
-
-	port, err := strconv.Atoi(os.Getenv("KUBELET_PORT"))
-	if err != nil {
-		return vkubelet.APIConfig{}, strongerrors.InvalidArgument(errors.Wrap(err, "error parsing KUBELET_PORT variable"))
-	}
-	config.Addr = fmt.Sprintf(":%d", port)
-
-	return config, nil
 }

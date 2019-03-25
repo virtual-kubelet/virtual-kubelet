@@ -10,7 +10,8 @@ RUN apk add --no-cache \
 	gcc \
 	libc-dev \
 	libgcc \
-        make
+	make \
+	bash
 
 COPY . /go/src/github.com/virtual-kubelet/virtual-kubelet
 WORKDIR /go/src/github.com/virtual-kubelet/virtual-kubelet

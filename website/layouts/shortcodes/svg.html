@@ -1,0 +1,10 @@
+{{ $src      := .Get "src" }}
+{{ $path     := printf "static/%s" $src | relURL }}
+{{ $figureId := $.Page.Scratch.Get "numFigures" }}
+<figure id="figure-{{ $figureId }}">
+  {{ $path | readFile | safeHTML }}
+  <figcaption>
+    <strong>Figure {{ $figureId }}</strong>{{ with .Get "caption" }}. {{ . | markdownify }}{{ end }}
+  </figcaption>
+</figure>
+

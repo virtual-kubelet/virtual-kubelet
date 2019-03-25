@@ -8,7 +8,9 @@ This document details configuring the Virtual Kubelet ACI provider.
 
 #### Table of Contents
 
+* [Feature set](#current-feature-set)
 * [Prerequiste](#prerequisite)
+* [Set-up virtual node in AKS](#set-up-virtual-node-in-AKS)
 * [Quick set-up with the ACI Connector](#quick-set-up-with-the-aci-connector)
 * [Manual set-up](#manual-set-up)
 * [Create a cluster with a Virtual Network](#create-an-aks-cluster-with-vnet)
@@ -17,6 +19,30 @@ This document details configuring the Virtual Kubelet ACI provider.
 * [Work arounds](#work-arounds-for-the-aci-connector)
 * [Upgrade the ACI Connector ](#upgrade-the-aci-connector)
 * [Remove the Virtual Kubelet](#remove-the-virtual-kubelet)
+
+## Current feature set
+
+Virtual Kubelet's ACI provider relies heavily on the feature set that Azure Container Instances provide. Please check the Azure documentation accurate details on region avaliability, pricing and new features. The list here attempts to give an accurate reference for the features we support in ACI and the ACI provider within Virtual Kubelet. 
+
+*WIP*
+
+**Features**
+* Volumes: empty dir, github repo, Azure Files
+* Secure env variables, config maps
+* Bring your own virtual network (VNet)
+* Deploy to GPU enabled container instances *(documentation in progress)*
+* Network security group support 
+* Basic Azure Networking support within AKS virtual node 
+* [Exec support](https://docs.microsoft.com/en-us/azure/container-instances/container-instances-exec) for container instances 
+* Azure Monitoring integration or formally known as OMS
+
+**Limitations**
+* Using service principal credentials to pull ACR images 
+* Liveness and readiness probes (WIP)
+* [Limitations](https://docs.microsoft.com/en-us/azure/container-instances/container-instances-vnet) with VNet 
+* VNet peering
+* Argument support for exec 
+* [Host aliases](https://kubernetes.io/docs/concepts/services-networking/add-entries-to-pod-etc-hosts-with-host-aliases/) support 
 
 ## Prerequisite
 
@@ -121,6 +147,12 @@ First let's identify your Azure subscription and save it for use later on in the
    az provider register -n Microsoft.ContainerInstance
    ```
 
+## Set-up virtual node in AKS
+
+Azure Kubernetes Service has easy ways of setting up virtual kubelet with the ACI provider with a feature called virtual node. You can easily install a virtual node that will deploy Linux workloads to ACI. The pods that spin out will automatically get private IPs as the experience forces you to pick "advanced networking."
+
+To install virtual node in the Azure portal go [here](https://docs.microsoft.com/en-us/azure/aks/virtual-nodes-portal). To install virtual node in the Azure CLI go [here](https://docs.microsoft.com/en-us/azure/aks/virtual-nodes-cli). 
+
 ## Quick set-up with the ACI Connector
 
 The Azure cli can be used to install the ACI provider. We like to say Azure's provider or implementation for Virtual Kubelet is the ACI Connector. Please note that this command has no Virtual Networking support. 
@@ -197,18 +229,27 @@ resources on your account on behalf of Kubernetes. This step is optional if you 
 Run these commands to deploy the virtual kubelet which connects your Kubernetes cluster to Azure Container Instances.
 
 ```cli
-export VK_RElEASE=virtual-kubelet-latest
+export VK_RELEASE=virtual-kubelet-latest
+```
+
+Grab the public master URI for your Kubernetes cluster and save the value.
+
+```cli 
+kubectl cluster-info
+export MASTER_URI=<Kubernetes Master>
 ```
 
 If your cluster is an AKS cluster:
 ```cli
-RELEASE_NAME=virtual-kubelet
-NODE_NAME=virtual-kubelet
-CHART_URL=https://github.com/virtual-kubelet/virtual-kubelet/raw/master/charts/$VK_RELEASE.tgz
+export RELEASE_NAME=virtual-kubelet
+export VK_RELEASE=virtual-kubelet-latest
+export NODE_NAME=virtual-kubelet
+export CHART_URL=https://github.com/virtual-kubelet/virtual-kubelet/raw/master/charts/$VK_RELEASE.tgz
 
 helm install "$CHART_URL" --name "$RELEASE_NAME" \
   --set provider=azure \
   --set providers.azure.targetAKS=true \
+  --set providers.azure.masterUri=$MASTER_URI
 ```
 
 For any other type of Kubernetes cluster:
@@ -226,10 +267,11 @@ helm install "$CHART_URL" --name "$RELEASE_NAME" \
   --set providers.azure.tenantId=$AZURE_TENANT_ID \
   --set providers.azure.subscriptionId=$AZURE_SUBSCRIPTION_ID \
   --set providers.azure.clientId=$AZURE_CLIENT_ID \
-  --set providers.azure.clientKey=$AZURE_CLIENT_SECRET
+  --set providers.azure.clientKey=$AZURE_CLIENT_SECRET \
+  --set providers.azure.masterUri=$MASTER_URI
 ```
 
-If your cluster has RBAC enabled set ```rbac.install=true```
+If your cluster has RBAC disabled set ```rbac.install=false```
 
 Output:
 

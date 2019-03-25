@@ -1,0 +1,11 @@
+{{ define "title" }}
+{{ site.Title }} | Home
+{{ end }}
+
+{{ define "main" }}
+{{ partial "navbar.html" . }}
+{{ partial "home/hero.html" . }}
+{{ partial "home/info.html" . }}
+{{ partial "home/cncf.html" . }}
+{{ partial "footer.html" . }}
+{{ end }}

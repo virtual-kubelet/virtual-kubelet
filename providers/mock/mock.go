@@ -6,16 +6,21 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"log"
+	"math/rand"
 	"time"
 
 	"github.com/cpuguy83/strongerrors"
-	"github.com/virtual-kubelet/virtual-kubelet/providers"
-	"k8s.io/api/core/v1"
+	"github.com/cpuguy83/strongerrors/status/ocstatus"
+	"github.com/virtual-kubelet/virtual-kubelet/log"
+	"github.com/virtual-kubelet/virtual-kubelet/trace"
+	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/remotecommand"
+	stats "k8s.io/kubernetes/pkg/kubelet/apis/stats/v1alpha1"
+
+	"github.com/virtual-kubelet/virtual-kubelet/providers"
 )
 
 const (
@@ -23,6 +28,11 @@ const (
 	defaultCPUCapacity    = "20"
 	defaultMemoryCapacity = "100Gi"
 	defaultPodCapacity    = "20"
+
+	// Values used in tracing as attribute keys.
+	namespaceKey     = "namespace"
+	nameKey          = "name"
+	containerNameKey = "containerName"
 )
 
 // MockProvider implements the virtual-kubelet provider interface and stores pods in memory.
@@ -33,6 +43,7 @@ type MockProvider struct {
 	daemonEndpointPort int32
 	pods               map[string]*v1.Pod
 	config             MockConfig
+	startTime          time.Time
 }
 
 // MockConfig contains a mock virtual-kubelet's configurable parameters.
@@ -56,6 +67,7 @@ func NewMockProvider(providerConfig, nodeName, operatingSystem string, internalI
 		daemonEndpointPort: daemonEndpointPort,
 		pods:               make(map[string]*v1.Pod),
 		config:             config,
+		startTime:          time.Now(),
 	}
 	return &provider, nil
 }
@@ -99,7 +111,13 @@ func loadConfig(providerConfig, nodeName string) (config MockConfig, err error) 
 
 // CreatePod accepts a Pod definition and stores it in memory.
 func (p *MockProvider) CreatePod(ctx context.Context, pod *v1.Pod) error {
-	log.Printf("receive CreatePod %q\n", pod.Name)
+	ctx, span := trace.StartSpan(ctx, "CreatePod")
+	defer span.End()
+
+	// Add the pod's coordinates to the current span.
+	ctx = addAttributes(ctx, span, namespaceKey, pod.Namespace, nameKey, pod.Name)
+
+	log.G(ctx).Info("receive CreatePod %q", pod.Name)
 
 	key, err := buildKey(pod)
 	if err != nil {
@@ -113,7 +131,13 @@ func (p *MockProvider) CreatePod(ctx context.Context, pod *v1.Pod) error {
 
 // UpdatePod accepts a Pod definition and updates its reference.
 func (p *MockProvider) UpdatePod(ctx context.Context, pod *v1.Pod) error {
-	log.Printf("receive UpdatePod %q\n", pod.Name)
+	ctx, span := trace.StartSpan(ctx, "UpdatePod")
+	defer span.End()
+
+	// Add the pod's coordinates to the current span.
+	ctx = addAttributes(ctx, span, namespaceKey, pod.Namespace, nameKey, pod.Name)
+
+	log.G(ctx).Info("receive UpdatePod %q", pod.Name)
 
 	key, err := buildKey(pod)
 	if err != nil {
@@ -127,7 +151,13 @@ func (p *MockProvider) UpdatePod(ctx context.Context, pod *v1.Pod) error {
 
 // DeletePod deletes the specified pod out of memory.
 func (p *MockProvider) DeletePod(ctx context.Context, pod *v1.Pod) (err error) {
-	log.Printf("receive DeletePod %q\n", pod.Name)
+	ctx, span := trace.StartSpan(ctx, "DeletePod")
+	defer span.End()
+
+	// Add the pod's coordinates to the current span.
+	ctx = addAttributes(ctx, span, namespaceKey, pod.Namespace, nameKey, pod.Name)
+
+	log.G(ctx).Info("receive DeletePod %q", pod.Name)
 
 	key, err := buildKey(pod)
 	if err != nil {
@@ -145,7 +175,16 @@ func (p *MockProvider) DeletePod(ctx context.Context, pod *v1.Pod) (err error) {
 
 // GetPod returns a pod by name that is stored in memory.
 func (p *MockProvider) GetPod(ctx context.Context, namespace, name string) (pod *v1.Pod, err error) {
-	log.Printf("receive GetPod %q\n", name)
+	ctx, span := trace.StartSpan(ctx, "GetPod")
+	defer func() {
+		span.SetStatus(ocstatus.FromError(err))
+		span.End()
+	}()
+
+	// Add the pod's coordinates to the current span.
+	ctx = addAttributes(ctx, span, namespaceKey, namespace, nameKey, name)
+
+	log.G(ctx).Info("receive GetPod %q", name)
 
 	key, err := buildKeyFromNames(namespace, name)
 	if err != nil {
@@ -155,13 +194,18 @@ func (p *MockProvider) GetPod(ctx context.Context, namespace, name string) (pod 
 	if pod, ok := p.pods[key]; ok {
 		return pod, nil
 	}
-
-	return nil, nil
+	return nil, strongerrors.NotFound(fmt.Errorf("pod \"%s/%s\" is not known to the provider", namespace, name))
 }
 
 // GetContainerLogs retrieves the logs of a container by name from the provider.
 func (p *MockProvider) GetContainerLogs(ctx context.Context, namespace, podName, containerName string, tail int) (string, error) {
-	log.Printf("receive GetContainerLogs %q\n", podName)
+	ctx, span := trace.StartSpan(ctx, "GetContainerLogs")
+	defer span.End()
+
+	// Add pod and container attributes to the current span.
+	ctx = addAttributes(ctx, span, namespaceKey, namespace, nameKey, podName, containerNameKey, containerName)
+
+	log.G(ctx).Info("receive GetContainerLogs %q", podName)
 	return "", nil
 }
 
@@ -174,14 +218,20 @@ func (p *MockProvider) GetPodFullName(namespace string, pod string) string {
 // ExecInContainer executes a command in a container in the pod, copying data
 // between in/out/err and the container's stdin/stdout/stderr.
 func (p *MockProvider) ExecInContainer(name string, uid types.UID, container string, cmd []string, in io.Reader, out, err io.WriteCloser, tty bool, resize <-chan remotecommand.TerminalSize, timeout time.Duration) error {
-	log.Printf("receive ExecInContainer %q\n", container)
+	log.G(context.TODO()).Info("receive ExecInContainer %q", container)
 	return nil
 }
 
 // GetPodStatus returns the status of a pod by name that is "running".
 // returns nil if a pod by that name is not found.
 func (p *MockProvider) GetPodStatus(ctx context.Context, namespace, name string) (*v1.PodStatus, error) {
-	log.Printf("receive GetPodStatus %q\n", name)
+	ctx, span := trace.StartSpan(ctx, "GetPodStatus")
+	defer span.End()
+
+	// Add namespace and name as attributes to the current span.
+	ctx = addAttributes(ctx, span, namespaceKey, namespace, nameKey, name)
+
+	log.G(ctx).Info("receive GetPodStatus %q", name)
 
 	now := metav1.NewTime(time.Now())
 
@@ -208,7 +258,7 @@ func (p *MockProvider) GetPodStatus(ctx context.Context, namespace, name string)
 
 	pod, err := p.GetPod(ctx, namespace, name)
 	if err != nil {
-		return status, err
+		return nil, err
 	}
 
 	for _, container := range pod.Spec.Containers {
@@ -230,7 +280,10 @@ func (p *MockProvider) GetPodStatus(ctx context.Context, namespace, name string)
 
 // GetPods returns a list of all pods known to be "running".
 func (p *MockProvider) GetPods(ctx context.Context) ([]*v1.Pod, error) {
-	log.Printf("receive GetPods\n")
+	ctx, span := trace.StartSpan(ctx, "GetPods")
+	defer span.End()
+
+	log.G(ctx).Info("receive GetPods")
 
 	var pods []*v1.Pod
 
@@ -243,6 +296,9 @@ func (p *MockProvider) GetPods(ctx context.Context) ([]*v1.Pod, error) {
 
 // Capacity returns a resource list containing the capacity limits.
 func (p *MockProvider) Capacity(ctx context.Context) v1.ResourceList {
+	ctx, span := trace.StartSpan(ctx, "Capacity")
+	defer span.End()
+
 	return v1.ResourceList{
 		"cpu":    resource.MustParse(p.config.CPU),
 		"memory": resource.MustParse(p.config.Memory),
@@ -253,6 +309,9 @@ func (p *MockProvider) Capacity(ctx context.Context) v1.ResourceList {
 // NodeConditions returns a list of conditions (Ready, OutOfDisk, etc), for updates to the node status
 // within Kubernetes.
 func (p *MockProvider) NodeConditions(ctx context.Context) []v1.NodeCondition {
+	ctx, span := trace.StartSpan(ctx, "NodeConditions")
+	defer span.End()
+
 	// TODO: Make this configurable
 	return []v1.NodeCondition{
 		{
@@ -302,6 +361,9 @@ func (p *MockProvider) NodeConditions(ctx context.Context) []v1.NodeCondition {
 // NodeAddresses returns a list of addresses for the node status
 // within Kubernetes.
 func (p *MockProvider) NodeAddresses(ctx context.Context) []v1.NodeAddress {
+	ctx, span := trace.StartSpan(ctx, "NodeAddresses")
+	defer span.End()
+
 	return []v1.NodeAddress{
 		{
 			Type:    "InternalIP",
@@ -313,6 +375,9 @@ func (p *MockProvider) NodeAddresses(ctx context.Context) []v1.NodeAddress {
 // NodeDaemonEndpoints returns NodeDaemonEndpoints for the node status
 // within Kubernetes.
 func (p *MockProvider) NodeDaemonEndpoints(ctx context.Context) *v1.NodeDaemonEndpoints {
+	ctx, span := trace.StartSpan(ctx, "NodeDaemonEndpoints")
+	defer span.End()
+
 	return &v1.NodeDaemonEndpoints{
 		KubeletEndpoint: v1.DaemonEndpoint{
 			Port: p.daemonEndpointPort,
@@ -324,6 +389,83 @@ func (p *MockProvider) NodeDaemonEndpoints(ctx context.Context) *v1.NodeDaemonEn
 // This is a noop to default to Linux for now.
 func (p *MockProvider) OperatingSystem() string {
 	return providers.OperatingSystemLinux
+}
+
+// GetStatsSummary returns dummy stats for all pods known by this provider.
+func (p *MockProvider) GetStatsSummary(ctx context.Context) (*stats.Summary, error) {
+	ctx, span := trace.StartSpan(ctx, "GetStatsSummary")
+	defer span.End()
+
+	// Grab the current timestamp so we can report it as the time the stats were generated.
+	time := metav1.NewTime(time.Now())
+
+	// Create the Summary object that will later be populated with node and pod stats.
+	res := &stats.Summary{}
+
+	// Populate the Summary object with basic node stats.
+	res.Node = stats.NodeStats{
+		NodeName:  p.nodeName,
+		StartTime: metav1.NewTime(p.startTime),
+	}
+
+	// Populate the Summary object with dummy stats for each pod known by this provider.
+	for _, pod := range p.pods {
+		var (
+			// totalUsageNanoCores will be populated with the sum of the values of UsageNanoCores computes across all containers in the pod.
+			totalUsageNanoCores uint64
+			// totalUsageBytes will be populated with the sum of the values of UsageBytes computed across all containers in the pod.
+			totalUsageBytes uint64
+		)
+
+		// Create a PodStats object to populate with pod stats.
+		pss := stats.PodStats{
+			PodRef: stats.PodReference{
+				Name:      pod.Name,
+				Namespace: pod.Namespace,
+				UID:       string(pod.UID),
+			},
+			StartTime: pod.CreationTimestamp,
+		}
+
+		// Iterate over all containers in the current pod to compute dummy stats.
+		for _, container := range pod.Spec.Containers {
+			// Grab a dummy value to be used as the total CPU usage.
+			// The value should fit a uint32 in order to avoid overflows later on when computing pod stats.
+			dummyUsageNanoCores := uint64(rand.Uint32())
+			totalUsageNanoCores += dummyUsageNanoCores
+			// Create a dummy value to be used as the total RAM usage.
+			// The value should fit a uint32 in order to avoid overflows later on when computing pod stats.
+			dummyUsageBytes := uint64(rand.Uint32())
+			totalUsageBytes += dummyUsageBytes
+			// Append a ContainerStats object containing the dummy stats to the PodStats object.
+			pss.Containers = append(pss.Containers, stats.ContainerStats{
+				Name:      container.Name,
+				StartTime: pod.CreationTimestamp,
+				CPU: &stats.CPUStats{
+					Time:           time,
+					UsageNanoCores: &dummyUsageNanoCores,
+				},
+				Memory: &stats.MemoryStats{
+					Time:       time,
+					UsageBytes: &dummyUsageBytes,
+				},
+			})
+		}
+
+		// Populate the CPU and RAM stats for the pod and append the PodsStats object to the Summary object to be returned.
+		pss.CPU = &stats.CPUStats{
+			Time:           time,
+			UsageNanoCores: &totalUsageNanoCores,
+		}
+		pss.Memory = &stats.MemoryStats{
+			Time:       time,
+			UsageBytes: &totalUsageBytes,
+		}
+		res.Pods = append(res.Pods, pss)
+	}
+
+	// Return the dummy stats.
+	return res, nil
 }
 
 func buildKeyFromNames(namespace string, name string) (string, error) {
@@ -341,4 +483,18 @@ func buildKey(pod *v1.Pod) (string, error) {
 	}
 
 	return buildKeyFromNames(pod.ObjectMeta.Namespace, pod.ObjectMeta.Name)
+}
+
+// addAttributes adds the specified attributes to the provided span.
+// attrs must be an even-sized list of string arguments.
+// Otherwise, the span won't be modified.
+// TODO: Refactor and move to a "tracing utilities" package.
+func addAttributes(ctx context.Context, span trace.Span, attrs ...string) context.Context {
+	if len(attrs)%2 == 1 {
+		return ctx
+	}
+	for i := 0; i < len(attrs); i += 2 {
+		ctx = span.WithField(ctx, attrs[i], attrs[i+1])
+	}
+	return ctx
 }

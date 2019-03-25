@@ -1,12 +1,14 @@
+SHELL := /bin/bash
 IMPORT_PATH := github.com/virtual-kubelet/virtual-kubelet
 DOCKER_IMAGE := virtual-kubelet
 exec := $(DOCKER_IMAGE)
 github_repo := virtual-kubelet/virtual-kubelet
 binary := virtual-kubelet
-build_tags := "netgo osusergo $(VK_BUILD_TAGS)"
+build_tags := netgo osusergo $(VK_BUILD_TAGS)
+
 
 # comment this line out for quieter things
-#V := 1 # When V is set, print commands and build progress.
+# V := 1 # When V is set, print commands and build progress.
 
 # Space separated patterns of packages to skip in list, test, format.
 IGNORED_PACKAGES := /vendor/
@@ -21,9 +23,10 @@ safebuild:
 	$Q docker build --build-arg BUILD_TAGS=$(build_tags) -t $(DOCKER_IMAGE):$(VERSION) .
 
 .PHONY: build
+build: build_tags_actual := $(shell scripts/process_build_tags.sh $(build_tags))
 build: authors
 	@echo "Building..."
-	$Q CGO_ENABLED=0 go build -a --tags $(build_tags) -ldflags '-extldflags "-static"' -o bin/$(binary) $(if $V,-v) $(VERSION_FLAGS) $(IMPORT_PATH)
+	$Q CGO_ENABLED=0 go build -a --tags '$(build_tags_actual)' -ldflags '-extldflags "-static"' -o bin/$(binary) $(if $V,-v) $(VERSION_FLAGS) $(IMPORT_PATH)
 
 .PHONY: tags
 tags:
@@ -59,19 +62,27 @@ clean:
 	@echo "Clean..."
 	$Q rm -rf bin
 
+vet:
+	@echo "go vet'ing..."
+ifndef CI
+	@echo "go vet'ing Outside CI..."
+	$Q go vet $(allpackages)
+else
+	@echo "go vet'ing in CI..."
+	$Q mkdir -p test
+	$Q ( go vet $(allpackages); echo $$? ) | \
+       tee test/vet.txt | sed '$$ d'; exit $$(tail -1 test/vet.txt)
+endif
 
 test:
 	@echo "Testing..."
 	$Q go test $(if $V,-v) -i $(allpackages) # install -race libs to speed up next run
 ifndef CI
 	@echo "Testing Outside CI..."
-	$Q go vet $(allpackages)
 	$Q GODEBUG=cgocheck=2 go test $(allpackages)
 else
 	@echo "Testing in CI..."
 	$Q mkdir -p test
-	$Q ( go vet $(allpackages); echo $$? ) | \
-       tee test/vet.txt | sed '$$ d'; exit $$(tail -1 test/vet.txt)
 	$Q ( GODEBUG=cgocheck=2 go test -v $(allpackages); echo $$? ) | \
        tee test/output.txt | sed '$$ d'; exit $$(tail -1 test/output.txt)
 endif
@@ -108,6 +119,51 @@ format: $(GOPATH)/bin/goimports
 	$Q find . -iname \*.go | grep -v \
         -e "^$$" $(addprefix -e ,$(IGNORED_PACKAGES)) | xargs goimports -w
 
+.PHONY: skaffold-validate
+skaffold-validate:
+	@if [[ ! "minikube,docker-for-desktop" =~ .*"$(kubectl_context)".* ]]; then \
+		echo current-context is [$(kubectl_context)]. Must be one of [minikube,docker-for-desktop]; false; \
+	fi
+
+.PHONY: skaffold-build
+skaffold-build: tags_with_mock := $(VK_BUILD_TAGS) mock_provider
+skaffold-build:
+	@if [[ ! "$(MODE)" == "delete" ]]; then \
+		GOOS=linux GOARCH=amd64 $(MAKE) VK_BUILD_TAGS="$(tags_with_mock)" build; \
+	fi
+
+# skaffold deploys the virtual-kubelet to the Kubernetes cluster targeted by the current kubeconfig using skaffold.
+# The current context (as indicated by "kubectl config current-context") must be one of "minikube" or "docker-for-desktop".
+# MODE must be set to one of "dev" (default), "delete" or "run", and is used as the skaffold command to be run.
+.PHONY: skaffold
+skaffold: MODE ?= dev
+skaffold: PROFILE := local
+skaffold: skaffold-validate skaffold-build
+	@skaffold $(MODE) \
+		-f $(PWD)/hack/skaffold/virtual-kubelet/skaffold.yml \
+		-p $(PROFILE)
+
+# e2e runs the end-to-end test suite against the Kubernetes cluster targeted by the current kubeconfig.
+# It automatically deploys the virtual-kubelet with the mock provider by running "make skaffold MODE=run".
+# It is the caller's responsibility to cleanup the deployment after running this target (e.g. by running "make skaffold MODE=delete").
+.PHONY: e2e
+e2e: KUBECONFIG ?= $(HOME)/.kube/config
+e2e: NAMESPACE := default
+e2e: NODE_NAME := vkubelet-mock-0
+e2e: TAINT_KEY := virtual-kubelet.io/provider
+e2e: TAINT_VALUE := mock
+e2e: TAINT_EFFECT := NoSchedule
+e2e:
+	@$(MAKE) skaffold MODE=delete && kubectl delete --ignore-not-found node $(NODE_NAME)
+	@$(MAKE) skaffold MODE=run
+	@cd $(PWD)/test/e2e && go test -v -tags e2e ./... \
+		-kubeconfig=$(KUBECONFIG) \
+		-namespace=$(NAMESPACE) \
+		-node-name=$(NODE_NAME) \
+		-taint-key=$(TAINT_KEY) \
+		-taint-value=$(TAINT_VALUE) \
+		-taint-effect=$(TAINT_EFFECT)
+
 ##### =====> Internals <===== #####
 
 .PHONY: setup
@@ -118,12 +174,6 @@ setup: clean
     fi
 	if ! grep "/cover" .gitignore > /dev/null 2>&1; then \
         echo "/cover" >> .gitignore; \
-    fi
-	if ! grep "/bin" .gitignore > /dev/null 2>&1; then \
-        echo "/bin" >> .gitignore; \
-    fi
-	if ! grep "/test" .gitignore > /dev/null 2>&1; then \
-        echo "/test" >> .gitignore; \
     fi
 	mkdir -p cover
 	mkdir -p bin

@@ -1,0 +1,7 @@
+{{ $jsFiles := (slice "anchor" "app") }}
+<script src="https://code.jquery.com/jquery-3.3.1.min.js" integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8=" crossorigin="anonymous"></script>
+{{ range $jsFiles }}
+{{ $path := printf "js/%s.js" . }}
+{{ $file := resources.Get $path | minify | fingerprint }}
+<script src="{{ $file.RelPermalink }}" integrity="{{ $file.Data.Integrity }}"></script>
+{{ end }}

@@ -19,15 +19,14 @@ import (
 	"sync"
 	"time"
 
-	"github.com/Sirupsen/logrus"
 	"github.com/gorilla/websocket"
+	client "github.com/virtual-kubelet/azure-aci/client"
+	"github.com/virtual-kubelet/azure-aci/client/aci"
+	"github.com/virtual-kubelet/azure-aci/client/network"
 	"github.com/virtual-kubelet/virtual-kubelet/log"
 	"github.com/virtual-kubelet/virtual-kubelet/manager"
-	client "github.com/virtual-kubelet/virtual-kubelet/providers/azure/client"
-	"github.com/virtual-kubelet/virtual-kubelet/providers/azure/client/aci"
-	"github.com/virtual-kubelet/virtual-kubelet/providers/azure/client/network"
-	"go.opencensus.io/trace"
-	"k8s.io/api/core/v1"
+	"github.com/virtual-kubelet/virtual-kubelet/trace"
+	v1 "k8s.io/api/core/v1"
 	k8serr "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -95,17 +94,25 @@ type AuthConfig struct {
 
 // See https://azure.microsoft.com/en-us/status/ for valid regions.
 var validAciRegions = []string{
+	"australiaeast",
+	"canadacentral",
+	"centralindia",
 	"centralus",
+	"eastasia",
 	"eastus",
 	"eastus2",
+	"eastus2euap",
+	"japaneast",
+	"northcentralus",
+	"northeurope",
+	"southcentralus",
+	"southeastasia",
+	"southindia",
+	"uksouth",
+	"westcentralus",
 	"westus",
 	"westus2",
-	"northeurope",
 	"westeurope",
-	"southeastasia",
-	"australiaeast",
-	"eastus2euap",
-	"westcentralus",
 }
 
 // isValidACIRegion checks to make sure we're using a valid ACI region
@@ -338,9 +345,6 @@ func (p *ACIProvider) setupNetworkProfile(auth *client.Authentication) error {
 		if p.subnetCIDR != *subnet.SubnetPropertiesFormat.AddressPrefix {
 			return fmt.Errorf("found subnet '%s' using different CIDR: '%s'. desired: '%s'", p.subnetName, *subnet.SubnetPropertiesFormat.AddressPrefix, p.subnetCIDR)
 		}
-		if subnet.SubnetPropertiesFormat.NetworkSecurityGroup != nil {
-			return fmt.Errorf("unable to delegate subnet '%s' to Azure Container Instance since it references the network security group '%s'.", p.subnetName, *subnet.SubnetPropertiesFormat.NetworkSecurityGroup.ID)
-		}
 		if subnet.SubnetPropertiesFormat.RouteTable != nil {
 			return fmt.Errorf("unable to delegate subnet '%s' to Azure Container Instance since it references the route table '%s'.", p.subnetName, *subnet.SubnetPropertiesFormat.RouteTable.ID)
 		}
@@ -475,11 +479,11 @@ func getKubeProxyExtension(secretPath, masterURI, clusterCIDR string) (*aci.Exte
 	return &extension, nil
 }
 
-func addAzureAttributes(span *trace.Span, p *ACIProvider) {
-	span.AddAttributes(
-		trace.StringAttribute("azure.resourceGroup", p.resourceGroup),
-		trace.StringAttribute("azure.region", p.region),
-	)
+func addAzureAttributes(ctx context.Context, span trace.Span, p *ACIProvider) context.Context {
+	return span.WithFields(ctx, log.Fields{
+		"azure.resourceGroup": p.resourceGroup,
+		"azure.region":        p.region,
+	})
 }
 
 // CreatePod accepts a Pod definition and creates
@@ -487,7 +491,7 @@ func addAzureAttributes(span *trace.Span, p *ACIProvider) {
 func (p *ACIProvider) CreatePod(ctx context.Context, pod *v1.Pod) error {
 	ctx, span := trace.StartSpan(ctx, "aci.CreatePod")
 	defer span.End()
-	addAzureAttributes(span, p)
+	ctx = addAzureAttributes(ctx, span, p)
 
 	var containerGroup aci.ContainerGroup
 	containerGroup.Location = p.region
@@ -689,7 +693,7 @@ func (p *ACIProvider) UpdatePod(ctx context.Context, pod *v1.Pod) error {
 func (p *ACIProvider) DeletePod(ctx context.Context, pod *v1.Pod) error {
 	ctx, span := trace.StartSpan(ctx, "aci.DeletePod")
 	defer span.End()
-	addAzureAttributes(span, p)
+	ctx = addAzureAttributes(ctx, span, p)
 
 	err := p.aciClient.DeleteContainerGroup(ctx, p.resourceGroup, fmt.Sprintf("%s-%s", pod.Namespace, pod.Name))
 	return wrapError(err)
@@ -700,7 +704,7 @@ func (p *ACIProvider) DeletePod(ctx context.Context, pod *v1.Pod) error {
 func (p *ACIProvider) GetPod(ctx context.Context, namespace, name string) (*v1.Pod, error) {
 	ctx, span := trace.StartSpan(ctx, "aci.GetPod")
 	defer span.End()
-	addAzureAttributes(span, p)
+	ctx = addAzureAttributes(ctx, span, p)
 
 	cg, err, status := p.aciClient.GetContainerGroup(ctx, p.resourceGroup, fmt.Sprintf("%s-%s", namespace, name))
 	if err != nil {
@@ -721,7 +725,7 @@ func (p *ACIProvider) GetPod(ctx context.Context, namespace, name string) (*v1.P
 func (p *ACIProvider) GetContainerLogs(ctx context.Context, namespace, podName, containerName string, tail int) (string, error) {
 	ctx, span := trace.StartSpan(ctx, "aci.GetContainerLogs")
 	defer span.End()
-	addAzureAttributes(span, p)
+	ctx = addAzureAttributes(ctx, span, p)
 
 	logContent := ""
 	cg, err, _ := p.aciClient.GetContainerGroup(ctx, p.resourceGroup, fmt.Sprintf("%s-%s", namespace, podName))
@@ -739,7 +743,6 @@ func (p *ACIProvider) GetContainerLogs(ctx context.Context, namespace, podName, 
 		cLogs, err := p.aciClient.GetContainerLogs(ctx, p.resourceGroup, cg.Name, containerName, tail)
 		if err != nil {
 			log.G(ctx).WithField("method", "GetContainerLogs").WithError(err).Debug("Error getting container logs, retrying")
-			span.Annotate(nil, "Error getting container logs, retrying")
 			time.Sleep(5000 * time.Millisecond)
 		} else {
 			logContent = cLogs.Content
@@ -780,7 +783,8 @@ func (p *ACIProvider) ExecInContainer(name string, uid types.UID, container stri
 		terminalSize = <-resize // Receive terminal resize event if resize stream is present
 	}
 
-	xcrsp, err := p.aciClient.LaunchExec(p.resourceGroup, cg.Name, container, cmd[0], terminalSize)
+	ts := aci.TerminalSizeRequest{Height: int(terminalSize.Height), Width: int(terminalSize.Width)}
+	xcrsp, err := p.aciClient.LaunchExec(p.resourceGroup, cg.Name, container, cmd[0], ts)
 	if err != nil {
 		return err
 	}
@@ -836,7 +840,7 @@ func (p *ACIProvider) ExecInContainer(name string, uid types.UID, container stri
 func (p *ACIProvider) GetPodStatus(ctx context.Context, namespace, name string) (*v1.PodStatus, error) {
 	ctx, span := trace.StartSpan(ctx, "aci.GetPodStatus")
 	defer span.End()
-	addAzureAttributes(span, p)
+	ctx = addAzureAttributes(ctx, span, p)
 
 	pod, err := p.GetPod(ctx, namespace, name)
 	if err != nil {
@@ -854,7 +858,7 @@ func (p *ACIProvider) GetPodStatus(ctx context.Context, namespace, name string) 
 func (p *ACIProvider) GetPods(ctx context.Context) ([]*v1.Pod, error) {
 	ctx, span := trace.StartSpan(ctx, "aci.GetPods")
 	defer span.End()
-	addAzureAttributes(span, p)
+	ctx = addAzureAttributes(ctx, span, p)
 
 	cgs, err := p.aciClient.ListContainerGroups(ctx, p.resourceGroup)
 	if err != nil {
@@ -870,7 +874,7 @@ func (p *ACIProvider) GetPods(ctx context.Context) ([]*v1.Pod, error) {
 
 		p, err := containerGroupToPod(&c)
 		if err != nil {
-			log.G(context.TODO()).WithFields(logrus.Fields{
+			log.G(ctx).WithFields(log.Fields{
 				"name": c.Name,
 				"id":   c.ID,
 			}).WithError(err).Error("error converting container group to pod")
@@ -997,6 +1001,38 @@ func (p *ACIProvider) getImagePullSecrets(pod *v1.Pod) ([]aci.ImageRegistryCrede
 	return ips, nil
 }
 
+func makeRegistryCredential(server string, authConfig AuthConfig) (*aci.ImageRegistryCredential, error) {
+	username := authConfig.Username
+	password := authConfig.Password
+
+	if username == "" {
+		if authConfig.Auth == "" {
+			return nil, fmt.Errorf("no username present in auth config for server: %s", server)
+		}
+
+		decoded, err := base64.StdEncoding.DecodeString(authConfig.Auth)
+		if err != nil {
+			return nil, fmt.Errorf("error decoding the auth for server: %s Error: %v", server, err)
+		}
+
+		parts := strings.Split(string(decoded), ":")
+		if len(parts) != 2 {
+			return nil, fmt.Errorf("malformed auth for server: %s", server)
+		}
+
+		username = parts[0]
+		password = parts[1]
+	}
+
+	cred := aci.ImageRegistryCredential{
+		Server:   server,
+		Username: username,
+		Password: password,
+	}
+
+	return &cred, nil
+}
+
 func readDockerCfgSecret(secret *v1.Secret, ips []aci.ImageRegistryCredential) ([]aci.ImageRegistryCredential, error) {
 	var err error
 	var authConfigs map[string]AuthConfig
@@ -1011,12 +1047,13 @@ func readDockerCfgSecret(secret *v1.Secret, ips []aci.ImageRegistryCredential) (
 		return ips, err
 	}
 
-	for server, authConfig := range authConfigs {
-		ips = append(ips, aci.ImageRegistryCredential{
-			Password: authConfig.Password,
-			Server:   server,
-			Username: authConfig.Username,
-		})
+	for server := range authConfigs {
+		cred, err := makeRegistryCredential(server, authConfigs[server])
+		if err != nil {
+			return ips, err
+		}
+
+		ips = append(ips, *cred)
 	}
 
 	return ips, err
@@ -1038,17 +1075,17 @@ func readDockerConfigJSONSecret(secret *v1.Secret, ips []aci.ImageRegistryCreden
 	}
 
 	auths, ok := authConfigs["auths"]
-
 	if !ok {
 		return ips, fmt.Errorf("malformed dockerconfigjson in secret")
 	}
 
-	for server, authConfig := range auths {
-		ips = append(ips, aci.ImageRegistryCredential{
-			Password: authConfig.Password,
-			Server:   server,
-			Username: authConfig.Username,
-		})
+	for server := range auths {
+		cred, err := makeRegistryCredential(server, auths[server])
+		if err != nil {
+			return ips, err
+		}
+
+		ips = append(ips, *cred)
 	}
 
 	return ips, err
@@ -1253,11 +1290,7 @@ func (p *ACIProvider) getVolumes(pod *v1.Pod) ([]aci.Volume, error) {
 			}
 
 			for k, v := range secret.Data {
-				var b bytes.Buffer
-				enc := base64.NewEncoder(base64.StdEncoding, &b)
-				enc.Write(v)
-
-				paths[k] = b.String()
+				paths[k] = base64.StdEncoding.EncodeToString(v)
 			}
 
 			if len(paths) != 0 {
@@ -1280,12 +1313,8 @@ func (p *ACIProvider) getVolumes(pod *v1.Pod) ([]aci.Volume, error) {
 				continue
 			}
 
-			for k, v := range configMap.Data {
-				var b bytes.Buffer
-				enc := base64.NewEncoder(base64.StdEncoding, &b)
-				enc.Write([]byte(v))
-
-				paths[k] = b.String()
+			for k, v := range configMap.BinaryData {
+				paths[k] = base64.StdEncoding.EncodeToString(v)
 			}
 
 			if len(paths) != 0 {
