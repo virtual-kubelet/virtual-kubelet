@@ -23,7 +23,6 @@ The best description is "Kubernetes API on top, programmable back."
     + [Azure Container Instances Provider](#azure-container-instances-provider)
 	+ [Azure Batch GPU Provider](./providers/azurebatch/README.md)
     + [AWS Fargate Provider](#aws-fargate-provider)
-    + [Service Fabric Mesh Provider](#service-fabric-mesh-provider)
 	+ [HashiCorp Nomad](#hashicorp-nomad-provider)
     + [Adding a New Provider via the Provider Interface](#adding-a-new-provider-via-the-provider-interface)
 * [Testing](#testing)
@@ -176,19 +175,6 @@ security groups, IAM roles, CloudWatch Logs and many other AWS services. Pods on
 co-exist with pods on regular worker nodes in the same Kubernetes cluster.
 
 Easy instructions and a sample configuration file is available in the [AWS Fargate provider documentation](providers/aws/README.md).
-
-### Service Fabric Mesh Provider
-
-The Service Fabric Mesh Provider allows you to deploy pods to Azure [Service Fabric Mesh](https://docs.microsoft.com/en-us/azure/service-fabric-mesh/service-fabric-mesh-overview).
-
-Service Fabric Mesh is a fully managed service that lets developers deploy microservices without managing the underlying infrastructure.
- Pods deployed to Service Fabric Mesh will be assigned Public IPs from the Service Fabric Mesh network.
-
-```
-./bin/virtual-kubelet --provider sfmesh --taint azure.com/sfmesh
-```
-
-More detailed instructions can be found [here](providers/sfmesh/README.md).
 
 ### HashiCorp Nomad Provider
 

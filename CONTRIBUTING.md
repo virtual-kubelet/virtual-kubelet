@@ -47,10 +47,6 @@ Onur Filiz (onfiliz@amazon.com)
 
 (TBA)
 
-**Service Fabric Mesh**
-
-Yaron Schneider (yaronsc@microsoft.com)
-
 **Huawei**
 
 Fei Xu (xufei40@huawei.com)
