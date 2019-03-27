@@ -24,36 +24,32 @@ This document details configuring the Virtual Kubelet ACI provider.
 
 Virtual Kubelet's ACI provider relies heavily on the feature set that Azure Container Instances provide. Please check the Azure documentation accurate details on region avaliability, pricing and new features. The list here attempts to give an accurate reference for the features we support in ACI and the ACI provider within Virtual Kubelet. 
 
-*WIP*
-
 **Features**
 * Volumes: empty dir, github repo, Azure Files
 * Secure env variables, config maps
 * Bring your own virtual network (VNet)
-* Deploy to GPU enabled container instances *(documentation in progress)*
 * Network security group support 
 * Basic Azure Networking support within AKS virtual node 
 * [Exec support](https://docs.microsoft.com/en-us/azure/container-instances/container-instances-exec) for container instances 
-* Azure Monitoring integration or formally known as OMS
+* Azure Monitor integration or formally known as OMS
 
 **Limitations**
-* Using service principal credentials to pull ACR images 
-* Liveness and readiness probes (WIP)
+* Using service principal credentials to pull ACR images ([see workaround](#Private-registry))
+* Liveness and readiness probes 
 * [Limitations](https://docs.microsoft.com/en-us/azure/container-instances/container-instances-vnet) with VNet 
 * VNet peering
 * Argument support for exec 
 * [Host aliases](https://kubernetes.io/docs/concepts/services-networking/add-entries-to-pod-etc-hosts-with-host-aliases/) support 
 
-## Prerequisite
+## Prerequisites
 
-This guide assumes that you have a Kubernetes cluster up and running (can be `minikube`) and that `kubectl` is already configured to talk to it.
-
-Other pre-requesites are:
-
+* Kubernetes cluster up and running (can be an AKS cluster or `minikube`) and that `kubectl` is already configured.
 * A [Microsoft Azure account](https://azure.microsoft.com/en-us/free/).
 * Install the [Azure CLI](#install-the-azure-cli).
 * Install the [Kubernetes CLI](#install-the-kubernetes-cli).
 * Install the [Helm CLI](#install-the-helm-cli).
+
+You may also use [Azure cloud shell](https://docs.microsoft.com/en-us/azure/cloud-shell/overview) which has the above CLI's already installed.
 
 ### Install the Azure CLI
 
@@ -147,15 +143,15 @@ First let's identify your Azure subscription and save it for use later on in the
    az provider register -n Microsoft.ContainerInstance
    ```
 
-## Set-up virtual node in AKS
+## Set up Linux containers with Virtual Nodes
 
-Azure Kubernetes Service has easy ways of setting up virtual kubelet with the ACI provider with a feature called virtual node. You can easily install a virtual node that will deploy Linux workloads to ACI. The pods that spin out will automatically get private IPs as the experience forces you to pick "advanced networking."
+Azure Kubernetes Service has an efficient way of setting up virtual kubelet with the ACI provider with a feature called virtual node. You can easily install a virtual node that will deploy Linux workloads to ACI. The pods that spin out will automatically get private IPs and will be within a subnet that is within the AKS cluster's Virtual Network. **Virtual Nodes is the recommended path for using virtual kubelet on Linux AKS clusters**  
 
 To install virtual node in the Azure portal go [here](https://docs.microsoft.com/en-us/azure/aks/virtual-nodes-portal). To install virtual node in the Azure CLI go [here](https://docs.microsoft.com/en-us/azure/aks/virtual-nodes-cli). 
 
-## Quick set-up with the ACI Connector
+## Set up for Windows containers
 
-The Azure cli can be used to install the ACI provider. We like to say Azure's provider or implementation for Virtual Kubelet is the ACI Connector. Please note that this command has no Virtual Networking support. 
+The virtual nodes experience Please note that this command has no Virtual Networking support. 
 For this section Virtual Kubelet's specific ACI provider will be referenced as the the ACI Connector. 
 If you continue with this section you can skip sections below up to "Schedule a pod in ACI", as we use Azure Container Service (AKS) to easily deploy and install the connector, thus it is assumed 
 that you've created an [AKS cluster](https://docs.microsoft.com/en-us/azure/aks/kubernetes-walkthrough). 
@@ -164,25 +160,11 @@ To install the ACI Connector use the az cli and the aks namespace. Make sure to 
 
 Note: You might need to specify the --aci-resource-group, due to a bug in the az cli. The resource group is then auto-generated. To find the name navigate to the Azure Portal resource groups, scroll down and find the name that matches MC_aks cluster name_aks rg_location.
 
-1. Install the Linux ACI Connector
-
-   **Bash**
-   ```cli
-   az aks install-connector --resource-group <aks cluster rg> --name <aks cluster name> 
-   ```
-
-2. Install the Windows ACI Connector
+1. Install the Windows ACI Connector
 
    **Bash**
    ```cli 
    az aks install-connector --resource-group <aks cluster rg> --name <aks cluster name> --os-type windows 
-   ```
-
-3. Install both the Windows and Linux ACI Connectors
-
-   **Bash**
-   ```cli
-   az aks install-connector --resource-group <aks cluster rg> --name <aks cluster name> --os-type both 
    ```
 
 Now you are ready to deploy a pod to the connector so skip to the "Schedule a pod in ACI" section. 
@@ -522,7 +504,7 @@ spec:
 
 Notice that Virtual-Kubelet nodes are tainted by default to avoid unexpected pods running on them, i.e. kube-proxy, other virtual-kubelet pods, etc. To schedule a pod to them, you need to add the toleration to the pod spec and a node selector:
 
-```
+```yaml
   nodeSelector:
     kubernetes.io/role: agent
     beta.kubernetes.io/os: linux
@@ -534,14 +516,20 @@ Notice that Virtual-Kubelet nodes are tainted by default to avoid unexpected pod
     effect: NoSchedule
 ```
 
-Also, specify a nodeSelector so the pods will be forced onto the Virtual-Kubelet node. 
+### Private registry
+If your image is on a private registry, you need to [add a kubernetes secret to your cluster](https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/#create-a-secret-by-providing-credentials-on-the-command-line) and reference it in the pod spec.
 
+```yaml
+  spec:
+    containers:
+    - name: aci-helloworld
+      image: <registry name>.azurecr.io/aci-helloworld:v1
+      ports:
+      - containerPort: 80
+    imagePullSecrets:
+    - name: <K8 secret name>
 ```
-  nodeSelector:
-    kubernetes.io/role: agent
-    beta.kubernetes.io/os: linux
-    type: virtual-kubelet
-```
+
 
 Run the application with the [kubectl create][kubectl-create] command.
 
