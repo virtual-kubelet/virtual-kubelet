@@ -30,31 +30,32 @@ Virtual Kubelet's ACI provider relies heavily on the feature set that Azure Cont
 * Bring your own virtual network (VNet)
 * Network security group support 
 * Basic Azure Networking support within AKS virtual node 
-* [Exec support](https://docs.microsoft.com/en-us/azure/container-instances/container-instances-exec) for container instances 
+* [Exec support](https://docs.microsoft.com/azure/container-instances/container-instances-exec) for container instances 
 * Azure Monitor integration or formally known as OMS
 
 **Limitations**
 * Using service principal credentials to pull ACR images ([see workaround](#Private-registry))
 * Liveness and readiness probes 
-* [Limitations](https://docs.microsoft.com/en-us/azure/container-instances/container-instances-vnet) with VNet 
+* [Limitations](https://docs.microsoft.com/azure/container-instances/container-instances-vnet) with VNet 
 * VNet peering
 * Argument support for exec 
+* Init containers 
 * [Host aliases](https://kubernetes.io/docs/concepts/services-networking/add-entries-to-pod-etc-hosts-with-host-aliases/) support 
 
 ## Prerequisites
 
 * Kubernetes cluster up and running (can be an AKS cluster or `minikube`) and that `kubectl` is already configured.
-* A [Microsoft Azure account](https://azure.microsoft.com/en-us/free/).
+* A [Microsoft Azure account](https://azure.microsoft.com/free/).
 * Install the [Azure CLI](#install-the-azure-cli).
 * Install the [Kubernetes CLI](#install-the-kubernetes-cli).
 * Install the [Helm CLI](#install-the-helm-cli).
 
-You may also use [Azure cloud shell](https://docs.microsoft.com/en-us/azure/cloud-shell/overview) which has the above CLI's already installed.
+You may also use [Azure cloud shell](https://docs.microsoft.com/azure/cloud-shell/overview) which has the above CLI's already installed.
 
 ### Install the Azure CLI
 
 Install `az` by following the instructions for your operating system.
-See the [full installation instructions](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli?view=azure-cli-latest) if yours isn't listed below.
+See the [full installation instructions](https://docs.microsoft.com/cli/azure/install-azure-cli?view=azure-cli-latest) if yours isn't listed below.
 
 #### MacOS
 
@@ -143,31 +144,24 @@ First let's identify your Azure subscription and save it for use later on in the
    az provider register -n Microsoft.ContainerInstance
    ```
 
-## Set up Linux containers with Virtual Nodes
+## Quick set up with AKS
 
-Azure Kubernetes Service has an efficient way of setting up virtual kubelet with the ACI provider with a feature called virtual node. You can easily install a virtual node that will deploy Linux workloads to ACI. The pods that spin out will automatically get private IPs and will be within a subnet that is within the AKS cluster's Virtual Network. **Virtual Nodes is the recommended path for using virtual kubelet on Linux AKS clusters**  
+### Linux containers with Virtual Nodes
 
-To install virtual node in the Azure portal go [here](https://docs.microsoft.com/en-us/azure/aks/virtual-nodes-portal). To install virtual node in the Azure CLI go [here](https://docs.microsoft.com/en-us/azure/aks/virtual-nodes-cli). 
+Azure Kubernetes Service has an efficient way of setting up virtual kubelet with the ACI provider with a feature called virtual node. You can easily install a virtual node that will deploy Linux workloads to ACI. The pods that spin out will automatically get private IPs and will be within a subnet that is within the AKS cluster's Virtual Network. **Virtual Nodes is the recommended path for using the ACI provider on Linux AKS clusters.** 
 
-## Set up for Windows containers
+To install virtual node in the Azure portal go [here](https://docs.microsoft.com/azure/aks/virtual-nodes-portal). To install virtual node in the Azure CLI go [here](https://docs.microsoft.com/azure/aks/virtual-nodes-cli). 
 
-The virtual nodes experience Please note that this command has no Virtual Networking support. 
-For this section Virtual Kubelet's specific ACI provider will be referenced as the the ACI Connector. 
-If you continue with this section you can skip sections below up to "Schedule a pod in ACI", as we use Azure Container Service (AKS) to easily deploy and install the connector, thus it is assumed 
-that you've created an [AKS cluster](https://docs.microsoft.com/en-us/azure/aks/kubernetes-walkthrough). 
+### Windows containers
 
-To install the ACI Connector use the az cli and the aks namespace. Make sure to use the resource group of the aks cluster you've created and the name of the aks cluster you've created. You can choose the connector name to be anything. Choose any command below to install the Linux, Windows, or both the Windows and Linux Connector.
+The virtual nodes experience does not exist for Windows containers yet including no virtual networking support. You can use the following command to install the ACI provider for Windows. 
 
-Note: You might need to specify the --aci-resource-group, due to a bug in the az cli. The resource group is then auto-generated. To find the name navigate to the Azure Portal resource groups, scroll down and find the name that matches MC_aks cluster name_aks rg_location.
+**Bash**
+```cli 
+az aks install-connector --resource-group <aks cluster rg> --name <aks cluster name> --os-type windows 
+```
 
-1. Install the Windows ACI Connector
-
-   **Bash**
-   ```cli 
-   az aks install-connector --resource-group <aks cluster rg> --name <aks cluster name> --os-type windows 
-   ```
-
-Now you are ready to deploy a pod to the connector so skip to the "Schedule a pod in ACI" section. 
+Once created, [verify the virtual node has been registed](#Validate-the-Virtual-Kubelet-ACI-provider) and you can now [schedule pods in ACI](#Schedule-a-pod-in-ACI). 
 
 ## Manual set-up
 
@@ -460,15 +454,17 @@ Output:
 
 ```console
 NAME                                        STATUS    ROLES     AGE       VERSION
-virtual-kubelet-virtual-kubelet             Ready     <none>    2m        v1.8.3
-aks-nodepool1-39289454-0                    Ready     agent     22h       v1.7.7
-aks-nodepool1-39289454-1                    Ready     agent     22h       v1.7.7
-aks-nodepool1-39289454-2                    Ready     agent     22h       v1.7.7
+virtual-kubelet-aci-linux                   Ready     agent     2m        v1.13.1
+aks-nodepool1-39289454-0                    Ready     agent     22h       v1.12.6
+aks-nodepool1-39289454-1                    Ready     agent     22h       v1.12.6
+aks-nodepool1-39289454-2                    Ready     agent     22h       v1.12.6
 ```
+
+If you installed the Windows provider, your node name will be something similar to `virtual-kubelet-aci-connector-windows-<region name>`
 
 ## Schedule a pod in ACI
 
-Create a file named `virtual-kubelet-test.yaml` and copy in the following YAML.
+Create a file named `virtual-kubelet-test.yaml` and copy in the following YAML. For Windows containers, use the [Windows sample](https://docs.microsoft.com/azure/aks/virtual-kubelet#run-windows-container) from the AKS docs.
 
 ```yaml
 apiVersion: v1
@@ -530,7 +526,6 @@ If your image is on a private registry, you need to [add a kubernetes secret to 
     - name: <K8 secret name>
 ```
 
-
 Run the application with the [kubectl create][kubectl-create] command.
 
 ```cli
@@ -547,14 +542,14 @@ Notice that the `helloworld` pod is running on the `virtual-kubelet` node.
 
 ```console
 NAME                                            READY     STATUS    RESTARTS   AGE       IP             NODE
-aci-helloworld-2559879000-8vmjw                 1/1       Running   0          39s       52.179.3.180   virtual-kubelet
+aci-helloworld-2559879000-8vmjw                 1/1       Running   0          39s       52.179.3.180   virtual-kubelet-aci-linux
 
 ```
 If the AKS cluster was configured with a virtual network, then the output will look like the following. The container instance will get a private ip rather than a public one. 
 
 ```console
 NAME                            READY     STATUS    RESTARTS   AGE       IP           NODE
-aci-helloworld-9b55975f-bnmfl   1/1       Running   0          4m        10.241.0.4   virtual-kubelet
+aci-helloworld-9b55975f-bnmfl   1/1       Running   0          4m        10.241.0.4   virtual-kubelet-aci-linux
 ```
 
 To validate that the container is running in an Azure Container Instance, use the [az container list][az-container-list] Azure CLI command.
@@ -619,11 +614,11 @@ Output:
 "helloworld-aci.westus.azurecontainer.io"
 ```
 -->
-## Work arounds for the ACI Connector
+## Work arounds for the ACI Connector pod
 
 If your pod that's scheduled onto the Virtual Kubelet node is in a pending state please add these workarounds to your Virtual Kubelet pod spec. 
 
-First, grab the logs from your ACI Connector pod, with the following command.  
+First, grab the logs from your ACI Connector pod, with the following command. You can get the pod name from the `kubectl get pods` command  
 
 ```cli
 kubectl logs virtual-kubelet-virtual-kubelet-7bcf5dc749-6mvgp 
@@ -719,10 +714,9 @@ Also, delete the following argument in your pod spec:
   - azure.com/aci
 ```
 
-## Upgrade the ACI Connector 
+## Upgrade the ACI Provider 
 
-If you've installed Virtual Kubelet with the Azure cli so you're using the ACI Connector implementation, then you are also able to upgrade the connector to the latest release. 
-Run the following command to upgrade your ACI Connector. 
+Run the following command to upgrade your ACI Connector. **This does not apply if you used Virtual Node since the system pod gets updated with AKS updates**
 
 ```cli
 az aks upgrade-connector --resource-group <aks cluster rg> --name <aks cluster name> --connector-name virtual-kubelet --os-type linux
@@ -741,8 +735,10 @@ If you used the ACI Connector installation then use the following command to rem
 az aks remove-connector --resource-group <aks cluster rg> --name <aks cluster name> --connector-name virtual-kubelet --os-type linux
 ```
 
+If you used Virtual Nodes, can follow the steps [here](https://docs.microsoft.com/azure/aks/virtual-nodes-cli#remove-virtual-nodes) to remove the add-on
+
 <!-- LINKS -->
 [kubectl-create]: https://kubernetes.io/docs/user-guide/kubectl/v1.6/#create
 [kubectl-get]: https://kubernetes.io/docs/user-guide/kubectl/v1.8/#get
-[az-container-list]: https://docs.microsoft.com/en-us/cli/azure/container?view=azure-cli-latest#az_container_list
-[az-container-show]: https://docs.microsoft.com/en-us/cli/azure/container?view=azure-cli-latest#az_container_show
+[az-container-list]: https://docs.microsoft.com/cli/azure/container?view=azure-cli-latest#az_container_list
+[az-container-show]: https://docs.microsoft.com/cli/azure/container?view=azure-cli-latest#az_container_show
