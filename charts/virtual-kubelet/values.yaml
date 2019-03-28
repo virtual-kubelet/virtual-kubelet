@@ -3,8 +3,6 @@ image:
   tag: latest
   pullPolicy: Always
 
-## `provider` should be one of aws, azure, azurebatch, etc...
-provider: 
 nodeName: "virtual-kubelet"
 nodeOsType: "Linux"
 monitoredNamespace: ""

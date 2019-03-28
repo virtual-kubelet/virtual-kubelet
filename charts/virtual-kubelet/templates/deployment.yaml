@@ -45,7 +45,7 @@ spec:
           value: {{ tpl .Values.taint.value $ }}
         - name: VKUBELET_TAINT_EFFECT
           value: {{ .Values.taint.effect }}
-{{- if eq .Values.provider "azure" }}
+{{- if eq (required "You must specify a Virtual Kubelet provider" .Values.provider) "azure" }}
 {{- with .Values.providers.azure }}
 {{- if .loganalytics.enabled }}
         - name: LOG_ANALYTICS_AUTH_LOCATION
@@ -113,7 +113,7 @@ spec:
         volumeMounts:
         - name: credentials
           mountPath: "/etc/virtual-kubelet"
-{{- if eq .Values.provider "azure" }}
+{{- if eq (required "You must specify a Virtual Kubelet provider" .Values.provider) "azure" }}
 {{- if .Values.providers.azure.targetAKS }}
         - name: acs-credential
           mountPath: "/etc/acs/azure.json"
@@ -124,7 +124,7 @@ spec:
 {{- if not .Values.taint.enabled }}
           "--disable-taint", "true",
 {{- end }}
-          "--provider", "{{ required "provider is required" .Values.provider }}",
+          "--provider", "{{ required "You must specify a Virtual Kubelet provider" .Values.provider }}",
           "--namespace", "{{ .Values.monitoredNamespace }}",
           "--nodename", "{{ required "nodeName is required" .Values.nodeName }}",
           {{- if .Values.logLevel }}
@@ -146,7 +146,7 @@ spec:
       - name: credentials
         secret:
           secretName: {{ template "vk.fullname" . }}
-{{- if eq .Values.provider "azure" }}
+{{- if eq (required "You must specify a Virtual Kubelet provider" .Values.provider) "azure" }}
 {{- if .Values.providers.azure.targetAKS }}
       - name: acs-credential
         hostPath:
