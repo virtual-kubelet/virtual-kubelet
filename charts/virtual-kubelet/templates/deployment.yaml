@@ -14,6 +14,17 @@ spec:
         checksum/secret: {{ include (print $.Template.BasePath "/secret.yaml") . | sha256sum }}
     spec:
       containers:
+{{- if eq .Values.trace.exporter "jaeger" }}
+{{- with .Values.traceExporters.jaeger }}
+{{- if eq .endpoint "" }}
+      - name: {{ tpl .name $ }}
+        image: {{ .image.repository}}:{{.image.tag}}
+        imagePullPolicy: {{ .image.pullPolicy }}
+        ports:
+          - containerPort: 16686
+{{- end }}
+{{- end }}
+{{- end }}
       - name: {{ template "vk.fullname" . }}
         image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
         imagePullPolicy: {{ .Values.image.pullPolicy }}
@@ -89,6 +100,16 @@ spec:
 {{- end }}          
 {{- end }}
 {{- end }}
+{{- if eq .Values.trace.exporter "jaeger" }}
+        - name: JAEGER_ENDPOINT
+{{- with .Values.traceExporters.jaeger }}
+{{- if eq .endpoint "" }}
+          value: "http://127.0.0.1:14268"
+{{- else }}
+          value: {{.endpoint}}
+{{- end }}
+{{- end }}
+{{- end }}
         volumeMounts:
         - name: credentials
           mountPath: "/etc/virtual-kubelet"
@@ -109,6 +130,16 @@ spec:
           {{- if .Values.logLevel }}
           "--log-level", "{{.Values.logLevel}}",
           {{- end }}
+{{- if ne .Values.trace.exporter "" }}
+          "--trace-exporter", "{{ .Values.trace.exporter }}",
+{{- if gt .Values.trace.sampleRate 0.0 }}
+          "--trace-sample-rate", "{{ .Values.trace.sampleRate }}",
+{{- end }}
+{{- $serviceName := tpl .Values.trace.serviceName $ }}
+{{- if ne $serviceName "" }}
+          "--trace-service-name", "{{ $serviceName }}",
+{{- end}}
+{{- end}}
           "--os", "{{ .Values.nodeOsType }}"
         ]
       volumes:

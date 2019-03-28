@@ -19,6 +19,20 @@ taint:
   ## `effect` must be `NoSchedule`, `PreferNoSchedule` or `NoExecute`.
   effect: NoSchedule
 
+trace:
+  exporter: ""
+  serviceName: "{{ .Values.nodeName }}"
+  sampleRate: 0
+
+traceExporters:
+  jaeger:
+    name: "{{ .Values.trace.exporter }}"
+    endpoint: ""
+    image:
+      repository: jaegertracing/all-in-one
+      tag: 1.8
+      pullPolicy: Always
+
 providers:
   azure:
     ## Set to true if deploying to Azure Kubernetes Service (AKS), otherwise false
