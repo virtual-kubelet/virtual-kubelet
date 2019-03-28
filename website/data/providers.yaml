@@ -12,7 +12,5 @@
   tag: huawei
 - name: HashiCorp Nomad
   tag: nomad
-- name: Service Fabric Mesh
-  tag: sfmesh
 - name: vSphere Integrated Containers (**VIC**)
   tag: vic
