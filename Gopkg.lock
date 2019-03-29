@@ -24,6 +24,7 @@
   packages = [
     "services/batch/2017-09-01.6.0/batch",
     "services/network/mgmt/2018-08-01/network",
+    "services/preview/servicefabricmesh/mgmt/2018-07-01-preview/servicefabricmesh",
     "version",
   ]
   pruneopts = "NUT"
@@ -1054,7 +1055,7 @@
   version = "v0.1"
 
 [[projects]]
-  digest = "1:d4de0b9ca757efa67bf8f0f0ee664ad4dc7e11fbad7dd38db4e403ad9b92fe3c"
+  digest = "1:6a02f7a43a434d20225f8fef98694f3ceda5a3dad2376ffb07e3b2f201fab9a3"
   name = "github.com/stretchr/testify"
   packages = [
     "assert",
@@ -1807,6 +1808,7 @@
     "github.com/cpuguy83/strongerrors/status",
     "github.com/cpuguy83/strongerrors/status/ocstatus",
     "github.com/docker/docker/api/types/strslice",
+    "github.com/google/go-cmp/cmp",
     "github.com/google/uuid",
     "github.com/gorilla/mux",
     "github.com/gorilla/websocket",
@@ -1818,9 +1820,7 @@
     "github.com/pkg/errors",
     "github.com/spf13/cobra",
     "github.com/spf13/viper",
-    "github.com/stretchr/testify/assert",
     "github.com/stretchr/testify/mock",
-    "github.com/stretchr/testify/require",
     "github.com/virtual-kubelet/azure-aci/client",
     "github.com/virtual-kubelet/azure-aci/client/aci",
     "github.com/virtual-kubelet/azure-aci/client/api",

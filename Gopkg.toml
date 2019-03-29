@@ -137,3 +137,7 @@
   name = "github.com/virtual-kubelet/azure-aci"
   version = "v0.1.0"
 
+
+[[constraint]]
+  name = "gotest.tools"
+  version = "2.3.0"

@@ -6,9 +6,9 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ecs"
+	"gotest.tools/assert"
+	is "gotest.tools/assert/cmp"
 
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 )
@@ -45,21 +45,21 @@ func TestContainerDefinition(t *testing.T) {
 	cntrSpec := anyContainerSpec
 
 	cntr, err := newContainer(&cntrSpec)
-	require.NoError(t, err, "failed to create container")
+	assert.NilError(t, err, "failed to create container")
 
-	assert.Equal(t, cntrSpec.Name, *cntr.definition.Name, "incorrect name")
-	assert.Equal(t, cntrSpec.Image, *cntr.definition.Image, "incorrect image")
-	assert.Equal(t, cntrSpec.Command[0], *cntr.definition.EntryPoint[0], "incorrect command")
+	assert.Check(t, is.Equal(cntrSpec.Name, *cntr.definition.Name), "incorrect name")
+	assert.Check(t, is.Equal(cntrSpec.Image, *cntr.definition.Image), "incorrect image")
+	assert.Check(t, is.Equal(cntrSpec.Command[0], *cntr.definition.EntryPoint[0]), "incorrect command")
 
 	for i, env := range cntrSpec.Args {
-		assert.Equal(t, env, *cntr.definition.Command[i], "incorrect args")
+		assert.Check(t, is.Equal(env, *cntr.definition.Command[i]), "incorrect args")
 	}
 
-	assert.Equal(t, cntrSpec.WorkingDir, *cntr.definition.WorkingDirectory, "incorrect working dir")
+	assert.Check(t, is.Equal(cntrSpec.WorkingDir, *cntr.definition.WorkingDirectory), "incorrect working dir")
 
 	for i, env := range cntrSpec.Env {
-		assert.Equal(t, env.Name, *cntr.definition.Environment[i].Name, "incorrect env name")
-		assert.Equal(t, env.Value, *cntr.definition.Environment[i].Value, "incorrect env value")
+		assert.Check(t, is.Equal(env.Name, *cntr.definition.Environment[i].Name), "incorrect env name")
+		assert.Check(t, is.Equal(env.Value, *cntr.definition.Environment[i].Value), "incorrect env value")
 	}
 }
 
@@ -69,10 +69,10 @@ func TestContainerResourceRequirementsDefaults(t *testing.T) {
 	cntrSpec := anyContainerSpec
 
 	cntr, err := newContainer(&cntrSpec)
-	require.NoError(t, err, "failed to create container")
+	assert.NilError(t, err, "failed to create container")
 
-	assert.Equal(t, containerDefaultCPULimit, *cntr.definition.Cpu, "incorrect CPU limit")
-	assert.Equal(t, containerDefaultMemoryLimit, *cntr.definition.Memory, "incorrect memory limit")
+	assert.Check(t, is.Equal(containerDefaultCPULimit, *cntr.definition.Cpu), "incorrect CPU limit")
+	assert.Check(t, is.Equal(containerDefaultMemoryLimit, *cntr.definition.Memory), "incorrect memory limit")
 }
 
 // TestContainerResourceRequirementsWithRequestsNoLimits verifies whether the container gets
@@ -87,10 +87,10 @@ func TestContainerResourceRequirementsWithRequestsNoLimits(t *testing.T) {
 	}
 
 	cntr, err := newContainer(&cntrSpec)
-	require.NoError(t, err, "failed to create container")
+	assert.NilError(t, err, "failed to create container")
 
-	assert.Equal(t, int64(512), *cntr.definition.Cpu, "incorrect CPU limit")
-	assert.Equal(t, int64(768), *cntr.definition.Memory, "incorrect memory limit")
+	assert.Check(t, is.Equal(int64(512), *cntr.definition.Cpu), "incorrect CPU limit")
+	assert.Check(t, is.Equal(int64(768), *cntr.definition.Memory), "incorrect memory limit")
 }
 
 // TestContainerResourceRequirementsWithLimitsNoRequests verifies whether the container gets
@@ -105,10 +105,10 @@ func TestContainerResourceRequirementsWithLimitsNoRequests(t *testing.T) {
 	}
 
 	cntr, err := newContainer(&cntrSpec)
-	require.NoError(t, err, "failed to create container")
+	assert.NilError(t, err, "failed to create container")
 
-	assert.Equal(t, int64(2048), *cntr.definition.Cpu, "incorrect CPU limit")
-	assert.Equal(t, int64(2048), *cntr.definition.Memory, "incorrect memory limit")
+	assert.Check(t, is.Equal(int64(2048), *cntr.definition.Cpu), "incorrect CPU limit")
+	assert.Check(t, is.Equal(int64(2048), *cntr.definition.Memory), "incorrect memory limit")
 }
 
 // TestContainerResourceRequirementsWithRequestsAndLimits verifies whether the container gets
@@ -127,10 +127,10 @@ func TestContainerResourceRequirementsWithRequestsAndLimits(t *testing.T) {
 	}
 
 	cntr, err := newContainer(&cntrSpec)
-	require.NoError(t, err, "failed to create container")
+	assert.NilError(t, err, "failed to create container")
 
-	assert.Equal(t, int64(2048), *cntr.definition.Cpu, "incorrect CPU limit")
-	assert.Equal(t, int64(2048), *cntr.definition.Memory, "incorrect memory limit")
+	assert.Check(t, is.Equal(int64(2048), *cntr.definition.Cpu), "incorrect CPU limit")
+	assert.Check(t, is.Equal(int64(2048), *cntr.definition.Memory), "incorrect memory limit")
 }
 
 // TestContainerResourceRequirements verifies whether Kubernetes container resource requirements
@@ -195,9 +195,9 @@ func TestContainerResourceRequirementsTranslations(t *testing.T) {
 				cntrSpec.Resources = reqs
 
 				cntr, err := newContainer(&cntrSpec)
-				require.NoError(t, err, "failed to create container")
+				assert.NilError(t, err, "failed to create container")
 
-				assert.Truef(t,
+				assert.Check(t,
 					*cntr.definition.Cpu == tc.expectedCPU && *cntr.definition.Memory == tc.expectedMemoryInMiBs,
 					"requested (cpu:%v memory:%v) expected (cpu:%v memory:%v) observed (cpu:%v memory:%v)",
 					tc.requestedCPU, tc.requestedMemory,
@@ -213,7 +213,7 @@ func TestContainerStatus(t *testing.T) {
 	cntrSpec := anyContainerSpec
 
 	cntr, err := newContainer(&cntrSpec)
-	require.NoError(t, err, "failed to create container")
+	assert.NilError(t, err, "failed to create container")
 
 	// Fargate container status provisioning.
 	state := ecs.Container{
@@ -225,51 +225,51 @@ func TestContainerStatus(t *testing.T) {
 
 	status := cntr.getStatus(&state)
 
-	assert.Equal(t, anyContainerName, status.Name, "incorrect name")
-	assert.NotNil(t, status.State.Waiting, "incorrect state")
-	assert.Equal(t, anyContainerReason, status.State.Waiting.Reason, "incorrect reason")
-	assert.Nil(t, status.State.Running, "incorrect state")
-	assert.Nil(t, status.State.Terminated, "incorrect state")
-	assert.False(t, status.Ready, "incorrect ready")
-	assert.Equal(t, anyContainerImage, status.Image, "incorrect image")
+	assert.Check(t, is.Equal(anyContainerName, status.Name), "incorrect name")
+	assert.Check(t, status.State.Waiting != nil, "incorrect state")
+	assert.Check(t, is.Equal(anyContainerReason, status.State.Waiting.Reason), "incorrect reason")
+	assert.Check(t, is.Nil(status.State.Running), "incorrect state")
+	assert.Check(t, is.Nil(status.State.Terminated), "incorrect state")
+	assert.Check(t, !status.Ready, "incorrect ready")
+	assert.Check(t, is.Equal(anyContainerImage, status.Image), "incorrect image")
 
 	// Fargate container status pending.
 	state.LastStatus = aws.String(containerStatusPending)
 	status = cntr.getStatus(&state)
 
-	assert.Equal(t, anyContainerName, status.Name, "incorrect name")
-	assert.NotNil(t, status.State.Waiting, "incorrect state")
-	assert.Equal(t, anyContainerReason, status.State.Waiting.Reason, "incorrect reason")
-	assert.Nil(t, status.State.Running, "incorrect state")
-	assert.Nil(t, status.State.Terminated, "incorrect state")
-	assert.False(t, status.Ready, "incorrect ready")
-	assert.Equal(t, anyContainerImage, status.Image, "incorrect image")
+	assert.Check(t, is.Equal(anyContainerName, status.Name), "incorrect name")
+	assert.Check(t, status.State.Waiting != nil, "incorrect state")
+	assert.Check(t, is.Equal(anyContainerReason, status.State.Waiting.Reason), "incorrect reason")
+	assert.Check(t, is.Nil(status.State.Running), "incorrect state")
+	assert.Check(t, is.Nil(status.State.Terminated), "incorrect state")
+	assert.Check(t, !status.Ready, "incorrect ready")
+	assert.Check(t, is.Equal(anyContainerImage, status.Image), "incorrect image")
 
 	// Fargate container status running.
 	state.LastStatus = aws.String(containerStatusRunning)
 	status = cntr.getStatus(&state)
 
-	assert.Equal(t, anyContainerName, status.Name, "incorrect name")
-	assert.Nil(t, status.State.Waiting, "incorrect state")
-	assert.NotNil(t, status.State.Running, "incorrect state")
-	assert.False(t, status.State.Running.StartedAt.IsZero(), "incorrect startedat")
-	assert.Nil(t, status.State.Terminated, "incorrect state")
-	assert.True(t, status.Ready, "incorrect ready")
-	assert.Equal(t, anyContainerImage, status.Image, "incorrect image")
+	assert.Check(t, is.Equal(anyContainerName, status.Name), "incorrect name")
+	assert.Check(t, is.Nil(status.State.Waiting), "incorrect state")
+	assert.Check(t, status.State.Running != nil, "incorrect state")
+	assert.Check(t, !status.State.Running.StartedAt.IsZero(), "incorrect startedat")
+	assert.Check(t, is.Nil(status.State.Terminated), "incorrect state")
+	assert.Check(t, status.Ready, "incorrect ready")
+	assert.Check(t, is.Equal(anyContainerImage, status.Image), "incorrect image")
 
 	// Fargate container status stopped.
 	state.LastStatus = aws.String(containerStatusStopped)
 	state.ExitCode = aws.Int64(anyContainerExitCode)
 	status = cntr.getStatus(&state)
 
-	assert.Equal(t, anyContainerName, status.Name, "incorrect name")
-	assert.Nil(t, status.State.Waiting, "incorrect state")
-	assert.Nil(t, status.State.Running, "incorrect state")
-	assert.NotNil(t, status.State.Terminated, "incorrect state")
-	assert.Equal(t, int32(anyContainerExitCode), status.State.Terminated.ExitCode, "incorrect exitcode")
-	assert.Equal(t, anyContainerReason, status.State.Terminated.Reason, "incorrect reason")
-	assert.False(t, status.State.Terminated.StartedAt.IsZero(), "incorrect startedat")
-	assert.False(t, status.State.Terminated.FinishedAt.IsZero(), "incorrect finishedat")
-	assert.False(t, status.Ready, "incorrect ready")
-	assert.Equal(t, anyContainerImage, status.Image, "incorrect image")
+	assert.Check(t, is.Equal(anyContainerName, status.Name), "incorrect name")
+	assert.Check(t, is.Nil(status.State.Waiting), "incorrect state")
+	assert.Check(t, is.Nil(status.State.Running), "incorrect state")
+	assert.Check(t, status.State.Terminated != nil, "incorrect state")
+	assert.Check(t, is.Equal(int32(anyContainerExitCode), status.State.Terminated.ExitCode), "incorrect exitcode")
+	assert.Check(t, is.Equal(anyContainerReason, status.State.Terminated.Reason), "incorrect reason")
+	assert.Check(t, !status.State.Terminated.StartedAt.IsZero(), "incorrect startedat")
+	assert.Check(t, !status.State.Terminated.FinishedAt.IsZero(), "incorrect finishedat")
+	assert.Check(t, !status.Ready, "incorrect ready")
+	assert.Check(t, is.Equal(anyContainerImage, status.Image), "incorrect image")
 }
