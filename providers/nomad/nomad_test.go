@@ -9,7 +9,8 @@ import (
 	"github.com/google/uuid"
 	nomad "github.com/hashicorp/nomad/api"
 	"github.com/hashicorp/nomad/testutil"
-	"github.com/stretchr/testify/assert"
+	"gotest.tools/assert"
+	is "gotest.tools/assert/cmp"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -77,10 +78,10 @@ func TestCreateGetDeletePod(t *testing.T) {
 
 	// Get pod tests
 	// Validate pod spec
-	assert.NotNil(t, pod, "pod cannot be nil")
-	assert.NotNil(t, pod.Spec.Containers, "containers cannot be nil")
-	assert.Nil(t, pod.Annotations, "pod annotations should be nil")
-	assert.Equal(t, pod.Name, fmt.Sprintf("%s-%s", jobNamePrefix, podName), "pod name should be equal")
+	assert.Check(t, pod != nil, "pod cannot be nil")
+	assert.Check(t, pod.Spec.Containers != nil, "containers cannot be nil")
+	assert.Check(t, is.Nil(pod.Annotations), "pod annotations should be nil")
+	assert.Check(t, is.Equal(pod.Name, fmt.Sprintf("%s-%s", jobNamePrefix, podName)), "pod name should be equal")
 
 	// Get pods
 	pods, err := provider.GetPods(context.Background())
@@ -89,7 +90,7 @@ func TestCreateGetDeletePod(t *testing.T) {
 	}
 
 	// TODO: finish adding a few more assertions
-	assert.Len(t, pods, 1, "number of pods should be 1")
+	assert.Check(t, is.Len(pods, 1), "number of pods should be 1")
 
 	// Delete pod
 	err = provider.DeletePod(context.Background(), pod)

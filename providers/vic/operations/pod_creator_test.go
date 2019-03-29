@@ -4,9 +4,10 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/vmware/vic/lib/apiservers/portlayer/client"
 	"github.com/vmware/vic/lib/metadata"
+	"gotest.tools/assert"
+	is "gotest.tools/assert/cmp"
 )
 
 func init() {
@@ -24,24 +25,24 @@ func TestNewPodCreator(t *testing.T) {
 
 	// Positive cases
 	c, err = NewPodCreator(client, store, proxy, cache, persona, portlayer)
-	assert.NotNil(t, c, "Expected not-nil creating a pod creator but received nil")
+	assert.Check(t, c != nil, "Expected not-nil creating a pod creator but received nil")
 
 	// Negative cases
 	c, err = NewPodCreator(nil, store, proxy, cache, persona, portlayer)
-	assert.Nil(t, c, "Expected nil")
-	assert.Equal(t, err, PodCreatorPortlayerClientError)
+	assert.Check(t, is.Nil(c), "Expected nil")
+	assert.Check(t, is.DeepEqual(err, PodCreatorPortlayerClientError))
 
 	c, err = NewPodCreator(client, nil, proxy, cache, persona, portlayer)
-	assert.Nil(t, c, "Expected nil")
-	assert.Equal(t, err, PodCreatorImageStoreError)
+	assert.Check(t, is.Nil(c), "Expected nil")
+	assert.Check(t, is.DeepEqual(err, PodCreatorImageStoreError))
 
 	c, err = NewPodCreator(client, store, nil, cache, persona, portlayer)
-	assert.Nil(t, c, "Expected nil")
-	assert.Equal(t, err, PodCreatorIsolationProxyError)
+	assert.Check(t, is.Nil(c), "Expected nil")
+	assert.Check(t, is.DeepEqual(err, PodCreatorIsolationProxyError))
 
 	c, err = NewPodCreator(client, store, proxy, nil, persona, portlayer)
-	assert.Nil(t, c, "Expected nil")
-	assert.Equal(t, err, PodCreatorPodCacheError)
+	assert.Check(t, is.Nil(c), "Expected nil")
+	assert.Check(t, is.DeepEqual(err, PodCreatorPodCacheError))
 }
 
 func TestCreatePod_NilPod(t *testing.T) {
@@ -52,10 +53,10 @@ func TestCreatePod_NilPod(t *testing.T) {
 
 	// Create nil pod
 	c, err := NewPodCreator(client, store, ip, cache, persona, portlayer)
-	assert.NotNil(t, c, "Expected not-nil creating a pod creator but received nil")
+	assert.Check(t, c != nil, "Expected not-nil creating a pod creator but received nil")
 
 	err = c.CreatePod(op, nil, true)
-	assert.NotNil(t, err, "Expected error from createPod but received '%s'", err)
+	assert.Check(t, err != nil, "Expected error from createPod but received '%s'", err)
 }
 
 func TestCreatePod_Success(t *testing.T) {
@@ -84,10 +85,10 @@ func TestCreatePod_Success(t *testing.T) {
 
 	// The test
 	c, err := NewPodCreator(client, store, ip, cache, persona, portlayer)
-	assert.NotNil(t, c, "Expected not-nil creating a pod creator but received nil")
+	assert.Check(t, c != nil, "Expected not-nil creating a pod creator but received nil")
 
 	err = c.CreatePod(op, &pod, true)
-	assert.Nil(t, err, "Expected error from createPod but received '%s'", err)
+	assert.Check(t, err, "Expected error from createPod but received '%s'", err)
 }
 
 func TestCreatePod_ImageStoreError(t *testing.T) {
@@ -117,10 +118,10 @@ func TestCreatePod_ImageStoreError(t *testing.T) {
 
 	// The test
 	c, err := NewPodCreator(client, store, ip, cache, persona, portlayer)
-	assert.NotNil(t, c, "Expected not-nil creating a pod creator but received nil")
+	assert.Check(t, c != nil, "Expected not-nil creating a pod creator but received nil")
 
 	err = c.CreatePod(op, &pod, true)
-	assert.NotNil(t, err, "Expected nil error from createPod")
+	assert.Check(t, err != nil, "Expected nil error from createPod")
 }
 
 func TestCreatePod_CreateHandleError(t *testing.T) {
@@ -150,11 +151,11 @@ func TestCreatePod_CreateHandleError(t *testing.T) {
 
 	// The test
 	c, err := NewPodCreator(client, store, ip, cache, persona, portlayer)
-	assert.NotNil(t, c, "Expected not-nil creating a pod creator but received nil")
+	assert.Check(t, c != nil, "Expected not-nil creating a pod creator but received nil")
 
 	err = c.CreatePod(op, &pod, true)
-	assert.NotNil(t, err, "Expected nil error from createPod")
-	assert.Equal(t, err.Error(), fakeErr.Error())
+	assert.Check(t, err != nil, "Expected nil error from createPod")
+	assert.Check(t, is.Equal(err.Error(), fakeErr.Error()))
 }
 
 func TestCreatePod_AddImageError(t *testing.T) {
@@ -184,11 +185,11 @@ func TestCreatePod_AddImageError(t *testing.T) {
 
 	// The test
 	c, err := NewPodCreator(client, store, ip, cache, persona, portlayer)
-	assert.NotNil(t, c, "Expected not-nil creating a pod creator but received nil")
+	assert.Check(t, c != nil, "Expected not-nil creating a pod creator but received nil")
 
 	err = c.CreatePod(op, &pod, true)
-	assert.NotNil(t, err, "Expected nil error from createPod")
-	assert.Equal(t, err.Error(), fakeErr.Error())
+	assert.Check(t, err != nil, "Expected nil error from createPod")
+	assert.Check(t, is.Equal(err.Error(), fakeErr.Error()))
 }
 
 func TestCreatePod_CreateHandleTaskError(t *testing.T) {
@@ -218,11 +219,11 @@ func TestCreatePod_CreateHandleTaskError(t *testing.T) {
 
 	// The test
 	c, err := NewPodCreator(client, store, ip, cache, persona, portlayer)
-	assert.NotNil(t, c, "Expected not-nil creating a pod creator but received nil")
+	assert.Check(t, c != nil, "Expected not-nil creating a pod creator but received nil")
 
 	err = c.CreatePod(op, &pod, true)
-	assert.NotNil(t, err, "Expected nil error from createPod")
-	assert.Equal(t, err.Error(), fakeErr.Error())
+	assert.Check(t, err != nil, "Expected nil error from createPod")
+	assert.Check(t, is.Equal(err.Error(), fakeErr.Error()))
 }
 
 func TestCreatePod_AddHandleToScopeError(t *testing.T) {
@@ -252,11 +253,11 @@ func TestCreatePod_AddHandleToScopeError(t *testing.T) {
 
 	// The test
 	c, err := NewPodCreator(client, store, ip, cache, persona, portlayer)
-	assert.NotNil(t, c, "Expected not-nil creating a pod creator but received nil")
+	assert.Check(t, c != nil, "Expected not-nil creating a pod creator but received nil")
 
 	err = c.CreatePod(op, &pod, true)
-	assert.NotNil(t, err, "Expected nil error from createPod")
-	assert.Equal(t, err.Error(), fakeErr.Error())
+	assert.Check(t, err != nil, "Expected nil error from createPod")
+	assert.Check(t, is.Equal(err.Error(), fakeErr.Error()))
 }
 
 func TestCreatePod_AddInteractionError(t *testing.T) {
@@ -286,11 +287,11 @@ func TestCreatePod_AddInteractionError(t *testing.T) {
 
 	// The test
 	c, err := NewPodCreator(client, store, ip, cache, persona, portlayer)
-	assert.NotNil(t, c, "Expected not-nil creating a pod creator but received nil")
+	assert.Check(t, c != nil, "Expected not-nil creating a pod creator but received nil")
 
 	err = c.CreatePod(op, &pod, true)
-	assert.NotNil(t, err, "Expected nil error from createPod")
-	assert.Equal(t, err.Error(), fakeErr.Error())
+	assert.Check(t, err != nil, "Expected nil error from createPod")
+	assert.Check(t, is.Equal(err.Error(), fakeErr.Error()))
 }
 
 func TestCreatePod_AddLoggingError(t *testing.T) {
@@ -320,11 +321,11 @@ func TestCreatePod_AddLoggingError(t *testing.T) {
 
 	// The test
 	c, err := NewPodCreator(client, store, ip, cache, persona, portlayer)
-	assert.NotNil(t, c, "Expected not-nil creating a pod creator but received nil")
+	assert.Check(t, c != nil, "Expected not-nil creating a pod creator but received nil")
 
 	err = c.CreatePod(op, &pod, true)
-	assert.NotNil(t, err, "Expected nil error from createPod")
-	assert.Equal(t, err.Error(), fakeErr.Error())
+	assert.Check(t, err != nil, "Expected nil error from createPod")
+	assert.Check(t, is.Equal(err.Error(), fakeErr.Error()))
 }
 
 func TestCreatePod_CommitError(t *testing.T) {
@@ -354,11 +355,11 @@ func TestCreatePod_CommitError(t *testing.T) {
 
 	// The test
 	c, err := NewPodCreator(client, store, ip, cache, persona, portlayer)
-	assert.NotNil(t, c, "Expected not-nil creating a pod creator but received nil")
+	assert.Check(t, c != nil, "Expected not-nil creating a pod creator but received nil")
 
 	err = c.CreatePod(op, &pod, true)
-	assert.NotNil(t, err, "Expected nil error from createPod")
-	assert.Equal(t, err.Error(), fakeErr.Error())
+	assert.Check(t, err != nil, "Expected nil error from createPod")
+	assert.Check(t, is.Equal(err.Error(), fakeErr.Error()))
 }
 
 func TestCreatePod_HandleError(t *testing.T) {
@@ -388,11 +389,11 @@ func TestCreatePod_HandleError(t *testing.T) {
 
 	// The test
 	c, err := NewPodCreator(client, store, ip, cache, persona, portlayer)
-	assert.NotNil(t, c, "Expected not-nil creating a pod creator but received nil")
+	assert.Check(t, c != nil, "Expected not-nil creating a pod creator but received nil")
 
 	err = c.CreatePod(op, &pod, true)
-	assert.NotNil(t, err, "Expected nil error from createPod")
-	assert.Equal(t, err.Error(), fakeErr.Error())
+	assert.Check(t, err != nil, "Expected nil error from createPod")
+	assert.Check(t, is.Equal(err.Error(), fakeErr.Error()))
 }
 
 func TestCreatePod_BindScopeError(t *testing.T) {
@@ -423,11 +424,11 @@ func TestCreatePod_BindScopeError(t *testing.T) {
 
 	// The test
 	c, err := NewPodCreator(client, store, ip, cache, persona, portlayer)
-	assert.NotNil(t, c, "Expected not-nil creating a pod creator but received nil")
+	assert.Check(t, c != nil, "Expected not-nil creating a pod creator but received nil")
 
 	err = c.CreatePod(op, &pod, true)
-	assert.NotNil(t, err, "Expected nil error from createPod")
-	assert.Equal(t, err.Error(), fakeErr.Error())
+	assert.Check(t, err != nil, "Expected nil error from createPod")
+	assert.Check(t, is.Equal(err.Error(), fakeErr.Error()))
 }
 
 func TestCreatePod_SetStateError(t *testing.T) {
@@ -458,9 +459,9 @@ func TestCreatePod_SetStateError(t *testing.T) {
 
 	// The test
 	c, err := NewPodCreator(client, store, ip, cache, persona, portlayer)
-	assert.NotNil(t, c, "Expected not-nil creating a pod creator but received nil")
+	assert.Check(t, c != nil, "Expected not-nil creating a pod creator but received nil")
 
 	err = c.CreatePod(op, &pod, true)
-	assert.NotNil(t, err, "Expected nil error from createPod")
-	assert.Equal(t, err.Error(), fakeErr.Error())
+	assert.Check(t, err != nil, "Expected nil error from createPod")
+	assert.Check(t, is.Equal(err.Error(), fakeErr.Error()))
 }
