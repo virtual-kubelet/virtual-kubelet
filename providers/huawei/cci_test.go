@@ -6,8 +6,9 @@ import (
 	"os"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
-	"k8s.io/api/core/v1"
+	"gotest.tools/assert"
+	is "gotest.tools/assert/cmp"
+	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/uuid"
 )
@@ -30,8 +31,8 @@ func TestCreateProject(t *testing.T) {
 	}
 
 	cciServerMocker.OnCreateProject = func(ns *v1.Namespace) (int, interface{}) {
-		assert.NotNil(t, ns, "Project is nil")
-		assert.Equal(t, fakeProject, ns.Name, "pod.Annotations[\"virtual-kubelet-podname\"] is not expected")
+		assert.Check(t, ns != nil, "Project is nil")
+		assert.Check(t, is.Equal(fakeProject, ns.Name), "pod.Annotations[\"virtual-kubelet-podname\"] is not expected")
 		return http.StatusOK, &v1.Namespace{
 			TypeMeta: metav1.TypeMeta{
 				Kind:       "Namespace",
@@ -59,12 +60,12 @@ func TestCreatePod(t *testing.T) {
 	podNamespace := "ns-" + string(uuid.NewUUID())
 
 	cciServerMocker.OnCreatePod = func(pod *v1.Pod) (int, interface{}) {
-		assert.NotNil(t, pod, "Pod is nil")
-		assert.NotNil(t, pod.Annotations, "pod.Annotations is expected")
-		assert.Equal(t, podName, pod.Annotations[podAnnotationPodNameKey], "pod.Annotations[\"virtual-kubelet-podname\"] is not expected")
-		assert.Equal(t, podNamespace, pod.Annotations[podAnnotationNamespaceKey], "pod.Annotations[\"virtual-kubelet-namespace\"] is not expected")
-		assert.Equal(t, 1, len(pod.Spec.Containers), "1 Container is expected")
-		assert.Equal(t, "nginx", pod.Spec.Containers[0].Name, "Container nginx is expected")
+		assert.Check(t, pod != nil, "Pod is nil")
+		assert.Check(t, pod.Annotations != nil, "pod.Annotations is expected")
+		assert.Check(t, is.Equal(podName, pod.Annotations[podAnnotationPodNameKey]), "pod.Annotations[\"virtual-kubelet-podname\"] is not expected")
+		assert.Check(t, is.Equal(podNamespace, pod.Annotations[podAnnotationNamespaceKey]), "pod.Annotations[\"virtual-kubelet-namespace\"] is not expected")
+		assert.Check(t, is.Equal(1, len(pod.Spec.Containers)), "1 Container is expected")
+		assert.Check(t, is.Equal("nginx", pod.Spec.Containers[0].Name), "Container nginx is expected")
 		return http.StatusOK, pod
 	}
 
@@ -127,14 +128,14 @@ func TestGetPod(t *testing.T) {
 		t.Fatal("Failed to get pod", err)
 	}
 
-	assert.NotNil(t, pod, "Response pod should not be nil")
-	assert.NotNil(t, pod.Spec.Containers, "Containers should not be nil")
-	assert.Equal(t, pod.Name, "podname", "Pod name is not expected")
-	assert.Equal(t, pod.Namespace, "podnamespaces", "Pod namespace is not expected")
-	assert.Nil(t, pod.Annotations, "Pod Annotations should be nil")
-	assert.Equal(t, string(pod.UID), "poduid", "Pod UID is not expected")
-	assert.Equal(t, pod.ClusterName, "podclustername", "Pod clustername is not expected")
-	assert.Equal(t, pod.Spec.NodeName, "podnodename", "Pod node name is not expected")
+	assert.Check(t, pod != nil, "Response pod should not be nil")
+	assert.Check(t, pod.Spec.Containers != nil, "Containers should not be nil")
+	assert.Check(t, is.Equal(pod.Name, "podname"), "Pod name is not expected")
+	assert.Check(t, is.Equal(pod.Namespace, "podnamespaces"), "Pod namespace is not expected")
+	assert.Check(t, is.Nil(pod.Annotations), "Pod Annotations should be nil")
+	assert.Check(t, is.Equal(string(pod.UID), "poduid"), "Pod UID is not expected")
+	assert.Check(t, is.Equal(pod.ClusterName, "podclustername"), "Pod clustername is not expected")
+	assert.Check(t, is.Equal(pod.Spec.NodeName, "podnodename"), "Pod node name is not expected")
 }
 
 // Tests get pod.
@@ -179,14 +180,14 @@ func TestGetPods(t *testing.T) {
 	}
 
 	pod := pods[0]
-	assert.NotNil(t, pod, "Response pod should not be nil")
-	assert.NotNil(t, pod.Spec.Containers, "Containers should not be nil")
-	assert.Equal(t, pod.Name, "podname", "Pod name is not expected")
-	assert.Equal(t, pod.Namespace, "podnamespaces", "Pod namespace is not expected")
-	assert.Nil(t, pod.Annotations, "Pod Annotations should be nil")
-	assert.Equal(t, string(pod.UID), "poduid", "Pod UID is not expected")
-	assert.Equal(t, pod.ClusterName, "podclustername", "Pod clustername is not expected")
-	assert.Equal(t, pod.Spec.NodeName, "podnodename", "Pod node name is not expected")
+	assert.Check(t, pod != nil, "Response pod should not be nil")
+	assert.Check(t, pod.Spec.Containers != nil, "Containers should not be nil")
+	assert.Check(t, is.Equal(pod.Name, "podname"), "Pod name is not expected")
+	assert.Check(t, is.Equal(pod.Namespace, "podnamespaces"), "Pod namespace is not expected")
+	assert.Check(t, is.Nil(pod.Annotations), "Pod Annotations should be nil")
+	assert.Check(t, is.Equal(string(pod.UID), "poduid"), "Pod UID is not expected")
+	assert.Check(t, is.Equal(pod.ClusterName, "podclustername"), "Pod clustername is not expected")
+	assert.Check(t, is.Equal(pod.Spec.NodeName, "podnodename"), "Pod node name is not expected")
 }
 
 func prepareMocks() (*CCIMock, *CCIProvider, error) {

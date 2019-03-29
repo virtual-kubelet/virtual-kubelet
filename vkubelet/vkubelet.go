@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"go.opencensus.io/trace"
-	corev1 "k8s.io/api/core/v1"
 	corev1informers "k8s.io/client-go/informers/core/v1"
 	"k8s.io/client-go/kubernetes"
 
@@ -19,10 +18,9 @@ const (
 
 // Server masquarades itself as a kubelet and allows for the virtual node to be backed by non-vm/node providers.
 type Server struct {
-	nodeName        string
 	namespace       string
+	nodeName        string
 	k8sClient       *kubernetes.Clientset
-	taint           *corev1.Taint
 	provider        providers.Provider
 	resourceManager *manager.ResourceManager
 	podSyncWorkers  int
@@ -36,7 +34,6 @@ type Config struct {
 	NodeName        string
 	Provider        providers.Provider
 	ResourceManager *manager.ResourceManager
-	Taint           *corev1.Taint
 	PodSyncWorkers  int
 	PodInformer     corev1informers.PodInformer
 }
@@ -48,9 +45,8 @@ type Config struct {
 // You must call `Run` on the returned object to start the server.
 func New(cfg Config) *Server {
 	return &Server{
-		namespace:       cfg.Namespace,
 		nodeName:        cfg.NodeName,
-		taint:           cfg.Taint,
+		namespace:       cfg.Namespace,
 		k8sClient:       cfg.Client,
 		resourceManager: cfg.ResourceManager,
 		provider:        cfg.Provider,
@@ -65,10 +61,6 @@ func New(cfg Config) *Server {
 // info to the Kubernetes API Server, such as logs, metrics, exec, etc.
 // See `AttachPodRoutes` and `AttachMetricsRoutes` to set these up.
 func (s *Server) Run(ctx context.Context) error {
-	if err := s.registerNode(ctx); err != nil {
-		return err
-	}
-
 	go s.providerSyncLoop(ctx)
 
 	return NewPodController(s).Run(ctx, s.podSyncWorkers)
@@ -89,7 +81,6 @@ func (s *Server) providerSyncLoop(ctx context.Context) {
 			t.Stop()
 
 			ctx, span := trace.StartSpan(ctx, "syncActualState")
-			s.updateNode(ctx)
 			s.updatePodStatuses(ctx)
 			span.End()
 

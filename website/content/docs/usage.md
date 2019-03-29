@@ -4,11 +4,11 @@ description: Run a Virtual Kubelet inside or outside of your Kubernetes cluster
 weight: 2
 ---
 
-Virtual Kubelet is run via the `virtual-kubelet` command-line tool (documented [below](#virtual-kubelet-cli)). You can run Virtual Kubelet either [outside](#outside-k8s) or [inside](#inside-k8s) of a Kubernetes cluster.
+You can Virtual Kubelet either [outside](#outside-k8s) or [inside](#inside-k8s) of a Kubernetes cluster using the [`virtual-kubelet`](#virtual-kubelet-cli) command-line tool. If you run Virtual Kubelet inside of a Kubernetes cluster, you can also deploy it using [Helm](#helm).
+
+> For `virtual-kubelet` installation instructions, see the [Setup](../setup) guide.
 
 ## Outside of a Kubernetes cluster {#outside-k8s}
-
-> Before you go through this section, make sure to [install Virtual Kubelet](../setup) first.
 
 To run Virtual Kubelet outside of a Kubernetes cluster, run the [`virtual-kubelet`](#virtual-kubelet-cli) binary with your chosen [provider](../providers). Here's an example:
 
@@ -16,7 +16,7 @@ To run Virtual Kubelet outside of a Kubernetes cluster, run the [`virtual-kubele
 virtual-kubelet --provider aws
 ```
 
-Once the Virtual Kubelet is deployed, run `kubectl get nodes` and you should see a `virtual-kubelet` node (unless you've named it something else using the [`--nodename`](#virtual-kubelet-cli) flag).
+Once Virtual Kubelet is deployed, run `kubectl get nodes` and you should see a `virtual-kubelet` node (unless you've named it something else using the [`--nodename`](#virtual-kubelet-cli) flag).
 
 <!-- The CLI docs are generated using the shortcode in layouts/shortcodes/cli.html
 and the YAML config in data/cli.yaml
@@ -53,3 +53,41 @@ make skaffold MODE=run
 ```
 
 This will build and deploy the Virtual Kubelet and return.
+
+## Helm
+
+{{< info >}}
+[Helm](https://helm.sh) is a package manager that enables you to easily deploy complex systems on Kubernetes using configuration bundles called [Charts](https://docs.helm.sh/developing_charts/).
+{{< /info >}}
+
+You can use the Virtual Kubelet [Helm chart](https://github.com/virtual-kubelet/virtual-kubelet/tree/master/charts) to deploy Virtual Kubelet on Kubernetes.
+
+First, add the Chart repository (the Chart is currently hosted on [GitHub](https://github.com)):
+
+```bash
+helm repo add virtual-kubelet \
+  https://raw.githubusercontent.com/virtual-kubelet/virtual-kubelet/master/charts
+```
+
+{{< success >}}
+You can check to make sure that the repo is listed amongst your current repos using `helm repo list`.
+{{< /success >}}
+
+Now you can install Virtual Kubelet using `helm install`. Here's an example command:
+
+```bash
+helm install virtual-kubelet/virtual-kubelet \
+  --name virtual-kubelet-azure \
+  --namespace virtual-kubelet \
+  --set provider=azure
+```
+
+This would install the [Azure Container Instances Virtual Kubelet](https://github.com/virtual-kubelet/virtual-kubelet/tree/master/providers/azure) in the `virtual-kubelet` namespace.
+
+To verify that Virtual Kubelet has been installed, run this command, which will list the available nodes and watch for changes:
+
+```bash
+kubectl get nodes \
+  --namespace virtual-kubelet \
+  --watch
+```

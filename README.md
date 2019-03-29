@@ -23,7 +23,6 @@ The best description is "Kubernetes API on top, programmable back."
     + [Azure Container Instances Provider](#azure-container-instances-provider)
 	+ [Azure Batch GPU Provider](./providers/azurebatch/README.md)
     + [AWS Fargate Provider](#aws-fargate-provider)
-    + [Service Fabric Mesh Provider](#service-fabric-mesh-provider)
 	+ [HashiCorp Nomad](#hashicorp-nomad-provider)
     + [Adding a New Provider via the Provider Interface](#adding-a-new-provider-via-the-provider-interface)
 * [Testing](#testing)
@@ -176,19 +175,6 @@ security groups, IAM roles, CloudWatch Logs and many other AWS services. Pods on
 co-exist with pods on regular worker nodes in the same Kubernetes cluster.
 
 Easy instructions and a sample configuration file is available in the [AWS Fargate provider documentation](providers/aws/README.md).
-
-### Service Fabric Mesh Provider
-
-The Service Fabric Mesh Provider allows you to deploy pods to Azure [Service Fabric Mesh](https://docs.microsoft.com/en-us/azure/service-fabric-mesh/service-fabric-mesh-overview).
-
-Service Fabric Mesh is a fully managed service that lets developers deploy microservices without managing the underlying infrastructure.
- Pods deployed to Service Fabric Mesh will be assigned Public IPs from the Service Fabric Mesh network.
-
-```
-./bin/virtual-kubelet --provider sfmesh --taint azure.com/sfmesh
-```
-
-More detailed instructions can be found [here](providers/sfmesh/README.md).
 
 ### HashiCorp Nomad Provider
 
@@ -343,7 +329,7 @@ Enable the ServiceNodeExclusion flag, by modifying the Controller Manager manife
 Virtual Kubelet follows the [CNCF Code of Conduct](https://github.com/cncf/foundation/blob/master/code-of-conduct.md).
 Sign the [CNCF CLA](https://github.com/kubernetes/community/blob/master/CLA.md) to be able to make Pull Requests to this repo. 
 
-Bi-weekly Virtual Kubelet Architecture meetings are held at 11am PST in this [zoom meeting room](https://zoom.us/j/245165908). Our virtual kubelet google calander has the architecture meetings listed and Tuesday & Thursday scrums for anyone interested. Check out the calander [here](https://calendar.google.com/calendar?cid=bjRtbGMxYWNtNXR0NXQ1a2hqZmRkNTRncGNAZ3JvdXAuY2FsZW5kYXIuZ29vZ2xlLmNvbQ).
+Bi-weekly Virtual Kubelet Architecture meetings are held at 11am PST in this [zoom meeting room](https://zoom.us/j/245165908).  Check out the calendar [here](https://calendar.google.com/calendar?cid=bjRtbGMxYWNtNXR0NXQ1a2hqZmRkNTRncGNAZ3JvdXAuY2FsZW5kYXIuZ29vZ2xlLmNvbQ).
 
 Our google drive with design specifications and meeting notes are [here](https://drive.google.com/drive/folders/19Ndu11WBCCBDowo9CrrGUHoIfd2L8Ueg?usp=sharing).
 
