@@ -1,4 +1,4 @@
-// +build !no_openstack_provider
+// +build openstack_provider
 
 package register
 
