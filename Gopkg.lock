@@ -554,6 +554,22 @@
   version = "v0.1.0"
 
 [[projects]]
+  digest = "1:cc43a0f35c2c50d5af1d3f8fa1352bd6205f5d8fc0d4cb50c5aed8e0b3f7c703"
+  name = "github.com/gophercloud/gophercloud"
+  packages = [
+    ".",
+    "openstack",
+    "openstack/container/v1/capsules",
+    "openstack/identity/v2/tenants",
+    "openstack/identity/v2/tokens",
+    "openstack/identity/v3/tokens",
+    "openstack/utils",
+    "pagination",
+  ]
+  pruneopts = "NUT"
+  revision = "954aa14363ced787c28efcfcd15ae6945eb862fb"
+
+[[projects]]
   digest = "1:412beefef71413b580631c12a681ba2acab1ffdad9f967c38ed37e19fd101631"
   name = "github.com/gorhill/cronexpr"
   packages = ["."]
@@ -1810,6 +1826,10 @@
     "github.com/docker/docker/api/types/strslice",
     "github.com/google/go-cmp/cmp",
     "github.com/google/uuid",
+    "github.com/gophercloud/gophercloud",
+    "github.com/gophercloud/gophercloud/openstack",
+    "github.com/gophercloud/gophercloud/openstack/container/v1/capsules",
+    "github.com/gophercloud/gophercloud/pagination",
     "github.com/gorilla/mux",
     "github.com/gorilla/websocket",
     "github.com/hashicorp/nomad/api",
