@@ -1,0 +1,10 @@
+{{- if eq .Values.provider "cri" }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Values.nodeName }}-cni
+data:
+{{- range .Values.cniConfig }}
+  {{ .name }}: | {{- .data | nindent 4 -}}
+{{- end -}}
+{{- end -}}

@@ -54,6 +54,24 @@ providers:
       subnetCidr: 
       clusterCidr: 
       kubeDnsIp: 
+  cri:
+    implementation: containerd
+
+criImplementations:
+  containerd:
+    image:
+      pullPolicy: Always
+      repository: cpuguy83/containerd
+      tag: v1.2.5
+
+cniConfig:
+  - name: "99-localhost.conf"
+    data: |-
+      {
+        "cniVersion": "0.2.0",
+        "name": "lo",
+        "type": "loopback"
+      }
 
 ## Install Default RBAC roles and bindings
 rbac:
