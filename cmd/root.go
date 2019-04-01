@@ -100,7 +100,7 @@ This allows users to schedule kubernetes workloads on nodes that aren't running 
 			vkubelet.NaiveNodeProvider{},
 			pNode,
 			k8sClient.Coordination().Leases(corev1.NamespaceNodeLease),
-			k8sClient.CoreV1().Nodes(),
+			k8sClient.CoreV1(),
 			vkubelet.WithNodeDisableLease(!enableNodeLease),
 		)
 		if err != nil {

@@ -29,11 +29,11 @@ func testNodeRun(t *testing.T, enableLease bool) {
 
 	testP := &testNodeProvider{NodeProvider: &NaiveNodeProvider{}}
 
-	nodes := c.CoreV1().Nodes()
+	core := c.CoreV1()
 	leases := c.Coordination().Leases(corev1.NamespaceNodeLease)
 
 	interval := 1 * time.Millisecond
-	node, err := NewNode(testP, testNode(t), leases, nodes,
+	node, err := NewNode(testP, testNode(t), leases, core,
 		WithNodePingInterval(interval),
 		WithNodeStatusUpdateInterval(interval),
 		WithNodeDisableLease(!enableLease),
@@ -51,7 +51,7 @@ func testNodeRun(t *testing.T, enableLease bool) {
 		close(chErr)
 	}()
 
-	nw := makeWatch(t, nodes, node.n.Name)
+	nw := makeWatch(t, core.Nodes(), node.n.Name)
 	defer nw.Stop()
 	nr := nw.ResultChan()
 
@@ -111,11 +111,11 @@ func testNodeRun(t *testing.T, enableLease bool) {
 	n := node.n.DeepCopy()
 	newCondition := corev1.NodeCondition{
 		Type:               corev1.NodeConditionType("UPDATED"),
-		LastTransitionTime: metav1.NewTime(time.Now()),
+		LastTransitionTime: metav1.Now().Rfc3339Copy(),
 	}
 	n.Status.Conditions = append(n.Status.Conditions, newCondition)
 
-	nw = makeWatch(t, nodes, node.n.Name)
+	nw = makeWatch(t, core.Nodes(), node.n.Name)
 	defer nw.Stop()
 	nr = nw.ResultChan()
 
@@ -170,18 +170,18 @@ func TestEnsureLease(t *testing.T) {
 func TestUpdateNodeStatus(t *testing.T) {
 	n := testNode(t)
 	n.Status.Conditions = append(n.Status.Conditions, corev1.NodeCondition{
-		LastHeartbeatTime: metav1.NewTime(time.Now()),
+		LastHeartbeatTime: metav1.Now().Rfc3339Copy(),
 	})
 	n.Status.Phase = corev1.NodePending
-	nodes := testclient.NewSimpleClientset().CoreV1().Nodes()
+	core := testclient.NewSimpleClientset().CoreV1()
 
 	ctx := context.Background()
-	updated, err := UpdateNodeStatus(ctx, nodes, n.DeepCopy())
+	updated, err := UpdateNodeStatus(ctx, core, n.DeepCopy())
 	assert.NilError(t, err)
 	assert.Check(t, cmp.DeepEqual(n.Status, updated.Status))
 
 	n.Status.Phase = corev1.NodeRunning
-	updated, err = UpdateNodeStatus(ctx, nodes, n.DeepCopy())
+	updated, err = UpdateNodeStatus(ctx, core, n.DeepCopy())
 	assert.NilError(t, err)
 	assert.Check(t, cmp.DeepEqual(n.Status, updated.Status))
 }

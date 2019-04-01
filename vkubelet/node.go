@@ -13,8 +13,10 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/typed/coordination/v1beta1"
 	v1 "k8s.io/client-go/kubernetes/typed/core/v1"
+	nodeutil "k8s.io/kubernetes/pkg/util/node"
 )
 
 // NewNode creates a new node.
@@ -22,8 +24,8 @@ import (
 //
 // Use the node's `Run` method to register and run the loops to update the node
 // in Kubernetes.
-func NewNode(p providers.NodeProvider, node *corev1.Node, leases v1beta1.LeaseInterface, nodes v1.NodeInterface, opts ...NodeOpt) (*Node, error) {
-	n := &Node{p: p, n: node, leases: leases, nodes: nodes}
+func NewNode(p providers.NodeProvider, node *corev1.Node, leases v1beta1.LeaseInterface, c v1.CoreV1Interface, opts ...NodeOpt) (*Node, error) {
+	n := &Node{p: p, core: c, n: node, leases: leases}
 	for _, o := range opts {
 		if err := o(n); err != nil {
 			return nil, pkgerrors.Wrap(err, "error applying node option")
@@ -79,7 +81,7 @@ type Node struct {
 	n *corev1.Node
 
 	leases v1beta1.LeaseInterface
-	nodes  v1.NodeInterface
+	core   v1.CoreV1Interface
 
 	disableLease   bool
 	pingInterval   time.Duration
@@ -233,7 +235,7 @@ func (n *Node) updateLease(ctx context.Context) error {
 func (n *Node) updateStatus(ctx context.Context) error {
 	updateNodeStatusHeartbeat(n.n)
 
-	node, err := UpdateNodeStatus(ctx, n.nodes, n.n)
+	node, err := UpdateNodeStatus(ctx, n.core, n.n)
 	if err != nil {
 		return err
 	}
@@ -307,11 +309,13 @@ var emptyGetOptions = metav1.GetOptions{}
 // to the passed in node object.
 //
 // If you use this function, it is up to you to syncronize this with other operations.
-func UpdateNodeStatus(ctx context.Context, nodes v1.NodeInterface, n *corev1.Node) (*corev1.Node, error) {
+// This reduces the time to second-level precision.
+func UpdateNodeStatus(ctx context.Context, c v1.CoreV1Interface, n *corev1.Node) (*corev1.Node, error) {
 	ctx, span := trace.StartSpan(ctx, "UpdateNodeStatus")
 	defer span.End()
+	var node *corev1.Node
 
-	node, err := nodes.Get(n.Name, emptyGetOptions)
+	oldNode, err := c.Nodes().Get(n.Name, emptyGetOptions)
 	if err != nil {
 		if !errors.IsNotFound(err) {
 			span.SetStatus(ocstatus.FromError(err))
@@ -319,7 +323,7 @@ func UpdateNodeStatus(ctx context.Context, nodes v1.NodeInterface, n *corev1.Nod
 		}
 
 		log.G(ctx).Debug("node not found")
-		node, err = nodes.Create(n.DeepCopy())
+		node, err = c.Nodes().Create(n.DeepCopy())
 		if err != nil {
 			return nil, err
 		}
@@ -328,18 +332,20 @@ func UpdateNodeStatus(ctx context.Context, nodes v1.NodeInterface, n *corev1.Nod
 	}
 
 	log.G(ctx).Debug("got node from api server")
-
+	node = oldNode.DeepCopy()
 	node.ResourceVersion = ""
 	node.Status = n.Status
 
 	ctx = addNodeAttributes(ctx, span, node)
 
-	updated, err := nodes.UpdateStatus(node)
+	// Patch the node status to merge other changes on the node.
+	updated, _, err := nodeutil.PatchNodeStatus(c, types.NodeName(n.Name), oldNode, node)
 	if err != nil {
 		return nil, err
 	}
 
-	log.G(ctx).WithField("resourceVersion", updated.ResourceVersion).Debug("updated node status in api server")
+	log.G(ctx).WithField("Conditions", updated.Status.Conditions).
+		Debug("updated node status in api server")
 	return updated, nil
 }
 
