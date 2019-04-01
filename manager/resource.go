@@ -1,8 +1,6 @@
 package manager
 
 import (
-	"sync"
-
 	"k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	corev1listers "k8s.io/client-go/listers/core/v1"
@@ -13,8 +11,6 @@ import (
 // ResourceManager acts as a passthrough to a cache (lister) for pods assigned to the current node.
 // It is also a passthrough to a cache (lister) for Kubernetes secrets and config maps.
 type ResourceManager struct {
-	sync.RWMutex
-
 	podLister       corev1listers.PodLister
 	secretLister    corev1listers.SecretLister
 	configMapLister corev1listers.ConfigMapLister
