@@ -558,7 +558,7 @@ func prepareMocks() (*AADMock, *ACIMock, *ACIProvider, error) {
 	os.Setenv("AZURE_AUTH_LOCATION", file.Name())
 	os.Setenv("ACI_RESOURCE_GROUP", fakeResourceGroup)
 
-	rm, err := manager.NewResourceManager(nil, nil, nil)
+	rm, err := manager.NewResourceManager(nil, nil, nil, nil)
 	if err != nil {
 		return nil, nil, nil, err
 	}

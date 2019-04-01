@@ -312,8 +312,11 @@ func initConfig() {
 	secretInformer := scmInformerFactory.Core().V1().Secrets()
 	configMapInformer := scmInformerFactory.Core().V1().ConfigMaps()
 
+	// Create a service informer so we can pass its lister to the resource manager.
+	serviceInformer := scmInformerFactory.Core().V1().Services()
+
 	// Create a new instance of the resource manager that uses the listers above for pods, secrets and config maps.
-	rm, err = manager.NewResourceManager(podInformer.Lister(), secretInformer.Lister(), configMapInformer.Lister())
+	rm, err = manager.NewResourceManager(podInformer.Lister(), secretInformer.Lister(), configMapInformer.Lister(), serviceInformer.Lister())
 	if err != nil {
 		logger.WithError(err).Fatal("Error initializing resource manager")
 	}

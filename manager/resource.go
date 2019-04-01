@@ -14,14 +14,16 @@ type ResourceManager struct {
 	podLister       corev1listers.PodLister
 	secretLister    corev1listers.SecretLister
 	configMapLister corev1listers.ConfigMapLister
+	serviceLister   corev1listers.ServiceLister
 }
 
 // NewResourceManager returns a ResourceManager with the internal maps initialized.
-func NewResourceManager(podLister corev1listers.PodLister, secretLister corev1listers.SecretLister, configMapLister corev1listers.ConfigMapLister) (*ResourceManager, error) {
+func NewResourceManager(podLister corev1listers.PodLister, secretLister corev1listers.SecretLister, configMapLister corev1listers.ConfigMapLister, serviceLister corev1listers.ServiceLister) (*ResourceManager, error) {
 	rm := ResourceManager{
 		podLister:       podLister,
 		secretLister:    secretLister,
 		configMapLister: configMapLister,
+		serviceLister:   serviceLister,
 	}
 	return &rm, nil
 }
@@ -44,4 +46,9 @@ func (rm *ResourceManager) GetConfigMap(name, namespace string) (*v1.ConfigMap, 
 // GetSecret retrieves the specified secret from Kubernetes.
 func (rm *ResourceManager) GetSecret(name, namespace string) (*v1.Secret, error) {
 	return rm.secretLister.Secrets(namespace).Get(name)
+}
+
+// ListServices retrieves the list of services from Kubernetes.
+func (rm *ResourceManager) ListServices() ([]*v1.Service, error) {
+	return rm.serviceLister.List(labels.Everything())
 }
