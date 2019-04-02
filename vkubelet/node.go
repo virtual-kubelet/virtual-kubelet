@@ -214,7 +214,7 @@ func (n *Node) handlePing(ctx context.Context) (retErr error) {
 	}()
 
 	if err := n.p.Ping(ctx); err != nil {
-		return pkgerrors.Wrap(err, "error whiling pinging node provider")
+		return pkgerrors.Wrap(err, "error while pinging the node provider")
 	}
 
 	if n.disableLease {
