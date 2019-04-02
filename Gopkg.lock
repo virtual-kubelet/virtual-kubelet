@@ -1495,14 +1495,6 @@
   version = "kubernetes-1.13.1"
 
 [[projects]]
-  branch = "master"
-  digest = "1:d7276d849da38d07fd1cc29884d0424523f3c6e8086de9b477982100593a0c57"
-  name = "k8s.io/apiextensions-apiserver"
-  packages = ["pkg/features"]
-  pruneopts = "NUT"
-  revision = "4cac3cbacb4e2d131a0c467d1d8f23026ee6d552"
-
-[[projects]]
   digest = "1:692e27ed8a5eb2d74bde52d323d428814cd9a6e0f726d02ffd60fda7819e1ee7"
   name = "k8s.io/apimachinery"
   packages = [
@@ -1560,12 +1552,10 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:027893ed0602526c88395e79608e578756e63ce357be8b5065805719faab102a"
+  digest = "1:b708a75f2dbffa13e29055c8ba293c4e0c2832fddcbfa751ccb146658629da58"
   name = "k8s.io/apiserver"
   packages = [
-    "pkg/features",
     "pkg/server/httplog",
-    "pkg/util/feature",
     "pkg/util/wsstream",
   ]
   pruneopts = "NUT"
@@ -1771,19 +1761,16 @@
   revision = "0317810137be915b9cf888946c6e115c1bfac693"
 
 [[projects]]
-  digest = "1:829117c212dfb9d1b02db262120fe77c67ffdcd197494a4264dd11252da2b12d"
+  digest = "1:02e74ccd0c045a31940dca52ba2545108fd299d4f66632b1bf643fb92b662de2"
   name = "k8s.io/kubernetes"
   packages = [
     "pkg/api/v1/pod",
     "pkg/apis/core",
     "pkg/apis/core/pods",
-    "pkg/features",
     "pkg/fieldpath",
-    "pkg/kubelet/apis",
     "pkg/kubelet/apis/cri/runtime/v1alpha2",
     "pkg/kubelet/apis/stats/v1alpha1",
     "pkg/kubelet/server/remotecommand",
-    "pkg/util/node",
   ]
   pruneopts = "NUT"
   revision = "c27b913fddd1a6c480c229191a087698aa92f0b1"
@@ -1896,6 +1883,7 @@
     "k8s.io/apimachinery/pkg/types",
     "k8s.io/apimachinery/pkg/util/intstr",
     "k8s.io/apimachinery/pkg/util/net",
+    "k8s.io/apimachinery/pkg/util/strategicpatch",
     "k8s.io/apimachinery/pkg/util/uuid",
     "k8s.io/apimachinery/pkg/util/validation",
     "k8s.io/apimachinery/pkg/util/wait",
@@ -1922,7 +1910,6 @@
     "k8s.io/kubernetes/pkg/kubelet/apis/cri/runtime/v1alpha2",
     "k8s.io/kubernetes/pkg/kubelet/apis/stats/v1alpha1",
     "k8s.io/kubernetes/pkg/kubelet/server/remotecommand",
-    "k8s.io/kubernetes/pkg/util/node",
   ]
   solver-name = "gps-cdcl"
   solver-version = 1
