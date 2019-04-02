@@ -29,11 +29,11 @@ func testNodeRun(t *testing.T, enableLease bool) {
 
 	testP := &testNodeProvider{NodeProvider: &NaiveNodeProvider{}}
 
-	core := c.CoreV1()
+	nodes := c.CoreV1().Nodes()
 	leases := c.Coordination().Leases(corev1.NamespaceNodeLease)
 
 	interval := 1 * time.Millisecond
-	node, err := NewNode(testP, testNode(t), leases, core,
+	node, err := NewNode(testP, testNode(t), leases, nodes,
 		WithNodePingInterval(interval),
 		WithNodeStatusUpdateInterval(interval),
 		WithNodeDisableLease(!enableLease),
@@ -51,7 +51,7 @@ func testNodeRun(t *testing.T, enableLease bool) {
 		close(chErr)
 	}()
 
-	nw := makeWatch(t, core.Nodes(), node.n.Name)
+	nw := makeWatch(t, nodes, node.n.Name)
 	defer nw.Stop()
 	nr := nw.ResultChan()
 
@@ -115,7 +115,7 @@ func testNodeRun(t *testing.T, enableLease bool) {
 	}
 	n.Status.Conditions = append(n.Status.Conditions, newCondition)
 
-	nw = makeWatch(t, core.Nodes(), node.n.Name)
+	nw = makeWatch(t, nodes, node.n.Name)
 	defer nw.Stop()
 	nr = nw.ResultChan()
 
@@ -173,15 +173,15 @@ func TestUpdateNodeStatus(t *testing.T) {
 		LastHeartbeatTime: metav1.Now().Rfc3339Copy(),
 	})
 	n.Status.Phase = corev1.NodePending
-	core := testclient.NewSimpleClientset().CoreV1()
+	nodes := testclient.NewSimpleClientset().CoreV1().Nodes()
 
 	ctx := context.Background()
-	updated, err := UpdateNodeStatus(ctx, core, n.DeepCopy())
+	updated, err := UpdateNodeStatus(ctx, nodes, n.DeepCopy())
 	assert.NilError(t, err)
 	assert.Check(t, cmp.DeepEqual(n.Status, updated.Status))
 
 	n.Status.Phase = corev1.NodeRunning
-	updated, err = UpdateNodeStatus(ctx, core, n.DeepCopy())
+	updated, err = UpdateNodeStatus(ctx, nodes, n.DeepCopy())
 	assert.NilError(t, err)
 	assert.Check(t, cmp.DeepEqual(n.Status, updated.Status))
 }

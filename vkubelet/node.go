@@ -26,8 +26,8 @@ import (
 //
 // Use the node's `Run` method to register and run the loops to update the node
 // in Kubernetes.
-func NewNode(p providers.NodeProvider, node *corev1.Node, leases v1beta1.LeaseInterface, c v1.CoreV1Interface, opts ...NodeOpt) (*Node, error) {
-	n := &Node{p: p, core: c, n: node, leases: leases}
+func NewNode(p providers.NodeProvider, node *corev1.Node, leases v1beta1.LeaseInterface, nodes v1.NodeInterface, opts ...NodeOpt) (*Node, error) {
+	n := &Node{p: p, n: node, leases: leases, nodes: nodes}
 	for _, o := range opts {
 		if err := o(n); err != nil {
 			return nil, pkgerrors.Wrap(err, "error applying node option")
@@ -83,7 +83,7 @@ type Node struct {
 	n *corev1.Node
 
 	leases v1beta1.LeaseInterface
-	core   v1.CoreV1Interface
+	nodes  v1.NodeInterface
 
 	disableLease   bool
 	pingInterval   time.Duration
@@ -237,7 +237,7 @@ func (n *Node) updateLease(ctx context.Context) error {
 func (n *Node) updateStatus(ctx context.Context) error {
 	updateNodeStatusHeartbeat(n.n)
 
-	node, err := UpdateNodeStatus(ctx, n.core, n.n)
+	node, err := UpdateNodeStatus(ctx, n.nodes, n.n)
 	if err != nil {
 		return err
 	}
@@ -350,12 +350,12 @@ func preparePatchBytesforNodeStatus(nodeName types.NodeName, oldNode *corev1.Nod
 //
 // If you use this function, it is up to you to syncronize this with other operations.
 // This reduces the time to second-level precision.
-func UpdateNodeStatus(ctx context.Context, c v1.CoreV1Interface, n *corev1.Node) (*corev1.Node, error) {
+func UpdateNodeStatus(ctx context.Context, nodes v1.NodeInterface, n *corev1.Node) (*corev1.Node, error) {
 	ctx, span := trace.StartSpan(ctx, "UpdateNodeStatus")
 	defer span.End()
 	var node *corev1.Node
 
-	oldNode, err := c.Nodes().Get(n.Name, emptyGetOptions)
+	oldNode, err := nodes.Get(n.Name, emptyGetOptions)
 	if err != nil {
 		if !errors.IsNotFound(err) {
 			span.SetStatus(ocstatus.FromError(err))
@@ -363,7 +363,7 @@ func UpdateNodeStatus(ctx context.Context, c v1.CoreV1Interface, n *corev1.Node)
 		}
 
 		log.G(ctx).Debug("node not found")
-		node, err = c.Nodes().Create(n.DeepCopy())
+		node, err = nodes.Create(n.DeepCopy())
 		if err != nil {
 			return nil, err
 		}
@@ -379,7 +379,7 @@ func UpdateNodeStatus(ctx context.Context, c v1.CoreV1Interface, n *corev1.Node)
 	ctx = addNodeAttributes(ctx, span, node)
 
 	// Patch the node status to merge other changes on the node.
-	updated, _, err := PatchNodeStatus(c.Nodes(), types.NodeName(n.Name), oldNode, node)
+	updated, _, err := PatchNodeStatus(nodes, types.NodeName(n.Name), oldNode, node)
 	if err != nil {
 		return nil, err
 	}
