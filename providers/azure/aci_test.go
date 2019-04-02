@@ -26,7 +26,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"k8s.io/client-go/kubernetes/fake"
 )
 
 const (
@@ -234,13 +233,10 @@ func TestCreatePodWithGPU(t *testing.T) {
  	aciServerMocker.OnCreate = func(subscription, resourceGroup, containerGroup string, cg *aci.ContainerGroup) (int, interface{}) {
 		assert.Check(t, is.Equal(fakeSubscription, subscription), "Subscription doesn't match")
 		assert.Check(t, is.Equal(fakeResourceGroup, resourceGroup), "Resource group doesn't match")
-		assert.Check(t, cg != nil, "Container group is nil")
 		assert.Check(t, is.Equal(podNamespace+"-"+podName, containerGroup), "Container group name is not expected")
-		assert.Check(t, cg.ContainerGroupProperties != nil, "Container group properties should not be nil")
 		assert.Check(t, cg.ContainerGroupProperties.Containers != nil, "Containers should not be nil")
 		assert.Check(t, is.Equal(1, len(cg.ContainerGroupProperties.Containers)), "1 Container is expected")
 		assert.Check(t, is.Equal("nginx", cg.ContainerGroupProperties.Containers[0].Name), "Container nginx is expected")
-		assert.Check(t, cg.ContainerGroupProperties.Containers[0].Resources != nil, "Container resources should not be nil")
 		assert.Check(t, cg.ContainerGroupProperties.Containers[0].Resources.Requests != nil, "Container resource requests should not be nil")
 		assert.Check(t, is.Equal(1.98, cg.ContainerGroupProperties.Containers[0].Resources.Requests.CPU), "Request CPU is not expected")
 		assert.Check(t, is.Equal(3.4, cg.ContainerGroupProperties.Containers[0].Resources.Requests.MemoryInGB), "Request Memory is not expected")
@@ -317,11 +313,9 @@ func TestCreatePodWithGPUSKU(t *testing.T) {
 		assert.Check(t, is.Equal(fakeResourceGroup, resourceGroup), "Resource group doesn't match")
 		assert.Check(t, cg != nil, "Container group is nil")
 		assert.Check(t, is.Equal(podNamespace+"-"+podName, containerGroup), "Container group name is not expected")
-		assert.Check(t, cg.ContainerGroupProperties != nil, "Container group properties should not be nil")
 		assert.Check(t, cg.ContainerGroupProperties.Containers != nil, "Containers should not be nil")
 		assert.Check(t, is.Equal(1, len(cg.ContainerGroupProperties.Containers)), "1 Container is expected")
 		assert.Check(t, is.Equal("nginx", cg.ContainerGroupProperties.Containers[0].Name), "Container nginx is expected")
-		assert.Check(t, cg.ContainerGroupProperties.Containers[0].Resources != nil, "Container resources should not be nil")
 		assert.Check(t, cg.ContainerGroupProperties.Containers[0].Resources.Requests != nil, "Container resource requests should not be nil")
 		assert.Check(t, is.Equal(1.98, cg.ContainerGroupProperties.Containers[0].Resources.Requests.CPU), "Request CPU is not expected")
 		assert.Check(t, is.Equal(3.4, cg.ContainerGroupProperties.Containers[0].Resources.Requests.MemoryInGB), "Request Memory is not expected")
@@ -643,26 +637,25 @@ func TestGetPodWithGPU(t *testing.T) {
 
  	assert.Check(t, pod != nil, "Response pod should not be nil")
 	assert.Check(t, pod.Spec.Containers != nil, "Containers should not be nil")
-	assert.Check(t, pod.Spec.Containers[0].Resources != nil, "Containers[0].Resources should not be nil")
 	assert.Check(t, pod.Spec.Containers[0].Resources.Requests != nil, "Containers[0].Resources.Requests should not be nil")
-	assert.Equal(
+	assert.Check(
 		t,
 		is.Equal(ptrQuantity(resource.MustParse("0.99")).Value(), pod.Spec.Containers[0].Resources.Requests.Cpu().Value()),
 		"Containers[0].Resources.Requests.CPU doesn't match")
-	assert.Equal(
+	assert.Check(
 		t,
 		is.Equal(ptrQuantity(resource.MustParse("1.5G")).Value(), pod.Spec.Containers[0].Resources.Requests.Memory().Value()),
 		"Containers[0].Resources.Requests.Memory doesn't match")
 	gpuQuantity, ok := pod.Spec.Containers[0].Resources.Requests[gpuResourceName]
-	assert.True(t, ok, "Containers[0].Resources.Requests.GPU should not be nil")
-	assert.Equal(
+	assert.Check(t, is.Equal(ok, true), "Containers[0].Resources.Requests.GPU should not be nil")
+	assert.Check(
 		t,
 		is.Equal(ptrQuantity(resource.MustParse("5")).Value(), ptrQuantity(gpuQuantity).Value()),
 		"Containers[0].Resources.Requests.GPU.Count doesn't match")
 	assert.Check(t, pod.Spec.Containers[0].Resources.Limits != nil, "Containers[0].Resources.Limits should not be nil")
 	gpuQuantity, ok = pod.Spec.Containers[0].Resources.Limits[gpuResourceName]
-	assert.True(t, ok, "Containers[0].Resources.Requests.GPU should not be nil")
-	assert.Equal(
+	assert.Check(t, is.Equal(ok, true), "Containers[0].Resources.Requests.GPU should not be nil")
+	assert.Check(
 		t,
 		is.Equal(ptrQuantity(resource.MustParse("5")).Value(), ptrQuantity(gpuQuantity).Value()),
 		"Containers[0].Resources.Limits.GPU.Count doesn't match")
@@ -839,8 +832,8 @@ func createTestProvider(aadServerMocker *AADMock, aciServerMocker*ACIMock) (*ACI
 	os.Setenv("ACI_RESOURCE_GROUP", fakeResourceGroup)
 	os.Setenv("ACI_REGION", fakeRegion)
 
-	clientset := fake.NewSimpleClientset()
-	rm, err := manager.NewResourceManager(clientset)
+	rm, err := manager.NewResourceManager(nil, nil, nil)
+
 	if err != nil {
 		return nil, err
 	}
