@@ -11,12 +11,13 @@ import (
 	"github.com/virtual-kubelet/azure-aci/client/api"
 )
 
+// TerminalSizeRequest is the terminal size request
 type TerminalSizeRequest struct {
 	Width  int
 	Height int
 }
 
-// Starts the exec command for a specified container instance in a specified resource group and container group.
+// LaunchExec starts the exec command for a specified container instance in a specified resource group and container group.
 // From: https://docs.microsoft.com/en-us/rest/api/container-instances/startcontainer/launchexec
 func (c *Client) LaunchExec(resourceGroup, containerGroupName, containerName, command string, terminalSize TerminalSizeRequest) (ExecResponse, error) {
 	urlParams := url.Values{
@@ -35,7 +36,7 @@ func (c *Client) LaunchExec(resourceGroup, containerGroupName, containerName, co
 
 	var xcrsp ExecResponse
 	xcrsp.Password = ""
-	xcrsp.WebSocketUri = ""
+	xcrsp.WebSocketURI = ""
 
 	b := new(bytes.Buffer)
 

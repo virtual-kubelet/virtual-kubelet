@@ -24,7 +24,6 @@
   packages = [
     "services/batch/2017-09-01.6.0/batch",
     "services/network/mgmt/2018-08-01/network",
-    "services/preview/servicefabricmesh/mgmt/2018-07-01-preview/servicefabricmesh",
     "version",
   ]
   pruneopts = "NUT"
@@ -1076,7 +1075,6 @@
   packages = [
     "assert",
     "mock",
-    "require",
   ]
   pruneopts = "NUT"
   revision = "12b6f73e6084dad08a7c6e575284b177ecafbc71"
@@ -1110,7 +1108,7 @@
   version = "v0.10.2"
 
 [[projects]]
-  digest = "1:9a98ebb3ee9bb59770d26639de8f2c9a65d695daaa1c1957d34de84a6f40c282"
+  digest = "1:868e54a0d7eefb6a5fc88b7379c56ea70d50fb2c7905690f83bb9b7474a321e1"
   name = "github.com/virtual-kubelet/azure-aci"
   packages = [
     "client",
@@ -1119,8 +1117,8 @@
     "client/network",
   ]
   pruneopts = "NUT"
-  revision = "2e12def8b355625e62ffdb319e7c0b26d1d9c15d"
-  version = "v0.1.0"
+  revision = "a846478f02b6b4219bf5bd8ea5d608513ef623f7"
+  version = "v0.2.0"
 
 [[projects]]
   digest = "1:a707ec1c12a88afc978307bca7f40bde7bd6b6434ceee41f8d7c6985e245dbdb"
@@ -1885,6 +1883,7 @@
     "k8s.io/apimachinery/pkg/types",
     "k8s.io/apimachinery/pkg/util/intstr",
     "k8s.io/apimachinery/pkg/util/net",
+    "k8s.io/apimachinery/pkg/util/strategicpatch",
     "k8s.io/apimachinery/pkg/util/uuid",
     "k8s.io/apimachinery/pkg/util/validation",
     "k8s.io/apimachinery/pkg/util/wait",
