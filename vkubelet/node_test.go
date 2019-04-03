@@ -111,7 +111,7 @@ func testNodeRun(t *testing.T, enableLease bool) {
 	n := node.n.DeepCopy()
 	newCondition := corev1.NodeCondition{
 		Type:               corev1.NodeConditionType("UPDATED"),
-		LastTransitionTime: metav1.NewTime(time.Now()),
+		LastTransitionTime: metav1.Now().Rfc3339Copy(),
 	}
 	n.Status.Conditions = append(n.Status.Conditions, newCondition)
 
@@ -170,7 +170,7 @@ func TestEnsureLease(t *testing.T) {
 func TestUpdateNodeStatus(t *testing.T) {
 	n := testNode(t)
 	n.Status.Conditions = append(n.Status.Conditions, corev1.NodeCondition{
-		LastHeartbeatTime: metav1.NewTime(time.Now()),
+		LastHeartbeatTime: metav1.Now().Rfc3339Copy(),
 	})
 	n.Status.Phase = corev1.NodePending
 	nodes := testclient.NewSimpleClientset().CoreV1().Nodes()
