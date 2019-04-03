@@ -11,8 +11,31 @@ __The [ACI provider](../azure/README.md) is the best option unless you're lookin
 ## Status: Experimental
 
 This provider is currently in the exterimental stages. Contributions welcome!
+## For the Helm
+-. Run `az login` and follow the instructions in the command output to authorize `az` to use your account
+-. List your Azure subscriptions:
+    ```cli
+    az account list -o table
+    ```
+-. Copy your subscription ID and save it in an environment variable:
+
+    **Bash**
+    ```cli
+    export AZURE_SUBSCRIPTION_ID="<SubscriptionId>"
+    ```
+
+    **PowerShell**
+    ```cli
+    $env:AZURE_SUBSCRIPTION_ID = "<SubscriptionId>"
+    ```
+- KEYS=$(az ad sp create-for-rbac --name virtual-kubelete-batch )
+- APPID=$(echo $KEYS | jq -r .appId)
+-  az role assignment create --assignee ${APPID} --role Contributor
+
+-  helm install "$CHART_URL" --name $RELEASE_NAME  --set provider=azurebatch   --set rbac.install=true --set azure.tenantId=$(echo $KEYS | jq -r .tenant) --set azure.subscriptionId=$AZURE_SUBSCRIPTION_ID   --set azure.clientId=$(echo $KEYS | jq -r .appId) --set azure.clientSecret=$(echo $KEYS  | jq -r .password) --set azure.masterUri=$MASTER_URI   --set azure.batch.poolID=gpu-ubuntu-container   --set azure.batch.accountName=testgpu31 --set azure.rg=k8s-testgpu31-eastus
 
 ## Quick Start
+
 
 The following Terraform template deploys an AKS cluster with the Virtual Kubelet, Azure Batch Account and GPU enabled Azure Batch pool. The Batch pool contains 1 Dedicated NC6 Node and 2 Low Priority NC6 Nodes.
 
