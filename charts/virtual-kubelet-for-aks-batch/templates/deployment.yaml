@@ -1,0 +1,68 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: {{ template "fullname" . }}
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: {{ template "fullname" . }}
+    spec:
+      containers:
+      - name: {{ template "fullname" . }}
+        image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+        imagePullPolicy: {{ .Values.image.pullPolicy }}
+        env:
+        - name: KUBELET_PORT
+          value: "10250"
+        - name: ACS_CREDENTIAL_LOCATION
+          value: /etc/acs/azure.json
+        - name: AZURE_TENANT_ID
+          value: {{ .Values.azure.tenantId }}
+        - name: AZURE_SUBSCRIPTION_ID
+          value: {{ .Values.azure.subscriptionId }}
+        - name: AZURE_CLIENT_ID
+          value: {{ .Values.azure.clientId }}
+        - name: AZURE_CLIENT_SECRET
+          value: {{ .Values.azure.clientSecret }}
+        - name: AZURE_BATCH_POOLID
+          value: {{ .Values.azure.batch.poolID }}
+        - name: AZURE_BATCH_ACCOUNT_NAME
+          value: {{ .Values.azure.batch.accountName}}
+        - name: AZURE_BATCH_ACCOUNT_LOCATION
+          value: {{ default "eastus" .Values.azure.batch.accountLocation}}
+        - name: APISERVER_CERT_LOCATION
+          value: /etc/virtual-kubelet/cert.pem
+        - name: APISERVER_KEY_LOCATION
+          value: /etc/virtual-kubelet/key.pem
+        - name: VKUBELET_POD_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+        - name: MASTER_URI
+          value: {{ .Values.env.masterUri }}
+        - name: CLUSTER_CIDR
+          value: {{ .Values.env.clusterCIDR }}
+        - name: KUBE_DNS_IP
+          value: {{ .Values.env.kubeDnsIP }}
+        volumeMounts:
+        - name: credentials
+          mountPath: "/etc/virtual-kubelet"
+        - name: acs-credential
+          mountPath: "/etc/acs/azure.json"
+        command: ["virtual-kubelet"]
+        args: ["--provider", "azurebatch"]
+      volumes:
+      - name: credentials
+        secret:
+          secretName: {{ template "fullname" . }}
+      - name: acs-credential
+        hostPath:
+          path: /etc/kubernetes/azure.json
+          type: File
+      {{ if .Values.rbac.install }}
+      serviceAccountName: {{ template "fullname" . }}
+      {{ end }}
+      nodeSelector:
+        beta.kubernetes.io/os: linux
