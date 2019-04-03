@@ -1,8 +1,6 @@
 package manager
 
 import (
-	"sync"
-
 	"k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	corev1listers "k8s.io/client-go/listers/core/v1"
@@ -13,19 +11,19 @@ import (
 // ResourceManager acts as a passthrough to a cache (lister) for pods assigned to the current node.
 // It is also a passthrough to a cache (lister) for Kubernetes secrets and config maps.
 type ResourceManager struct {
-	sync.RWMutex
-
 	podLister       corev1listers.PodLister
 	secretLister    corev1listers.SecretLister
 	configMapLister corev1listers.ConfigMapLister
+	serviceLister   corev1listers.ServiceLister
 }
 
 // NewResourceManager returns a ResourceManager with the internal maps initialized.
-func NewResourceManager(podLister corev1listers.PodLister, secretLister corev1listers.SecretLister, configMapLister corev1listers.ConfigMapLister) (*ResourceManager, error) {
+func NewResourceManager(podLister corev1listers.PodLister, secretLister corev1listers.SecretLister, configMapLister corev1listers.ConfigMapLister, serviceLister corev1listers.ServiceLister) (*ResourceManager, error) {
 	rm := ResourceManager{
 		podLister:       podLister,
 		secretLister:    secretLister,
 		configMapLister: configMapLister,
+		serviceLister:   serviceLister,
 	}
 	return &rm, nil
 }
@@ -48,4 +46,9 @@ func (rm *ResourceManager) GetConfigMap(name, namespace string) (*v1.ConfigMap, 
 // GetSecret retrieves the specified secret from Kubernetes.
 func (rm *ResourceManager) GetSecret(name, namespace string) (*v1.Secret, error) {
 	return rm.secretLister.Secrets(namespace).Get(name)
+}
+
+// ListServices retrieves the list of services from Kubernetes.
+func (rm *ResourceManager) ListServices() ([]*v1.Service, error) {
+	return rm.serviceLister.List(labels.Everything())
 }

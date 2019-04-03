@@ -54,3 +54,13 @@ func FakeSecret(namespace, name string, data map[string]string) *corev1.Secret {
 	}
 	return res
 }
+
+// FakeService returns a service with the specified namespace and name.
+func FakeService(namespace, name string) *corev1.Service {
+	return &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: namespace,
+			Name:      name,
+		},
+	}
+}
