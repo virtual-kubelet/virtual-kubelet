@@ -140,7 +140,7 @@
 
 [[constraint]]
   name = "github.com/virtual-kubelet/azure-aci"
-  version = "v0.1.0"
+  version = "v0.2.0"
 
 
 [[constraint]]
