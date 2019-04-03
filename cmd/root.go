@@ -74,6 +74,7 @@ var apiConfig *apiServerConfig
 var podInformer corev1informers.PodInformer
 var kubeSharedInformerFactoryResync time.Duration
 var podSyncWorkers int
+var enableNodeLease bool
 
 var userTraceExporters []string
 var userTraceConfig = TracingExporterOptions{Tags: make(map[string]string)}
@@ -94,11 +95,22 @@ This allows users to schedule kubernetes workloads on nodes that aren't running 
 
 		defer rootContextCancel()
 
+		pNode := NodeFromProvider(rootContext, nodeName, taint, p)
+		node, err := vkubelet.NewNode(
+			vkubelet.NaiveNodeProvider{},
+			pNode,
+			k8sClient.Coordination().Leases(corev1.NamespaceNodeLease),
+			k8sClient.CoreV1().Nodes(),
+			vkubelet.WithNodeDisableLease(!enableNodeLease),
+		)
+		if err != nil {
+			log.G(rootContext).Fatal(err)
+		}
+
 		vk := vkubelet.New(vkubelet.Config{
 			Client:          k8sClient,
 			Namespace:       kubeNamespace,
-			NodeName:        nodeName,
-			Taint:           taint,
+			NodeName:        pNode.Name,
 			Provider:        p,
 			ResourceManager: rm,
 			PodSyncWorkers:  podSyncWorkers,
@@ -118,9 +130,18 @@ This allows users to schedule kubernetes workloads on nodes that aren't running 
 		}
 		defer cancelHTTP()
 
-		if err := vk.Run(rootContext); err != nil && errors.Cause(err) != context.Canceled {
-			log.G(rootContext).Fatal(err)
-		}
+		go func() {
+			if err := vk.Run(rootContext); err != nil && errors.Cause(err) != context.Canceled {
+				log.G(rootContext).Fatal(err)
+			}
+		}()
+
+		go func() {
+			if err := node.Run(rootContext); err != nil {
+				log.G(rootContext).Fatal(err)
+			}
+		}()
+		<-rootContext.Done()
 	},
 }
 
@@ -192,6 +213,7 @@ func init() {
 	RootCmd.PersistentFlags().MarkDeprecated("taint", "Taint key should now be configured using the VK_TAINT_KEY environment variable")
 	RootCmd.PersistentFlags().StringVar(&logLevel, "log-level", "info", `set the log level, e.g. "trace", debug", "info", "warn", "error"`)
 	RootCmd.PersistentFlags().IntVar(&podSyncWorkers, "pod-sync-workers", 10, `set the number of pod synchronization workers`)
+	RootCmd.PersistentFlags().BoolVar(&enableNodeLease, "enable-node-lease", false, `use node leases (1.13) for node heartbeats`)
 
 	RootCmd.PersistentFlags().StringSliceVar(&userTraceExporters, "trace-exporter", nil, fmt.Sprintf("sets the tracing exporter to use, available exporters: %s", AvailableTraceExporters()))
 	RootCmd.PersistentFlags().StringVar(&userTraceConfig.ServiceName, "trace-service-name", "virtual-kubelet", "sets the name of the service used to register with the trace exporter")
@@ -290,8 +312,11 @@ func initConfig() {
 	secretInformer := scmInformerFactory.Core().V1().Secrets()
 	configMapInformer := scmInformerFactory.Core().V1().ConfigMaps()
 
+	// Create a service informer so we can pass its lister to the resource manager.
+	serviceInformer := scmInformerFactory.Core().V1().Services()
+
 	// Create a new instance of the resource manager that uses the listers above for pods, secrets and config maps.
-	rm, err = manager.NewResourceManager(podInformer.Lister(), secretInformer.Lister(), configMapInformer.Lister())
+	rm, err = manager.NewResourceManager(podInformer.Lister(), secretInformer.Lister(), configMapInformer.Lister(), serviceInformer.Lister())
 	if err != nil {
 		logger.WithError(err).Fatal("Error initializing resource manager")
 	}

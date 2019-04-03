@@ -237,22 +237,35 @@ type Resource struct {
 	Tags     map[string]string `json:"tags,omitempty"`
 }
 
-// ResourceLimits is the resource limits.
-type ResourceLimits struct {
-	MemoryInGB float64 `json:"memoryInGB,omitempty"`
-	CPU        float64 `json:"cpu,omitempty"`
+// GPUSKU enumerates the values for GPU SKUs
+type GPUSKU string
+
+const (
+	// K80 specifies the K80 GPU SKU
+	K80  GPUSKU = "K80"
+	// P100 specifies the P100 GPU SKU
+	P100 GPUSKU = "P100"
+	// V100 specifies the V100 GPU SKU
+	V100 GPUSKU = "V100"
+)
+
+// GPUResource is the GPU resource for the container group.
+type GPUResource struct {
+	Count int32  `json:"count"`
+	SKU   GPUSKU `json:"sku"`
 }
 
-// ResourceRequests is the resource requests.
-type ResourceRequests struct {
-	MemoryInGB float64 `json:"memoryInGB,omitempty"`
-	CPU        float64 `json:"cpu,omitempty"`
+// ComputeResources is the compute resource.
+type ComputeResources struct {
+	MemoryInGB float64      `json:"memoryInGB,omitempty"`
+	CPU        float64      `json:"cpu,omitempty"`
+	GPU        *GPUResource `json:"gpu,omitempty"`
 }
 
 // ResourceRequirements is the resource requirements.
 type ResourceRequirements struct {
-	Requests *ResourceRequests `json:"requests,omitempty"`
-	Limits   *ResourceLimits   `json:"limits,omitempty"`
+	Requests *ComputeResources `json:"requests,omitempty"`
+	Limits   *ComputeResources `json:"limits,omitempty"`
 }
 
 // Usage is a single usage result
@@ -305,7 +318,7 @@ type ExecRequest struct {
 
 // ExecResponse is a request for Launch Exec API response for ACI.
 type ExecResponse struct {
-	WebSocketUri string `json:"webSocketUri,omitempty"`
+	WebSocketURI string `json:"webSocketUri,omitempty"`
 	Password     string `json:"password,omitempty"`
 }
 
@@ -488,3 +501,20 @@ const (
 	LogAnalyticsMetadataKeyNodeName          string = "node-name"
 	LogAnalyticsMetadataKeyClusterResourceID string = "cluster-resource-id"
 )
+
+// GPURegionalSKU is the ACI GPU regional SKU
+type GPURegionalSKU struct {
+	Location string   `json:"location"`
+	SKUs     []GPUSKU `json:"skus"`
+}
+
+// ResourceProviderMetadata is the ACI resource provider metadata
+type ResourceProviderMetadata struct {
+	VNetSupportRegions []string          `json:"vnetSupportRegions,omitempty"`
+	GPURegionalSKUs    []*GPURegionalSKU `json:"gpuRegionalSkus,omitempty"`
+}
+
+// ResourceProviderManifest is the ACI resource provider manifest
+type ResourceProviderManifest struct {
+	Metadata *ResourceProviderMetadata `json:"metadata"`
+}

@@ -2,7 +2,6 @@ package vkubelet
 
 import (
 	"context"
-	"sync"
 	"time"
 
 	"github.com/cpuguy83/strongerrors/status/ocstatus"
@@ -12,7 +11,10 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
+	"k8s.io/client-go/util/workqueue"
 )
 
 func addPodAttributes(ctx context.Context, span trace.Span, pod *corev1.Pod) context.Context {
@@ -136,56 +138,41 @@ func (s *Server) forceDeletePodResource(ctx context.Context, namespace, name str
 }
 
 // updatePodStatuses syncs the providers pod status with the kubernetes pod status.
-func (s *Server) updatePodStatuses(ctx context.Context) {
+func (s *Server) updatePodStatuses(ctx context.Context, q workqueue.RateLimitingInterface) {
 	ctx, span := trace.StartSpan(ctx, "updatePodStatuses")
 	defer span.End()
 
 	// Update all the pods with the provider status.
-	pods := s.resourceManager.GetPods()
-
+	pods, err := s.podInformer.Lister().List(labels.Everything())
+	if err != nil {
+		err = pkgerrors.Wrap(err, "error getting pod list")
+		span.SetStatus(ocstatus.FromError(err))
+		log.G(ctx).WithError(err).Error("Error updating pod statuses")
+		return
+	}
 	ctx = span.WithField(ctx, "nPods", int64(len(pods)))
 
-	sema := make(chan struct{}, s.podSyncWorkers)
-	var wg sync.WaitGroup
-	wg.Add(len(pods))
-
 	for _, pod := range pods {
-		go func(pod *corev1.Pod) {
-			defer wg.Done()
-
-			select {
-			case <-ctx.Done():
-				span.SetStatus(ocstatus.FromError(ctx.Err()))
-				return
-			case sema <- struct{}{}:
-			}
-			defer func() { <-sema }()
-
-			if err := s.updatePodStatus(ctx, pod); err != nil {
-				log.G(ctx).WithFields(log.Fields{
-					"pod":       pod.GetName(),
-					"namespace": pod.GetNamespace(),
-					"status":    pod.Status.Phase,
-					"reason":    pod.Status.Reason,
-				}).Error(err)
-			}
-
-		}(pod)
+		if !shouldSkipPodStatusUpdate(pod) {
+			s.enqueuePodStatusUpdate(ctx, q, pod)
+		}
 	}
+}
 
-	wg.Wait()
+func shouldSkipPodStatusUpdate(pod *corev1.Pod) bool {
+	return pod.Status.Phase == corev1.PodSucceeded ||
+		pod.Status.Phase == corev1.PodFailed ||
+		pod.Status.Reason == podStatusReasonProviderFailed
 }
 
 func (s *Server) updatePodStatus(ctx context.Context, pod *corev1.Pod) error {
+	if shouldSkipPodStatusUpdate(pod) {
+		return nil
+	}
+
 	ctx, span := trace.StartSpan(ctx, "updatePodStatus")
 	defer span.End()
 	ctx = addPodAttributes(ctx, span, pod)
-
-	if pod.Status.Phase == corev1.PodSucceeded ||
-		pod.Status.Phase == corev1.PodFailed ||
-		pod.Status.Reason == podStatusReasonProviderFailed {
-		return nil
-	}
 
 	status, err := s.provider.GetPodStatus(ctx, pod.Namespace, pod.Name)
 	if err != nil {
@@ -229,4 +216,34 @@ func (s *Server) updatePodStatus(ctx context.Context, pod *corev1.Pod) error {
 	}).Debug("Updated pod status in kubernetes")
 
 	return nil
+}
+
+func (s *Server) enqueuePodStatusUpdate(ctx context.Context, q workqueue.RateLimitingInterface, pod *corev1.Pod) {
+	if key, err := cache.MetaNamespaceKeyFunc(pod); err != nil {
+		log.G(ctx).WithError(err).WithField("method", "enqueuePodStatusUpdate").Error("Error getting pod meta namespace key")
+	} else {
+		q.AddRateLimited(key)
+	}
+}
+
+func (s *Server) podStatusHandler(ctx context.Context, key string) (retErr error) {
+	ctx, span := trace.StartSpan(ctx, "podStatusHandler")
+	defer span.End()
+	defer func() {
+		span.SetStatus(ocstatus.FromError(retErr))
+	}()
+
+	ctx = span.WithField(ctx, "key", key)
+
+	namespace, name, err := cache.SplitMetaNamespaceKey(key)
+	if err != nil {
+		return pkgerrors.Wrap(err, "error spliting cache key")
+	}
+
+	pod, err := s.podInformer.Lister().Pods(namespace).Get(name)
+	if err != nil {
+		return pkgerrors.Wrap(err, "error looking up pod")
+	}
+
+	return s.updatePodStatus(ctx, pod)
 }

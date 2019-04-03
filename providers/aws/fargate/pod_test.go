@@ -4,7 +4,8 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
+	"gotest.tools/assert"
+	is "gotest.tools/assert/cmp"
 )
 
 // TestTaskSizeTableInvariants verifies that the task size table is in ascending order by CPU.
@@ -13,7 +14,7 @@ func TestTaskSizeTableInvariants(t *testing.T) {
 	prevRow := taskSizeTable[0]
 
 	for _, row := range taskSizeTable {
-		assert.True(t, row.cpu >= prevRow.cpu, "Task size table must be in ascending order by CPU")
+		assert.Check(t, row.cpu >= prevRow.cpu, "Task size table must be in ascending order by CPU")
 		prevRow = row
 	}
 }
@@ -108,7 +109,7 @@ func TestPodResourceRequirements(t *testing.T) {
 				err := pod.mapTaskSize()
 				if tc.taskCPU != 0 {
 					// Test case is expected to succeed.
-					assert.NoErrorf(t, err,
+					assert.Check(t, err,
 						"mapTaskSize failed for (cpu:%v memory:%v)",
 						tc.podCPU, tc.podMemory)
 					if err != nil {
@@ -116,16 +117,15 @@ func TestPodResourceRequirements(t *testing.T) {
 					}
 				} else {
 					// Test case is expected to fail.
-					assert.Errorf(t, err,
-						"mapTaskSize expected to fail but succeeded for (cpu:%v memory:%v)",
+					assert.Check(t, is.ErrorContains(err, ""), "mapTaskSize expected to fail but succeeded for (cpu:%v memory:%v)",
 						tc.podCPU, tc.podMemory)
 					return
 				}
 
-				assert.True(t, pod.taskCPU >= tc.podCPU, "pod assigned less cpu than requested")
-				assert.True(t, pod.taskMemory >= tc.podMemory, "pod assigned less memory than requested")
+				assert.Check(t, pod.taskCPU >= tc.podCPU, "pod assigned less cpu than requested")
+				assert.Check(t, pod.taskMemory >= tc.podMemory, "pod assigned less memory than requested")
 
-				assert.Truef(t,
+				assert.Check(t,
 					pod.taskCPU == tc.taskCPU && pod.taskMemory == tc.taskMemory,
 					"requested (cpu:%v memory:%v) expected (cpu:%v memory:%v) observed (cpu:%v memory:%v)\n",
 					tc.podCPU, tc.podMemory, tc.taskCPU, tc.taskMemory, pod.taskCPU, pod.taskMemory)
