@@ -40,8 +40,8 @@ func (mock *AADMock) start() {
 		w.WriteHeader(http.StatusOK)
 		token := adal.Token{
 			AccessToken: "Test Token",
-			NotBefore:   strconv.FormatInt(time.Now().UnixNano(), 10),
-			ExpiresIn:   strconv.FormatInt(int64(time.Minute), 10),
+			NotBefore:   json.Number(strconv.FormatInt(time.Now().UnixNano(), 10)),
+			ExpiresIn:   json.Number(strconv.FormatInt(int64(time.Minute), 10)),
 		}
 
 		b := new(bytes.Buffer)

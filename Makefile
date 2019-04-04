@@ -54,7 +54,7 @@ release: build goreleaser
 deps: setup
 	@echo "Ensuring Dependencies..."
 	$Q go env
-	$Q dep ensure
+	$Q GO111MODULE=on go mod vendor
 
 docker:
 	@echo "Docker Build..."
@@ -138,7 +138,6 @@ setup: goimports gocovmerge goreleaser gox clean
 	mkdir -p cover
 	mkdir -p bin
 	mkdir -p test
-	go get -u github.com/golang/dep/cmd/dep
 
 VERSION          := $(shell git describe --tags --always --dirty="-dev")
 DATE             := $(shell date -u '+%Y-%m-%d-%H:%M UTC')
