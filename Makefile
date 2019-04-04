@@ -6,6 +6,7 @@ github_repo := virtual-kubelet/virtual-kubelet
 binary := virtual-kubelet
 build_tags := netgo osusergo $(VK_BUILD_TAGS)
 
+include Makefile.e2e
 
 # comment this line out for quieter things
 # V := 1 # When V is set, print commands and build progress.
@@ -119,50 +120,7 @@ format: $(GOPATH)/bin/goimports
 	$Q find . -iname \*.go | grep -v \
         -e "^$$" $(addprefix -e ,$(IGNORED_PACKAGES)) | xargs goimports -w
 
-.PHONY: skaffold-validate
-skaffold-validate:
-	@if [[ ! "minikube,docker-for-desktop" =~ .*"$(kubectl_context)".* ]]; then \
-		echo current-context is [$(kubectl_context)]. Must be one of [minikube,docker-for-desktop]; false; \
-	fi
 
-.PHONY: skaffold-build
-skaffold-build: tags_with_mock := $(VK_BUILD_TAGS) mock_provider
-skaffold-build:
-	@if [[ ! "$(MODE)" == "delete" ]]; then \
-		GOOS=linux GOARCH=amd64 $(MAKE) VK_BUILD_TAGS="$(tags_with_mock)" build; \
-	fi
-
-# skaffold deploys the virtual-kubelet to the Kubernetes cluster targeted by the current kubeconfig using skaffold.
-# The current context (as indicated by "kubectl config current-context") must be one of "minikube" or "docker-for-desktop".
-# MODE must be set to one of "dev" (default), "delete" or "run", and is used as the skaffold command to be run.
-.PHONY: skaffold
-skaffold: MODE ?= dev
-skaffold: PROFILE := local
-skaffold: skaffold-validate skaffold-build
-	@skaffold $(MODE) \
-		-f $(PWD)/hack/skaffold/virtual-kubelet/skaffold.yml \
-		-p $(PROFILE)
-
-# e2e runs the end-to-end test suite against the Kubernetes cluster targeted by the current kubeconfig.
-# It automatically deploys the virtual-kubelet with the mock provider by running "make skaffold MODE=run".
-# It is the caller's responsibility to cleanup the deployment after running this target (e.g. by running "make skaffold MODE=delete").
-.PHONY: e2e
-e2e: KUBECONFIG ?= $(HOME)/.kube/config
-e2e: NAMESPACE := default
-e2e: NODE_NAME := vkubelet-mock-0
-e2e: TAINT_KEY := virtual-kubelet.io/provider
-e2e: TAINT_VALUE := mock
-e2e: TAINT_EFFECT := NoSchedule
-e2e:
-	@$(MAKE) skaffold MODE=delete && kubectl delete --ignore-not-found node $(NODE_NAME)
-	@$(MAKE) skaffold MODE=run
-	@cd $(PWD)/test/e2e && go test -v -tags e2e ./... \
-		-kubeconfig=$(KUBECONFIG) \
-		-namespace=$(NAMESPACE) \
-		-node-name=$(NODE_NAME) \
-		-taint-key=$(TAINT_KEY) \
-		-taint-value=$(TAINT_VALUE) \
-		-taint-effect=$(TAINT_EFFECT)
 
 ##### =====> Internals <===== #####
 
