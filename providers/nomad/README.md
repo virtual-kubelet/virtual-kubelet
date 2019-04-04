@@ -1,6 +1,6 @@
 # HashiCorp Nomad Provider for Virtual Kubelet
 
-HashiCorp Nomad provider for Virtual Kubelet connects your Kubernetes cluster
+HashiCorp [Nomad](https://nomadproject.io) provider for Virtual Kubelet connects your Kubernetes cluster
 with Nomad cluster by exposing the Nomad cluster as a node in Kubernetes. By
 using the provider, pods that are scheduled on the virtual Nomad node
 registered on Kubernetes will run as jobs on Nomad clients as they
