@@ -43,5 +43,5 @@ e2e: e2e.clean
 		-taint-effect=$(TAINT_EFFECT)
 
 .PHONY: e2e.clean
-e2e.clean: #skaffold/delete
+e2e.clean: skaffold/delete
 	kubectl delete --ignore-not-found node $(NODE_NAME)
