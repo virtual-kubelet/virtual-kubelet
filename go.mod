@@ -18,7 +18,7 @@ require (
 	github.com/araddon/gou v0.0.0-20190110011759-c797efecbb61 // indirect
 	github.com/armon/go-radix v1.0.0 // indirect
 	github.com/asaskevich/govalidator v0.0.0-20180315120708-ccb8e960c48f // indirect
-	github.com/aws/aws-sdk-go v1.13.46
+	github.com/aws/aws-sdk-go v1.15.64
 	github.com/bitly/go-hostpool v0.0.0-20171023180738-a3a6125de932 // indirect
 	github.com/bmizerany/assert v0.0.0-20160611221934-b7ed37b82869 // indirect
 	github.com/boombuler/barcode v1.0.0 // indirect
@@ -51,7 +51,6 @@ require (
 	github.com/gammazero/workerpool v0.0.0-20181230203049-86a96b5d5d92 // indirect
 	github.com/garyburd/redigo v1.6.0 // indirect
 	github.com/go-errors/errors v1.0.1 // indirect
-	github.com/go-ini/ini v1.36.0 // indirect
 	github.com/go-ldap/ldap v3.0.2+incompatible // indirect
 	github.com/go-openapi/analysis v0.0.0-20161231055341-d5a75b7d751c // indirect
 	github.com/go-openapi/errors v0.0.0-20170104180542-fc3f73a22449 // indirect
@@ -109,11 +108,10 @@ require (
 	github.com/hashicorp/vault-plugin-secrets-gcpkms v0.0.0-20190320213325-9e326a9e802d // indirect
 	github.com/hashicorp/vault-plugin-secrets-kv v0.0.0-20190320211621-3ccc8684cf25 // indirect
 	github.com/hashicorp/yamux v0.0.0-20181012175058-2f1d1f20f75d // indirect
-	github.com/imdario/mergo v0.3.4 // indirect
+	github.com/imdario/mergo v0.3.6 // indirect
 	github.com/inconshreveable/mousetrap v1.0.0 // indirect
 	github.com/jeffchao/backoff v0.0.0-20140404060208-9d7fd7aa17f2 // indirect
 	github.com/jefferai/jsonx v1.0.0 // indirect
-	github.com/jmespath/go-jmespath v0.0.0-20160202185014-0b12d6b521d8 // indirect
 	github.com/jonboulle/clockwork v0.1.0 // indirect
 	github.com/json-iterator/go v1.1.5 // indirect
 	github.com/keybase/go-crypto v0.0.0-20190403132359-d65b6b94177f // indirect
@@ -170,7 +168,7 @@ require (
 	github.com/vishvananda/netlink v0.0.0-20161119221931-482f7a52b758 // indirect
 	github.com/vishvananda/netns v0.0.0-20171111001504-be1fbeda1936 // indirect
 	github.com/vmware/govmomi v0.17.1 // indirect
-	github.com/vmware/vic v0.0.0-20180820162446-c7d40ac878b0
+	github.com/vmware/vic v1.5.0-dev.0.20180820162446-c7d40ac878b0
 	github.com/vmware/vmw-guestinfo v0.0.0-20170707015358-25eff159a728 // indirect
 	github.com/xiang90/probing v0.0.0-20190116061207-43a291ad63a2 // indirect
 	go.etcd.io/bbolt v1.3.2 // indirect
@@ -185,7 +183,6 @@ require (
 	gopkg.in/asn1-ber.v1 v1.0.0-20181015200546-f715ec2f112d // indirect
 	gopkg.in/gemnasium/logrus-airbrake-hook.v2 v2.1.2 // indirect
 	gopkg.in/gorethink/gorethink.v4 v4.1.0 // indirect
-	gopkg.in/ini.v1 v1.42.0 // indirect
 	gopkg.in/mgo.v2 v2.0.0-20180705113604-9856a29383ce // indirect
 	gopkg.in/ory-am/dockertest.v2 v2.2.3 // indirect
 	gopkg.in/yaml.v2 v2.2.2

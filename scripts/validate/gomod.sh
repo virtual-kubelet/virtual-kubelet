@@ -1,17 +1,22 @@
 #!/usr/bin/env bash
+set -e
 
 exit_code=0
 
-echo "==> Running go mod verify check <=="
+echo "==> Running go mod tidy to add missing and remove unused modules <=="
 
-GO111MODULE=on go mod verify || exit_code=1
-
+GO111MODULE=on go mod tidy || exit_code=1
 if [ $exit_code -ne 0 ]; then
-  echo '`go mod verify` was not run. Make sure dependency changes are committed to the repository.'
-  echo 'You may also need to check that all deps are pinned to a commit or tag instead of a branch or HEAD.'
-  echo 'Check go.mod and go.sum'
+  echo 'Checking go.mod and go.sum files'
 else
-  echo "go mod verify passed."
+  echo "go mod tidy passed."
 fi
 
-exit $exit_code
+git diff --exit-code go.mod go.sum || exit_code=$?
+
+if [ ${exit_code} -eq 0 ]; then
+	exit 0
+fi
+
+echo "please run \`go mod tidy\` and check in the changes"
+exit ${exit_code}

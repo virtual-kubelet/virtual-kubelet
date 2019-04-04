@@ -3,6 +3,8 @@ jobs:
   validate:
     docker:
       - image: circleci/golang:1.12
+        environment:
+          GO111MODULE: "on"
     working_directory: /go/src/github.com/virtual-kubelet/virtual-kubelet
     steps:
       - checkout
@@ -11,17 +13,19 @@ jobs:
           command: V=1 CI=1 make vet
       - run:
           name: Install linters
-          command: curl -sfL https://install.goreleaser.com/github.com/golangci/golangci-lint.sh | bash -s v1.10.2 && mv ./bin/* /go/bin/
+          command: curl -sfL https://install.goreleaser.com/github.com/golangci/golangci-lint.sh | bash -s v1.15.0 && mv ./bin/* /go/bin/
       - run:
           name: Lint
           command: golangci-lint run --new-from-rev "HEAD~$(git rev-list master.. --count)" ./...
       - run:
           name: Dependencies
-          command: scripts/validate/dep.sh
+          command: scripts/validate/gomod.sh
 
   test:
     docker:
       - image: circleci/golang:1.12
+        environment:
+          GO111MODULE: "on"
     working_directory: /go/src/github.com/virtual-kubelet/virtual-kubelet
     steps:
       - checkout
@@ -58,8 +62,22 @@ jobs:
       MINIKUBE_WANTUPDATENOTIFICATION: false
       MINIKUBE_WANTREPORTERRORPROMPT: false
       SKAFFOLD_VERSION: v0.18.0
+      GO111MODULE: "on"
+      GOVERSION: 1.11.5
+      OS: linux
+      ARCH: amd64
     steps:
       - checkout
+      - run:
+          name: Install go
+          command: |
+            go version
+            go env GOROOT
+            mkdir tmp
+            cd tmp
+            sudo rm -rf /usr/local/go
+            wget https://storage.googleapis.com/golang/go$GOVERSION.$OS-$ARCH.tar.gz
+            sudo tar -C /usr/local -xzf go$GOVERSION.$OS-$ARCH.tar.gz
       - run:
           name: Install kubectl
           command: |
