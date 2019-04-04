@@ -7,11 +7,10 @@ import (
 	"testing"
 	"time"
 
-	"k8s.io/api/core/v1"
+	"github.com/virtual-kubelet/virtual-kubelet/vkubelet"
+	v1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/kubernetes/pkg/kubelet/apis/stats/v1alpha1"
-
-	"github.com/virtual-kubelet/virtual-kubelet/vkubelet"
 )
 
 const (

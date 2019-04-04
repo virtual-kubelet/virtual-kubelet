@@ -11,6 +11,7 @@ import (
 	"gotest.tools/assert/cmp"
 	coord "k8s.io/api/coordination/v1beta1"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	watch "k8s.io/apimachinery/pkg/watch"
 	testclient "k8s.io/client-go/kubernetes/fake"
@@ -184,6 +185,17 @@ func TestUpdateNodeStatus(t *testing.T) {
 	updated, err = UpdateNodeStatus(ctx, nodes, n.DeepCopy())
 	assert.NilError(t, err)
 	assert.Check(t, cmp.DeepEqual(n.Status, updated.Status))
+
+	err = nodes.Delete(n.Name, nil)
+	assert.NilError(t, err)
+
+	_, err = nodes.Get(n.Name, metav1.GetOptions{})
+	assert.Equal(t, errors.IsNotFound(err), true, err)
+
+	updated, err = UpdateNodeStatus(ctx, nodes, updated.DeepCopy())
+	assert.NilError(t, err)
+	_, err = nodes.Get(n.Name, metav1.GetOptions{})
+	assert.NilError(t, err)
 }
 
 func TestUpdateNodeLease(t *testing.T) {
