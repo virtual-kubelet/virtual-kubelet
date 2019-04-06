@@ -24,6 +24,7 @@ The best description is "Kubernetes API on top, programmable back."
 	+ [Azure Batch GPU Provider](./providers/azurebatch/README.md)
     + [AWS Fargate Provider](#aws-fargate-provider)
 	+ [HashiCorp Nomad](#hashicorp-nomad-provider)
+    + [OpenStack Zun](#openstack-zun-provider)
     + [Adding a New Provider via the Provider Interface](#adding-a-new-provider-via-the-provider-interface)
 * [Testing](#testing)
     + [Unit tests](#unit-tests)
@@ -189,6 +190,21 @@ would on a Kubernetes node.
 ```
 
 For detailed instructions, follow the guide [here](providers/nomad/README.md).
+
+### OpenStack Zun Provider
+
+OpenStack [Zun](https://docs.openstack.org/zun/latest/) provider for Virtual Kubelet connects
+your Kubernetes cluster with OpenStack in order to run Kubernetes pods on OpenStack Cloud.
+Your pods on OpenStack have access to OpenStack tenant networks because they have Neutron ports
+in your subnets. Each pod will have private IP addresses to connect to other OpenStack resources
+(i.e. VMs) within your tenant, optionally have floating IP addresses to connect to the internet,
+and bind-mount Cinder volumes into a path inside a pod's container.
+
+```bash
+./bin/virtual-kubelet --provider="openstack"
+```
+
+For detailed instructions, follow the guide [here](providers/openstack/README.md).
 
 ### Adding a New Provider via the Provider Interface
 
