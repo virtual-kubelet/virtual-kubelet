@@ -277,7 +277,7 @@ func (p *VicProvider) ExecInContainer(name string, uid types.UID, container stri
 // GetPodStatus retrieves the status of a pod by name from the provider.
 // This function needs to return a status or the reconcile loop will stop running.
 func (v *VicProvider) GetPodStatus(ctx context.Context, namespace, name string) (*v1.PodStatus, error) {
-	op := trace.NewOperation(context.Background(), "GetPodStatus - pod[%s], namespace", name, namespace)
+	op := trace.NewOperation(context.Background(), "GetPodStatus - pod[%s], namespace [%s]", name, namespace)
 	defer trace.End(trace.Begin("GetPodStatus", op))
 
 	now := metav1.NewTime(time.Now())
