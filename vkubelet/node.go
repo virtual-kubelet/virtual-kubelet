@@ -363,7 +363,9 @@ func UpdateNodeStatus(ctx context.Context, nodes v1.NodeInterface, n *corev1.Nod
 		}
 
 		log.G(ctx).Debug("node not found")
-		node, err = nodes.Create(n.DeepCopy())
+		newNode := n.DeepCopy()
+		newNode.ResourceVersion = ""
+		node, err = nodes.Create(newNode)
 		if err != nil {
 			return nil, err
 		}

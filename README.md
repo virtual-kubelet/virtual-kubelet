@@ -178,7 +178,7 @@ Easy instructions and a sample configuration file is available in the [AWS Farga
 
 ### HashiCorp Nomad Provider
 
-HashiCorp Nomad provider for Virtual Kubelet connects your Kubernetes cluster
+HashiCorp [Nomad](https://nomadproject.io) provider for Virtual Kubelet connects your Kubernetes cluster
 with Nomad cluster by exposing the Nomad cluster as a node in Kubernetes. By
 using the provider, pods that are scheduled on the virtual Nomad node
 registered on Kubernetes will run as jobs on Nomad clients as they
