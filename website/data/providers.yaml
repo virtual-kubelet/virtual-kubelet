@@ -12,5 +12,7 @@
   tag: huawei
 - name: HashiCorp Nomad
   tag: nomad
+- name: OpenStack Zun
+  tag: openstack
 - name: vSphere Integrated Containers (**VIC**)
   tag: vic

@@ -67,6 +67,10 @@ Ben Corrie (bcorrie@vmware.com)
 
 Anubhav Mishra (mishra@hashicorp.com)
 
+**OpenStack**
+
+OpenStack Zun team (https://governance.openstack.org/tc/reference/projects/zun.html)
+
 ## Support Channels
 
 This is an open source project and as such no formal support is available.
