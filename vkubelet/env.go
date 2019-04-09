@@ -8,10 +8,14 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/sets"
 	apivalidation "k8s.io/apimachinery/pkg/util/validation"
 	"k8s.io/client-go/tools/record"
 	podshelper "k8s.io/kubernetes/pkg/apis/core/pods"
+	v1helper "k8s.io/kubernetes/pkg/apis/core/v1/helper"
 	fieldpath "k8s.io/kubernetes/pkg/fieldpath"
+	"k8s.io/kubernetes/pkg/kubelet/envvars"
 
 	"github.com/virtual-kubelet/virtual-kubelet/log"
 	"github.com/virtual-kubelet/virtual-kubelet/manager"
@@ -50,6 +54,8 @@ const (
 	ReasonInvalidEnvironmentVariableNames = "InvalidEnvironmentVariableNames"
 )
 
+var masterServices = sets.NewString("kubernetes")
+
 // populateEnvironmentVariables populates the environment of each container (and init container) in the specified pod.
 // TODO Make this the single exported function of a "pkg/environment" package in the future.
 func populateEnvironmentVariables(ctx context.Context, pod *corev1.Pod, rm *manager.ResourceManager, recorder record.EventRecorder) error {
@@ -87,6 +93,53 @@ func populateContainerEnvironment(ctx context.Context, pod *corev1.Pod, containe
 	container.EnvFrom = []corev1.EnvFromSource{}
 	container.Env = mergeEnvironments(envFrom, env)
 	return nil
+}
+
+// getServiceEnvVarMap makes a map[string]string of env vars for services a
+// pod in namespace ns should see.
+// Based on getServiceEnvVarMap in kubelet_pods.go.
+func getServiceEnvVarMap(rm *manager.ResourceManager, ns string, enableServiceLinks bool) (map[string]string, error) {
+	var (
+		serviceMap = make(map[string]*corev1.Service)
+		m          = make(map[string]string)
+	)
+
+	services, err := rm.ListServices()
+	if err != nil {
+		return nil, err
+	}
+
+	// project the services in namespace ns onto the master services
+	for i := range services {
+		service := services[i]
+		// ignore services where ClusterIP is "None" or empty
+		if !v1helper.IsServiceIPSet(service) {
+			continue
+		}
+		serviceName := service.Name
+
+		// We always want to add environment variabled for master services
+		// from the master service namespace, even if enableServiceLinks is false.
+		// We also add environment variables for other services in the same
+		// namespace, if enableServiceLinks is true.
+		if service.Namespace == metav1.NamespaceDefault && masterServices.Has(serviceName) {
+			if _, exists := serviceMap[serviceName]; !exists {
+				serviceMap[serviceName] = service
+			}
+		} else if service.Namespace == ns && enableServiceLinks {
+			serviceMap[serviceName] = service
+		}
+	}
+
+	mappedServices := []*corev1.Service{}
+	for key := range serviceMap {
+		mappedServices = append(mappedServices, serviceMap[key])
+	}
+
+	for _, e := range envvars.FromServices(mappedServices) {
+		m[e.Name] = e.Value
+	}
+	return m, nil
 }
 
 // makeEnvironmentMapBasedOnEnvFrom returns a map representing the resolved environment of the specified container after being populated from the entries in the ".envFrom" field.
@@ -347,6 +400,29 @@ loop:
 			continue loop
 		}
 	}
+
+	// enableServiceLinks defaults to true.
+	enableServiceLinks := true
+	if pod.Spec.EnableServiceLinks != nil {
+		enableServiceLinks = *pod.Spec.EnableServiceLinks
+	}
+
+	// Note that there is a race between Kubelet seeing the pod and kubelet seeing the service.
+	// To avoid this users can: (1) wait between starting a service and starting; or (2) detect
+	// missing service env var and exit and be restarted; or (3) use DNS instead of env vars
+	// and keep trying to resolve the DNS name of the service (recommended).
+	svcEnv, err := getServiceEnvVarMap(rm, pod.Namespace, enableServiceLinks)
+	if err != nil {
+		return nil, err
+	}
+
+	// Append service env vars.
+	for k, v := range svcEnv {
+		if _, present := res[k]; !present {
+			res[k] = v
+		}
+	}
+
 	// Return the populated environment.
 	return res, nil
 }

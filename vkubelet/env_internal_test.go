@@ -192,6 +192,7 @@ func TestPopulatePodWithInitContainersUsingEnv(t *testing.T) {
 					},
 				},
 			},
+			EnableServiceLinks: &bFalse,
 		},
 	}
 
@@ -466,6 +467,7 @@ func TestPopulatePodWithInitContainersUsingEnvFrom(t *testing.T) {
 					},
 				},
 			},
+			EnableServiceLinks: &bFalse,
 		},
 	}
 
@@ -544,6 +546,7 @@ func TestEnvFromTwoConfigMapsAndOneSecret(t *testing.T) {
 					},
 				},
 			},
+			EnableServiceLinks: &bFalse,
 		},
 	}
 
@@ -605,6 +608,7 @@ func TestEnvFromConfigMapAndSecretWithInvalidKeys(t *testing.T) {
 					},
 				},
 			},
+			EnableServiceLinks: &bFalse,
 		},
 	}
 
@@ -675,6 +679,7 @@ func TestEnvOverridesEnvFrom(t *testing.T) {
 					},
 				},
 			},
+			EnableServiceLinks: &bFalse,
 		},
 	}
 
@@ -751,6 +756,7 @@ func TestEnvFromInexistentConfigMaps(t *testing.T) {
 					},
 				},
 			},
+			EnableServiceLinks: &bFalse,
 		},
 	}
 
@@ -807,6 +813,7 @@ func TestEnvFromInexistentSecrets(t *testing.T) {
 					},
 				},
 			},
+			EnableServiceLinks: &bFalse,
 		},
 	}
 
@@ -859,6 +866,7 @@ func TestEnvReferencingInexistentConfigMapKey(t *testing.T) {
 					},
 				},
 			},
+			EnableServiceLinks: &bFalse,
 		},
 	}
 
@@ -908,6 +916,7 @@ func TestEnvReferencingInexistentSecretKey(t *testing.T) {
 					},
 				},
 			},
+			EnableServiceLinks: &bFalse,
 		},
 	}
 
