@@ -123,8 +123,8 @@ func TestGetConfigMap(t *testing.T) {
 func TestListServices(t *testing.T) {
 	var (
 		lsServices = []*v1.Service{
-			testutil.FakeService("namespace-0", "service-0"),
-			testutil.FakeService("namespace-1", "service-1"),
+			testutil.FakeService("namespace-0", "service-0", "1.2.3.1", "TCP", 8081),
+			testutil.FakeService("namespace-1", "service-1", "1.2.3.2", "TCP", 8082),
 		}
 	)
 

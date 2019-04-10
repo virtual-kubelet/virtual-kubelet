@@ -192,7 +192,6 @@ func TestPopulatePodWithInitContainersUsingEnv(t *testing.T) {
 					},
 				},
 			},
-			EnableServiceLinks: &bFalse,
 		},
 	}
 
@@ -467,7 +466,6 @@ func TestPopulatePodWithInitContainersUsingEnvFrom(t *testing.T) {
 					},
 				},
 			},
-			EnableServiceLinks: &bFalse,
 		},
 	}
 
@@ -546,7 +544,6 @@ func TestEnvFromTwoConfigMapsAndOneSecret(t *testing.T) {
 					},
 				},
 			},
-			EnableServiceLinks: &bFalse,
 		},
 	}
 
@@ -608,7 +605,6 @@ func TestEnvFromConfigMapAndSecretWithInvalidKeys(t *testing.T) {
 					},
 				},
 			},
-			EnableServiceLinks: &bFalse,
 		},
 	}
 
@@ -679,7 +675,6 @@ func TestEnvOverridesEnvFrom(t *testing.T) {
 					},
 				},
 			},
-			EnableServiceLinks: &bFalse,
 		},
 	}
 
@@ -756,7 +751,6 @@ func TestEnvFromInexistentConfigMaps(t *testing.T) {
 					},
 				},
 			},
-			EnableServiceLinks: &bFalse,
 		},
 	}
 
@@ -813,7 +807,6 @@ func TestEnvFromInexistentSecrets(t *testing.T) {
 					},
 				},
 			},
-			EnableServiceLinks: &bFalse,
 		},
 	}
 
@@ -866,7 +859,6 @@ func TestEnvReferencingInexistentConfigMapKey(t *testing.T) {
 					},
 				},
 			},
-			EnableServiceLinks: &bFalse,
 		},
 	}
 
@@ -916,7 +908,6 @@ func TestEnvReferencingInexistentSecretKey(t *testing.T) {
 					},
 				},
 			},
-			EnableServiceLinks: &bFalse,
 		},
 	}
 
@@ -929,4 +920,84 @@ func TestEnvReferencingInexistentSecretKey(t *testing.T) {
 	event1 := <-er.Events
 	assert.Check(t, is.Contains(event1, ReasonMandatorySecretNotFound))
 	assert.Check(t, is.Contains(event1, missingSecretName))
+}
+
+// TestServiceEnvVar tries to populate the environment of a container using services with ServiceLinks enabled and disabled.
+func TestServiceEnvVar(t *testing.T) {
+	namespace2 := "namespace-02"
+
+	service1 := testutil.FakeService(metav1.NamespaceDefault, "kubernetes", "1.2.3.1", "TCP", 8081)
+	service2 := testutil.FakeService(namespace, "test", "1.2.3.3", "TCP", 8083)
+	// unused svc to show it isn't populated within a different namespace.
+	service3 := testutil.FakeService(namespace2, "unused", "1.2.3.4", "TCP", 8084)
+
+	rm := testutil.FakeResourceManager(service1, service2, service3)
+	er := testutil.FakeEventRecorder(defaultEventRecorderBufferSize)
+
+	pod := &corev1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: namespace,
+			Name:      "test-pod-name",
+		},
+		Spec: corev1.PodSpec{
+			Containers: []corev1.Container{
+				{
+					Env: []corev1.EnvVar{
+						{Name: envVarName1, Value: envVarValue1},
+					},
+				},
+			},
+		},
+	}
+
+	testCases := []struct {
+		name               string          // the name of the test case
+		enableServiceLinks *bool           // enabling service links
+		expectedEnvs       []corev1.EnvVar // a set of expected environment vars
+	}{
+		{
+			name:               "ServiceLinks disabled",
+			enableServiceLinks: &bFalse,
+			expectedEnvs: []corev1.EnvVar{
+				{Name: envVarName1, Value: envVarValue1},
+				{Name: "KUBERNETES_SERVICE_PORT", Value: "8081"},
+				{Name: "KUBERNETES_SERVICE_HOST", Value: "1.2.3.1"},
+				{Name: "KUBERNETES_PORT", Value: "tcp://1.2.3.1:8081"},
+				{Name: "KUBERNETES_PORT_8081_TCP", Value: "tcp://1.2.3.1:8081"},
+				{Name: "KUBERNETES_PORT_8081_TCP_PROTO", Value: "tcp"},
+				{Name: "KUBERNETES_PORT_8081_TCP_PORT", Value: "8081"},
+				{Name: "KUBERNETES_PORT_8081_TCP_ADDR", Value: "1.2.3.1"},
+			},
+		},
+		{
+			name:               "ServiceLinks enabled",
+			enableServiceLinks: &bTrue,
+			expectedEnvs: []corev1.EnvVar{
+				{Name: envVarName1, Value: envVarValue1},
+				{Name: "TEST_SERVICE_HOST", Value: "1.2.3.3"},
+				{Name: "TEST_SERVICE_PORT", Value: "8083"},
+				{Name: "TEST_PORT", Value: "tcp://1.2.3.3:8083"},
+				{Name: "TEST_PORT_8083_TCP", Value: "tcp://1.2.3.3:8083"},
+				{Name: "TEST_PORT_8083_TCP_PROTO", Value: "tcp"},
+				{Name: "TEST_PORT_8083_TCP_PORT", Value: "8083"},
+				{Name: "TEST_PORT_8083_TCP_ADDR", Value: "1.2.3.3"},
+				{Name: "KUBERNETES_SERVICE_PORT", Value: "8081"},
+				{Name: "KUBERNETES_SERVICE_HOST", Value: "1.2.3.1"},
+				{Name: "KUBERNETES_PORT", Value: "tcp://1.2.3.1:8081"},
+				{Name: "KUBERNETES_PORT_8081_TCP", Value: "tcp://1.2.3.1:8081"},
+				{Name: "KUBERNETES_PORT_8081_TCP_PROTO", Value: "tcp"},
+				{Name: "KUBERNETES_PORT_8081_TCP_PORT", Value: "8081"},
+				{Name: "KUBERNETES_PORT_8081_TCP_ADDR", Value: "1.2.3.1"},
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		pod.Spec.EnableServiceLinks = tc.enableServiceLinks
+
+		err := populateEnvironmentVariables(context.Background(), pod, rm, er)
+		assert.NilError(t, err, "[%s]", tc.name)
+		assert.Check(t, is.DeepEqual(pod.Spec.Containers[0].Env, tc.expectedEnvs, sortOpt))
+	}
+
 }
