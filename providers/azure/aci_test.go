@@ -205,32 +205,32 @@ func TestCreatePodWithGPU(t *testing.T) {
 	aadServerMocker := NewAADMock()
 	aciServerMocker := NewACIMock()
 
- 	podName := "pod-" + uuid.New().String()
+	podName := "pod-" + uuid.New().String()
 	podNamespace := "ns-" + uuid.New().String()
 	gpuSKU := aci.GPUSKU("sku-" + uuid.New().String())
 
- 	aciServerMocker.OnGetRPManifest = func() (int, interface{}) {
+	aciServerMocker.OnGetRPManifest = func() (int, interface{}) {
 		manifest := &aci.ResourceProviderManifest{
 			Metadata: &aci.ResourceProviderMetadata{
 				GPURegionalSKUs: []*aci.GPURegionalSKU{
 					&aci.GPURegionalSKU{
 						Location: fakeRegion,
-						SKUs: []aci.GPUSKU{gpuSKU, aci.K80, aci.P100},
+						SKUs:     []aci.GPUSKU{gpuSKU, aci.K80, aci.P100},
 					},
 				},
 			},
 		}
 
- 		return http.StatusOK, manifest
+		return http.StatusOK, manifest
 	}
 
- 	provider, err := createTestProvider(aadServerMocker, aciServerMocker)
+	provider, err := createTestProvider(aadServerMocker, aciServerMocker)
 	if err != nil {
 		t.Fatalf("failed to create the test provider. %s", err.Error())
 		return
 	}
 
- 	aciServerMocker.OnCreate = func(subscription, resourceGroup, containerGroup string, cg *aci.ContainerGroup) (int, interface{}) {
+	aciServerMocker.OnCreate = func(subscription, resourceGroup, containerGroup string, cg *aci.ContainerGroup) (int, interface{}) {
 		assert.Check(t, is.Equal(fakeSubscription, subscription), "Subscription doesn't match")
 		assert.Check(t, is.Equal(fakeResourceGroup, resourceGroup), "Resource group doesn't match")
 		assert.Check(t, is.Equal(podNamespace+"-"+podName, containerGroup), "Container group name is not expected")
@@ -247,10 +247,10 @@ func TestCreatePodWithGPU(t *testing.T) {
 		assert.Check(t, is.Equal(int32(10), cg.ContainerGroupProperties.Containers[0].Resources.Limits.GPU.Count), "Requests GPU Count is not expected")
 		assert.Check(t, is.Equal(gpuSKU, cg.ContainerGroupProperties.Containers[0].Resources.Limits.GPU.SKU), "Requests GPU SKU is not expected")
 
- 		return http.StatusOK, cg
+		return http.StatusOK, cg
 	}
 
- 	pod := &v1.Pod{
+	pod := &v1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      podName,
 			Namespace: podNamespace,
@@ -273,42 +273,42 @@ func TestCreatePodWithGPU(t *testing.T) {
 		},
 	}
 
- 	if err := provider.CreatePod(context.Background(), pod); err != nil {
+	if err := provider.CreatePod(context.Background(), pod); err != nil {
 		t.Fatal("Failed to create pod", err)
 	}
 }
 
- // Tests create pod with GPU SKU in annotation.
+// Tests create pod with GPU SKU in annotation.
 func TestCreatePodWithGPUSKU(t *testing.T) {
 	aadServerMocker := NewAADMock()
 	aciServerMocker := NewACIMock()
 
- 	podName := "pod-" + uuid.New().String()
+	podName := "pod-" + uuid.New().String()
 	podNamespace := "ns-" + uuid.New().String()
 	gpuSKU := aci.GPUSKU("sku-" + uuid.New().String())
 
- 	aciServerMocker.OnGetRPManifest = func() (int, interface{}) {
+	aciServerMocker.OnGetRPManifest = func() (int, interface{}) {
 		manifest := &aci.ResourceProviderManifest{
 			Metadata: &aci.ResourceProviderMetadata{
 				GPURegionalSKUs: []*aci.GPURegionalSKU{
 					&aci.GPURegionalSKU{
 						Location: fakeRegion,
-						SKUs: []aci.GPUSKU{aci.K80, aci.P100, gpuSKU},
+						SKUs:     []aci.GPUSKU{aci.K80, aci.P100, gpuSKU},
 					},
 				},
 			},
 		}
 
- 		return http.StatusOK, manifest
+		return http.StatusOK, manifest
 	}
 
- 	provider, err := createTestProvider(aadServerMocker, aciServerMocker)
+	provider, err := createTestProvider(aadServerMocker, aciServerMocker)
 	if err != nil {
 		t.Fatalf("failed to create the test provider. %s", err.Error())
 		return
 	}
 
- 	aciServerMocker.OnCreate = func(subscription, resourceGroup, containerGroup string, cg *aci.ContainerGroup) (int, interface{}) {
+	aciServerMocker.OnCreate = func(subscription, resourceGroup, containerGroup string, cg *aci.ContainerGroup) (int, interface{}) {
 		assert.Check(t, is.Equal(fakeSubscription, subscription), "Subscription doesn't match")
 		assert.Check(t, is.Equal(fakeResourceGroup, resourceGroup), "Resource group doesn't match")
 		assert.Check(t, cg != nil, "Container group is nil")
@@ -326,10 +326,10 @@ func TestCreatePodWithGPUSKU(t *testing.T) {
 		assert.Check(t, is.Equal(int32(1), cg.ContainerGroupProperties.Containers[0].Resources.Limits.GPU.Count), "Requests GPU Count is not expected")
 		assert.Check(t, is.Equal(gpuSKU, cg.ContainerGroupProperties.Containers[0].Resources.Limits.GPU.SKU), "Requests GPU SKU is not expected")
 
- 		return http.StatusOK, cg
+		return http.StatusOK, cg
 	}
 
- 	pod := &v1.Pod{
+	pod := &v1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      podName,
 			Namespace: podNamespace,
@@ -355,7 +355,7 @@ func TestCreatePodWithGPUSKU(t *testing.T) {
 		},
 	}
 
- 	if err := provider.CreatePod(context.Background(), pod); err != nil {
+	if err := provider.CreatePod(context.Background(), pod); err != nil {
 		t.Fatal("Failed to create pod", err)
 	}
 }
@@ -577,19 +577,19 @@ func TestGetPodWithoutResourceRequestsLimits(t *testing.T) {
 func TestGetPodWithGPU(t *testing.T) {
 	_, aciServerMocker, provider, err := prepareMocks()
 
- 	if err != nil {
+	if err != nil {
 		t.Fatal("Unable to prepare the mocks", err)
 	}
 
- 	podName := "pod-" + uuid.New().String()
+	podName := "pod-" + uuid.New().String()
 	podNamespace := "ns-" + uuid.New().String()
 
- 	aciServerMocker.OnGetContainerGroup = func(subscription, resourceGroup, containerGroup string) (int, interface{}) {
+	aciServerMocker.OnGetContainerGroup = func(subscription, resourceGroup, containerGroup string) (int, interface{}) {
 		assert.Equal(t, fakeSubscription, subscription, "Subscription doesn't match")
 		assert.Equal(t, fakeResourceGroup, resourceGroup, "Resource group doesn't match")
 		assert.Equal(t, podNamespace+"-"+podName, containerGroup, "Container group name is not expected")
 
- 		return http.StatusOK, aci.ContainerGroup{
+		return http.StatusOK, aci.ContainerGroup{
 			Tags: map[string]string{
 				"NodeName": fakeNodeName,
 			},
@@ -630,12 +630,12 @@ func TestGetPodWithGPU(t *testing.T) {
 		}
 	}
 
- 	pod, err := provider.GetPod(context.Background(), podNamespace, podName)
+	pod, err := provider.GetPod(context.Background(), podNamespace, podName)
 	if err != nil {
 		t.Fatal("Failed to get pod", err)
 	}
 
- 	assert.Check(t, pod != nil, "Response pod should not be nil")
+	assert.Check(t, pod != nil, "Response pod should not be nil")
 	assert.Check(t, pod.Spec.Containers != nil, "Containers should not be nil")
 	assert.Check(t, pod.Spec.Containers[0].Resources.Requests != nil, "Containers[0].Resources.Requests should not be nil")
 	assert.Check(
@@ -786,7 +786,7 @@ func prepareMocks() (*AADMock, *ACIMock, *ACIProvider, error) {
 				GPURegionalSKUs: []*aci.GPURegionalSKU{
 					&aci.GPURegionalSKU{
 						Location: fakeRegion,
-						SKUs: []aci.GPUSKU{aci.K80, aci.P100, aci.V100},
+						SKUs:     []aci.GPUSKU{aci.K80, aci.P100, aci.V100},
 					},
 				},
 			},
@@ -803,7 +803,7 @@ func prepareMocks() (*AADMock, *ACIMock, *ACIProvider, error) {
 	return aadServerMocker, aciServerMocker, provider, nil
 }
 
-func createTestProvider(aadServerMocker *AADMock, aciServerMocker*ACIMock) (*ACIProvider, error) {
+func createTestProvider(aadServerMocker *AADMock, aciServerMocker *ACIMock) (*ACIProvider, error) {
 	auth := azure.NewAuthentication(
 		azure.PublicCloud.Name,
 		fakeClientID,
@@ -861,14 +861,14 @@ func TestCreatePodWithNamedLivenessProbe(t *testing.T) {
 	podNamespace := "ns-" + uuid.New().String()
 
 	aciServerMocker.OnCreate = func(subscription, resourceGroup, containerGroup string, cg *aci.ContainerGroup) (int, interface{}) {
-		assert.NotNil(t, cg.Containers[0].LivenessProbe, "Liveness probe expected")
-		assert.Equal(t, cg.Containers[0].LivenessProbe.InitialDelaySeconds, 10, "Initial Probe Delay doesn't match")
-		assert.Equal(t, cg.Containers[0].LivenessProbe.Period, 5, "Probe Period doesn't match")
-		assert.Equal(t, cg.Containers[0].LivenessProbe.TimeoutSeconds, 60, "Probe Timeout doesn't match")
-		assert.Equal(t, cg.Containers[0].LivenessProbe.SuccessThreshold, 3, "Probe Success Threshold doesn't match")
-		assert.Equal(t, cg.Containers[0].LivenessProbe.FailureThreshold, 5, "Probe Failure Threshold doesn't match")
-		assert.NotNil(t, cg.Containers[0].LivenessProbe.HTTPGet, "Expected an HTTP Get Probe")
-		assert.Equal(t, cg.Containers[0].LivenessProbe.HTTPGet.Port, 8080, "Expected Port to be 8080")
+		assert.Check(t, cg.Containers[0].LivenessProbe != nil, "Liveness probe expected")
+		assert.Check(t, is.Equal(10, cg.Containers[0].LivenessProbe.InitialDelaySeconds), "Initial Probe Delay doesn't match")
+		assert.Check(t, is.Equal(5, cg.Containers[0].LivenessProbe.Period), "Probe Period doesn't match")
+		assert.Check(t, is.Equal(60, cg.Containers[0].LivenessProbe.TimeoutSeconds), "Probe Timeout doesn't match")
+		assert.Check(t, is.Equal(3, cg.Containers[0].LivenessProbe.SuccessThreshold), "Probe Success Threshold doesn't match")
+		assert.Check(t, is.Equal(5, cg.Containers[0].LivenessProbe.FailureThreshold), "Probe Failure Threshold doesn't match")
+		assert.Check(t, cg.Containers[0].LivenessProbe.HTTPGet != nil, "Expected an HTTP Get Probe")
+		assert.Check(t, is.Equal(8080, cg.Containers[0].LivenessProbe.HTTPGet.Port), "Expected Port to be 8080")
 		pod := &v1.Pod{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      podName,
@@ -880,7 +880,7 @@ func TestCreatePodWithNamedLivenessProbe(t *testing.T) {
 						Name: "nginx",
 						Ports: []v1.ContainerPort{
 							v1.ContainerPort{
-								Name: "http",
+								Name:          "http",
 								ContainerPort: 8080,
 							},
 						},
@@ -902,7 +902,7 @@ func TestCreatePodWithNamedLivenessProbe(t *testing.T) {
 			},
 		}
 
-		if err := provider.CreatePod(pod); err != nil {
+		if err := provider.CreatePod(context.Background(), pod); err != nil {
 			t.Fatal("Failed to create pod", err)
 		}
 
@@ -951,7 +951,7 @@ func TestCreatePodWithLivenessProbe(t *testing.T) {
 					LivenessProbe: &v1.Probe{
 						Handler: v1.Handler{
 							HTTPGet: &v1.HTTPGetAction{
-								Port: intstr.FromString("8080"),
+								Port: intstr.FromInt(8080),
 								Path: "/",
 							},
 						},
@@ -1012,7 +1012,7 @@ func TestCreatePodWithReadinessProbe(t *testing.T) {
 					ReadinessProbe: &v1.Probe{
 						Handler: v1.Handler{
 							HTTPGet: &v1.HTTPGetAction{
-								Port: intstr.FromString("8080"),
+								Port: intstr.FromInt(8080),
 								Path: "/",
 							},
 						},

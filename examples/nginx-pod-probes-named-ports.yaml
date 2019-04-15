@@ -21,7 +21,6 @@ spec:
       httpGet:
         path: /
         port: http
-  dnsPolicy: ClusterFirst
   nodeSelector:
     kubernetes.io/role: agent
     beta.kubernetes.io/os: linux
