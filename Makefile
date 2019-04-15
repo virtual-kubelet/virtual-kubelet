@@ -1,10 +1,10 @@
 SHELL := /bin/bash
 IMPORT_PATH := github.com/virtual-kubelet/virtual-kubelet
+
 DOCKER_IMAGE := virtual-kubelet
 exec := $(DOCKER_IMAGE)
 github_repo := virtual-kubelet/virtual-kubelet
 binary := virtual-kubelet
-build_tags := netgo osusergo $(VK_BUILD_TAGS)
 
 include Makefile.e2e
 
@@ -21,13 +21,14 @@ all: test build
 # safebuild builds inside a docker container with no clingons from your $GOPATH
 safebuild:
 	@echo "Building..."
-	$Q docker build --build-arg BUILD_TAGS=$(build_tags) -t $(DOCKER_IMAGE):$(VERSION) .
+	$Q docker build --build-arg BUILD_TAGS="$(VK_BUILD_TAGS)" -t $(DOCKER_IMAGE):$(VERSION) .
 
 .PHONY: build
-build: build_tags_actual := $(shell scripts/process_build_tags.sh $(build_tags))
+build: build_tags := netgo osusergo
+build: OUTPUT_DIR ?= bin
 build: authors
 	@echo "Building..."
-	$Q CGO_ENABLED=0 go build -a --tags '$(build_tags_actual)' -ldflags '-extldflags "-static"' -o bin/$(binary) $(if $V,-v) $(VERSION_FLAGS) $(IMPORT_PATH)
+	$Q CGO_ENABLED=0 go build -a --tags '$(shell scripts/process_build_tags.sh $(build_tags) $(VK_BUILD_TAGS))' -ldflags '-extldflags "-static"' -o $(OUTPUT_DIR)/$(binary) $(if $V,-v) $(VERSION_FLAGS) $(IMPORT_PATH)
 
 .PHONY: tags
 tags:
