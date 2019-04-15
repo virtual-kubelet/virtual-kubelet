@@ -1,0 +1,26 @@
+{{ .Scratch.Set "numFigures" 1 }}
+{{ $pageType := cond .IsHome "home" .Section }}
+<!DOCTYPE html>
+<html lang="{{ site.LanguageCode }}">
+  <head>
+    {{ partial "meta.html" . }}
+    <title>
+      {{ block "title" . }}{{ site.Title }}{{ end }}
+    </title>
+    {{ partial "css.html" . }}
+  </head>
+  <body class="page is-{{ $pageType }}-page">
+    {{ block "main" . }}
+    {{ partial "navbar.html" . }}
+
+    <main class="main">
+      {{ block "main" . }}
+      {{ end }}
+    </main>
+
+    {{ partial "footer.html" . }}
+    {{ end }}
+
+    {{ partial "javascript.html" . }}
+  </body>
+</html>

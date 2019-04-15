@@ -1,21 +1,23 @@
-package manager
+package manager_test
 
 import (
 	"testing"
 
 	"k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	corev1listers "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/tools/cache"
+
+	"github.com/virtual-kubelet/virtual-kubelet/manager"
+	testutil "github.com/virtual-kubelet/virtual-kubelet/test/util"
 )
 
 // TestGetPods verifies that the resource manager acts as a passthrough to a pod lister.
 func TestGetPods(t *testing.T) {
 	var (
 		lsPods = []*v1.Pod{
-			makePod("namespace-0", "name-0", "image-0"),
-			makePod("namespace-1", "name-1", "image-1"),
+			testutil.FakePodWithSingleContainer("namespace-0", "name-0", "image-0"),
+			testutil.FakePodWithSingleContainer("namespace-1", "name-1", "image-1"),
 		}
 	)
 
@@ -27,7 +29,7 @@ func TestGetPods(t *testing.T) {
 	podLister := corev1listers.NewPodLister(indexer)
 
 	// Create a new instance of the resource manager based on the pod lister.
-	rm, err := NewResourceManager(podLister, nil, nil)
+	rm, err := manager.NewResourceManager(podLister, nil, nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -43,8 +45,8 @@ func TestGetPods(t *testing.T) {
 func TestGetSecret(t *testing.T) {
 	var (
 		lsSecrets = []*v1.Secret{
-			makeSecret("namespace-0", "name-0", "key-0", "val-0"),
-			makeSecret("namespace-1", "name-1", "key-1", "val-1"),
+			testutil.FakeSecret("namespace-0", "name-0", map[string]string{"key-0": "val-0"}),
+			testutil.FakeSecret("namespace-1", "name-1", map[string]string{"key-1": "val-1"}),
 		}
 	)
 
@@ -56,7 +58,7 @@ func TestGetSecret(t *testing.T) {
 	secretLister := corev1listers.NewSecretLister(indexer)
 
 	// Create a new instance of the resource manager based on the secret lister.
-	rm, err := NewResourceManager(nil, secretLister, nil)
+	rm, err := manager.NewResourceManager(nil, secretLister, nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -82,8 +84,8 @@ func TestGetSecret(t *testing.T) {
 func TestGetConfigMap(t *testing.T) {
 	var (
 		lsConfigMaps = []*v1.ConfigMap{
-			makeConfigMap("namespace-0", "name-0", "key-0", "val-0"),
-			makeConfigMap("namespace-1", "name-1", "key-1", "val-1"),
+			testutil.FakeConfigMap("namespace-0", "name-0", map[string]string{"key-0": "val-0"}),
+			testutil.FakeConfigMap("namespace-1", "name-1", map[string]string{"key-1": "val-1"}),
 		}
 	)
 
@@ -95,7 +97,7 @@ func TestGetConfigMap(t *testing.T) {
 	configMapLister := corev1listers.NewConfigMapLister(indexer)
 
 	// Create a new instance of the resource manager based on the config map lister.
-	rm, err := NewResourceManager(nil, nil, configMapLister)
+	rm, err := manager.NewResourceManager(nil, nil, configMapLister, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -117,42 +119,34 @@ func TestGetConfigMap(t *testing.T) {
 	}
 }
 
-func makeConfigMap(namespace, name, key, value string) *v1.ConfigMap {
-	return &v1.ConfigMap{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: namespace,
-			Name:      name,
-		},
-		Data: map[string]string{
-			key: value,
-		},
-	}
-}
+// TestListServices verifies that the resource manager acts as a passthrough to a service lister.
+func TestListServices(t *testing.T) {
+	var (
+		lsServices = []*v1.Service{
+			testutil.FakeService("namespace-0", "service-0"),
+			testutil.FakeService("namespace-1", "service-1"),
+		}
+	)
 
-func makePod(namespace, name, image string) *v1.Pod {
-	return &v1.Pod{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: namespace,
-			Name:      name,
-		},
-		Spec: v1.PodSpec{
-			Containers: []v1.Container{
-				{
-					Image: image,
-				},
-			},
-		},
+	// Create a pod lister that will list the pods defined above.
+	indexer := cache.NewIndexer(cache.MetaNamespaceKeyFunc, cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc})
+	for _, service := range lsServices {
+		indexer.Add(service)
 	}
-}
+	serviceLister := corev1listers.NewServiceLister(indexer)
 
-func makeSecret(namespace, name, key, value string) *v1.Secret {
-	return &v1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: namespace,
-			Name:      name,
-		},
-		Data: map[string][]byte{
-			key: []byte(value),
-		},
+	// Create a new instance of the resource manager based on the pod lister.
+	rm, err := manager.NewResourceManager(nil, nil, nil, serviceLister)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Check that the resource manager returns two pods in the call to "GetPods".
+	services, err := rm.ListServices()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(lsServices) != len(services) {
+		t.Fatalf("expected %d services, found %d", len(lsServices), len(services))
 	}
 }

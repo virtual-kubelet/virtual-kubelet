@@ -19,22 +19,21 @@ import (
 	"sync"
 	"time"
 
-	"github.com/Sirupsen/logrus"
 	"github.com/gorilla/websocket"
+	client "github.com/virtual-kubelet/azure-aci/client"
+	"github.com/virtual-kubelet/azure-aci/client/aci"
+	"github.com/virtual-kubelet/azure-aci/client/network"
 	"github.com/virtual-kubelet/virtual-kubelet/log"
 	"github.com/virtual-kubelet/virtual-kubelet/manager"
-	client "github.com/virtual-kubelet/virtual-kubelet/providers/azure/client"
-	"github.com/virtual-kubelet/virtual-kubelet/providers/azure/client/aci"
-	"github.com/virtual-kubelet/virtual-kubelet/providers/azure/client/network"
-	"go.opencensus.io/trace"
-	"k8s.io/api/core/v1"
+	"github.com/virtual-kubelet/virtual-kubelet/trace"
+	v1 "k8s.io/api/core/v1"
 	k8serr "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	clientcmdv1 "k8s.io/client-go/tools/clientcmd/api/v1"
-  "k8s.io/client-go/tools/remotecommand"
+	"k8s.io/client-go/tools/remotecommand"
 	stats "k8s.io/kubernetes/pkg/kubelet/apis/stats/v1alpha1"
 )
 
@@ -55,6 +54,11 @@ const (
 	maxDNSSearchListChars = 256
 )
 
+const (
+	gpuResourceName   v1.ResourceName = "nvidia.com/gpu"
+	gpuTypeAnnotation                 = "virtual-kubelet.io/gpu-type"
+)
+
 // ACIProvider implements the virtual-kubelet provider interface and communicates with Azure's ACI APIs.
 type ACIProvider struct {
 	aciClient          *aci.Client
@@ -66,6 +70,8 @@ type ACIProvider struct {
 	cpu                string
 	memory             string
 	pods               string
+	gpu                string
+	gpuSKUs            []aci.GPUSKU
 	internalIP         string
 	daemonEndpointPort int32
 	diagnostics        *aci.ContainerGroupDiagnostics
@@ -96,17 +102,25 @@ type AuthConfig struct {
 
 // See https://azure.microsoft.com/en-us/status/ for valid regions.
 var validAciRegions = []string{
+	"australiaeast",
+	"canadacentral",
+	"centralindia",
 	"centralus",
+	"eastasia",
 	"eastus",
 	"eastus2",
+	"eastus2euap",
+	"japaneast",
+	"northcentralus",
+	"northeurope",
+	"southcentralus",
+	"southeastasia",
+	"southindia",
+	"uksouth",
+	"westcentralus",
 	"westus",
 	"westus2",
-	"northeurope",
 	"westeurope",
-	"southeastasia",
-	"australiaeast",
-	"eastus2euap",
-	"westcentralus",
 }
 
 // isValidACIRegion checks to make sure we're using a valid ACI region
@@ -254,21 +268,8 @@ func NewACIProvider(config string, rm *manager.ResourceManager, nodeName, operat
 		return nil, errors.New(unsupportedRegionMessage)
 	}
 
-	// Set sane defaults for Capacity in case config is not supplied
-	p.cpu = "800"
-	p.memory = "4Ti"
-	p.pods = "800"
-
-	if cpuQuota := os.Getenv("ACI_QUOTA_CPU"); cpuQuota != "" {
-		p.cpu = cpuQuota
-	}
-
-	if memoryQuota := os.Getenv("ACI_QUOTA_MEMORY"); memoryQuota != "" {
-		p.memory = memoryQuota
-	}
-
-	if podsQuota := os.Getenv("ACI_QUOTA_POD"); podsQuota != "" {
-		p.pods = podsQuota
+	if err := p.setupCapacity(context.TODO()); err != nil {
+		return nil, err
 	}
 
 	p.operatingSystem = operatingSystem
@@ -318,6 +319,54 @@ func NewACIProvider(config string, rm *manager.ResourceManager, nodeName, operat
 	return &p, err
 }
 
+func (p *ACIProvider) setupCapacity(ctx context.Context) error {
+	ctx, span := trace.StartSpan(ctx, "setupCapacity")
+	defer span.End()
+	logger := log.G(ctx).WithField("method", "setupCapacity")
+
+	// Set sane defaults for Capacity in case config is not supplied
+	p.cpu = "800"
+	p.memory = "4Ti"
+	p.pods = "800"
+
+	if cpuQuota := os.Getenv("ACI_QUOTA_CPU"); cpuQuota != "" {
+		p.cpu = cpuQuota
+	}
+
+	if memoryQuota := os.Getenv("ACI_QUOTA_MEMORY"); memoryQuota != "" {
+		p.memory = memoryQuota
+	}
+
+	if podsQuota := os.Getenv("ACI_QUOTA_POD"); podsQuota != "" {
+		p.pods = podsQuota
+	}
+
+	metadata, err := p.aciClient.GetResourceProviderMetadata(ctx)
+
+	if err != nil {
+		msg := "Unable to fetch the ACI metadata"
+		logger.WithError(err).Error(msg)
+		return err
+	}
+
+	if metadata == nil || metadata.GPURegionalSKUs == nil {
+		logger.Warn("ACI GPU capacity is not enabled. GPU capacity will be disabled")
+		return nil
+	}
+
+	for _, regionalSKU := range metadata.GPURegionalSKUs {
+		if strings.EqualFold(regionalSKU.Location, p.region) && len(regionalSKU.SKUs) != 0 {
+			p.gpu = "100"
+			if gpu := os.Getenv("ACI_QUOTA_GPU"); gpu != "" {
+				p.gpu = gpu
+			}
+			p.gpuSKUs = regionalSKU.SKUs
+		}
+	}
+
+	return nil
+}
+
 func (p *ACIProvider) setupNetworkProfile(auth *client.Authentication) error {
 	c, err := network.NewClient(auth, p.extraUserAgent)
 	if err != nil {
@@ -338,9 +387,6 @@ func (p *ACIProvider) setupNetworkProfile(auth *client.Authentication) error {
 		}
 		if p.subnetCIDR != *subnet.SubnetPropertiesFormat.AddressPrefix {
 			return fmt.Errorf("found subnet '%s' using different CIDR: '%s'. desired: '%s'", p.subnetName, *subnet.SubnetPropertiesFormat.AddressPrefix, p.subnetCIDR)
-		}
-		if subnet.SubnetPropertiesFormat.NetworkSecurityGroup != nil {
-			return fmt.Errorf("unable to delegate subnet '%s' to Azure Container Instance since it references the network security group '%s'.", p.subnetName, *subnet.SubnetPropertiesFormat.NetworkSecurityGroup.ID)
 		}
 		if subnet.SubnetPropertiesFormat.RouteTable != nil {
 			return fmt.Errorf("unable to delegate subnet '%s' to Azure Container Instance since it references the route table '%s'.", p.subnetName, *subnet.SubnetPropertiesFormat.RouteTable.ID)
@@ -476,11 +522,11 @@ func getKubeProxyExtension(secretPath, masterURI, clusterCIDR string) (*aci.Exte
 	return &extension, nil
 }
 
-func addAzureAttributes(span *trace.Span, p *ACIProvider) {
-	span.AddAttributes(
-		trace.StringAttribute("azure.resourceGroup", p.resourceGroup),
-		trace.StringAttribute("azure.region", p.region),
-	)
+func addAzureAttributes(ctx context.Context, span trace.Span, p *ACIProvider) context.Context {
+	return span.WithFields(ctx, log.Fields{
+		"azure.resourceGroup": p.resourceGroup,
+		"azure.region":        p.region,
+	})
 }
 
 // CreatePod accepts a Pod definition and creates
@@ -488,7 +534,7 @@ func addAzureAttributes(span *trace.Span, p *ACIProvider) {
 func (p *ACIProvider) CreatePod(ctx context.Context, pod *v1.Pod) error {
 	ctx, span := trace.StartSpan(ctx, "aci.CreatePod")
 	defer span.End()
-	addAzureAttributes(span, p)
+	ctx = addAzureAttributes(ctx, span, p)
 
 	var containerGroup aci.ContainerGroup
 	containerGroup.Location = p.region
@@ -690,7 +736,7 @@ func (p *ACIProvider) UpdatePod(ctx context.Context, pod *v1.Pod) error {
 func (p *ACIProvider) DeletePod(ctx context.Context, pod *v1.Pod) error {
 	ctx, span := trace.StartSpan(ctx, "aci.DeletePod")
 	defer span.End()
-	addAzureAttributes(span, p)
+	ctx = addAzureAttributes(ctx, span, p)
 
 	err := p.aciClient.DeleteContainerGroup(ctx, p.resourceGroup, fmt.Sprintf("%s-%s", pod.Namespace, pod.Name))
 	return wrapError(err)
@@ -701,9 +747,9 @@ func (p *ACIProvider) DeletePod(ctx context.Context, pod *v1.Pod) error {
 func (p *ACIProvider) GetPod(ctx context.Context, namespace, name string) (*v1.Pod, error) {
 	ctx, span := trace.StartSpan(ctx, "aci.GetPod")
 	defer span.End()
-	addAzureAttributes(span, p)
+	ctx = addAzureAttributes(ctx, span, p)
 
-	cg, err, status := p.aciClient.GetContainerGroup(ctx, p.resourceGroup, fmt.Sprintf("%s-%s", namespace, name))
+	cg, status, err := p.aciClient.GetContainerGroup(ctx, p.resourceGroup, fmt.Sprintf("%s-%s", namespace, name))
 	if err != nil {
 		if status != nil && *status == http.StatusNotFound {
 			return nil, nil
@@ -722,10 +768,10 @@ func (p *ACIProvider) GetPod(ctx context.Context, namespace, name string) (*v1.P
 func (p *ACIProvider) GetContainerLogs(ctx context.Context, namespace, podName, containerName string, tail int) (string, error) {
 	ctx, span := trace.StartSpan(ctx, "aci.GetContainerLogs")
 	defer span.End()
-	addAzureAttributes(span, p)
+	ctx = addAzureAttributes(ctx, span, p)
 
 	logContent := ""
-	cg, err, _ := p.aciClient.GetContainerGroup(ctx, p.resourceGroup, fmt.Sprintf("%s-%s", namespace, podName))
+	cg, _, err := p.aciClient.GetContainerGroup(ctx, p.resourceGroup, fmt.Sprintf("%s-%s", namespace, podName))
 	if err != nil {
 		return logContent, err
 	}
@@ -740,7 +786,6 @@ func (p *ACIProvider) GetContainerLogs(ctx context.Context, namespace, podName, 
 		cLogs, err := p.aciClient.GetContainerLogs(ctx, p.resourceGroup, cg.Name, containerName, tail)
 		if err != nil {
 			log.G(ctx).WithField("method", "GetContainerLogs").WithError(err).Debug("Error getting container logs, retrying")
-			span.Annotate(nil, "Error getting container logs, retrying")
 			time.Sleep(5000 * time.Millisecond)
 		} else {
 			logContent = cLogs.Content
@@ -766,7 +811,7 @@ func (p *ACIProvider) ExecInContainer(name string, uid types.UID, container stri
 		defer errstream.Close()
 	}
 
-	cg, err, _ := p.aciClient.GetContainerGroup(context.TODO(), p.resourceGroup, name)
+	cg, _, err := p.aciClient.GetContainerGroup(context.TODO(), p.resourceGroup, name)
 	if err != nil {
 		return err
 	}
@@ -781,15 +826,16 @@ func (p *ACIProvider) ExecInContainer(name string, uid types.UID, container stri
 		terminalSize = <-resize // Receive terminal resize event if resize stream is present
 	}
 
-	xcrsp, err := p.aciClient.LaunchExec(p.resourceGroup, cg.Name, container, cmd[0], terminalSize)
+	ts := aci.TerminalSizeRequest{Height: int(terminalSize.Height), Width: int(terminalSize.Width)}
+	xcrsp, err := p.aciClient.LaunchExec(p.resourceGroup, cg.Name, container, cmd[0], ts)
 	if err != nil {
 		return err
 	}
 
-	wsUri := xcrsp.WebSocketUri
+	wsURI := xcrsp.WebSocketURI
 	password := xcrsp.Password
 
-	c, _, _ := websocket.DefaultDialer.Dial(wsUri, nil)
+	c, _, _ := websocket.DefaultDialer.Dial(wsURI, nil)
 	c.WriteMessage(websocket.TextMessage, []byte(password)) // Websocket password needs to be sent before WS terminal is active
 
 	// Cleanup on exit
@@ -837,7 +883,7 @@ func (p *ACIProvider) ExecInContainer(name string, uid types.UID, container stri
 func (p *ACIProvider) GetPodStatus(ctx context.Context, namespace, name string) (*v1.PodStatus, error) {
 	ctx, span := trace.StartSpan(ctx, "aci.GetPodStatus")
 	defer span.End()
-	addAzureAttributes(span, p)
+	ctx = addAzureAttributes(ctx, span, p)
 
 	pod, err := p.GetPod(ctx, namespace, name)
 	if err != nil {
@@ -855,7 +901,7 @@ func (p *ACIProvider) GetPodStatus(ctx context.Context, namespace, name string) 
 func (p *ACIProvider) GetPods(ctx context.Context) ([]*v1.Pod, error) {
 	ctx, span := trace.StartSpan(ctx, "aci.GetPods")
 	defer span.End()
-	addAzureAttributes(span, p)
+	ctx = addAzureAttributes(ctx, span, p)
 
 	cgs, err := p.aciClient.ListContainerGroups(ctx, p.resourceGroup)
 	if err != nil {
@@ -871,7 +917,7 @@ func (p *ACIProvider) GetPods(ctx context.Context) ([]*v1.Pod, error) {
 
 		p, err := containerGroupToPod(&c)
 		if err != nil {
-			log.G(context.TODO()).WithFields(logrus.Fields{
+			log.G(ctx).WithFields(log.Fields{
 				"name": c.Name,
 				"id":   c.ID,
 			}).WithError(err).Error("error converting container group to pod")
@@ -886,11 +932,17 @@ func (p *ACIProvider) GetPods(ctx context.Context) ([]*v1.Pod, error) {
 
 // Capacity returns a resource list containing the capacity limits set for ACI.
 func (p *ACIProvider) Capacity(ctx context.Context) v1.ResourceList {
-	return v1.ResourceList{
-		"cpu":    resource.MustParse(p.cpu),
-		"memory": resource.MustParse(p.memory),
-		"pods":   resource.MustParse(p.pods),
+	resourceList := v1.ResourceList{
+		v1.ResourceCPU:    resource.MustParse(p.cpu),
+		v1.ResourceMemory: resource.MustParse(p.memory),
+		v1.ResourcePods:   resource.MustParse(p.pods),
 	}
+
+	if p.gpu != "" {
+		resourceList[gpuResourceName] = resource.MustParse(p.gpu)
+	}
+
+	return resourceList
 }
 
 // NodeConditions returns a list of conditions (Ready, OutOfDisk, etc), for updates to the node status
@@ -1143,7 +1195,7 @@ func (p *ACIProvider) getContainers(pod *v1.Pod) ([]aci.Container, error) {
 		}
 
 		c.Resources = aci.ResourceRequirements{
-			Requests: &aci.ResourceRequests{
+			Requests: &aci.ComputeResources{
 				CPU:        cpuRequest,
 				MemoryInGB: memoryRequest,
 			},
@@ -1160,9 +1212,28 @@ func (p *ACIProvider) getContainers(pod *v1.Pod) ([]aci.Container, error) {
 				memoryLimit = float64(container.Resources.Limits.Memory().Value()) / 1000000000.00
 			}
 
-			c.Resources.Limits = &aci.ResourceLimits{
+			c.Resources.Limits = &aci.ComputeResources{
 				CPU:        cpuLimit,
 				MemoryInGB: memoryLimit,
+			}
+
+			if gpu, ok := container.Resources.Limits[gpuResourceName]; ok {
+				sku, err := p.getGPUSKU(pod)
+				if err != nil {
+					return nil, err
+				}
+
+				if gpu.Value() == 0 {
+					return nil, errors.New("GPU must be a integer number")
+				}
+
+				gpuResource := &aci.GPUResource{
+					Count: int32(gpu.Value()),
+					SKU:   sku,
+				}
+
+				c.Resources.Requests.GPU = gpuResource
+				c.Resources.Limits.GPU = gpuResource
 			}
 		}
 
@@ -1187,7 +1258,26 @@ func (p *ACIProvider) getContainers(pod *v1.Pod) ([]aci.Container, error) {
 	return containers, nil
 }
 
+func (p *ACIProvider) getGPUSKU(pod *v1.Pod) (aci.GPUSKU, error) {
+	if len(p.gpuSKUs) == 0 {
+		return "", fmt.Errorf("The pod requires GPU resource, but ACI doesn't provide GPU enabled container group in region %s", p.region)
+	}
+
+	if desiredSKU, ok := pod.Annotations[gpuTypeAnnotation]; ok {
+		for _, supportedSKU := range p.gpuSKUs {
+			if strings.EqualFold(string(desiredSKU), string(supportedSKU)) {
+				return supportedSKU, nil
+			}
+		}
+
+		return "", fmt.Errorf("The pod requires GPU SKU %s, but ACI only supports SKUs %v in region %s", desiredSKU, p.region, p.gpuSKUs)
+	}
+
+	return p.gpuSKUs[0], nil
+}
+
 func getProbe(probe *v1.Probe, ports []v1.ContainerPort) (*aci.ContainerProbe, error) {
+
 	if probe.Handler.Exec != nil && probe.Handler.HTTPGet != nil {
 		return nil, fmt.Errorf("probe may not specify more than one of \"exec\" and \"httpGet\"")
 	}
@@ -1390,10 +1480,18 @@ func containerGroupToPod(cg *aci.ContainerGroup) (*v1.Pod, error) {
 			},
 		}
 
+		if c.Resources.Requests.GPU != nil {
+			container.Resources.Requests[gpuResourceName] = resource.MustParse(fmt.Sprintf("%d", c.Resources.Requests.GPU.Count))
+		}
+
 		if c.Resources.Limits != nil {
 			container.Resources.Limits = v1.ResourceList{
 				v1.ResourceCPU:    resource.MustParse(fmt.Sprintf("%g", c.Resources.Limits.CPU)),
 				v1.ResourceMemory: resource.MustParse(fmt.Sprintf("%gG", c.Resources.Limits.MemoryInGB)),
+			}
+
+			if c.Resources.Limits.GPU != nil {
+				container.Resources.Limits[gpuResourceName] = resource.MustParse(fmt.Sprintf("%d", c.Resources.Requests.GPU.Count))
 			}
 		}
 

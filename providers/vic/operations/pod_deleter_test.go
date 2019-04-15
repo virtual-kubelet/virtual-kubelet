@@ -3,9 +3,9 @@ package operations
 import (
 	"testing"
 
-	"github.com/stretchr/testify/assert"
-
 	"github.com/vmware/vic/lib/apiservers/portlayer/client"
+	"gotest.tools/assert"
+	is "gotest.tools/assert/cmp"
 )
 
 func init() {
@@ -20,20 +20,20 @@ func TestNewPodDeleter(t *testing.T) {
 
 	// Positive Cases
 	d, err := NewPodDeleter(client, ip, cache, persona, portlayer)
-	assert.NotNil(t, d, "Expected non-nil creating a pod Deleter but received nil")
+	assert.Check(t, d != nil, "Expected non-nil creating a pod Deleter but received nil")
 
 	// Negative Cases
 	d, err = NewPodDeleter(nil, ip, cache, persona, portlayer)
-	assert.Nil(t, d, "Expected nil")
-	assert.Equal(t, err, PodDeleterPortlayerClientError)
+	assert.Check(t, is.Nil(d), "Expected nil")
+	assert.Check(t, is.DeepEqual(err, PodDeleterPortlayerClientError))
 
 	d, err = NewPodDeleter(client, nil, cache, persona, portlayer)
-	assert.Nil(t, d, "Expected nil")
-	assert.Equal(t, err, PodDeleterIsolationProxyError)
+	assert.Check(t, is.Nil(d), "Expected nil")
+	assert.Check(t, is.DeepEqual(err, PodDeleterIsolationProxyError))
 
 	d, err = NewPodDeleter(client, ip, nil, persona, portlayer)
-	assert.Nil(t, d, "Expected nil")
-	assert.Equal(t, err, PodDeleterPodCacheError)
+	assert.Check(t, is.Nil(d), "Expected nil")
+	assert.Check(t, is.DeepEqual(err, PodDeleterPodCacheError))
 }
 
 func TestDeletePod(t *testing.T) {
@@ -44,8 +44,8 @@ func TestDeletePod(t *testing.T) {
 	portlayer := "1.2.3.4"
 
 	d, err := NewPodDeleter(client, ip, cache, persona, portlayer)
-	assert.NotNil(t, d, "Expected non-nil creating a pod Deleter but received nil")
-	assert.Nil(t, err, "Expected nil")
+	assert.Check(t, d != nil, "Expected non-nil creating a pod Deleter but received nil")
+	assert.Check(t, err, "Expected nil")
 
 	// Set up the mocks for this test
 	ip.On("Handle", op, podID, podName).Return(podHandle, nil)
@@ -59,7 +59,7 @@ func TestDeletePod(t *testing.T) {
 
 	// Positive case
 	err = d.DeletePod(op, &pod)
-	assert.Nil(t, err, "Expected nil")
+	assert.Check(t, err, "Expected nil")
 }
 
 func TestDeletePodErrorHandle(t *testing.T) {
@@ -70,8 +70,8 @@ func TestDeletePodErrorHandle(t *testing.T) {
 	portlayer := "1.2.3.4"
 
 	d, err := NewPodDeleter(client, ip, cache, persona, portlayer)
-	assert.NotNil(t, d, "Expected non-nil creating a pod Deleter but received nil")
-	assert.Nil(t, err, "Expected nil")
+	assert.Check(t, d != nil, "Expected non-nil creating a pod Deleter but received nil")
+	assert.Check(t, err, "Expected nil")
 
 	// Set up the mocks for this test
 	ip.On("UnbindScope", op, podHandle, podName).Return(podHandle, fakeEP, nil)
@@ -87,7 +87,7 @@ func TestDeletePodErrorHandle(t *testing.T) {
 	ip.On("Handle", op, podID, podName).Return("", fakeErr)
 
 	err = d.DeletePod(op, &pod)
-	assert.Equal(t, err, fakeErr, "Expected invalid handle error")
+	assert.Check(t, is.Error(err, fakeErr.Error()), "Expected invalid handle error")
 }
 
 func TestDeletePodErrorUnbindScope(t *testing.T) {
@@ -98,8 +98,8 @@ func TestDeletePodErrorUnbindScope(t *testing.T) {
 	portlayer := "1.2.3.4"
 
 	d, err := NewPodDeleter(client, ip, cache, persona, portlayer)
-	assert.NotNil(t, d, "Expected non-nil creating a pod Deleter but received nil")
-	assert.Nil(t, err, "Expected nil")
+	assert.Check(t, d != nil, "Expected non-nil creating a pod Deleter but received nil")
+	assert.Check(t, err, "Expected nil")
 
 	// Set up the mocks for this test
 	ip.On("Handle", op, podID, podName).Return(podHandle, nil)
@@ -114,7 +114,7 @@ func TestDeletePodErrorUnbindScope(t *testing.T) {
 	ip.On("UnbindScope", op, podHandle, podName).Return("", nil, fakeErr)
 
 	err = d.DeletePod(op, &pod)
-	assert.Equal(t, err, fakeErr, "Expected failed UnbindScope error")
+	assert.Check(t, is.Error(err, fakeErr.Error()), "Expected failed UnbindScope error")
 }
 
 func TestDeletePodErrorSetState(t *testing.T) {
@@ -125,8 +125,8 @@ func TestDeletePodErrorSetState(t *testing.T) {
 	portlayer := "1.2.3.4"
 
 	d, err := NewPodDeleter(client, ip, cache, persona, portlayer)
-	assert.NotNil(t, d, "Expected non-nil creating a pod Deleter but received nil")
-	assert.Nil(t, err, "Expected nil")
+	assert.Check(t, d != nil, "Expected non-nil creating a pod Deleter but received nil")
+	assert.Check(t, err, "Expected nil")
 
 	// Set up the mocks for this test
 	ip.On("Handle", op, podID, podName).Return(podHandle, nil)
@@ -141,7 +141,7 @@ func TestDeletePodErrorSetState(t *testing.T) {
 	fakeErr := fakeError("failed SetState")
 	ip.On("SetState", op, podHandle, podName, "STOPPED").Return("", fakeErr)
 	err = d.DeletePod(op, &pod)
-	assert.Equal(t, err, fakeErr, "Expected failed SetState error")
+	assert.Check(t, is.Error(err, fakeErr.Error()), "Expected failed SetState error")
 }
 
 func TestDeletePodErrorCommitHandle(t *testing.T) {
@@ -152,8 +152,8 @@ func TestDeletePodErrorCommitHandle(t *testing.T) {
 	portlayer := "1.2.3.4"
 
 	d, err := NewPodDeleter(client, ip, cache, persona, portlayer)
-	assert.NotNil(t, d, "Expected non-nil creating a pod Deleter but received nil")
-	assert.Nil(t, err, "Expected nil")
+	assert.Check(t, d != nil, "Expected non-nil creating a pod Deleter but received nil")
+	assert.Check(t, err, "Expected nil")
 
 	// Set up the mocks for this test
 	ip.On("Handle", op, podID, podName).Return(podHandle, nil)
@@ -167,7 +167,7 @@ func TestDeletePodErrorCommitHandle(t *testing.T) {
 	fakeErr := fakeError("failed Commit")
 	ip.On("CommitHandle", op, podHandle, podID, int32(-1)).Return(fakeErr)
 	err = d.DeletePod(op, &pod)
-	assert.Equal(t, err, fakeErr, "Expected failed Commit error")
+	assert.Check(t, is.Error(err, fakeErr.Error()), "Expected failed Commit error")
 }
 
 func TestDeletePodErrorRemove(t *testing.T) {
@@ -178,8 +178,8 @@ func TestDeletePodErrorRemove(t *testing.T) {
 	portlayer := "1.2.3.4"
 
 	d, err := NewPodDeleter(client, ip, cache, persona, portlayer)
-	assert.NotNil(t, d, "Expected non-nil creating a pod Deleter but received nil")
-	assert.Nil(t, err, "Expected nil")
+	assert.Check(t, d != nil, "Expected non-nil creating a pod Deleter but received nil")
+	assert.Check(t, err, "Expected nil")
 
 	// Set up the mocks for this test
 	ip.On("Handle", op, podID, podName).Return(podHandle, nil)
@@ -194,7 +194,7 @@ func TestDeletePodErrorRemove(t *testing.T) {
 	fakeErr := fakeError("failed Remove")
 	ip.On("Remove", op, podID, true).Return(fakeErr)
 	err = d.DeletePod(op, &pod)
-	assert.Equal(t, err, fakeErr, "Expected failed Remove error")
+	assert.Check(t, is.Error(err, fakeErr.Error()), "Expected failed Remove error")
 }
 
 func TestDeletePodErrorBadArgs(t *testing.T) {
@@ -204,9 +204,9 @@ func TestDeletePodErrorBadArgs(t *testing.T) {
 	portlayer := "1.2.3.4"
 
 	d, err := NewPodDeleter(client, ip, cache, persona, portlayer)
-	assert.NotNil(t, d, "Expected non-nil creating a pod Deleter but received nil")
+	assert.Check(t, d != nil, "Expected non-nil creating a pod Deleter but received nil")
 
 	// Negative Cases
 	err = d.DeletePod(op, nil)
-	assert.Equal(t, err, PodDeleterInvalidPodSpecError)
+	assert.Check(t, is.DeepEqual(err, PodDeleterInvalidPodSpecError))
 }

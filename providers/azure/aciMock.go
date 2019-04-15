@@ -7,7 +7,7 @@ import (
 	"net/http/httptest"
 
 	"github.com/gorilla/mux"
-	"github.com/virtual-kubelet/virtual-kubelet/providers/azure/client/aci"
+	"github.com/virtual-kubelet/azure-aci/client/aci"
 )
 
 // ACIMock implements a Azure Container Instance mock server.
@@ -16,12 +16,14 @@ type ACIMock struct {
 	OnCreate             func(string, string, string, *aci.ContainerGroup) (int, interface{})
 	OnGetContainerGroups func(string, string) (int, interface{})
 	OnGetContainerGroup  func(string, string, string) (int, interface{})
+	OnGetRPManifest      func() (int, interface{})
 }
 
 const (
 	containerGroupsRoute   = "/subscriptions/{subscriptionId}/resourceGroups/{resourceGroup}/providers/Microsoft.ContainerInstance/containerGroups"
 	containerGroupRoute    = containerGroupsRoute + "/{containerGroup}"
 	containerGroupLogRoute = containerGroupRoute + "/containers/{containerName}/logs"
+	resourceProviderRoute  = "/providers/Microsoft.ContainerInstance"
 )
 
 // NewACIMock creates a new Azure Container Instance mock server.
@@ -92,6 +94,22 @@ func (mock *ACIMock) start() {
 
 			if mock.OnGetContainerGroups != nil {
 				statusCode, response := mock.OnGetContainerGroups(subscription, resourceGroup)
+				w.WriteHeader(statusCode)
+				b := new(bytes.Buffer)
+				json.NewEncoder(b).Encode(response)
+				w.Write(b.Bytes())
+
+				return
+			}
+
+			w.WriteHeader(http.StatusNotImplemented)
+		}).Methods("GET")
+
+	router.HandleFunc(
+		resourceProviderRoute,
+		func(w http.ResponseWriter, r *http.Request) {
+			if mock.OnGetRPManifest != nil {
+				statusCode, response := mock.OnGetRPManifest()
 				w.WriteHeader(statusCode)
 				b := new(bytes.Buffer)
 				json.NewEncoder(b).Encode(response)
