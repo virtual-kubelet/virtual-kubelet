@@ -12,6 +12,7 @@ import (
 
 	"github.com/Azure/azure-sdk-for-go/services/batch/2017-09-01.6.0/batch"
 	"github.com/Azure/go-autorest/autorest"
+	"github.com/virtual-kubelet/virtual-kubelet/providers"
 
 	apiv1 "k8s.io/api/core/v1"
 )
@@ -120,12 +121,18 @@ func Test_readLogs_404Response_expectReturnStartupLogs(t *testing.T) {
 		return batch.ReadCloser{}, fmt.Errorf("Failed in test mock of getFileFromTask")
 	}
 
-	result, err := provider.GetContainerLogs(context.Background(), pod.Namespace, pod.Name, containerName, 0)
+	logs, err := provider.GetContainerLogs(context.Background(), pod.Namespace, pod.Name, containerName, providers.ContainerLogOpts{})
 	if err != nil {
-		t.Errorf("GetContainerLogs return error: %v", err)
+		t.Fatalf("GetContainerLogs return error: %v", err)
+	}
+	defer logs.Close()
+
+	r, err := ioutil.ReadAll(logs)
+	if err != nil {
+		t.Fatal(err)
 	}
 
-	fmt.Print(result)
+	result := string(r)
 
 	if !strings.Contains(result, "stderrResponse") || !strings.Contains(result, "stdoutResponse") {
 		t.Errorf("Result didn't contain expected content have: %v", result)
@@ -154,13 +161,19 @@ func Test_readLogs_JsonResponse_expectFormattedLogs(t *testing.T) {
 		return batch.ReadCloser{}, fmt.Errorf("Failed in test mock of getFileFromTask")
 	}
 
-	result, err := provider.GetContainerLogs(context.Background(), pod.Namespace, pod.Name, containerName, 0)
+	logs, err := provider.GetContainerLogs(context.Background(), pod.Namespace, pod.Name, containerName, providers.ContainerLogOpts{})
 	if err != nil {
 		t.Errorf("GetContainerLogs return error: %v", err)
 	}
+	defer logs.Close()
 
-	fmt.Print(result)
-	if !strings.Contains(result, "Copy output data from the CUDA device to the host memory") || strings.Contains(result, "{") {
+	r, err := ioutil.ReadAll(logs)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	result := string(r)
+	if !strings.Contains(string(result), "Copy output data from the CUDA device to the host memory") || strings.Contains(result, "{") {
 		t.Errorf("Result didn't contain expected content have or had json: %v", result)
 	}
 

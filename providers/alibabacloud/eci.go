@@ -9,6 +9,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
+	"io/ioutil"
 	"os"
 	"strconv"
 	"strings"
@@ -277,7 +279,7 @@ func (p *ECIProvider) GetPod(ctx context.Context, namespace, name string) (*v1.P
 }
 
 // GetContainerLogs returns the logs of a pod by name that is running inside ECI.
-func (p *ECIProvider) GetContainerLogs(ctx context.Context, namespace, podName, containerName string, tail int) (string, error) {
+func (p *ECIProvider) GetContainerLogs(ctx context.Context, namespace, podName, containerName string, opts providers.ContainerLogOpts) (io.ReadCloser, error) {
 	eciId := ""
 	for _, cg := range p.GetCgs() {
 		if getECITagValue(&cg, "PodName") == podName && getECITagValue(&cg, "NameSpace") == namespace {
@@ -286,13 +288,13 @@ func (p *ECIProvider) GetContainerLogs(ctx context.Context, namespace, podName, 
 		}
 	}
 	if eciId == "" {
-		return "", errors.New(fmt.Sprintf("GetContainerLogs can't find Pod %s-%s", namespace, podName))
+		return nil, errors.New(fmt.Sprintf("GetContainerLogs can't find Pod %s-%s", namespace, podName))
 	}
 
 	request := eci.CreateDescribeContainerLogRequest()
 	request.ContainerGroupId = eciId
 	request.ContainerName = containerName
-	request.Tail = requests.Integer(tail)
+	request.Tail = requests.Integer(opts.Tail)
 
 	// get logs from cg
 	logContent := ""
@@ -309,7 +311,7 @@ func (p *ECIProvider) GetContainerLogs(ctx context.Context, namespace, podName, 
 		}
 	}
 
-	return logContent, nil
+	return ioutil.NopCloser(strings.NewReader(logContent)), nil
 }
 
 // Get full pod name as defined in the provider context

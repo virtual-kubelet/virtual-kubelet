@@ -19,6 +19,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/cpuguy83/strongerrors"
 	"github.com/gorilla/websocket"
 	client "github.com/virtual-kubelet/azure-aci/client"
 	"github.com/virtual-kubelet/azure-aci/client/aci"
@@ -765,25 +766,26 @@ func (p *ACIProvider) GetPod(ctx context.Context, namespace, name string) (*v1.P
 }
 
 // GetContainerLogs returns the logs of a pod by name that is running inside ACI.
-func (p *ACIProvider) GetContainerLogs(ctx context.Context, namespace, podName, containerName string, tail int) (string, error) {
+func (p *ACIProvider) GetContainerLogs(ctx context.Context, namespace, podName, containerName string, opts providers.ContainerLogOpts) (io.ReadCloser, error) {
 	ctx, span := trace.StartSpan(ctx, "aci.GetContainerLogs")
 	defer span.End()
 	ctx = addAzureAttributes(ctx, span, p)
 
-	logContent := ""
 	cg, _, err := p.aciClient.GetContainerGroup(ctx, p.resourceGroup, fmt.Sprintf("%s-%s", namespace, podName))
 	if err != nil {
-		return logContent, err
+		return nil, err
 	}
 
 	if cg.Tags["NodeName"] != p.nodeName {
-		return logContent, nil
+		return nil, strongerrors.NotFound(errors.New("got unexpected pod node name"))
 	}
+
 	// get logs from cg
 	retry := 10
+	logContent := ""
 	var retries int
 	for retries = 0; retries < retry; retries++ {
-		cLogs, err := p.aciClient.GetContainerLogs(ctx, p.resourceGroup, cg.Name, containerName, tail)
+		cLogs, err := p.aciClient.GetContainerLogs(ctx, p.resourceGroup, cg.Name, containerName, opts.Tail)
 		if err != nil {
 			log.G(ctx).WithField("method", "GetContainerLogs").WithError(err).Debug("Error getting container logs, retrying")
 			time.Sleep(5000 * time.Millisecond)
@@ -792,7 +794,7 @@ func (p *ACIProvider) GetContainerLogs(ctx context.Context, namespace, podName, 
 			break
 		}
 	}
-	return logContent, err
+	return ioutil.NopCloser(strings.NewReader(logContent)), err
 }
 
 // GetPodFullName as defined in the provider context

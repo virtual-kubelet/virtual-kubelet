@@ -2,6 +2,8 @@ package fargate
 
 import (
 	"fmt"
+	"io"
+	"io/ioutil"
 	"log"
 	"strings"
 	"sync"
@@ -11,6 +13,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/cloudwatchlogs"
 	"github.com/aws/aws-sdk-go/service/ecs"
 	"github.com/cpuguy83/strongerrors"
+	"github.com/virtual-kubelet/virtual-kubelet/providers"
 	k8sTypes "k8s.io/apimachinery/pkg/types"
 )
 
@@ -310,9 +313,9 @@ func (c *Cluster) RemovePod(tag string) {
 }
 
 // GetContainerLogs returns the logs of a container from this cluster.
-func (c *Cluster) GetContainerLogs(namespace, podName, containerName string, tail int) (string, error) {
+func (c *Cluster) GetContainerLogs(namespace, podName, containerName string, opts providers.ContainerLogOpts) (io.ReadCloser, error) {
 	if c.cloudWatchLogGroupName == "" {
-		return "", fmt.Errorf("logs not configured, please specify a \"CloudWatchLogGroupName\"")
+		return nil, fmt.Errorf("logs not configured, please specify a \"CloudWatchLogGroupName\"")
 	}
 
 	prefix := fmt.Sprintf("%s_%s", buildTaskDefinitionTag(c.name, namespace, podName), containerName)
@@ -321,18 +324,18 @@ func (c *Cluster) GetContainerLogs(namespace, podName, containerName string, tai
 		LogStreamNamePrefix: aws.String(prefix),
 	})
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	// Nothing logged yet.
 	if len(describeResult.LogStreams) == 0 {
-		return "", nil
+		return nil, nil
 	}
 
 	logs := ""
 
 	err = client.logsapi.GetLogEventsPages(&cloudwatchlogs.GetLogEventsInput{
-		Limit:         aws.Int64(int64(tail)),
+		Limit:         aws.Int64(int64(opts.Tail)),
 		LogGroupName:  aws.String(c.cloudWatchLogGroupName),
 		LogStreamName: describeResult.LogStreams[0].LogStreamName,
 	}, func(page *cloudwatchlogs.GetLogEventsOutput, lastPage bool) bool {
@@ -348,8 +351,8 @@ func (c *Cluster) GetContainerLogs(namespace, podName, containerName string, tai
 	})
 
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
-	return logs, nil
+	return ioutil.NopCloser(strings.NewReader(logs)), nil
 }

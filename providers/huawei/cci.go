@@ -12,6 +12,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/cpuguy83/strongerrors"
@@ -298,8 +299,8 @@ func (p *CCIProvider) GetPod(ctx context.Context, namespace, name string) (*v1.P
 }
 
 // GetContainerLogs retrieves the logs of a container by name from the huawei CCI provider.
-func (p *CCIProvider) GetContainerLogs(ctx context.Context, namespace, podName, containerName string, tail int) (string, error) {
-	return "", nil
+func (p *CCIProvider) GetContainerLogs(ctx context.Context, namespace, podName, containerName string, opts providers.ContainerLogOpts) (io.ReadCloser, error) {
+	return ioutil.NopCloser(strings.NewReader("")), nil
 }
 
 // Get full pod name as defined in the provider context

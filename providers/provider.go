@@ -3,6 +3,7 @@ package providers
 import (
 	"context"
 	"io"
+	"time"
 
 	v1 "k8s.io/api/core/v1"
 	stats "k8s.io/kubernetes/pkg/kubelet/apis/stats/v1alpha1"
@@ -23,7 +24,7 @@ type Provider interface {
 	GetPod(ctx context.Context, namespace, name string) (*v1.Pod, error)
 
 	// GetContainerLogs retrieves the logs of a container by name from the provider.
-	GetContainerLogs(ctx context.Context, namespace, podName, containerName string, tail int) (string, error)
+	GetContainerLogs(ctx context.Context, namespace, podName, containerName string, opts ContainerLogOpts) (io.ReadCloser, error)
 
 	// RunInContainer executes a command in a container in the pod, copying data
 	// between in/out/err and the container's stdin/stdout/stderr.
@@ -52,6 +53,15 @@ type Provider interface {
 
 	// OperatingSystem returns the operating system the provider is for.
 	OperatingSystem() string
+}
+
+// ContainerLogOpts are used to pass along options to be set on the container
+// log stream.
+type ContainerLogOpts struct {
+	Tail       int
+	Since      time.Duration
+	LimitBytes int
+	Timestamps bool
 }
 
 // PodMetricsProvider is an optional interface that providers can implement to expose pod stats

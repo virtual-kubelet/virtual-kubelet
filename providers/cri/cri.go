@@ -6,6 +6,7 @@ import (
 	"bufio"
 	"context"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net"
 	"os"
@@ -606,10 +607,10 @@ func (p *CRIProvider) GetPod(ctx context.Context, namespace, name string) (*v1.P
 }
 
 // Reads a log file into a string
-func readLogFile(filename string, tail int) (string, error) {
+func readLogFile(filename string, opts providers.ContainerLogOpts) (io.ReadCloser, error) {
 	file, err := os.Open(filename)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	defer file.Close()
 
@@ -619,31 +620,31 @@ func readLogFile(filename string, tail int) (string, error) {
 	for scanner.Scan() {
 		lines = append(lines, scanner.Text())
 	}
-	if tail > 0 && tail < len(lines) {
-		lines = lines[len(lines)-tail:]
+	if opts.Tail > 0 && opts.Tail < len(lines) {
+		lines = lines[len(lines)-opts.Tail:]
 	}
-	return strings.Join(lines, ""), nil
+	return ioutil.NopCloser(strings.NewReader(strings.Join(lines, ""))), nil
 }
 
 // Provider function to read the logs of a container
-func (p *CRIProvider) GetContainerLogs(ctx context.Context, namespace, podName, containerName string, tail int) (string, error) {
+func (p *CRIProvider) GetContainerLogs(ctx context.Context, namespace, podName, containerName string, opts providers.ContainerLogOpts) (io.ReadCloser, error) {
 	log.Printf("receive GetContainerLogs %q", containerName)
 
 	err := p.refreshNodeState()
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	pod := p.findPodByName(namespace, podName)
 	if pod == nil {
-		return "", strongerrors.NotFound(fmt.Errorf("Pod %s in namespace %s not found", podName, namespace))
+		return nil, strongerrors.NotFound(fmt.Errorf("Pod %s in namespace %s not found", podName, namespace))
 	}
 	container := pod.containers[containerName]
 	if container == nil {
-		return "", strongerrors.NotFound(fmt.Errorf("Cannot find container %s in pod %s namespace %s", containerName, podName, namespace))
+		return nil, strongerrors.NotFound(fmt.Errorf("Cannot find container %s in pod %s namespace %s", containerName, podName, namespace))
 	}
 
-	return readLogFile(container.LogPath, tail)
+	return readLogFile(container.LogPath, opts)
 }
 
 // Get full pod name as defined in the provider context

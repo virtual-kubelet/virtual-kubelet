@@ -15,8 +15,9 @@ import (
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/ecs"
 	"github.com/aws/aws-sdk-go/service/iam"
+	"github.com/virtual-kubelet/virtual-kubelet/providers"
 	vkAWS "github.com/virtual-kubelet/virtual-kubelet/providers/aws"
-	"k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -282,13 +283,19 @@ func TestAWSFargateProviderPodLifecycle(t *testing.T) {
 		// Wait a few seconds for the logs to settle.
 		time.Sleep(10 * time.Second)
 
-		logs, err := provider.GetContainerLogs(context.Background(), "default", podName, "echo-container", 100)
+		logs, err := provider.GetContainerLogs(context.Background(), "default", podName, "echo-container", providers.ContainerLogOpts{Tail: 100})
 		if err != nil {
-			t.Error(err)
+			t.Fatal(err)
+		}
+		defer logs.Close()
+
+		b, err := ioutil.ReadAll(logs)
+		if err != nil {
+			t.Fatal(err)
 		}
 
 		// Test log output.
-		receivedLogs := strings.Split(logs, "\n")
+		receivedLogs := strings.Split(string(b), "\n")
 		expectedLogs := []string{
 			"Started",
 			pod.Spec.Containers[0].Env[0].Name + "=" + pod.Spec.Containers[0].Env[0].Value,
