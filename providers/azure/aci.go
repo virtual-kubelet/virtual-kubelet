@@ -1304,14 +1304,14 @@ func getProbe(probe *v1.Probe, ports []v1.ContainerPort) (*aci.ContainerProbe, e
 		case intstr.Int:
 			portValue = port.IntValue()
 		case intstr.String:
-			portValue = -1
 			portName := port.String()
 			for _, p := range ports {
 				if portName == p.Name {
 					portValue = int(p.ContainerPort)
+					break
 				}
 			}
-			if portValue == -1 {
+			if portValue == 0 {
 				return nil, fmt.Errorf("unable to find named port: %s", portName)
 			}
 		}
