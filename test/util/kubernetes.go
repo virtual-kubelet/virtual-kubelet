@@ -24,6 +24,8 @@ func FakeEventRecorder(bufferSize int) *record.FakeRecorder {
 
 // FakePodWithSingleContainer returns a pod with the specified namespace and name, and having a single container with the specified image.
 func FakePodWithSingleContainer(namespace, name, image string) *corev1.Pod {
+	enableServiceLink := corev1.DefaultEnableServiceLinks
+
 	return &corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: namespace,
@@ -36,6 +38,7 @@ func FakePodWithSingleContainer(namespace, name, image string) *corev1.Pod {
 					Image: image,
 				},
 			},
+			EnableServiceLinks: &enableServiceLink,
 		},
 	}
 }

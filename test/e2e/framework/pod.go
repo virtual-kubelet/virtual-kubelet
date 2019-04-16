@@ -25,6 +25,8 @@ const (
 // For each one of these strings, a container that uses the string as its image will be appended to the pod.
 // This method DOES NOT create the pod in the Kubernetes API.
 func (f *Framework) CreateDummyPodObjectWithPrefix(prefix string, images ...string) *corev1.Pod {
+	enableServiceLink := false
+
 	pod := &corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			GenerateName: prefix,
@@ -41,6 +43,7 @@ func (f *Framework) CreateDummyPodObjectWithPrefix(prefix string, images ...stri
 					Effect: corev1.TaintEffect(f.TaintEffect),
 				},
 			},
+			EnableServiceLinks: &enableServiceLink,
 		},
 	}
 	for idx, img := range images {

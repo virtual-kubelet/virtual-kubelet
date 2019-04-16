@@ -59,6 +59,10 @@ var masterServices = sets.NewString("kubernetes")
 // populateEnvironmentVariables populates the environment of each container (and init container) in the specified pod.
 // TODO Make this the single exported function of a "pkg/environment" package in the future.
 func populateEnvironmentVariables(ctx context.Context, pod *corev1.Pod, rm *manager.ResourceManager, recorder record.EventRecorder) error {
+	if pod.Spec.EnableServiceLinks == nil {
+		return fmt.Errorf("nil pod.spec.enableServiceLinks encountered, cannot construct envvars")
+	}
+
 	// Populate each init container's environment.
 	for idx := range pod.Spec.InitContainers {
 		if err := populateContainerEnvironment(ctx, pod, &pod.Spec.InitContainers[idx], rm, recorder); err != nil {
@@ -118,8 +122,8 @@ func getServiceEnvVarMap(rm *manager.ResourceManager, ns string, enableServiceLi
 		}
 		serviceName := service.Name
 
-		// We always want to add environment variabled for master services
-		// from the master service namespace, even if enableServiceLinks is false.
+		// We always want to add environment variables for master kubernetes service
+		// from the default namespace, even if enableServiceLinks is false.
 		// We also add environment variables for other services in the same
 		// namespace, if enableServiceLinks is true.
 		if service.Namespace == metav1.NamespaceDefault && masterServices.Has(serviceName) {
@@ -131,7 +135,7 @@ func getServiceEnvVarMap(rm *manager.ResourceManager, ns string, enableServiceLi
 		}
 	}
 
-	mappedServices := []*corev1.Service{}
+	mappedServices := make([]*corev1.Service, 0, len(serviceMap))
 	for key := range serviceMap {
 		mappedServices = append(mappedServices, serviceMap[key])
 	}
@@ -401,17 +405,11 @@ loop:
 		}
 	}
 
-	// enableServiceLinks defaults to true.
-	enableServiceLinks := true
-	if pod.Spec.EnableServiceLinks != nil {
-		enableServiceLinks = *pod.Spec.EnableServiceLinks
-	}
-
 	// Note that there is a race between Kubelet seeing the pod and kubelet seeing the service.
 	// To avoid this users can: (1) wait between starting a service and starting; or (2) detect
 	// missing service env var and exit and be restarted; or (3) use DNS instead of env vars
 	// and keep trying to resolve the DNS name of the service (recommended).
-	svcEnv, err := getServiceEnvVarMap(rm, pod.Namespace, enableServiceLinks)
+	svcEnv, err := getServiceEnvVarMap(rm, pod.Namespace, *pod.Spec.EnableServiceLinks)
 	if err != nil {
 		return nil, err
 	}
