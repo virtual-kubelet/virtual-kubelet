@@ -24,6 +24,8 @@ func FakeEventRecorder(bufferSize int) *record.FakeRecorder {
 
 // FakePodWithSingleContainer returns a pod with the specified namespace and name, and having a single container with the specified image.
 func FakePodWithSingleContainer(namespace, name, image string) *corev1.Pod {
+	enableServiceLink := corev1.DefaultEnableServiceLinks
+
 	return &corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: namespace,
@@ -36,6 +38,7 @@ func FakePodWithSingleContainer(namespace, name, image string) *corev1.Pod {
 					Image: image,
 				},
 			},
+			EnableServiceLinks: &enableServiceLink,
 		},
 	}
 }
@@ -55,12 +58,19 @@ func FakeSecret(namespace, name string, data map[string]string) *corev1.Secret {
 	return res
 }
 
-// FakeService returns a service with the specified namespace and name.
-func FakeService(namespace, name string) *corev1.Service {
+// FakeService returns a service with the specified namespace and name and service info.
+func FakeService(namespace, name, clusterIP, protocol string, port int32) *corev1.Service {
 	return &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: namespace,
 			Name:      name,
+		},
+		Spec: corev1.ServiceSpec{
+			Ports: []corev1.ServicePort{{
+				Protocol: corev1.Protocol(protocol),
+				Port:     port,
+			}},
+			ClusterIP: clusterIP,
 		},
 	}
 }
