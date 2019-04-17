@@ -59,9 +59,6 @@ var masterServices = sets.NewString("kubernetes")
 // populateEnvironmentVariables populates the environment of each container (and init container) in the specified pod.
 // TODO Make this the single exported function of a "pkg/environment" package in the future.
 func populateEnvironmentVariables(ctx context.Context, pod *corev1.Pod, rm *manager.ResourceManager, recorder record.EventRecorder) error {
-	if pod.Spec.EnableServiceLinks == nil {
-		return fmt.Errorf("nil pod.spec.enableServiceLinks encountered, cannot construct envvars")
-	}
 
 	// Populate each init container's environment.
 	for idx := range pod.Spec.InitContainers {
@@ -405,11 +402,17 @@ loop:
 		}
 	}
 
+	// TODO If pod.Spec.EnableServiceLinks is nil then fail as per 1.14 kubelet.
+	enableServiceLinks := corev1.DefaultEnableServiceLinks
+	if pod.Spec.EnableServiceLinks != nil {
+		enableServiceLinks = *pod.Spec.EnableServiceLinks
+	}
+
 	// Note that there is a race between Kubelet seeing the pod and kubelet seeing the service.
 	// To avoid this users can: (1) wait between starting a service and starting; or (2) detect
 	// missing service env var and exit and be restarted; or (3) use DNS instead of env vars
 	// and keep trying to resolve the DNS name of the service (recommended).
-	svcEnv, err := getServiceEnvVarMap(rm, pod.Namespace, *pod.Spec.EnableServiceLinks)
+	svcEnv, err := getServiceEnvVarMap(rm, pod.Namespace, enableServiceLinks)
 	if err != nil {
 		return nil, err
 	}
