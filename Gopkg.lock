@@ -1701,15 +1701,18 @@
   revision = "0317810137be915b9cf888946c6e115c1bfac693"
 
 [[projects]]
-  digest = "1:02e74ccd0c045a31940dca52ba2545108fd299d4f66632b1bf643fb92b662de2"
+  digest = "1:4ff70ea1888545c3a245a76657ba38a308d2c068bd26fa4310f63560ebaf265c"
   name = "k8s.io/kubernetes"
   packages = [
     "pkg/api/v1/pod",
     "pkg/apis/core",
+    "pkg/apis/core/helper",
     "pkg/apis/core/pods",
+    "pkg/apis/core/v1/helper",
     "pkg/fieldpath",
     "pkg/kubelet/apis/cri/runtime/v1alpha2",
     "pkg/kubelet/apis/stats/v1alpha1",
+    "pkg/kubelet/envvars",
     "pkg/kubelet/server/remotecommand",
   ]
   pruneopts = "NUT"
@@ -1823,6 +1826,7 @@
     "k8s.io/apimachinery/pkg/types",
     "k8s.io/apimachinery/pkg/util/intstr",
     "k8s.io/apimachinery/pkg/util/net",
+    "k8s.io/apimachinery/pkg/util/sets",
     "k8s.io/apimachinery/pkg/util/strategicpatch",
     "k8s.io/apimachinery/pkg/util/uuid",
     "k8s.io/apimachinery/pkg/util/validation",
@@ -1846,9 +1850,11 @@
     "k8s.io/client-go/util/workqueue",
     "k8s.io/kubernetes/pkg/api/v1/pod",
     "k8s.io/kubernetes/pkg/apis/core/pods",
+    "k8s.io/kubernetes/pkg/apis/core/v1/helper",
     "k8s.io/kubernetes/pkg/fieldpath",
     "k8s.io/kubernetes/pkg/kubelet/apis/cri/runtime/v1alpha2",
     "k8s.io/kubernetes/pkg/kubelet/apis/stats/v1alpha1",
+    "k8s.io/kubernetes/pkg/kubelet/envvars",
     "k8s.io/kubernetes/pkg/kubelet/server/remotecommand",
   ]
   solver-name = "gps-cdcl"
