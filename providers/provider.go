@@ -3,11 +3,8 @@ package providers
 import (
 	"context"
 	"io"
-	"time"
 
-	"k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/tools/remotecommand"
+	v1 "k8s.io/api/core/v1"
 	stats "k8s.io/kubernetes/pkg/kubelet/apis/stats/v1alpha1"
 )
 
@@ -28,9 +25,9 @@ type Provider interface {
 	// GetContainerLogs retrieves the logs of a container by name from the provider.
 	GetContainerLogs(ctx context.Context, namespace, podName, containerName string, tail int) (string, error)
 
-	// ExecInContainer executes a command in a container in the pod, copying data
+	// RunInContainer executes a command in a container in the pod, copying data
 	// between in/out/err and the container's stdin/stdout/stderr.
-	ExecInContainer(name string, uid types.UID, container string, cmd []string, in io.Reader, out, err io.WriteCloser, tty bool, resize <-chan remotecommand.TerminalSize, timeout time.Duration) error
+	RunInContainer(ctx context.Context, namespace, podName, containerName string, cmd []string, attach AttachIO) error
 
 	// GetPodStatus retrieves the status of a pod by name from the provider.
 	GetPodStatus(ctx context.Context, namespace, name string) (*v1.PodStatus, error)
@@ -71,4 +68,19 @@ type PodNotifier interface {
 	//
 	// NotifyPods should not block callers.
 	NotifyPods(context.Context, func(*v1.Pod))
+}
+
+// AttachIO is used to pass in streams to attach to a container process
+type AttachIO interface {
+	Stdin() io.Reader
+	Stdout() io.WriteCloser
+	Stderr() io.WriteCloser
+	TTY() bool
+	Resize() <-chan TermSize
+}
+
+// TermSize is used to set the terminal size from attached clients.
+type TermSize struct {
+	Width  uint16
+	Height uint16
 }

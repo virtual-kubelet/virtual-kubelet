@@ -25,6 +25,7 @@ import (
 	"github.com/virtual-kubelet/azure-aci/client/network"
 	"github.com/virtual-kubelet/virtual-kubelet/log"
 	"github.com/virtual-kubelet/virtual-kubelet/manager"
+	"github.com/virtual-kubelet/virtual-kubelet/providers"
 	"github.com/virtual-kubelet/virtual-kubelet/trace"
 	v1 "k8s.io/api/core/v1"
 	k8serr "k8s.io/apimachinery/pkg/api/errors"
@@ -33,7 +34,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	clientcmdv1 "k8s.io/client-go/tools/clientcmd/api/v1"
-	"k8s.io/client-go/tools/remotecommand"
 	stats "k8s.io/kubernetes/pkg/kubelet/apis/stats/v1alpha1"
 )
 
@@ -800,33 +800,35 @@ func (p *ACIProvider) GetPodFullName(namespace string, pod string) string {
 	return fmt.Sprintf("%s-%s", namespace, pod)
 }
 
-// ExecInContainer executes a command in a container in the pod, copying data
+// RunInContainer executes a command in a container in the pod, copying data
 // between in/out/err and the container's stdin/stdout/stderr.
-func (p *ACIProvider) ExecInContainer(name string, uid types.UID, container string, cmd []string, in io.Reader, out, errstream io.WriteCloser, tty bool, resize <-chan remotecommand.TerminalSize, timeout time.Duration) error {
-	// Cleanup on exit
+func (p *ACIProvider) RunInContainer(ctx context.Context, namespace, name, container string, cmd []string, attach providers.AttachIO) error {
+	out := attach.Stdout()
 	if out != nil {
 		defer out.Close()
 	}
-	if errstream != nil {
-		defer errstream.Close()
-	}
 
-	cg, _, err := p.aciClient.GetContainerGroup(context.TODO(), p.resourceGroup, name)
+	cg, _, err := p.aciClient.GetContainerGroup(ctx, p.resourceGroup, p.GetPodFullName(namespace, name))
 	if err != nil {
 		return err
 	}
 
 	// Set default terminal size
-	terminalSize := remotecommand.TerminalSize{
+	size := providers.TermSize{
 		Height: 60,
 		Width:  120,
 	}
 
+	resize := attach.Resize()
 	if resize != nil {
-		terminalSize = <-resize // Receive terminal resize event if resize stream is present
+		select {
+		case size = <-resize:
+		case <-ctx.Done():
+			return ctx.Err()
+		}
 	}
 
-	ts := aci.TerminalSizeRequest{Height: int(terminalSize.Height), Width: int(terminalSize.Width)}
+	ts := aci.TerminalSizeRequest{Height: int(size.Height), Width: int(size.Width)}
 	xcrsp, err := p.aciClient.LaunchExec(p.resourceGroup, cg.Name, container, cmd[0], ts)
 	if err != nil {
 		return err
@@ -840,12 +842,17 @@ func (p *ACIProvider) ExecInContainer(name string, uid types.UID, container stri
 
 	// Cleanup on exit
 	defer c.Close()
-	defer out.Close()
 
+	in := attach.Stdin()
 	if in != nil {
-		// Inputstream
 		go func() {
 			for {
+				select {
+				case <-ctx.Done():
+					return
+				default:
+				}
+
 				var msg = make([]byte, 512)
 				n, err := in.Read(msg)
 				if err == io.EOF {
@@ -858,14 +865,18 @@ func (p *ACIProvider) ExecInContainer(name string, uid types.UID, container stri
 				if n > 0 { // Only call WriteMessage if there is data to send
 					c.WriteMessage(websocket.BinaryMessage, msg[:n])
 				}
-
 			}
 		}()
 	}
 
 	if out != nil {
-		//Outputstream
 		for {
+			select {
+			case <-ctx.Done():
+				break
+			default:
+			}
+
 			_, cr, err := c.NextReader()
 			if err != nil {
 				// Handle errors
@@ -875,7 +886,7 @@ func (p *ACIProvider) ExecInContainer(name string, uid types.UID, container stri
 		}
 	}
 
-	return nil
+	return ctx.Err()
 }
 
 // GetPodStatus returns the status of a pod by name that is running inside ACI
