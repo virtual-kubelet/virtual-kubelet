@@ -348,14 +348,6 @@
   version = "v4.1.0"
 
 [[projects]]
-  digest = "1:1b91ae0dc69a41d4c2ed23ea5cffb721ea63f5037ca4b81e6d6771fbb8f45129"
-  name = "github.com/fsnotify/fsnotify"
-  packages = ["."]
-  pruneopts = "NUT"
-  revision = "c2828203cd70a50dcccfb2761f8b1f8ceef9a8e9"
-  version = "v1.4.7"
-
-[[projects]]
   digest = "1:e05711632e1515319b014e8fe4cbe1d30ab024c473403f60cf0fdeb4c586a474"
   name = "github.com/go-ini/ini"
   packages = ["."]
@@ -707,13 +699,12 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:11c6c696067d3127ecf332b10f89394d386d9083f82baf71f40f2da31841a009"
+  digest = "1:39f543569bf189e228c84a294c50aca8ea56c82b3d9df5c9b788249907d7049a"
   name = "github.com/hashicorp/hcl"
   packages = [
     ".",
     "hcl/ast",
     "hcl/parser",
-    "hcl/printer",
     "hcl/scanner",
     "hcl/strconv",
     "hcl/token",
@@ -832,14 +823,6 @@
   version = "v0.5.1"
 
 [[projects]]
-  digest = "1:35e5598ba3bc950039e13d91958ce37f675264735907cada569d11b243e5cacb"
-  name = "github.com/magiconair/properties"
-  packages = ["."]
-  pruneopts = "NUT"
-  revision = "c3beff4c2358b44d0493c7dda585e7db7ff28ae6"
-  version = "v1.7.6"
-
-[[projects]]
   branch = "master"
   digest = "1:ada518b8c338e10e0afa443d84671476d3bd1d926e13713938088e8ddbee1a3e"
   name = "github.com/mailru/easyjson"
@@ -944,14 +927,6 @@
   version = "v1.1"
 
 [[projects]]
-  digest = "1:13b8f1a2ce177961dc9231606a52f709fab896c565f3988f60a7f6b4e543a902"
-  name = "github.com/pelletier/go-toml"
-  packages = ["."]
-  pruneopts = "NUT"
-  revision = "acdc4509485b587f5e675510c4f2c63e90ff68a8"
-  version = "v1.1.0"
-
-[[projects]]
   branch = "master"
   digest = "1:3bf17a6e6eaa6ad24152148a631d18662f7212e21637c2699bff3369b7f00fa2"
   name = "github.com/petar/GoLLRB"
@@ -1011,25 +986,6 @@
   version = "v1.2.0"
 
 [[projects]]
-  digest = "1:35f36ea322654e3d0932e58ad26556998260b9fa9e691471f756d173684eac0a"
-  name = "github.com/spf13/afero"
-  packages = [
-    ".",
-    "mem",
-  ]
-  pruneopts = "NUT"
-  revision = "63644898a8da0bc22138abf860edaf5277b6102e"
-  version = "v1.1.0"
-
-[[projects]]
-  digest = "1:3fa7947ca83b98ae553590d993886e845a4bff19b7b007e869c6e0dd3b9da9cd"
-  name = "github.com/spf13/cast"
-  packages = ["."]
-  pruneopts = "NUT"
-  revision = "8965335b8c7107321228e3e3702cab9832751bac"
-  version = "v1.2.0"
-
-[[projects]]
   digest = "1:0f156dbd01b40676bdcbc64e51535c09b50f83c9cca5faef3090f82f18bda3c2"
   name = "github.com/spf13/cobra"
   packages = ["."]
@@ -1038,28 +994,12 @@
   version = "v0.0.2"
 
 [[projects]]
-  branch = "master"
-  digest = "1:f29f83301ed096daed24a90f4af591b7560cb14b9cc3e1827abbf04db7269ab5"
-  name = "github.com/spf13/jwalterweatherman"
-  packages = ["."]
-  pruneopts = "NUT"
-  revision = "7c0cea34c8ece3fbeb2b27ab9b59511d360fb394"
-
-[[projects]]
   digest = "1:15e5c398fbd9d2c439b635a08ac161b13d04f0c2aa587fe256b65dc0c3efe8b7"
   name = "github.com/spf13/pflag"
   packages = ["."]
   pruneopts = "NUT"
   revision = "583c0c0531f06d5278b7d917446061adc344b5cd"
   version = "v1.0.1"
-
-[[projects]]
-  digest = "1:ea67fb4941c0a1a92f828e73cf426533c71db02df45a2cdf55a14c3e7b74c07a"
-  name = "github.com/spf13/viper"
-  packages = ["."]
-  pruneopts = "NUT"
-  revision = "b5e8006cbee93ec955a89ab31e0e3ce3204f3736"
-  version = "v1.0.2"
 
 [[projects]]
   digest = "1:10301358a67805684f6b525cba6ad7ec014dbd56cccc2926fadc9189faa7889a"
@@ -1840,7 +1780,7 @@
     "github.com/mitchellh/go-homedir",
     "github.com/pkg/errors",
     "github.com/spf13/cobra",
-    "github.com/spf13/viper",
+    "github.com/spf13/pflag",
     "github.com/stretchr/testify/mock",
     "github.com/virtual-kubelet/azure-aci/client",
     "github.com/virtual-kubelet/azure-aci/client/aci",

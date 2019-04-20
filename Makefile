@@ -1,5 +1,4 @@
 SHELL := /bin/bash
-IMPORT_PATH := github.com/virtual-kubelet/virtual-kubelet
 
 DOCKER_IMAGE := virtual-kubelet
 exec := $(DOCKER_IMAGE)
@@ -28,7 +27,7 @@ build: build_tags := netgo osusergo
 build: OUTPUT_DIR ?= bin
 build: authors
 	@echo "Building..."
-	$Q CGO_ENABLED=0 go build -a --tags '$(shell scripts/process_build_tags.sh $(build_tags) $(VK_BUILD_TAGS))' -ldflags '-extldflags "-static"' -o $(OUTPUT_DIR)/$(binary) $(if $V,-v) $(VERSION_FLAGS) $(IMPORT_PATH)
+	$Q CGO_ENABLED=0 go build -a --tags '$(shell scripts/process_build_tags.sh $(build_tags) $(VK_BUILD_TAGS))' -ldflags '-extldflags "-static"' -o $(OUTPUT_DIR)/$(binary) $(if $V,-v) $(VERSION_FLAGS) ./cmd/$(binary)
 
 .PHONY: tags
 tags:
@@ -38,14 +37,6 @@ tags:
 .PHONY: release
 release: build $(GOPATH)/bin/goreleaser
 	goreleaser
-
-
-### Code not in the repository root? Another binary? Add to the path like this.
-# .PHONY: otherbin
-# otherbin: .GOPATH/.ok
-#   $Q go install $(if $V,-v) $(VERSION_FLAGS) $(IMPORT_PATH)/cmd/otherbin
-
-##### ^^^^^^ EDIT ABOVE ^^^^^^ #####
 
 ##### =====> Utility targets <===== #####
 
