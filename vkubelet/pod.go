@@ -192,6 +192,10 @@ func (s *Server) updatePodStatus(ctx context.Context, pod *corev1.Pod) error {
 			pod.Status.Reason = "NotFound"
 			pod.Status.Message = "The pod status was not found and may have been deleted from the provider"
 			for i, c := range pod.Status.ContainerStatuses {
+				// Skip waiting and Terminated status
+				if c.State.Waiting != nil || c.State.Terminated != nil {
+					continue
+				}
 				pod.Status.ContainerStatuses[i].State.Terminated = &corev1.ContainerStateTerminated{
 					ExitCode:    -137,
 					Reason:      "NotFound",
