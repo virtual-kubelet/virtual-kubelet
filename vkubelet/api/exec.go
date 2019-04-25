@@ -6,7 +6,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/cpuguy83/strongerrors"
 	"github.com/gorilla/mux"
+	"github.com/pkg/errors"
+	api "k8s.io/kubernetes/pkg/apis/core"
 	"k8s.io/kubernetes/pkg/kubelet/server/remotecommand"
 )
 
@@ -14,7 +17,7 @@ import (
 // Note that this handler currently depends on gorrilla/mux to get url parts as variables.
 // TODO(@cpuguy83): don't force gorilla/mux on consumers of this function
 func PodExecHandlerFunc(backend remotecommand.Executor) http.HandlerFunc {
-	return func(w http.ResponseWriter, req *http.Request) {
+	return handleError(func(w http.ResponseWriter, req *http.Request) error {
 		vars := mux.Vars(req)
 
 		namespace := vars["namespace"]
@@ -26,30 +29,36 @@ func PodExecHandlerFunc(backend remotecommand.Executor) http.HandlerFunc {
 		q := req.URL.Query()
 		command := q["command"]
 
-		var stdin, stdout, stderr, tty bool
-		if q.Get("stdin") == "true" {
-			stdin = true
-		}
-		if q.Get("stdout") == "true" {
-			stdout = true
-		}
-		if q.Get("stderr") == "true" {
-			stderr = true
-		}
-		if q.Get("tty") == "true" {
-			tty = true
-		}
-		
-		streamOpts := &remotecommand.Options{
-			Stdin:  stdin,
-			Stdout: stdout,
-			Stderr: stderr,
-			TTY:    tty,
+		streamOpts, err := getExecOptions(req)
+		if err != nil {
+			return strongerrors.InvalidArgument(err)
 		}
 
 		idleTimeout := time.Second * 30
 		streamCreationTimeout := time.Second * 30
 
 		remotecommand.ServeExec(w, req, backend, fmt.Sprintf("%s-%s", namespace, pod), "", container, command, streamOpts, idleTimeout, streamCreationTimeout, supportedStreamProtocols)
+		return nil
+	})
+}
+
+func getExecOptions(req *http.Request) (*remotecommand.Options, error) {
+	tty := req.FormValue(api.ExecTTYParam) == "1"
+	stdin := req.FormValue(api.ExecStdinParam) == "1"
+	stdout := req.FormValue(api.ExecStdoutParam) == "1"
+	stderr := req.FormValue(api.ExecStderrParam) == "1"
+	if tty && stderr {
+		return nil, errors.New("cannot exec with tty and stderr")
 	}
+
+	if !stdin && !stdout && !stderr {
+		return nil, errors.New("you must specify at least one of stdin, stdout, stderr")
+	}
+	return &remotecommand.Options{
+		Stdin:  stdin,
+		Stdout: stdout,
+		Stderr: stderr,
+		TTY:    tty,
+	}, nil
+
 }
