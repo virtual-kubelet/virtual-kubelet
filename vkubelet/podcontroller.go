@@ -20,14 +20,12 @@ import (
 	"reflect"
 	"strconv"
 	"sync"
-	"time"
 
 	"github.com/cpuguy83/strongerrors/status/ocstatus"
 	pkgerrors "github.com/pkg/errors"
 	"github.com/virtual-kubelet/virtual-kubelet/trace"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/util/wait"
 	v1 "k8s.io/client-go/informers/core/v1"
 	"k8s.io/client-go/kubernetes/scheme"
 	typedcorev1 "k8s.io/client-go/kubernetes/typed/core/v1"
@@ -54,6 +52,8 @@ type PodController struct {
 	workqueue workqueue.RateLimitingInterface
 	// recorder is an event recorder for recording Event resources to the Kubernetes API.
 	recorder record.EventRecorder
+
+	readyCh chan struct{}
 }
 
 // NewPodController returns a new instance of PodController.
@@ -71,6 +71,7 @@ func NewPodController(server *Server) *PodController {
 		podsLister:   server.podInformer.Lister(),
 		workqueue:    workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "pods"),
 		recorder:     recorder,
+		readyCh:      make(chan struct{}),
 	}
 
 	// Set up event handlers for when Pod resources change.
@@ -114,33 +115,44 @@ func NewPodController(server *Server) *PodController {
 	return pc
 }
 
+// Ready notifies callers when the pod controller has finished it's inital
+// syncronization.
+func (pc *PodController) Ready() <-chan struct{} {
+	return pc.readyCh
+}
+
 // Run will set up the event handlers for types we are interested in, as well as syncing informer caches and starting workers.
 // It will block until stopCh is closed, at which point it will shutdown the work queue and wait for workers to finish processing their current work items.
-func (pc *PodController) Run(ctx context.Context, threadiness int) error {
+func (pc *PodController) Run(ctx context.Context, numWorkers int) error {
 	defer pc.workqueue.ShutDown()
+
+	log.G(ctx).Debug("Waiting for pod controller sync")
 
 	// Wait for the caches to be synced before starting workers.
 	if ok := cache.WaitForCacheSync(ctx.Done(), pc.podsInformer.Informer().HasSynced); !ok {
 		return pkgerrors.New("failed to wait for caches to sync")
 	}
 
+	log.G(ctx).Debug("Pod controller cache synced")
+
 	// Perform a reconciliation step that deletes any dangling pods from the provider.
 	// This happens only when the virtual-kubelet is starting, and operates on a "best-effort" basis.
 	// If by any reason the provider fails to delete a dangling pod, it will stay in the provider and deletion won't be retried.
-	pc.deleteDanglingPods(ctx, threadiness)
+	pc.deleteDanglingPods(ctx, numWorkers)
 
-	// Launch "threadiness" workers to process Pod resources.
-	log.G(ctx).Info("starting workers")
-	for id := 0; id < threadiness; id++ {
-		go wait.Until(func() {
-			// Use the worker's "index" as its ID so we can use it for tracing.
-			pc.runWorker(ctx, strconv.Itoa(id))
-		}, time.Second, ctx.Done())
+	close(pc.readyCh)
+	log.G(ctx).Info("PodController initialized")
+
+	// Launch workers to process Pod resources.
+	log.G(ctx).Info("starting pod workers")
+	for id := 0; id < numWorkers; id++ {
+		// Use the worker's "index" as its ID so we can use it for tracing.
+		go pc.runWorker(ctx, strconv.Itoa(id))
 	}
 
-	log.G(ctx).Info("started workers")
+	log.G(ctx).Info("started pod workers")
 	<-ctx.Done()
-	log.G(ctx).Info("shutting down workers")
+	log.G(ctx).Info("shutting down pod workers")
 
 	return nil
 }
@@ -268,6 +280,8 @@ func (pc *PodController) deleteDanglingPods(ctx context.Context, threadiness int
 			log.G(ctx).Error(err)
 			return
 		}
+
+		pc.server.addPodReferences(pp)
 	}
 
 	// We delete each pod in its own goroutine, allowing a maximum of "threadiness" concurrent deletions.

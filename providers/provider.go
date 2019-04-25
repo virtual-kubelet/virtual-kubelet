@@ -54,6 +54,13 @@ type Provider interface {
 	OperatingSystem() string
 }
 
+// ReferencedUpdater is an optional interface that providers can implement for
+// receiving notifications about updates to objects referenced by a pod.
+type ReferencedUpdater interface {
+	UpdateConfigMap(ctx context.Context, cm *v1.ConfigMap, refs []string) error
+	UpdateSecret(ctx context.Context, secret *v1.Secret, refs []string) error
+}
+
 // PodMetricsProvider is an optional interface that providers can implement to expose pod stats
 type PodMetricsProvider interface {
 	GetStatsSummary(context.Context) (*stats.Summary, error)

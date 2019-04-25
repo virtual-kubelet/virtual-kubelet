@@ -79,6 +79,8 @@ func (s *Server) createOrUpdatePod(ctx context.Context, pod *corev1.Pod, recorde
 		return origErr
 	}
 
+	s.addPodReferences(pod)
+
 	log.G(ctx).Info("Created pod in provider")
 
 	return nil
@@ -91,6 +93,9 @@ func (s *Server) deletePod(ctx context.Context, namespace, name string) error {
 	pod, _ := s.provider.GetPod(ctx, namespace, name)
 	if pod == nil {
 		// The provider is not aware of the pod, but we must still delete the Kubernetes API resource.
+		//
+		// TODO: Delete config/secret references? I'm not sure what scenario we could be in
+		// where the provider doesn't know about a pod but we are holding references from the pod itself...
 		return s.forceDeletePodResource(ctx, namespace, name)
 	}
 
@@ -113,6 +118,8 @@ func (s *Server) deletePod(ctx context.Context, namespace, name string) error {
 		}
 		log.G(ctx).Info("Deleted pod from Kubernetes")
 	}
+
+	s.deleteReferencesFromPod(pod)
 
 	return nil
 }

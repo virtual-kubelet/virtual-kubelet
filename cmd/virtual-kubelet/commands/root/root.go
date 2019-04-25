@@ -145,13 +145,15 @@ func runRootCommand(ctx context.Context, c Opts) error {
 	}
 
 	vk := vkubelet.New(vkubelet.Config{
-		Client:          client,
-		Namespace:       c.KubeNamespace,
-		NodeName:        pNode.Name,
-		Provider:        p,
-		ResourceManager: rm,
-		PodSyncWorkers:  c.PodSyncWorkers,
-		PodInformer:     podInformer,
+		Client:            client,
+		Namespace:         c.KubeNamespace,
+		NodeName:          pNode.Name,
+		Provider:          p,
+		ResourceManager:   rm,
+		PodSyncWorkers:    c.PodSyncWorkers,
+		PodInformer:       podInformer,
+		SecretsInformer:   secretInformer,
+		ConfigMapInformer: configMapInformer,
 	})
 
 	cancelHTTP, err := setupHTTPServer(ctx, p, apiConfig)
