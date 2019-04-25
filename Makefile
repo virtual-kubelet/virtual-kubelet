@@ -80,7 +80,7 @@ endif
 
 test:
 	@echo "Testing..."
-	$Q go test -mod=vendor $(if $V,-v) -i $(allpackages) # install -race libs to speed up next run
+	$Q go test -mod=vendor $(if $V,-v) $(allpackages) # install -race libs to speed up next run
 ifndef CI
 	@echo "Testing Outside CI..."
 	$Q GODEBUG=cgocheck=2 go test -mod=vendor $(allpackages)
