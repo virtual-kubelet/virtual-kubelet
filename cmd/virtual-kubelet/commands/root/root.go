@@ -136,7 +136,7 @@ func runRootCommand(ctx context.Context, c Opts) error {
 	node, err := vkubelet.NewNode(
 		vkubelet.NaiveNodeProvider{},
 		pNode,
-		client.Coordination().Leases(corev1.NamespaceNodeLease),
+		client.CoordinationV1beta1().Leases(corev1.NamespaceNodeLease),
 		client.CoreV1().Nodes(),
 		vkubelet.WithNodeDisableLease(!c.EnableNodeLease),
 	)
