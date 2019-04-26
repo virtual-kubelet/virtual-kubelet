@@ -17,7 +17,7 @@ hrefTargetBlank = true
 
 # General site-level parameters
 [params]
-favicon            = "https://raw.githubusercontent.com/cncf/artwork/master/virtualkubelet/icon/color/virtualkubelet-icon-color.png"
+favicon            = "https://raw.githubusercontent.com/cncf/artwork/master/projects/virtualkubelet/icon/color/virtualkubelet-icon-color.png"
 sansSerifFont      = "Noto Sans TC"
 monospaceFont      = "Fira Mono"
 fontAwesomeVersion = "5.5.0"
