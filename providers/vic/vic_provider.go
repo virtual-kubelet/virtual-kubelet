@@ -2,7 +2,6 @@ package vic
 
 import (
 	"fmt"
-	"io"
 	"os"
 	"path"
 	"syscall"
@@ -24,6 +23,7 @@ import (
 	"github.com/vmware/vic/pkg/trace"
 
 	"github.com/virtual-kubelet/virtual-kubelet/manager"
+	"github.com/virtual-kubelet/virtual-kubelet/providers"
 	"github.com/virtual-kubelet/virtual-kubelet/providers/vic/cache"
 	"github.com/virtual-kubelet/virtual-kubelet/providers/vic/operations"
 	"github.com/virtual-kubelet/virtual-kubelet/providers/vic/proxy"
@@ -31,11 +31,9 @@ import (
 
 	"net"
 
-	"k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/tools/remotecommand"
 )
 
 type VicProvider struct {
@@ -267,9 +265,9 @@ func (p *VicProvider) GetPodFullName(namespace string, pod string) string {
 	return ""
 }
 
-// ExecInContainer executes a command in a container in the pod, copying data
+// RunInContainer executes a command in a container in the pod, copying data
 // between in/out/err and the container's stdin/stdout/stderr.
-func (p *VicProvider) ExecInContainer(name string, uid types.UID, container string, cmd []string, in io.Reader, out, err io.WriteCloser, tty bool, resize <-chan remotecommand.TerminalSize, timeout time.Duration) error {
+func (p *VicProvider) RunInContainer(ctx context.Context, namespace, name, container string, cmd []string, attach providers.AttachIO) error {
 	log.Printf("receive ExecInContainer %q\n", container)
 	return nil
 }
