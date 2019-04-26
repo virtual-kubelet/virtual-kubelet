@@ -30,9 +30,8 @@ import (
 
 	"github.com/cenkalti/backoff"
 	"github.com/cpuguy83/strongerrors"
-	"k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/tools/remotecommand"
+	"github.com/virtual-kubelet/virtual-kubelet/providers"
+	v1 "k8s.io/api/core/v1"
 )
 
 // BrokerProvider implements the virtual-kubelet provider interface by forwarding kubelet calls to a web endpoint.
@@ -133,10 +132,10 @@ func (p *BrokerProvider) GetPodFullName(namespace string, pod string) string {
 	return ""
 }
 
-// ExecInContainer executes a command in a container in the pod, copying data
+// RunInContainer executes a command in a container in the pod, copying data
 // between in/out/err and the container's stdin/stdout/stderr.
 // TODO: Implementation
-func (p *BrokerProvider) ExecInContainer(name string, uid types.UID, container string, cmd []string, in io.Reader, out, err io.WriteCloser, tty bool, resize <-chan remotecommand.TerminalSize, timeout time.Duration) error {
+func (p *BrokerProvider) RunInContainer(ctx context.Context, namespace, name, container string, cmd []string, attach providers.AttachIO) error {
 	log.Printf("receive ExecInContainer %q\n", container)
 	return nil
 }

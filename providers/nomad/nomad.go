@@ -3,11 +3,9 @@ package nomad
 import (
 	"context"
 	"fmt"
-	"io"
 	"log"
 	"os"
 	"strings"
-	"time"
 
 	"github.com/virtual-kubelet/virtual-kubelet/manager"
 	"github.com/virtual-kubelet/virtual-kubelet/providers"
@@ -16,8 +14,6 @@ import (
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	apitypes "k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/tools/remotecommand"
 )
 
 // Nomad provider constants
@@ -159,10 +155,10 @@ func (p *Provider) GetPodFullName(ctx context.Context, namespace string, pod str
 	return fmt.Sprintf("%s-%s", jobNamePrefix, pod)
 }
 
-// ExecInContainer executes a command in a container in the pod, copying data
+// RunInContainer executes a command in a container in the pod, copying data
 // between in/out/err and the container's stdin/stdout/stderr.
 // TODO: Implementation
-func (p *Provider) ExecInContainer(name string, uid apitypes.UID, container string, cmd []string, in io.Reader, out, err io.WriteCloser, tty bool, resize <-chan remotecommand.TerminalSize, timeout time.Duration) error {
+func (p *Provider) RunInContainer(ctx context.Context, namespace, name, container string, cmd []string, attach providers.AttachIO) error {
 	log.Printf("ExecInContainer %q\n", container)
 	return nil
 }
