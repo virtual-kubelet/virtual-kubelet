@@ -192,19 +192,28 @@ func (s *Server) updatePodStatus(ctx context.Context, pod *corev1.Pod) error {
 			pod.Status.Reason = "NotFound"
 			pod.Status.Message = "The pod status was not found and may have been deleted from the provider"
 			for i, c := range pod.Status.ContainerStatuses {
-				// Skip waiting and Terminated status
-				if c.State.Waiting != nil || c.State.Terminated != nil {
+				var startAt metav1.Time
+				var fininshedAt metav1.Time
+				if c.State.Waiting != nil {
+					// Skip waiting state
 					continue
+				} else if c.State.Terminated != nil {
+					startAt = c.State.Terminated.StartedAt
+					fininshedAt = c.State.Terminated.FinishedAt
+				} else {
+					// In Running state
+					startAt = c.State.Running.StartedAt
+					fininshedAt = metav1.NewTime(time.Now())
+					pod.Status.ContainerStatuses[i].State.Running = nil
 				}
 				pod.Status.ContainerStatuses[i].State.Terminated = &corev1.ContainerStateTerminated{
 					ExitCode:    -137,
 					Reason:      "NotFound",
 					Message:     "Container was not found and was likely deleted",
-					FinishedAt:  metav1.NewTime(time.Now()),
-					StartedAt:   c.State.Running.StartedAt,
+					FinishedAt:  fininshedAt,
+					StartedAt:   startAt,
 					ContainerID: c.ContainerID,
 				}
-				pod.Status.ContainerStatuses[i].State.Running = nil
 			}
 		}
 	}
