@@ -1,12 +1,12 @@
-{{ $fonts    := .Site.Params.fonts }}
+{{ $fonts    := site.Params.fonts }}
 {{ $fontSlice := (slice) }}
 {{ range $fonts }}
 {{ $fontSlice = $fontSlice | append (printf "%s:%s" (replace .name " " "+") (delimit .sizes ",")) }}
 {{ end }}
 {{ $fontsUrl := printf "https://fonts.googleapis.com/css?family=%s" (delimit $fontSlice "|") }}
-{{ $sansSerifFont := .Site.Params.sansSerifFont }}
-{{ $monospaceFont := .Site.Params.monospaceFont }}
-{{ $fontAwesomeVersion := .Site.Params.fontAwesomeVersion }}
+{{ $sansSerifFont := site.Params.sansSerifFont }}
+{{ $monospaceFont := site.Params.monospaceFont }}
+{{ $fontAwesomeVersion := site.Params.fontAwesomeVersion }}
 {{ $fontAwesomeUrl     := printf "https://use.fontawesome.com/releases/v%s/css/all.css" $fontAwesomeVersion }}
 
 @charset "utf-8"

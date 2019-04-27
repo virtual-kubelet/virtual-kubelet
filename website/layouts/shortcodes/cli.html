@@ -1,4 +1,4 @@
-{{ $cli         := .Site.Data.cli }}
+{{ $cli         := site.Data.cli }}
 {{ $description := $cli.description | markdownify }}
 {{ $flags       := $cli.flags }}
 <div class="cli">

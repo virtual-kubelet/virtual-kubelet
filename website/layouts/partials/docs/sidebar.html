@@ -1,4 +1,4 @@
-{{ $sidebarLogo := site.Params.logos.sidebar }}
+{{ $sidebarLogo := site.Params.logos.sidebar | relURL }}
 {{ $docs        := where site.Pages "Section" "docs" }}
 <div class="dashboard-panel is-medium is-hidden-mobile has-background-primary">
   <div class="dashboard-panel-header has-text-centered">
@@ -13,7 +13,7 @@
     <div class="toc">
       {{ range $docs }}
       <div class="toc-item has-text-weight-light">
-        <a href="{{ .URL }}">
+        <a href="{{ .RelPermalink }}">
             {{ .Title }}
           </a>
       </div>
