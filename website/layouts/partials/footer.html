@@ -1,7 +1,8 @@
-{{ $year := now.Year}}
+{{ $year := now.Year }}
+{{ $logo := site.Params.logos.footer | relURL }}
 <footer class="footer has-background-black">
   <div class="has-text-centered">
-    <img class="is-footer-logo" src="https://raw.githubusercontent.com/cncf/artwork/master/virtualkubelet/icon/white/virtualkubelet-icon-white.png">
+    <img class="is-footer-logo" src="{{ $logo }}">
 
     <br /><br />
 
