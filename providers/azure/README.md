@@ -371,7 +371,7 @@ Grab the id of the cluster subnet you created earlier with the following command
 az network vnet subnet show --resource-group $AKS_CLUSTER_RG --vnet-name $VNET_NAME --name $CLUSTER_SUBNET_NAME --query id -o tsv
 ```
 
-Save the entire output starting witn "/subscriptions/..." in the following enviorment variable. 
+Save the entire output starting witn "/subscriptions/..." in the following environment variable. 
 
 ```cli 
 export VNET_SUBNET_ID=<subnet-resource>
