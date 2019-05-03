@@ -27,6 +27,7 @@ type Server struct {
 	resourceManager *manager.ResourceManager
 	podSyncWorkers  int
 	podInformer     corev1informers.PodInformer
+	readyCh         chan struct{}
 }
 
 // Config is used to configure a new server.
@@ -54,6 +55,7 @@ func New(cfg Config) *Server {
 		provider:        cfg.Provider,
 		podSyncWorkers:  cfg.PodSyncWorkers,
 		podInformer:     cfg.PodInformer,
+		readyCh:         make(chan struct{}),
 	}
 }
 
@@ -64,7 +66,7 @@ func New(cfg Config) *Server {
 // See `AttachPodRoutes` and `AttachMetricsRoutes` to set these up.
 func (s *Server) Run(ctx context.Context) error {
 	q := workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "podStatusUpdate")
-	go s.runProviderSyncWorkers(ctx, q)
+	s.runProviderSyncWorkers(ctx, q)
 
 	if pn, ok := s.provider.(providers.PodNotifier); ok {
 		pn.NotifyPods(ctx, func(pod *corev1.Pod) {
@@ -74,7 +76,27 @@ func (s *Server) Run(ctx context.Context) error {
 		go s.providerSyncLoop(ctx, q)
 	}
 
-	return NewPodController(s).Run(ctx, s.podSyncWorkers)
+	pc := NewPodController(s)
+
+	go func() {
+		select {
+		case <-pc.inSyncCh:
+		case <-ctx.Done():
+		}
+		close(s.readyCh)
+	}()
+
+	return pc.Run(ctx, s.podSyncWorkers)
+}
+
+// Ready returns a channel which will be closed once the VKubelet is running
+func (s *Server) Ready() <-chan struct{} {
+	// TODO: right now all this waits on is the in-sync channel. Later, we might either want to expose multiple types
+	// of ready, for example:
+	// * In Sync
+	// * Control Loop running
+	// * Provider state synchronized with API Server state
+	return s.readyCh
 }
 
 // providerSyncLoop syncronizes pod states from the provider back to kubernetes
