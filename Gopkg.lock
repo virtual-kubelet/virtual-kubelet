@@ -1905,6 +1905,7 @@
     "k8s.io/client-go/tools/watch",
     "k8s.io/client-go/util/workqueue",
     "k8s.io/kubernetes/pkg/api/v1/pod",
+    "k8s.io/kubernetes/pkg/apis/core",
     "k8s.io/kubernetes/pkg/apis/core/pods",
     "k8s.io/kubernetes/pkg/fieldpath",
     "k8s.io/kubernetes/pkg/kubelet/apis/cri/runtime/v1alpha2",
