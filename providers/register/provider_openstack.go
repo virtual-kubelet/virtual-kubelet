@@ -17,5 +17,5 @@ func initOpenStack(cfg InitConfig) (providers.Provider, error) {
 		cfg.ResourceManager,
 		cfg.NodeName,
 		cfg.OperatingSystem,
-		cfg.DaemonPort,)
+		cfg.DaemonPort)
 }
