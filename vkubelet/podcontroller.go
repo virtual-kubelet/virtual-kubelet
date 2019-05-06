@@ -54,6 +54,10 @@ type PodController struct {
 	workqueue workqueue.RateLimitingInterface
 	// recorder is an event recorder for recording Event resources to the Kubernetes API.
 	recorder record.EventRecorder
+
+	// inSync is a channel which will be closed once the pod controller has become in-sync with apiserver
+	// it will never close if startup fails, or if the run context is cancelled prior to initialization completing
+	inSyncCh chan struct{}
 }
 
 // NewPodController returns a new instance of PodController.
@@ -71,6 +75,7 @@ func NewPodController(server *Server) *PodController {
 		podsLister:   server.podInformer.Lister(),
 		workqueue:    workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "pods"),
 		recorder:     recorder,
+		inSyncCh:     make(chan struct{}),
 	}
 
 	// Set up event handlers for when Pod resources change.
@@ -123,6 +128,9 @@ func (pc *PodController) Run(ctx context.Context, threadiness int) error {
 	if ok := cache.WaitForCacheSync(ctx.Done(), pc.podsInformer.Informer().HasSynced); !ok {
 		return pkgerrors.New("failed to wait for caches to sync")
 	}
+	log.G(ctx).Info("Pod cache in-sync")
+
+	close(pc.inSyncCh)
 
 	// Perform a reconciliation step that deletes any dangling pods from the provider.
 	// This happens only when the virtual-kubelet is starting, and operates on a "best-effort" basis.
