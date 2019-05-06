@@ -26,6 +26,7 @@ rules:
   - get
   - list
   - watch
+  - patch
 - apiGroups:
   - ""
   resources:
@@ -45,6 +46,7 @@ rules:
   - pods/status
   verbs:
   - update
+  - patch
 - apiGroups:
   - ""
   resources:
