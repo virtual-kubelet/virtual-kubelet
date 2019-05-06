@@ -44,9 +44,9 @@ func loadTLSConfig(certPath, keyPath string) (*tls.Config, error) {
 	}, nil
 }
 
-func setupHTTPServer(ctx context.Context, cfg *apiServerConfig) (cancel func(), retErr error) {
+func setupHTTPServer(ctx context.Context, cfg *apiServerConfig) (_ func(), retErr error) {
 	var closers []io.Closer
-	cancel = func() {
+	cancel := func() {
 		for _, c := range closers {
 			c.Close()
 		}
