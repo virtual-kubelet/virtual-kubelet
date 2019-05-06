@@ -1,9 +1,10 @@
 package azurebatch
 
 import (
-	"github.com/Azure/go-autorest/autorest/to"
 	"reflect"
 	"testing"
+
+	"github.com/Azure/go-autorest/autorest/to"
 
 	"github.com/Azure/azure-sdk-for-go/services/batch/2017-09-01.6.0/batch"
 	apiv1 "k8s.io/api/core/v1"

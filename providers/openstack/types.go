@@ -8,9 +8,9 @@ type CapsuleSpec struct {
 }
 
 type CapsuleTemplate struct {
-	Spec       CapsuleSpec `json:"spec,omitempty"`
-	Kind       string      `json:"kind,omitempty"`
-	Metadata   Metadata    `json:"metadata,omitempty"`
+	Spec     CapsuleSpec `json:"spec,omitempty"`
+	Kind     string      `json:"kind,omitempty"`
+	Metadata Metadata    `json:"metadata,omitempty"`
 }
 
 type Metadata struct {

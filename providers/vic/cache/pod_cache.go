@@ -24,11 +24,11 @@ type VicPodCache struct {
 
 type CacheError string
 
-func (c CacheError) Error() string {return string(c)}
+func (c CacheError) Error() string { return string(c) }
 
 const (
 	PodCachePodNameError = CacheError("PodCache called with empty pod name")
-	PodCacheNilPodError = CacheError("PodCache called with nil pod")
+	PodCacheNilPodError  = CacheError("PodCache called with nil pod")
 )
 
 func NewVicPodCache() PodCache {
