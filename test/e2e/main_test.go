@@ -36,6 +36,8 @@ var (
 	taintValue string
 	// taintEffect is the effect of the taint that is expected to be associated with the virtual-kubelet node to test.
 	taintEffect string
+	// Wait for Kubelet pod to come up before running tests
+	waitForKubelet bool
 )
 
 func init() {
@@ -45,17 +47,20 @@ func init() {
 	flag.StringVar(&taintKey, "taint-key", defaultTaintKey, "the key of the taint that is expected to be associated with the virtual-kubelet node to test")
 	flag.StringVar(&taintValue, "taint-value", defaultTaintValue, "the value of the taint that is expected to be associated with the virtual-kubelet node to test")
 	flag.StringVar(&taintEffect, "taint-effect", defaultTaintEffect, "the effect of the taint that is expected to be associated with the virtual-kubelet node to test")
-	flag.Parse()
+	flag.BoolVar(&waitForKubelet, "wait-for-kubelet", true, "Wait for Kubelet pod to come up before running tests")
 }
 
 func TestMain(m *testing.M) {
+	flag.Parse()
 	// Set sane defaults in case no values (or empty ones) have been provided.
 	setDefaults()
 	// Create a new instance of the test framework targeting the specified node.
 	f = framework.NewTestingFramework(kubeconfig, namespace, nodeName, taintKey, taintValue, taintEffect)
-	// Wait for the virtual-kubelet pod to be ready.
-	if err := f.WaitUntilPodReady(namespace, nodeName); err != nil {
-		panic(err)
+	if waitForKubelet {
+		// Wait for the virtual-kubelet pod to be ready.
+		if err := f.WaitUntilPodReady(namespace, nodeName); err != nil {
+			panic(err)
+		}
 	}
 	// Run the test suite.
 	os.Exit(m.Run())

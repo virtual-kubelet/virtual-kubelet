@@ -70,6 +70,17 @@ type PodNotifier interface {
 	NotifyPods(context.Context, func(*v1.Pod))
 }
 
+// SoftDeletes makes it so that containers are not immediately deleted from API server upon termination
+// It is useful for providers that intend to have a terminal status update for a container.
+// All Soft Delete providers must also implement the PodNotifier interface.
+//
+// You must implement this if you intend to ever delete pods after deletion
+type SoftDeletes interface {
+	PodNotifier
+	// This method does nothing other than signal the provider is okay with soft-deletes.
+	SoftDeletes()
+}
+
 // AttachIO is used to pass in streams to attach to a container process
 type AttachIO interface {
 	Stdin() io.Reader

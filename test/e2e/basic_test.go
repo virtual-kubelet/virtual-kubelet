@@ -14,8 +14,9 @@ import (
 )
 
 const (
-	// deleteGracePeriodForProvider is the amount of time we allow for the provider to react to deletion of a pod before proceeding to assert that the pod has been deleted.
-	deleteGracePeriodForProvider = 100 * time.Millisecond
+	// deleteGracePeriodForProvider is the maximum amount of time we allow for the provider to react to deletion of a pod
+	// before proceeding to assert that the pod has been deleted.
+	deleteGracePeriodForProvider = 1 * time.Second
 )
 
 // TestGetStatsSummary creates a pod having two containers and queries the /stats/summary endpoint of the virtual-kubelet.
@@ -79,6 +80,7 @@ func TestPodLifecycle(t *testing.T) {
 			t.Error(err)
 		}
 	}()
+	t.Log("Created pod: " + pod0.Name)
 
 	// Create a pod with prefix "nginx-1-" having a single container.
 	pod1, err := f.CreatePod(f.CreateDummyPodObjectWithPrefix("nginx-1-", "bar"))
@@ -91,15 +93,18 @@ func TestPodLifecycle(t *testing.T) {
 			t.Error(err)
 		}
 	}()
+	t.Log("Created pod: " + pod1.Name)
 
 	// Wait for the "nginx-0-X" pod to be reported as running and ready.
 	if err := f.WaitUntilPodReady(pod0.Namespace, pod0.Name); err != nil {
 		t.Fatal(err)
 	}
+	t.Logf("Pod %s ready", pod0.Name)
 	// Wait for the "nginx-1-Y" pod to be reported as running and ready.
 	if err := f.WaitUntilPodReady(pod1.Namespace, pod1.Name); err != nil {
 		t.Fatal(err)
 	}
+	t.Logf("Pod %s ready", pod1.Name)
 
 	// Grab the stats from the provider.
 	stats, err := f.GetStatsSummary()
@@ -122,7 +127,7 @@ func TestPodLifecycle(t *testing.T) {
 	pod1Ch := make(chan error)
 	go func() {
 		// Wait for the "nginx-1-Y" pod to be reported as having been marked for deletion.
-		if err := f.WaitUntilPodDeleted(pod1.Namespace, pod1.Name); err != nil {
+		if err := f.WaitUntilPodInPhase(pod1.Namespace, pod1.Name, v1.PodSucceeded, v1.PodFailed); err != nil {
 			// Propagate the error to the outside so we can fail the test.
 			pod1Ch <- err
 		} else {
@@ -135,6 +140,7 @@ func TestPodLifecycle(t *testing.T) {
 	if err := f.DeletePod(pod1.Namespace, pod1.Name); err != nil {
 		t.Fatal(err)
 	}
+	t.Log("Deleted pod: ", pod1.Name)
 	// Wait for the delete event to be ACKed.
 	if err := <-pod1Ch; err != nil {
 		t.Fatal(err)
@@ -155,6 +161,7 @@ func TestPodLifecycle(t *testing.T) {
 
 	// Wait for the "nginx-0-X" pod to be deleted in a separate goroutine.
 	// This ensures that we don't possibly miss the MODIFIED/DELETED events due to establishing the watch too late in the process.
+	// It also makes sure that in light of soft deletes, we properly handle non-graceful pod deletion
 	pod0Ch := make(chan error)
 	go func() {
 		// Wait for the "nginx-0-X" pod to be reported as having been deleted.
@@ -171,6 +178,8 @@ func TestPodLifecycle(t *testing.T) {
 	if err := f.DeletePodImmediately(pod0.Namespace, pod0.Name); err != nil {
 		t.Fatal(err)
 	}
+	t.Log("Force deleted pod: ", pod0.Name)
+
 	// Wait for the delete event to be ACKed.
 	if err := <-pod0Ch; err != nil {
 		t.Fatal(err)

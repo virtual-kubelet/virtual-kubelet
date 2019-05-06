@@ -2,6 +2,7 @@ package vkubelet
 
 import (
 	"context"
+	"hash/fnv"
 
 	"github.com/cpuguy83/strongerrors/status/ocstatus"
 	pkgerrors "github.com/pkg/errors"
@@ -15,9 +16,30 @@ const (
 	maxRetries = 20
 )
 
-type queueHandler func(ctx context.Context, key string) error
+type workItem func(ctx context.Context) error
 
-func handleQueueItem(ctx context.Context, q workqueue.RateLimitingInterface, handler queueHandler) bool {
+type wrappedWorkItem struct {
+	key  string
+	item workItem
+}
+
+func addItem(q []workqueue.RateLimitingInterface, key string, item workItem) {
+	hash := fnv.New32a()
+	_, err := hash.Write([]byte(key))
+	// This should be impossible
+	if err != nil {
+		panic(err)
+	}
+
+	idx := int(hash.Sum32()) % len(q)
+	addItemToSingleQueue(q[idx], key, item)
+}
+
+func addItemToSingleQueue(q workqueue.RateLimitingInterface, key string, item workItem) {
+	q.AddRateLimited(&wrappedWorkItem{key: key, item: item})
+}
+
+func handleQueueItem(ctx context.Context, q workqueue.RateLimitingInterface) bool {
 	ctx, span := trace.StartSpan(ctx, "handleQueueItem")
 	defer span.End()
 
@@ -32,30 +54,29 @@ func handleQueueItem(ctx context.Context, q workqueue.RateLimitingInterface, han
 		// For example, we do not call Forget if a transient error occurs.
 		// Instead, the item is put back on the work queue and attempted again after a back-off period.
 		defer q.Done(obj)
-		var key string
+		var item *wrappedWorkItem
 		var ok bool
 		// We expect strings to come off the work queue.
 		// These are of the form namespace/name.
 		// We do this as the delayed nature of the work queue means the items in the informer cache may actually be more up to date that when the item was initially put onto the workqueue.
-		if key, ok = obj.(string); !ok {
+		if item, ok = obj.(*wrappedWorkItem); !ok {
 			// As the item in the work queue is actually invalid, we call Forget here else we'd go into a loop of attempting to process a work item that is invalid.
 			q.Forget(obj)
-			log.G(ctx).Warnf("expected string in work queue item but got %#v", obj)
+			log.G(ctx).Warnf("expected wrappedWorkItem in work queue item but got %#v", obj)
 			return nil
 		}
-		// Add the current key as an attribute to the current span.
-		ctx = span.WithField(ctx, "key", key)
+
 		// Run the syncHandler, passing it the namespace/name string of the Pod resource to be synced.
-		if err := handler(ctx, key); err != nil {
-			if q.NumRequeues(key) < maxRetries {
+		if err := item.item(ctx); err != nil {
+			if q.NumRequeues(item) < maxRetries {
 				// Put the item back on the work queue to handle any transient errors.
-				log.G(ctx).Warnf("requeuing %q due to failed sync: %v", key, err)
-				q.AddRateLimited(key)
+				log.G(ctx).WithField("key", item.key).WithError(err).Warn("requeuing due to failed sync")
+				q.AddRateLimited(item)
 				return nil
 			}
 			// We've exceeded the maximum retries, so we must forget the key.
-			q.Forget(key)
-			return pkgerrors.Wrapf(err, "forgetting %q due to maximum retries reached", key)
+			q.Forget(item)
+			return pkgerrors.Wrapf(err, "forgetting %q due to maximum retries reached", item.key)
 		}
 		// Finally, if no error occurs we Forget this item so it does not get queued again until another change happens.
 		q.Forget(obj)

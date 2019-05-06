@@ -51,7 +51,7 @@ type PodController struct {
 	// workqueue is a rate limited work queue.
 	// This is used to queue work to be processed instead of performing it as soon as a change happens.
 	// This means we can ensure we only process a fixed amount of resources at a time, and makes it easy to ensure we are never processing the same item simultaneously in two different workers.
-	workqueue workqueue.RateLimitingInterface
+	workqueue []workqueue.RateLimitingInterface
 	// recorder is an event recorder for recording Event resources to the Kubernetes API.
 	recorder record.EventRecorder
 
@@ -73,9 +73,14 @@ func NewPodController(server *Server) *PodController {
 		server:       server,
 		podsInformer: server.podInformer,
 		podsLister:   server.podInformer.Lister(),
-		workqueue:    workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "pods"),
+		workqueue:    make([]workqueue.RateLimitingInterface, server.podSyncWorkers),
 		recorder:     recorder,
 		inSyncCh:     make(chan struct{}),
+	}
+
+	for idx := range pc.workqueue {
+		name := fmt.Sprintf("pods-%d", idx)
+		pc.workqueue[idx] = workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), name)
 	}
 
 	// Set up event handlers for when Pod resources change.
@@ -84,7 +89,7 @@ func NewPodController(server *Server) *PodController {
 			if key, err := cache.MetaNamespaceKeyFunc(pod); err != nil {
 				log.L.Error(err)
 			} else {
-				pc.workqueue.AddRateLimited(key)
+				addItem(pc.workqueue, key, pc.wrapSyncHandler(key))
 			}
 		},
 		UpdateFunc: func(oldObj, newObj interface{}) {
@@ -103,14 +108,14 @@ func NewPodController(server *Server) *PodController {
 			if key, err := cache.MetaNamespaceKeyFunc(newPod); err != nil {
 				log.L.Error(err)
 			} else {
-				pc.workqueue.AddRateLimited(key)
+				addItem(pc.workqueue, key, pc.wrapSyncHandler(key))
 			}
 		},
 		DeleteFunc: func(pod interface{}) {
 			if key, err := cache.DeletionHandlingMetaNamespaceKeyFunc(pod); err != nil {
 				log.L.Error(err)
 			} else {
-				pc.workqueue.AddRateLimited(key)
+				addItem(pc.workqueue, key, pc.wrapSyncHandler(key))
 			}
 		},
 	})
@@ -122,7 +127,9 @@ func NewPodController(server *Server) *PodController {
 // Run will set up the event handlers for types we are interested in, as well as syncing informer caches and starting workers.
 // It will block until stopCh is closed, at which point it will shutdown the work queue and wait for workers to finish processing their current work items.
 func (pc *PodController) Run(ctx context.Context, threadiness int) error {
-	defer pc.workqueue.ShutDown()
+	for idx := range pc.workqueue {
+		defer pc.workqueue[idx].ShutDown()
+	}
 
 	// Wait for the caches to be synced before starting workers.
 	if ok := cache.WaitForCacheSync(ctx.Done(), pc.podsInformer.Informer().HasSynced); !ok {
@@ -132,6 +139,8 @@ func (pc *PodController) Run(ctx context.Context, threadiness int) error {
 
 	close(pc.inSyncCh)
 
+	log.G(ctx).Info("Pod Controller synced")
+
 	// Perform a reconciliation step that deletes any dangling pods from the provider.
 	// This happens only when the virtual-kubelet is starting, and operates on a "best-effort" basis.
 	// If by any reason the provider fails to delete a dangling pod, it will stay in the provider and deletion won't be retried.
@@ -139,10 +148,11 @@ func (pc *PodController) Run(ctx context.Context, threadiness int) error {
 
 	// Launch "threadiness" workers to process Pod resources.
 	log.G(ctx).Info("starting workers")
-	for id := 0; id < threadiness; id++ {
+	for idx := range pc.workqueue {
+		q := pc.workqueue[idx]
 		go wait.Until(func() {
 			// Use the worker's "index" as its ID so we can use it for tracing.
-			pc.runWorker(ctx, strconv.Itoa(id))
+			pc.runWorker(ctx, q, strconv.Itoa(idx))
 		}, time.Second, ctx.Done())
 	}
 
@@ -154,13 +164,13 @@ func (pc *PodController) Run(ctx context.Context, threadiness int) error {
 }
 
 // runWorker is a long-running function that will continually call the processNextWorkItem function in order to read and process an item on the work queue.
-func (pc *PodController) runWorker(ctx context.Context, workerId string) {
-	for pc.processNextWorkItem(ctx, workerId) {
+func (pc *PodController) runWorker(ctx context.Context, q workqueue.RateLimitingInterface, workerId string) {
+	for pc.processNextWorkItem(ctx, q, workerId) {
 	}
 }
 
 // processNextWorkItem will read a single work item off the work queue and attempt to process it,by calling the syncHandler.
-func (pc *PodController) processNextWorkItem(ctx context.Context, workerId string) bool {
+func (pc *PodController) processNextWorkItem(ctx context.Context, q workqueue.RateLimitingInterface, workerId string) bool {
 
 	// We create a span only after popping from the queue so that we can get an adequate picture of how long it took to process the item.
 	ctx, span := trace.StartSpan(ctx, "processNextWorkItem")
@@ -168,7 +178,13 @@ func (pc *PodController) processNextWorkItem(ctx context.Context, workerId strin
 
 	// Add the ID of the current worker as an attribute to the current span.
 	ctx = span.WithField(ctx, "workerId", workerId)
-	return handleQueueItem(ctx, pc.workqueue, pc.syncHandler)
+	return handleQueueItem(ctx, q)
+}
+
+func (pc *PodController) wrapSyncHandler(key string) workItem {
+	return func(ctx context.Context) error {
+		return pc.syncHandler(ctx, key)
+	}
 }
 
 // syncHandler compares the actual state with the desired, and attempts to converge the two.
@@ -221,7 +237,15 @@ func (pc *PodController) syncPodInProvider(ctx context.Context, pod *corev1.Pod)
 	// Check whether the pod has been marked for deletion.
 	// If it does, guarantee it is deleted in the provider and Kubernetes.
 	if pod.DeletionTimestamp != nil {
-		if err := pc.server.deletePod(ctx, pod.Namespace, pod.Name); err != nil {
+		// Check if this pod has been tombstoned. If so we shouldn't do anything with it, and allow the provider
+		// to handle it, as tombstoning only occurs if the pod was successfully deleted from the provider
+		//
+		// TODO: In the future, we want to send an update about the pod (status) to the provider
+		if _, ok := pod.ObjectMeta.Annotations[softDeleteKey]; ok {
+			return nil
+		}
+
+		if err := pc.server.terminatePod(ctx, pod); err != nil {
 			err := pkgerrors.Wrapf(err, "failed to delete pod %q in the provider", loggablePodName(pod))
 			span.SetStatus(ocstatus.FromError(err))
 			return err
@@ -298,7 +322,9 @@ func (pc *PodController) deleteDanglingPods(ctx context.Context, threadiness int
 
 			// Add the pod's attributes to the current span.
 			ctx = addPodAttributes(ctx, span, pod)
-			// Actually delete the pod.
+			// Actually delete the pod. We use delete pod here, and not terminate pod here, because we detected
+			// a dangling pod, and that either means that the pod hasn't hit its grace period expiration yet
+			// or it's a real dangling pod.
 			if err := pc.server.deletePod(ctx, pod.Namespace, pod.Name); err != nil {
 				span.SetStatus(ocstatus.FromError(err))
 				log.G(ctx).Errorf("failed to delete pod %q in provider", loggablePodName(pod))

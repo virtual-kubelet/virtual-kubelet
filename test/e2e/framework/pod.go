@@ -121,6 +121,19 @@ func (f *Framework) WaitUntilPodDeleted(namespace, name string) error {
 	})
 }
 
+// WaitUntilPodInPhase blocks until the pod with the specified name and namespace is in one of the specified phases
+func (f *Framework) WaitUntilPodInPhase(namespace, name string, phases ...corev1.PodPhase) error {
+	return f.WaitUntilPodCondition(namespace, name, func(event watchapi.Event) (bool, error) {
+		pod := event.Object.(*corev1.Pod)
+		for _, p := range phases {
+			if pod.Status.Phase == p {
+				return true, nil
+			}
+		}
+		return false, nil
+	})
+}
+
 // WaitUntilPodEventWithReason establishes a watch on events involving the specified pod.
 // Then, it waits for an event with the specified reason to be created/updated.
 func (f *Framework) WaitUntilPodEventWithReason(pod *corev1.Pod, reason string) error {
