@@ -17,8 +17,8 @@ func TestNodeCreateAfterDelete(t *testing.T) {
 	chDone := make(chan struct{})
 	defer close(chDone)
 
+	var deleted bool
 	go func() {
-		var deleted bool
 		wait := func(e watchapi.Event) (bool, error) {
 			select {
 			case <-chDone:
@@ -44,6 +44,7 @@ func TestNodeCreateAfterDelete(t *testing.T) {
 
 	select {
 	case <-timer.C:
+		t.Logf("Observed deletion: %v", deleted)
 		t.Fatal("timeout waiting for node to be recreated")
 	case err := <-chErr:
 		assert.NilError(t, err)

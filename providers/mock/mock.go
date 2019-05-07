@@ -204,14 +204,30 @@ func (p *MockProvider) DeletePod(ctx context.Context, pod *v1.Pod) (err error) {
 		return strongerrors.NotFound(fmt.Errorf("pod not found"))
 	}
 
+	now := metav1.Now()
 	delete(p.pods, key)
-	if !p.config.DisableSoftDeletes {
-		pod.Status = v1.PodStatus{
-			Phase:  v1.PodSucceeded,
-			Reason: "MockProviderPodDeleted",
-		}
-		p.notifier(pod)
+	pod.Status = v1.PodStatus{
+		Phase:  v1.PodSucceeded,
+		Reason: "MockProviderPodDeleted",
 	}
+
+	pod.Status.ContainerStatuses = []v1.ContainerStatus{}
+	for _, container := range pod.Spec.Containers {
+		pod.Status.ContainerStatuses = append(pod.Status.ContainerStatuses, v1.ContainerStatus{
+			Name:         container.Name,
+			Image:        container.Image,
+			Ready:        true,
+			RestartCount: 0,
+			State: v1.ContainerState{
+				Terminated: &v1.ContainerStateTerminated{
+					Message:    "Mock provider terminated container upon deletion",
+					FinishedAt: now,
+					Reason:     "MockProviderPodContainerDeleted",
+				},
+			},
+		})
+	}
+	p.notifier(pod)
 
 	return nil
 }
