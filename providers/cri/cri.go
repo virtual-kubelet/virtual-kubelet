@@ -15,8 +15,8 @@ import (
 	"syscall"
 	"time"
 
-	log "github.com/Sirupsen/logrus"
 	"github.com/cpuguy83/strongerrors"
+	log "github.com/sirupsen/logrus"
 	"github.com/virtual-kubelet/virtual-kubelet/manager"
 	"github.com/virtual-kubelet/virtual-kubelet/providers"
 	"google.golang.org/grpc"

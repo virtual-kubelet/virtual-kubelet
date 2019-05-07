@@ -3,7 +3,7 @@ package cri
 import (
 	"fmt"
 
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 	"golang.org/x/net/context"
 	criapi "k8s.io/kubernetes/pkg/kubelet/apis/cri/runtime/v1alpha2"
 )
