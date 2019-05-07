@@ -57,14 +57,6 @@
   version = "v0.3.0"
 
 [[projects]]
-  digest = "1:6989062eb7ccf25cf38bf4fe3dba097ee209f896cda42cefdca3927047bef7b6"
-  name = "github.com/Sirupsen/logrus"
-  packages = ["."]
-  pruneopts = "NUT"
-  revision = "c155da19408a8799da419ed3eeb0cb5db0ad5dbc"
-  version = "v1.0.5"
-
-[[projects]]
   digest = "1:5e9ea5618cb3451ce312505a48a563e95ce26c9ef498cd0a8833255e5e7f5c61"
   name = "github.com/aliyun/alibaba-cloud-sdk-go"
   packages = [
@@ -572,6 +564,14 @@
   version = "v1.1.5"
 
 [[projects]]
+  digest = "1:58999a98719fddbac6303cb17e8d85b945f60b72f48e3a2df6b950b97fa926f1"
+  name = "github.com/konsorten/go-windows-terminal-sequences"
+  packages = ["."]
+  pruneopts = "NUT"
+  revision = "f55edac94c9bbba5d6182a4be46d86a2c9b5b50e"
+  version = "v1.0.2"
+
+[[projects]]
   digest = "1:648ad8414e400ae89650dea8db781f129d14cb4cc70a271fdcbb6fb0ede91883"
   name = "github.com/lawrencegripper/pod2docker"
   packages = ["."]
@@ -701,6 +701,14 @@
   pruneopts = "NUT"
   revision = "f58768cc1a7a7e77a3bd49e98cdd21419399b6a3"
   version = "v1.2.0"
+
+[[projects]]
+  digest = "1:998e4640c25e00ccb7b2569bf94562283937b8afb3485c0e1a0a05a15330240d"
+  name = "github.com/sirupsen/logrus"
+  packages = ["."]
+  pruneopts = "NUT"
+  revision = "8bdbc7bcc01dcbb8ec23dc8a28e332258d25251f"
+  version = "v1.4.1"
 
 [[projects]]
   digest = "1:0f156dbd01b40676bdcbc64e51535c09b50f83c9cca5faef3090f82f18bda3c2"
@@ -1309,7 +1317,6 @@
     "github.com/Azure/go-autorest/autorest/azure",
     "github.com/Azure/go-autorest/autorest/to",
     "github.com/BurntSushi/toml",
-    "github.com/Sirupsen/logrus",
     "github.com/aliyun/alibaba-cloud-sdk-go/sdk",
     "github.com/aliyun/alibaba-cloud-sdk-go/sdk/auth",
     "github.com/aliyun/alibaba-cloud-sdk-go/sdk/errors",
@@ -1340,6 +1347,7 @@
     "github.com/lawrencegripper/pod2docker",
     "github.com/mitchellh/go-homedir",
     "github.com/pkg/errors",
+    "github.com/sirupsen/logrus",
     "github.com/spf13/cobra",
     "github.com/spf13/pflag",
     "github.com/virtual-kubelet/azure-aci/client",
