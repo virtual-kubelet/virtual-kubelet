@@ -221,6 +221,7 @@ func (pc *PodController) syncHandler(ctx context.Context, key string) error {
 			span.SetStatus(ocstatus.FromError(err))
 			return err
 		}
+
 		return nil
 	}
 	// At this point we know the Pod resource has either been created or updated (which includes being marked for deletion).

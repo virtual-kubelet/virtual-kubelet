@@ -130,7 +130,6 @@ func testPodLifecycleGracefulDeleteSoftDeletesEnabled(t *testing.T) {
 	assert.Assert(t, *podLast.ObjectMeta.GetDeletionGracePeriodSeconds() > int64(0))
 
 	t.Logf("Pod ended as phase: %+v", podLast.Status.Phase)
-	t.Logf("Pod 0 ended as metadata: %+v", *podLast.ObjectMeta.GetDeletionGracePeriodSeconds())
 	assert.Equal(t, "true", podLast.ObjectMeta.Annotations["virtual-kubelet.io/softDelete"])
 }
 func testPodLifecycleGracefulDeleteSoftDeletesDisabled(t *testing.T) {
@@ -265,6 +264,7 @@ func TestPodLifecycleForceDelete(t *testing.T) {
 
 	// Wait for the delete event to be ACKed.
 	if err := <-podCh; err != nil {
+		t.Logf("Last saw pod in state: %+v", podLast)
 		t.Fatal(err)
 	}
 	// Give the provider some time to react to the MODIFIED/DELETED events before proceeding.
