@@ -29,7 +29,7 @@ spec:
     - :10256
     env:
     - name: KUBELET_PORT
-      value: 10251
+      value: "10251"
     ports:
     - name: metrics
       containerPort: 10256
