@@ -18,6 +18,7 @@ const (
 	defaultTaintKey    = "virtual-kubelet.io/provider"
 	defaultTaintValue  = "mock"
 	defaultTaintEffect = string(v1.TaintEffectNoSchedule)
+	defaultStatsPort   = 10255
 )
 
 var (
@@ -38,6 +39,8 @@ var (
 	taintEffect string
 	// Wait for Kubelet pod to come up before running tests
 	waitForKubelet bool
+	// Port that the statistics daemon is running on on the kubelet
+	statsPort int
 )
 
 func init() {
@@ -48,6 +51,7 @@ func init() {
 	flag.StringVar(&taintValue, "taint-value", defaultTaintValue, "the value of the taint that is expected to be associated with the virtual-kubelet node to test")
 	flag.StringVar(&taintEffect, "taint-effect", defaultTaintEffect, "the effect of the taint that is expected to be associated with the virtual-kubelet node to test")
 	flag.BoolVar(&waitForKubelet, "wait-for-kubelet", true, "Wait for Kubelet pod to come up before running tests")
+	flag.IntVar(&statsPort, "stats-port", defaultStatsPort, "Port that the statistics daemon is running on on the kubelet")
 }
 
 func TestMain(m *testing.M) {
@@ -55,7 +59,7 @@ func TestMain(m *testing.M) {
 	// Set sane defaults in case no values (or empty ones) have been provided.
 	setDefaults()
 	// Create a new instance of the test framework targeting the specified node.
-	f = framework.NewTestingFramework(kubeconfig, namespace, nodeName, taintKey, taintValue, taintEffect)
+	f = framework.NewTestingFramework(kubeconfig, namespace, nodeName, taintKey, taintValue, taintEffect, statsPort)
 	if waitForKubelet {
 		// Wait for the virtual-kubelet pod to be ready.
 		if _, err := f.WaitUntilPodReady(namespace, nodeName); err != nil {
@@ -82,5 +86,8 @@ func setDefaults() {
 	}
 	if taintEffect == "" {
 		taintEffect = defaultTaintEffect
+	}
+	if statsPort == 0 {
+		statsPort = defaultStatsPort
 	}
 }

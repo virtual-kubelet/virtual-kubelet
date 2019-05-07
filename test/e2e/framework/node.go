@@ -56,3 +56,8 @@ func (f *Framework) WaitUntilNodeAdded(event watchapi.Event) (bool, error) {
 func (f *Framework) DeleteNode() error {
 	return f.KubeClient.CoreV1().Nodes().Delete(f.NodeName, nil)
 }
+
+// GetNode gets the vk nodeused by the framework
+func (f *Framework) GetNode() (*corev1.Node, error) {
+	return f.KubeClient.CoreV1().Nodes().Get(f.NodeName, metav1.GetOptions{})
+}

@@ -13,6 +13,7 @@ rules:
   resources:
   - configmaps
   - secrets
+  - services
   verbs:
   - get
   - list
@@ -40,6 +41,7 @@ rules:
   - nodes/status
   verbs:
   - update
+  - patch
 - apiGroups:
   - ""
   resources:

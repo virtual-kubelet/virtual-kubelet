@@ -7,6 +7,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/virtual-kubelet/virtual-kubelet/cmd/virtual-kubelet/commands/root"
+
 	"github.com/virtual-kubelet/virtual-kubelet/vkubelet"
 	"gotest.tools/assert"
 	is "gotest.tools/assert/cmp"
@@ -70,98 +72,102 @@ func TestGetStatsSummary(t *testing.T) {
 // Then, it deletes one of the pods and verifies that the provider has been asked to delete it.
 // These verifications are made using the /stats/summary endpoint of the virtual-kubelet, by checking for the presence or absence of the pods.
 // Hence, the provider being tested must implement the PodMetricsProvider interface.
+func TestPodLifecycleGracefulDelete(t *testing.T) {
+	node, err := f.GetNode()
+	assert.NilError(t, err)
+	if val, ok := node.Annotations[root.SoftDeleteKey]; ok && val == "true" {
+		t.Run("SoftDeletesEnabled", testPodLifecycleGracefulDeleteSoftDeletesEnabled)
+	} else {
+		t.Run("SoftDeletesDisabled", testPodLifecycleGracefulDeleteSoftDeletesDisabled)
 
-func TestPodLifecycleGracefulDelete(t1 *testing.T) {
-	t1.Run("softDeletesEnabled", func(t *testing.T) {
-		// vkubelet-mock-0 is configured with soft deletes enabled
-		testPodLifecycleGracefulDelete(t, "vkubelet-mock-0", true, func(pod *v1.Pod) {
-			// Wait for the pod to be deleted in a separate goroutine.
-			// This ensures that we don't possibly miss the MODIFIED/DELETED events due to establishing the watch too late in the process.
-			podCh := make(chan error)
-			var podLast *v1.Pod
-			go func() {
-				defer close(podCh) // Close the podCh channel, signaling we've observed deletion of the pod.
-				deletePhases := []v1.PodPhase{v1.PodSucceeded, v1.PodFailed}
-				var err error
-				// Wait for the "nginx-1-Y" pod to be reported as having been marked for deletion.
-				podLast, err = f.WaitUntilPodInPhase(pod.Namespace, pod.Name, deletePhases...)
-				if err != nil {
-					// Propagate the error to the outside so we can fail the test.
-					podCh <- err
-				}
-			}()
-
-			// Delete the pod.
-			if err := f.DeletePod(pod.Namespace, pod.Name); err != nil {
-				t.Fatal(err)
-			}
-			t.Log("Deleted pod: ", pod.Name)
-			// Wait for the delete event to be ACKed.
-			if err := <-podCh; err != nil {
-				t.Fatal(err)
-			}
-			// Give the provider some time to react to the MODIFIED/DELETED events before proceeding.
-			time.Sleep(deleteGracePeriodForProvider)
-
-			// Grab the stats from the provider.
-			stats, err := f.GetStatsSummary()
-			if err != nil {
-				t.Fatal(err)
-			}
-
-			// Make sure the pod DOES NOT exist in the slice of PodStats anymore.
-			if _, err := findPodInPodStats(stats, pod); err == nil {
-				t.Fatalf("expected to NOT find pod \"%s/%s\" in the slice of pod stats", pod.Namespace, pod.Name)
-			}
-
-			assert.Assert(t, podLast != nil)
-			assert.Equal(t, podLast.Status.Phase, v1.PodSucceeded)
-			assert.Assert(t, podLast.ObjectMeta.GetDeletionGracePeriodSeconds() != nil)
-			assert.Assert(t, *podLast.ObjectMeta.GetDeletionGracePeriodSeconds() > int64(0))
-
-			t.Logf("Pod ended as phase: %+v", podLast.Status.Phase)
-			t.Logf("Pod 0 ended as metadata: %+v", *podLast.ObjectMeta.GetDeletionGracePeriodSeconds())
-			assert.Equal(t, "true", podLast.ObjectMeta.Annotations["virtual-kubelet.io/softDelete"])
-		})
-	})
-
-	// vkubelet-mock-0 is configured with soft deletes disabled
-	t1.Run("softDeletesDisabled", func(t *testing.T) {
-		testPodLifecycleGracefulDelete(t, "vkubelet-mock-1", false, func(pod *v1.Pod) {
-			podCh := make(chan error)
-			var podLast *v1.Pod
-			go func() {
-				// Close the podCh channel, signaling we've observed deletion of the pod.
-				defer close(podCh)
-
-				var err error
-				podLast, err = f.WaitUntilPodDeleted(pod.Namespace, pod.Name)
-				if err != nil {
-					// Propagate the error to the outside so we can fail the test.
-					podCh <- err
-				}
-			}()
-
-			// Gracefully delete the "nginx-0" pod.
-			if err := f.DeletePod(pod.Namespace, pod.Name); err != nil {
-				t.Fatal(err)
-			}
-			t.Log("Force deleted pod: ", pod.Name)
-
-			// Wait for the delete event to be ACKed.
-			if err := <-podCh; err != nil {
-				t.Fatal(err)
-			}
-			// Give the provider some time to react to the MODIFIED/DELETED events before proceeding.
-			time.Sleep(deleteGracePeriodForProvider)
-			assert.Assert(t, podLast != nil)
-			assert.Assert(t, podLast.ObjectMeta.GetDeletionGracePeriodSeconds() != nil)
-			assert.Equal(t, int64(0), *podLast.ObjectMeta.GetDeletionGracePeriodSeconds())
-			assert.Assert(t, is.Nil(podLast.ObjectMeta.Annotations["virtual-kubelet.io/softDelete"]))
-		})
-	})
+	}
 }
-func testPodLifecycleGracefulDelete(t *testing.T, nodeName string, checkMetrics bool, check func(*v1.Pod)) {
+func testPodLifecycleGracefulDeleteSoftDeletesEnabled(t *testing.T) {
+	pod := testPodLifecycleGracefulDelete(t)
+
+	// Wait for the pod to be deleted in a separate goroutine.
+	// This ensures that we don't possibly miss the MODIFIED/DELETED events due to establishing the watch too late in the process.
+	podCh := make(chan error)
+	var podLast *v1.Pod
+	go func() {
+		defer close(podCh) // Close the podCh channel, signaling we've observed deletion of the pod.
+		deletePhases := []v1.PodPhase{v1.PodSucceeded, v1.PodFailed}
+		var err error
+		// Wait for the "nginx-1-Y" pod to be reported as having been marked for deletion.
+		podLast, err = f.WaitUntilPodInPhase(pod.Namespace, pod.Name, deletePhases...)
+		if err != nil {
+			// Propagate the error to the outside so we can fail the test.
+			podCh <- err
+		}
+	}()
+
+	// Delete the pod.
+	if err := f.DeletePod(pod.Namespace, pod.Name); err != nil {
+		t.Fatal(err)
+	}
+	t.Log("Deleted pod: ", pod.Name)
+	// Wait for the delete event to be ACKed.
+	if err := <-podCh; err != nil {
+		t.Fatal(err)
+	}
+	// Give the provider some time to react to the MODIFIED/DELETED events before proceeding.
+	time.Sleep(deleteGracePeriodForProvider)
+
+	// Grab the stats from the provider.
+	stats, err := f.GetStatsSummary()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Make sure the pod DOES NOT exist in the slice of PodStats anymore.
+	if _, err := findPodInPodStats(stats, pod); err == nil {
+		t.Fatalf("expected to NOT find pod \"%s/%s\" in the slice of pod stats", pod.Namespace, pod.Name)
+	}
+
+	assert.Assert(t, podLast != nil)
+	assert.Equal(t, podLast.Status.Phase, v1.PodSucceeded)
+	assert.Assert(t, podLast.ObjectMeta.GetDeletionGracePeriodSeconds() != nil)
+	assert.Assert(t, *podLast.ObjectMeta.GetDeletionGracePeriodSeconds() > int64(0))
+
+	t.Logf("Pod ended as phase: %+v", podLast.Status.Phase)
+	t.Logf("Pod 0 ended as metadata: %+v", *podLast.ObjectMeta.GetDeletionGracePeriodSeconds())
+	assert.Equal(t, "true", podLast.ObjectMeta.Annotations["virtual-kubelet.io/softDelete"])
+}
+func testPodLifecycleGracefulDeleteSoftDeletesDisabled(t *testing.T) {
+	pod := testPodLifecycleGracefulDelete(t)
+	podCh := make(chan error)
+	var podLast *v1.Pod
+	go func() {
+		// Close the podCh channel, signaling we've observed deletion of the pod.
+		defer close(podCh)
+
+		var err error
+		podLast, err = f.WaitUntilPodDeleted(pod.Namespace, pod.Name)
+		if err != nil {
+			// Propagate the error to the outside so we can fail the test.
+			podCh <- err
+		}
+	}()
+
+	// Gracefully delete the "nginx-0" pod.
+	if err := f.DeletePod(pod.Namespace, pod.Name); err != nil {
+		t.Fatal(err)
+	}
+	t.Log("Force deleted pod: ", pod.Name)
+
+	// Wait for the delete event to be ACKed.
+	if err := <-podCh; err != nil {
+		t.Fatal(err)
+	}
+	// Give the provider some time to react to the MODIFIED/DELETED events before proceeding.
+	time.Sleep(deleteGracePeriodForProvider)
+	assert.Assert(t, podLast != nil)
+	assert.Assert(t, podLast.ObjectMeta.GetDeletionGracePeriodSeconds() != nil)
+	assert.Equal(t, int64(0), *podLast.ObjectMeta.GetDeletionGracePeriodSeconds())
+	assert.Assert(t, is.Nil(podLast.ObjectMeta.Annotations["virtual-kubelet.io/softDelete"]))
+}
+
+func testPodLifecycleGracefulDelete(t *testing.T) *v1.Pod {
 	// Create a pod with prefix "nginx-0-" having a single container.
 	podSpec := f.CreateDummyPodObjectWithPrefix("nginx-"+t.Name()+"-", "foo")
 	podSpec.Spec.NodeName = nodeName
@@ -184,35 +190,23 @@ func testPodLifecycleGracefulDelete(t *testing.T, nodeName string, checkMetrics 
 	}
 	t.Logf("Pod %s ready", pod.Name)
 
-	if checkMetrics {
-		// Grab the stats from the provider.
-		stats, err := f.GetStatsSummary()
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		// Make sure the "nginx-0-X" pod exists in the slice of PodStats.
-		if _, err := findPodInPodStats(stats, pod); err != nil {
-			t.Fatal(err)
-		}
+	// Grab the stats from the provider.
+	stats, err := f.GetStatsSummary()
+	if err != nil {
+		t.Fatal(err)
 	}
 
-	check(pod)
+	// Make sure the "nginx-0-X" pod exists in the slice of PodStats.
+	if _, err := findPodInPodStats(stats, pod); err != nil {
+		t.Fatal(err)
+	}
+	return pod
 }
 
 // TestPodLifecycleNonGracefulDelete creates one podsand verifies that the provider has created them
 // and put them in the running lifecycle. It then does a force delete on the pod, and verifies the provider
 // has deleted it.
-func TestPodLifecycleForceDelete(t1 *testing.T) {
-	t1.Run("softDeletesEnabled", func(t *testing.T) {
-		testPodLifecycleForceDelete(t, "vkubelet-mock-0")
-	})
-	t1.Run("softDeletesDisabled", func(t *testing.T) {
-		testPodLifecycleForceDelete(t, "vkubelet-mock-1")
-	})
-}
-
-func testPodLifecycleForceDelete(t *testing.T, nodename string) {
+func TestPodLifecycleForceDelete(t *testing.T) {
 
 	// Create a pod with prefix having a single container.
 	pod, err := f.CreatePod(f.CreateDummyPodObjectWithPrefix("nginx-0-", "foo"))

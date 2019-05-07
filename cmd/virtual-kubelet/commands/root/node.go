@@ -33,6 +33,9 @@ var (
 	vkVersion = strings.Join([]string{"v1.13.1", "vk", version.Version}, "-")
 )
 
+// SoftDeleteKey is an annotation put on the node to indicate its provider is soft delete capable
+const SoftDeleteKey = "virtual-kubelet.io/softdeletes-enabled"
+
 // NodeFromProvider builds a kubernetes node object from a provider
 // This is a temporary solution until node stuff actually split off from the provider interface itself.
 func NodeFromProvider(ctx context.Context, name string, taint *v1.Taint, p providers.Provider) *v1.Node {
@@ -44,7 +47,8 @@ func NodeFromProvider(ctx context.Context, name string, taint *v1.Taint, p provi
 
 	node := &v1.Node{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: name,
+			Name:        name,
+			Annotations: map[string]string{},
 			Labels: map[string]string{
 				"type":                   "virtual-kubelet",
 				"kubernetes.io/role":     "agent",
@@ -69,6 +73,12 @@ func NodeFromProvider(ctx context.Context, name string, taint *v1.Taint, p provi
 			DaemonEndpoints: *p.NodeDaemonEndpoints(ctx),
 		},
 	}
+	if sdProvider, ok := p.(providers.SoftDeletes); ok && sdProvider.SoftDeletes() {
+		node.Annotations[SoftDeleteKey] = "true"
+	} else {
+		node.Annotations[SoftDeleteKey] = "false"
+	}
+
 	return node
 }
 

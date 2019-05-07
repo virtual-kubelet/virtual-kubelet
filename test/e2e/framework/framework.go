@@ -14,10 +14,11 @@ type Framework struct {
 	TaintKey    string
 	TaintValue  string
 	TaintEffect string
+	StatsPort   int
 }
 
 // NewTestingFramework returns a new instance of the testing framework.
-func NewTestingFramework(kubeconfig, namespace, nodeName, taintKey, taintValue, taintEffect string) *Framework {
+func NewTestingFramework(kubeconfig, namespace, nodeName, taintKey, taintValue, taintEffect string, statsPort int) *Framework {
 	return &Framework{
 		KubeClient:  createKubeClient(kubeconfig),
 		Namespace:   namespace,
@@ -25,6 +26,7 @@ func NewTestingFramework(kubeconfig, namespace, nodeName, taintKey, taintValue, 
 		TaintKey:    taintKey,
 		TaintValue:  taintValue,
 		TaintEffect: taintEffect,
+		StatsPort:   statsPort,
 	}
 }
 
