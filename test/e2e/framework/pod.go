@@ -16,7 +16,7 @@ import (
 	podutil "k8s.io/kubernetes/pkg/api/v1/pod"
 )
 
-const defaultWatchTimeout = 30 * time.Second
+const defaultWatchTimeout = 2 * time.Minute
 
 // CreateDummyPodObjectWithPrefix creates a dujmmy pod object using the specified prefix as the value of .metadata.generateName.
 // A variable number of strings can be provided.
@@ -116,8 +116,8 @@ func (f *Framework) WaitUntilPodReady(namespace, name string) (*corev1.Pod, erro
 // WaitUntilPodDeleted blocks until the pod with the specified name and namespace is deleted from apiserver.
 func (f *Framework) WaitUntilPodDeleted(namespace, name string) (*corev1.Pod, error) {
 	return f.WaitUntilPodCondition(namespace, name, func(event watchapi.Event) (bool, error) {
-		//		pod := event.Object.(*corev1.Pod)
-		return event.Type == watchapi.Deleted, nil
+		pod := event.Object.(*corev1.Pod)
+		return event.Type == watchapi.Deleted || (pod.ObjectMeta.DeletionTimestamp != nil && *pod.ObjectMeta.GetDeletionGracePeriodSeconds() == 0), nil
 	})
 }
 
