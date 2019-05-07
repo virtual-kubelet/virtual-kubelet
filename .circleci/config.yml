@@ -103,9 +103,14 @@ jobs:
           command: |
             make e2e
       - run:
-          name: Collect logs on failure
+          name: Collect logs on failure from vkubelet-mock-0
           command: |
             kubectl logs vkubelet-mock-0
+          when: on_fail
+      - run:
+          name: Collect logs on failure from vkubelet-mock-1
+          command: |
+            kubectl logs vkubelet-mock-1
           when: on_fail
 
 workflows:

@@ -58,7 +58,7 @@ func TestMain(m *testing.M) {
 	f = framework.NewTestingFramework(kubeconfig, namespace, nodeName, taintKey, taintValue, taintEffect)
 	if waitForKubelet {
 		// Wait for the virtual-kubelet pod to be ready.
-		if err := f.WaitUntilPodReady(namespace, nodeName); err != nil {
+		if _, err := f.WaitUntilPodReady(namespace, nodeName); err != nil {
 			panic(err)
 		}
 	}

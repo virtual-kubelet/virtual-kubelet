@@ -3,7 +3,6 @@ package vkubelet
 import (
 	"context"
 	"encoding/json"
-	"strings"
 	"time"
 
 	"github.com/cpuguy83/strongerrors/status/ocstatus"
@@ -21,11 +20,7 @@ import (
 	"k8s.io/client-go/util/workqueue"
 )
 
-// ~1 = / in JSON-patch language
-// See RFC6901
 const softDeleteKey = "virtual-kubelet.io/softDelete"
-
-var escapedSoftDeleteKey = strings.Replace(softDeleteKey, "/", "~1", -1)
 
 func addPodAttributes(ctx context.Context, span trace.Span, pod *corev1.Pod) context.Context {
 	return span.WithFields(ctx, log.Fields{
@@ -100,10 +95,8 @@ func (s *Server) deletePodFromProvider(ctx context.Context, namespace, name stri
 	// Hence, we ignore the error and just act upon the pod if it is non-nil (meaning that the provider still knows about the pod).
 	pod, _ := s.provider.GetPod(ctx, namespace, name)
 	if pod == nil {
-		// The provider is not aware of the pod, but we must still delete the Kubernetes API resource.
-		return s.forceDeletePodResource(ctx, namespace, name)
+		return nil
 	}
-
 	ctx, span := trace.StartSpan(ctx, "deletePodFromProvider")
 	defer span.End()
 	ctx = addPodAttributes(ctx, span, pod)
@@ -124,10 +117,10 @@ func (s *Server) terminatePod(ctx context.Context, pod *corev1.Pod) error {
 	ctx, span := trace.StartSpan(ctx, "terminatePod")
 	defer span.End()
 	ctx = addPodAttributes(ctx, span, pod)
-	_, softDeletes := s.provider.(providers.SoftDeletes)
-	ctx = span.WithField(ctx, "softDeletes", softDeletes)
 
-	if !softDeletes {
+	ctx = span.WithField(ctx, "softDeletes", s.softDeletes())
+	ctx = log.WithLogger(ctx, log.G(ctx).WithField("softDeletes", s.softDeletes()))
+	if !s.softDeletes() {
 		return s.deletePod(ctx, pod.Namespace, pod.Name)
 	}
 
@@ -145,14 +138,16 @@ func (s *Server) terminatePod(ctx context.Context, pod *corev1.Pod) error {
 
 	// We prepare the patch first
 	patch := []struct {
-		Op    string `json:"op"`
-		Path  string `json:"path"`
-		Value string `json:"value"`
+		Op    string            `json:"op"`
+		Path  string            `json:"path"`
+		Value map[string]string `json:"value"`
 	}{
 		{
-			Op:    "add",
-			Path:  "/metadata/annotations/" + escapedSoftDeleteKey,
-			Value: "true",
+			Op:   "add",
+			Path: "/metadata/annotations",
+			Value: map[string]string{
+				softDeleteKey: "true",
+			},
 		},
 	}
 
@@ -388,4 +383,12 @@ func (s *Server) podStatusHandler(ctx context.Context, key string) (retErr error
 	}
 
 	return s.updatePodStatus(ctx, pod)
+}
+
+func (s *Server) softDeletes() bool {
+	softDeleteProvider, ok := s.provider.(providers.SoftDeletes)
+	if !ok {
+		return false
+	}
+	return softDeleteProvider.SoftDeletes()
 }

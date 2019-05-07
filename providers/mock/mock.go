@@ -46,9 +46,10 @@ type MockProvider struct {
 
 // MockConfig contains a mock virtual-kubelet's configurable parameters.
 type MockConfig struct {
-	CPU    string `json:"cpu,omitempty"`
-	Memory string `json:"memory,omitempty"`
-	Pods   string `json:"pods,omitempty"`
+	CPU                string `json:"cpu,omitempty"`
+	Memory             string `json:"memory,omitempty"`
+	Pods               string `json:"pods,omitempty"`
+	DisableSoftDeletes bool   `json:"disableSoftDeletes,omitempty"`
 }
 
 // NewMockProvider creates a new MockProvider
@@ -203,13 +204,14 @@ func (p *MockProvider) DeletePod(ctx context.Context, pod *v1.Pod) (err error) {
 		return strongerrors.NotFound(fmt.Errorf("pod not found"))
 	}
 
-	//
-	pod.Status = v1.PodStatus{
-		Phase:  v1.PodSucceeded,
-		Reason: "MockProviderPodDeleted",
-	}
 	delete(p.pods, key)
-	p.notifier(pod)
+	if !p.config.DisableSoftDeletes {
+		pod.Status = v1.PodStatus{
+			Phase:  v1.PodSucceeded,
+			Reason: "MockProviderPodDeleted",
+		}
+		p.notifier(pod)
+	}
 
 	return nil
 }
@@ -476,7 +478,9 @@ func (p *MockProvider) NotifyPods(ctx context.Context, notifier func(*v1.Pod)) {
 	p.notifier = notifier
 }
 
-func (p *MockProvider) SoftDeletes() {}
+func (p *MockProvider) SoftDeletes() bool {
+	return !p.config.DisableSoftDeletes
+}
 
 func buildKeyFromNames(namespace string, name string) (string, error) {
 	return fmt.Sprintf("%s-%s", namespace, name), nil

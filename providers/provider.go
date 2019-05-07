@@ -77,8 +77,8 @@ type PodNotifier interface {
 // You must implement this if you intend to ever delete pods after deletion
 type SoftDeletes interface {
 	PodNotifier
-	// This method does nothing other than signal the provider is okay with soft-deletes.
-	SoftDeletes()
+	// This method indicates the provider is okay with soft-deletes. Return true is the provider can handle them.
+	SoftDeletes() bool
 }
 
 // AttachIO is used to pass in streams to attach to a container process

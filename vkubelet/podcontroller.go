@@ -194,6 +194,7 @@ func (pc *PodController) syncHandler(ctx context.Context, key string) error {
 
 	// Add the current key as an attribute to the current span.
 	ctx = span.WithField(ctx, "key", key)
+	log.G(ctx).WithField("key", key).Debug("Syncing pod")
 
 	// Convert the namespace/name string into a distinct namespace and name.
 	namespace, name, err := cache.SplitMetaNamespaceKey(key)
@@ -215,7 +216,7 @@ func (pc *PodController) syncHandler(ctx context.Context, key string) error {
 		}
 		// At this point we know the Pod resource doesn't exist, which most probably means it was deleted.
 		// Hence, we must delete it from the provider if it still exists there.
-		if err := pc.server.deletePod(ctx, namespace, name); err != nil {
+		if err := pc.server.deletePodFromProvider(ctx, namespace, name); err != nil {
 			err := pkgerrors.Wrapf(err, "failed to delete pod %q in the provider", loggablePodNameFromCoordinates(namespace, name))
 			span.SetStatus(ocstatus.FromError(err))
 			return err
@@ -324,7 +325,7 @@ func (pc *PodController) deleteDanglingPods(ctx context.Context, threadiness int
 			ctx = addPodAttributes(ctx, span, pod)
 			// Actually delete the pod. We use delete pod here, and not terminate pod here, because we detected
 			// a dangling pod, and that either means that the pod hasn't hit its grace period expiration yet
-			// or it's a real dangling pod.
+			// or it's a real dangling pod
 			if err := pc.server.deletePod(ctx, pod.Namespace, pod.Name); err != nil {
 				span.SetStatus(ocstatus.FromError(err))
 				log.G(ctx).Errorf("failed to delete pod %q in provider", loggablePodName(pod))
