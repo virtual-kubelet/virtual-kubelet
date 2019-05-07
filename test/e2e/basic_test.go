@@ -258,6 +258,7 @@ func TestPodLifecycleForceDelete(t *testing.T) {
 
 	// Forcibly delete the pod.
 	if err := f.DeletePodImmediately(pod.Namespace, pod.Name); err != nil {
+		t.Logf("Last saw pod in state: %+v", podLast)
 		t.Fatal(err)
 	}
 	t.Log("Force deleted pod: ", pod.Name)
