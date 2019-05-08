@@ -16,6 +16,7 @@ package root
 
 import (
 	"context"
+	"net"
 	"net/http"
 	"os"
 	"strconv"
@@ -51,7 +52,7 @@ func setupTracing(ctx context.Context, c Opts) error {
 	c.TraceConfig.Tags["nodeName"] = c.NodeName
 	for _, e := range c.TraceExporters {
 		if e == "zpages" {
-			go setupZpages(ctx)
+			setupZpages(ctx)
 			continue
 		}
 		exporter, err := opencensus.GetTracingExporter(e, c.TraceConfig)
@@ -96,7 +97,19 @@ func setupZpages(ctx context.Context) {
 	if p == "" {
 		log.G(ctx).Error("Missing ZPAGES_PORT env var, cannot setup zpages endpoint")
 	}
+	listener, err := net.Listen("tcp", p)
+	if err != nil {
+		log.G(ctx).WithError(err).Error("Cannot bind to ZPAGES PORT, cannot setup listener")
+		return
+	}
 	mux := http.NewServeMux()
 	zpages.Handle(mux, "/debug")
-	http.ListenAndServe(p, mux)
+	go func() {
+		// This should never terminate, if it does, it will always terminate with an error
+		e := http.Serve(listener, mux)
+		if e == http.ErrServerClosed {
+			return
+		}
+		log.G(ctx).WithError(e).Error("Zpages server exited")
+	}()
 }

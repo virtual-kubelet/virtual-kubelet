@@ -51,10 +51,6 @@ Onur Filiz (onfiliz@amazon.com)
 
 Fei Xu (xufei40@huawei.com)
 
-**VIC**
-
-Loc Nguyen (nloc@vmware.com)
-
 **Azure Batch**
 
 Lawrence Gripper (lawrence.gripper@microsoft.com)

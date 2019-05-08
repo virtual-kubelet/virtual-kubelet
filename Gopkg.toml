@@ -74,10 +74,6 @@
   name = "github.com/cpuguy83/strongerrors"
   version = "0.2.1"
 
-[[constraint]]
-  branch = "feature/wolfpack"
-  name = "github.com/vmware/vic"
-
 [[override]]
   name = "github.com/docker/docker"
   revision = "49bf474f9ed7ce7143a59d1964ff7b7fd9b52178"

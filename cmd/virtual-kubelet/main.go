@@ -7,8 +7,8 @@ import (
 	"path/filepath"
 	"syscall"
 
-	"github.com/Sirupsen/logrus"
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/virtual-kubelet/virtual-kubelet/cmd/virtual-kubelet/commands/providers"
 	"github.com/virtual-kubelet/virtual-kubelet/cmd/virtual-kubelet/commands/root"
