@@ -3,14 +3,15 @@ package nomad
 import (
 	"context"
 	"fmt"
+	"io"
+	"io/ioutil"
 	"log"
 	"os"
 	"strings"
 
+	nomad "github.com/hashicorp/nomad/api"
 	"github.com/virtual-kubelet/virtual-kubelet/manager"
 	"github.com/virtual-kubelet/virtual-kubelet/providers"
-
-	nomad "github.com/hashicorp/nomad/api"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -146,8 +147,8 @@ func (p *Provider) GetPod(ctx context.Context, namespace, name string) (pod *v1.
 }
 
 // GetContainerLogs retrieves the logs of a container by name from the provider.
-func (p *Provider) GetContainerLogs(ctx context.Context, namespace, podName, containerName string, tail int) (string, error) {
-	return "", nil
+func (p *Provider) GetContainerLogs(ctx context.Context, namespace, podName, containerName string, opts providers.ContainerLogOpts) (io.ReadCloser, error) {
+	return ioutil.NopCloser(strings.NewReader("")), nil
 }
 
 // GetPodFullName as defined in the provider context

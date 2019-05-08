@@ -4,8 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"math/rand"
+	"strings"
 	"time"
 
 	"github.com/cpuguy83/strongerrors"
@@ -195,7 +197,7 @@ func (p *MockProvider) GetPod(ctx context.Context, namespace, name string) (pod 
 }
 
 // GetContainerLogs retrieves the logs of a container by name from the provider.
-func (p *MockProvider) GetContainerLogs(ctx context.Context, namespace, podName, containerName string, tail int) (string, error) {
+func (p *MockProvider) GetContainerLogs(ctx context.Context, namespace, podName, containerName string, opts providers.ContainerLogOpts) (io.ReadCloser, error) {
 	ctx, span := trace.StartSpan(ctx, "GetContainerLogs")
 	defer span.End()
 
@@ -203,7 +205,7 @@ func (p *MockProvider) GetContainerLogs(ctx context.Context, namespace, podName,
 	ctx = addAttributes(ctx, span, namespaceKey, namespace, nameKey, podName, containerNameKey, containerName)
 
 	log.G(ctx).Info("receive GetContainerLogs %q", podName)
-	return "", nil
+	return ioutil.NopCloser(strings.NewReader("")), nil
 }
 
 // Get full pod name as defined in the provider context

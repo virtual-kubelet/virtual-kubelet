@@ -4,17 +4,16 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
 	"strings"
 
-	"github.com/Azure/go-autorest/autorest"
-
-	"github.com/Azure/go-autorest/autorest/azure"
-
 	"github.com/Azure/azure-sdk-for-go/services/batch/2017-09-01.6.0/batch"
+	"github.com/Azure/go-autorest/autorest"
+	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/lawrencegripper/pod2docker"
 	"github.com/virtual-kubelet/virtual-kubelet/manager"
@@ -254,8 +253,14 @@ func (p *Provider) GetPod(ctx context.Context, namespace, name string) (*v1.Pod,
 	return pod, nil
 }
 
+const (
+	startingUpHeader = "Container still starting..\nShowing startup logs from Azure Batch node instead:\n"
+	stdoutHeader     = "----- STDOUT -----\n"
+	stderrHeader     = "----- STDERR -----\n"
+)
+
 // GetContainerLogs returns the logs of a container running in a pod by name.
-func (p *Provider) GetContainerLogs(ctx context.Context, namespace, podName, containerName string, tail int) (string, error) {
+func (p *Provider) GetContainerLogs(ctx context.Context, namespace, podName, containerName string, opts providers.ContainerLogOpts) (io.ReadCloser, error) {
 	log.Println("Getting pod logs ....")
 
 	taskID := getTaskIDForPod(namespace, podName)
@@ -265,40 +270,44 @@ func (p *Provider) GetContainerLogs(ctx context.Context, namespace, podName, con
 	if containerLogReader.Response.Response != nil && containerLogReader.StatusCode == http.StatusNotFound {
 		stdoutReader, err := p.getFileFromTask(taskID, "stdout.txt")
 		if err != nil {
-			return "", err
+			return nil, err
 		}
 		stderrReader, err := p.getFileFromTask(taskID, "stderr.txt")
 		if err != nil {
-			return "", err
+			return nil, err
 		}
 
-		var builder strings.Builder
-		builderPtr := &builder
-		mustWriteString(builderPtr, "Container still starting....\n")
-		mustWriteString(builderPtr, "Showing startup logs from Azure Batch node instead:\n")
-		mustWriteString(builderPtr, "----- STDOUT -----\n")
-		stdoutBytes, _ := ioutil.ReadAll(*stdoutReader.Value)
-		mustWrite(builderPtr, stdoutBytes)
-		mustWriteString(builderPtr, "\n")
-
-		mustWriteString(builderPtr, "----- STDERR -----\n")
-		stderrBytes, _ := ioutil.ReadAll(*stderrReader.Value)
-		mustWrite(builderPtr, stderrBytes)
-		mustWriteString(builderPtr, "\n")
-
-		return builder.String(), nil
+		stdout := io.MultiReader(strings.NewReader(startingUpHeader), strings.NewReader(stdoutHeader), *stdoutReader.Value, strings.NewReader("\n"))
+		stderr := io.MultiReader(strings.NewReader(stderrHeader), *stderrReader.Value, strings.NewReader("\n"))
+		return &readCloser{
+			Reader: io.MultiReader(stdout, stderr),
+			closer: func() error {
+				(*stdoutReader.Value).Close()
+				(*stderrReader.Value).Close()
+				return nil
+			}}, nil
 	}
 
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
+	// TODO(@cpuguy83): don't convert stream to a string
 	result, err := formatLogJSON(containerLogReader)
 	if err != nil {
-		return "", fmt.Errorf("Container log formating failed err: %v", err)
+		return nil, fmt.Errorf("Container log formating failed err: %v", err)
 	}
 
-	return result, nil
+	return ioutil.NopCloser(strings.NewReader(result)), nil
+}
+
+type readCloser struct {
+	io.Reader
+	closer func() error
+}
+
+func (r *readCloser) Close() error {
+	return r.closer()
 }
 
 // Get full pod name as defined in the provider context

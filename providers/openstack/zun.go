@@ -4,9 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
+	"io/ioutil"
 	"log"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/gophercloud/gophercloud"
@@ -232,8 +235,8 @@ func (p *ZunProvider) GetPodStatus(ctx context.Context, namespace, name string) 
 	return &pod.Status, nil
 }
 
-func (p *ZunProvider) GetContainerLogs(ctx context.Context, namespace, podName, containerName string, tail int) (string, error) {
-	return "not support in Zun Provider", nil
+func (p *ZunProvider) GetContainerLogs(ctx context.Context, namespace, podName, containerName string, opts providers.ContainerLogOpts) (io.ReadCloser, error) {
+	return ioutil.NopCloser(strings.NewReader("not support in Zun Provider")), nil
 }
 
 // NodeConditions returns a list of conditions (Ready, OutOfDisk, etc), for updates to the node status

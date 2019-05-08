@@ -29,3 +29,29 @@ func handleError(f handlerFunc) http.HandlerFunc {
 		}
 	}
 }
+
+func flushOnWrite(w io.Writer) io.Writer {
+	if fw, ok := w.(writeFlusher); ok {
+		return &flushWriter{fw}
+	}
+	return w
+}
+
+type flushWriter struct {
+	w writeFlusher
+}
+
+type writeFlusher interface {
+	Flush() error
+	Write([]byte) (int, error)
+}
+
+func (fw *flushWriter) Write(p []byte) (int, error) {
+	n, err := fw.w.Write(p)
+	if n > 0 {
+		if err := fw.w.Flush(); err != nil {
+			return n, err
+		}
+	}
+	return n, err
+}

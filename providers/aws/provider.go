@@ -3,13 +3,13 @@ package aws
 import (
 	"context"
 	"fmt"
+	"io"
 	"log"
 	"time"
 
 	"github.com/virtual-kubelet/virtual-kubelet/manager"
 	"github.com/virtual-kubelet/virtual-kubelet/providers"
 	"github.com/virtual-kubelet/virtual-kubelet/providers/aws/fargate"
-
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -172,9 +172,9 @@ func (p *FargateProvider) GetPod(ctx context.Context, namespace, name string) (*
 }
 
 // GetContainerLogs retrieves the logs of a container by name from the provider.
-func (p *FargateProvider) GetContainerLogs(ctx context.Context, namespace, podName, containerName string, tail int) (string, error) {
+func (p *FargateProvider) GetContainerLogs(ctx context.Context, namespace, podName, containerName string, opts providers.ContainerLogOpts) (io.ReadCloser, error) {
 	log.Printf("Received GetContainerLogs request for %s/%s/%s.\n", namespace, podName, containerName)
-	return p.cluster.GetContainerLogs(namespace, podName, containerName, tail)
+	return p.cluster.GetContainerLogs(namespace, podName, containerName, opts)
 }
 
 // GetPodFullName retrieves the full pod name as defined in the provider context.
