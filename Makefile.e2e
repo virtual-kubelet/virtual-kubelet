@@ -24,7 +24,7 @@ bin/e2e:
 	@mkdir -p bin/e2e
 
 bin/e2e/virtual-kubelet: bin/e2e
-	GO111MODULE=on GOOS=linux GOARCH=amd64 $(MAKE) OUTPUT_DIR=$(@D) build
+	GOOS=linux GOARCH=amd64 $(MAKE) OUTPUT_DIR=$(@D) build
 
 # e2e runs the end-to-end test suite against the Kubernetes cluster targeted by the current kubeconfig.
 # It automatically deploys the virtual-kubelet with the mock provider by running "make skaffold MODE=run".

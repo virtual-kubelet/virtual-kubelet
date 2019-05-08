@@ -151,6 +151,7 @@ type MountConfigInput struct {
 	AuditNonHMACResponseKeys  []string          `json:"audit_non_hmac_response_keys,omitempty" mapstructure:"audit_non_hmac_response_keys"`
 	ListingVisibility         string            `json:"listing_visibility,omitempty" mapstructure:"listing_visibility"`
 	PassthroughRequestHeaders []string          `json:"passthrough_request_headers,omitempty" mapstructure:"passthrough_request_headers"`
+	AllowedResponseHeaders    []string          `json:"allowed_response_headers,omitempty" mapstructure:"allowed_response_headers"`
 	TokenType                 string            `json:"token_type,omitempty" mapstructure:"token_type"`
 
 	// Deprecated: This field will always be blank for newer server responses.
@@ -158,6 +159,7 @@ type MountConfigInput struct {
 }
 
 type MountOutput struct {
+	UUID        string            `json:"uuid"`
 	Type        string            `json:"type"`
 	Description string            `json:"description"`
 	Accessor    string            `json:"accessor"`
@@ -175,6 +177,7 @@ type MountConfigOutput struct {
 	AuditNonHMACResponseKeys  []string `json:"audit_non_hmac_response_keys,omitempty" mapstructure:"audit_non_hmac_response_keys"`
 	ListingVisibility         string   `json:"listing_visibility,omitempty" mapstructure:"listing_visibility"`
 	PassthroughRequestHeaders []string `json:"passthrough_request_headers,omitempty" mapstructure:"passthrough_request_headers"`
+	AllowedResponseHeaders    []string `json:"allowed_response_headers,omitempty" mapstructure:"allowed_response_headers"`
 	TokenType                 string   `json:"token_type,omitempty" mapstructure:"token_type"`
 
 	// Deprecated: This field will always be blank for newer server responses.

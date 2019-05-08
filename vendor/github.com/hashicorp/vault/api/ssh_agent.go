@@ -9,12 +9,12 @@ import (
 	"os"
 
 	"github.com/hashicorp/errwrap"
-	"github.com/hashicorp/go-cleanhttp"
-	"github.com/hashicorp/go-multierror"
-	"github.com/hashicorp/go-rootcerts"
+	cleanhttp "github.com/hashicorp/go-cleanhttp"
+	multierror "github.com/hashicorp/go-multierror"
+	rootcerts "github.com/hashicorp/go-rootcerts"
 	"github.com/hashicorp/hcl"
 	"github.com/hashicorp/hcl/hcl/ast"
-	"github.com/hashicorp/vault/helper/hclutil"
+	"github.com/hashicorp/vault/sdk/helper/hclutil"
 	"github.com/mitchellh/mapstructure"
 )
 

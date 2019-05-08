@@ -158,14 +158,13 @@ func (e *Expiry) SetExpiration(expiration time.Time, window time.Duration) {
 
 // IsExpired returns if the credentials are expired.
 func (e *Expiry) IsExpired() bool {
-	curTime := e.CurrentTime
-	if curTime == nil {
-		curTime = time.Now
+	if e.CurrentTime == nil {
+		e.CurrentTime = time.Now
 	}
-	return e.expiration.Before(curTime())
+	return e.expiration.Before(e.CurrentTime())
 }
 
-// A Credentials provides concurrency safe retrieval of AWS credentials Value.
+// A Credentials provides synchronous safe retrieval of AWS credentials Value.
 // Credentials will cache the credentials value until they expire. Once the value
 // expires the next Get will attempt to retrieve valid credentials.
 //
@@ -179,8 +178,7 @@ func (e *Expiry) IsExpired() bool {
 type Credentials struct {
 	creds        Value
 	forceRefresh bool
-
-	m sync.RWMutex
+	m            sync.Mutex
 
 	provider Provider
 }
@@ -203,17 +201,6 @@ func NewCredentials(provider Provider) *Credentials {
 // If Credentials.Expire() was called the credentials Value will be force
 // expired, and the next call to Get() will cause them to be refreshed.
 func (c *Credentials) Get() (Value, error) {
-	// Check the cached credentials first with just the read lock.
-	c.m.RLock()
-	if !c.isExpired() {
-		creds := c.creds
-		c.m.RUnlock()
-		return creds, nil
-	}
-	c.m.RUnlock()
-
-	// Credentials are expired need to retrieve the credentials taking the full
-	// lock.
 	c.m.Lock()
 	defer c.m.Unlock()
 
@@ -247,8 +234,8 @@ func (c *Credentials) Expire() {
 // If the Credentials were forced to be expired with Expire() this will
 // reflect that override.
 func (c *Credentials) IsExpired() bool {
-	c.m.RLock()
-	defer c.m.RUnlock()
+	c.m.Lock()
+	defer c.m.Unlock()
 
 	return c.isExpired()
 }

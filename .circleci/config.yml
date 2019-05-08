@@ -63,7 +63,7 @@ jobs:
       MINIKUBE_WANTREPORTERRORPROMPT: false
       SKAFFOLD_VERSION: v0.18.0
       GO111MODULE: "on"
-      GOVERSION: 1.11.5
+      GOVERSION: 1.12.5
       OS: linux
       ARCH: amd64
     steps:

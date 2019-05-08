@@ -5,7 +5,7 @@ exec := $(DOCKER_IMAGE)
 github_repo := virtual-kubelet/virtual-kubelet
 binary := virtual-kubelet
 
-export GO111MODULE := on
+export GO111MODULE ?= on
 
 include Makefile.e2e
 # Currently this looks for a globally installed gobin. When we move to modules,
@@ -36,9 +36,10 @@ safebuild:
 .PHONY: build
 build: build_tags := netgo osusergo
 build: OUTPUT_DIR ?= bin
-build: vendor authors
+build: authors
 	@echo "Building..."
-	$Q GOFLAGS=-mod=vendor CGO_ENABLED=0 go build -a --tags '$(shell scripts/process_build_tags.sh $(build_tags) $(VK_BUILD_TAGS))' -ldflags '-extldflags "-static"' -o $(OUTPUT_DIR)/$(binary) $(if $V,-v) $(VERSION_FLAGS) ./cmd/$(binary)
+	# TODO: consider moving to a GOPROXY in the future
+	$Q CGO_ENABLED=0 go build -a --tags '$(shell scripts/process_build_tags.sh $(build_tags) $(VK_BUILD_TAGS))' -ldflags '-extldflags "-static"' -o $(OUTPUT_DIR)/$(binary) $(if $V,-v) $(VERSION_FLAGS) ./cmd/$(binary)
 
 .PHONY: tags
 tags:
@@ -53,10 +54,14 @@ release: build goreleaser
 
 .PHONY: clean test list cover format docker vendor
 
-vendor: setup
+vendor:
 	@echo "Ensuring Dependencies..."
 	$Q go env
 	$Q go mod vendor
+
+mod:
+	@echo "Prune Dependencies..."
+	$Q go mod tidy
 
 docker:
 	@echo "Docker Build..."

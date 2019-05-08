@@ -2,11 +2,11 @@ package session
 
 import (
 	"fmt"
+	"io/ioutil"
 
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/credentials"
-
-	"github.com/aws/aws-sdk-go/internal/ini"
+	"github.com/go-ini/ini"
 )
 
 const (
@@ -16,12 +16,11 @@ const (
 	sessionTokenKey = `aws_session_token`     // optional
 
 	// Assume Role Credentials group
-	roleArnKey          = `role_arn`          // group required
-	sourceProfileKey    = `source_profile`    // group required (or credential_source)
-	credentialSourceKey = `credential_source` // group required (or source_profile)
-	externalIDKey       = `external_id`       // optional
-	mfaSerialKey        = `mfa_serial`        // optional
-	roleSessionNameKey  = `role_session_name` // optional
+	roleArnKey         = `role_arn`          // group required
+	sourceProfileKey   = `source_profile`    // group required
+	externalIDKey      = `external_id`       // optional
+	mfaSerialKey       = `mfa_serial`        // optional
+	roleSessionNameKey = `role_session_name` // optional
 
 	// Additional Config fields
 	regionKey = `region`
@@ -33,12 +32,11 @@ const (
 )
 
 type assumeRoleConfig struct {
-	RoleARN          string
-	SourceProfile    string
-	CredentialSource string
-	ExternalID       string
-	MFASerial        string
-	RoleSessionName  string
+	RoleARN         string
+	SourceProfile   string
+	ExternalID      string
+	MFASerial       string
+	RoleSessionName string
 }
 
 // sharedConfig represents the configuration fields of the SDK config files.
@@ -66,7 +64,7 @@ type sharedConfig struct {
 
 type sharedConfigFile struct {
 	Filename string
-	IniData  ini.Sections
+	IniData  *ini.File
 }
 
 // loadSharedConfig retrieves the configuration from the list of files
@@ -107,16 +105,19 @@ func loadSharedConfigIniFiles(filenames []string) ([]sharedConfigFile, error) {
 	files := make([]sharedConfigFile, 0, len(filenames))
 
 	for _, filename := range filenames {
-		sections, err := ini.OpenFile(filename)
-		if aerr, ok := err.(awserr.Error); ok && aerr.Code() == ini.ErrCodeUnableToReadFile {
+		b, err := ioutil.ReadFile(filename)
+		if err != nil {
 			// Skip files which can't be opened and read for whatever reason
 			continue
-		} else if err != nil {
+		}
+
+		f, err := ini.Load(b)
+		if err != nil {
 			return nil, SharedConfigLoadError{Filename: filename, Err: err}
 		}
 
 		files = append(files, sharedConfigFile{
-			Filename: filename, IniData: sections,
+			Filename: filename, IniData: f,
 		})
 	}
 
@@ -125,13 +126,6 @@ func loadSharedConfigIniFiles(filenames []string) ([]sharedConfigFile, error) {
 
 func (cfg *sharedConfig) setAssumeRoleSource(origProfile string, files []sharedConfigFile) error {
 	var assumeRoleSrc sharedConfig
-
-	if len(cfg.AssumeRole.CredentialSource) > 0 {
-		// setAssumeRoleSource is only called when source_profile is found.
-		// If both source_profile and credential_source are set, then
-		// ErrSharedConfigSourceCollision will be returned
-		return ErrSharedConfigSourceCollision
-	}
 
 	// Multiple level assume role chains are not support
 	if cfg.AssumeRole.SourceProfile == origProfile {
@@ -177,45 +171,42 @@ func (cfg *sharedConfig) setFromIniFiles(profile string, files []sharedConfigFil
 // if a config file only includes aws_access_key_id but no aws_secret_access_key
 // the aws_access_key_id will be ignored.
 func (cfg *sharedConfig) setFromIniFile(profile string, file sharedConfigFile) error {
-	section, ok := file.IniData.GetSection(profile)
-	if !ok {
+	section, err := file.IniData.GetSection(profile)
+	if err != nil {
 		// Fallback to to alternate profile name: profile <name>
-		section, ok = file.IniData.GetSection(fmt.Sprintf("profile %s", profile))
-		if !ok {
-			return SharedConfigProfileNotExistsError{Profile: profile, Err: nil}
+		section, err = file.IniData.GetSection(fmt.Sprintf("profile %s", profile))
+		if err != nil {
+			return SharedConfigProfileNotExistsError{Profile: profile, Err: err}
 		}
 	}
 
 	// Shared Credentials
-	akid := section.String(accessKeyIDKey)
-	secret := section.String(secretAccessKey)
+	akid := section.Key(accessKeyIDKey).String()
+	secret := section.Key(secretAccessKey).String()
 	if len(akid) > 0 && len(secret) > 0 {
 		cfg.Creds = credentials.Value{
 			AccessKeyID:     akid,
 			SecretAccessKey: secret,
-			SessionToken:    section.String(sessionTokenKey),
+			SessionToken:    section.Key(sessionTokenKey).String(),
 			ProviderName:    fmt.Sprintf("SharedConfigCredentials: %s", file.Filename),
 		}
 	}
 
 	// Assume Role
-	roleArn := section.String(roleArnKey)
-	srcProfile := section.String(sourceProfileKey)
-	credentialSource := section.String(credentialSourceKey)
-	hasSource := len(srcProfile) > 0 || len(credentialSource) > 0
-	if len(roleArn) > 0 && hasSource {
+	roleArn := section.Key(roleArnKey).String()
+	srcProfile := section.Key(sourceProfileKey).String()
+	if len(roleArn) > 0 && len(srcProfile) > 0 {
 		cfg.AssumeRole = assumeRoleConfig{
-			RoleARN:          roleArn,
-			SourceProfile:    srcProfile,
-			CredentialSource: credentialSource,
-			ExternalID:       section.String(externalIDKey),
-			MFASerial:        section.String(mfaSerialKey),
-			RoleSessionName:  section.String(roleSessionNameKey),
+			RoleARN:         roleArn,
+			SourceProfile:   srcProfile,
+			ExternalID:      section.Key(externalIDKey).String(),
+			MFASerial:       section.Key(mfaSerialKey).String(),
+			RoleSessionName: section.Key(roleSessionNameKey).String(),
 		}
 	}
 
 	// Region
-	if v := section.String(regionKey); len(v) > 0 {
+	if v := section.Key(regionKey).String(); len(v) > 0 {
 		cfg.Region = v
 	}
 
