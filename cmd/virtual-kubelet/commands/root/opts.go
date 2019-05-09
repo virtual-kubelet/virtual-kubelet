@@ -117,8 +117,9 @@ func SetDefaultOpts(c *Opts) error {
 				return errors.Wrap(err, "error parsing KUBELET_PORT environment variable")
 			}
 			c.ListenPort = int32(p)
+		} else {
+			c.ListenPort = DefaultListenPort
 		}
-		c.ListenPort = DefaultListenPort
 	}
 
 	if c.KubeNamespace == "" {
