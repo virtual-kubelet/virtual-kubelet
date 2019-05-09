@@ -136,7 +136,7 @@ func (p *MockProvider) UpdatePod(ctx context.Context, pod *v1.Pod) error {
 	// Add the pod's coordinates to the current span.
 	ctx = addAttributes(ctx, span, namespaceKey, pod.Namespace, nameKey, pod.Name)
 
-	log.G(ctx).Info("receive UpdatePod %q", pod.Name)
+	log.G(ctx).Infof("receive UpdatePod %q", pod.Name)
 
 	key, err := buildKey(pod)
 	if err != nil {
@@ -156,7 +156,7 @@ func (p *MockProvider) DeletePod(ctx context.Context, pod *v1.Pod) (err error) {
 	// Add the pod's coordinates to the current span.
 	ctx = addAttributes(ctx, span, namespaceKey, pod.Namespace, nameKey, pod.Name)
 
-	log.G(ctx).Info("receive DeletePod %q", pod.Name)
+	log.G(ctx).Infof("receive DeletePod %q", pod.Name)
 
 	key, err := buildKey(pod)
 	if err != nil {
@@ -183,7 +183,7 @@ func (p *MockProvider) GetPod(ctx context.Context, namespace, name string) (pod 
 	// Add the pod's coordinates to the current span.
 	ctx = addAttributes(ctx, span, namespaceKey, namespace, nameKey, name)
 
-	log.G(ctx).Info("receive GetPod %q", name)
+	log.G(ctx).Infof("receive GetPod %q", name)
 
 	key, err := buildKeyFromNames(namespace, name)
 	if err != nil {
@@ -217,7 +217,7 @@ func (p *MockProvider) GetPodFullName(namespace string, pod string) string {
 // RunInContainer executes a command in a container in the pod, copying data
 // between in/out/err and the container's stdin/stdout/stderr.
 func (p *MockProvider) RunInContainer(ctx context.Context, namespace, name, container string, cmd []string, attach providers.AttachIO) error {
-	log.G(context.TODO()).Info("receive ExecInContainer %q", container)
+	log.G(context.TODO()).Infof("receive ExecInContainer %q", container)
 	return nil
 }
 
@@ -230,7 +230,7 @@ func (p *MockProvider) GetPodStatus(ctx context.Context, namespace, name string)
 	// Add namespace and name as attributes to the current span.
 	ctx = addAttributes(ctx, span, namespaceKey, namespace, nameKey, name)
 
-	log.G(ctx).Info("receive GetPodStatus %q", name)
+	log.G(ctx).Infof("receive GetPodStatus %q", name)
 
 	now := metav1.NewTime(time.Now())
 
