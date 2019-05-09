@@ -39,7 +39,7 @@ e2e: TAINT_EFFECT := NoSchedule
 e2e: export VK_BUILD_TAGS += mock_provider
 e2e: e2e.clean bin/e2e/virtual-kubelet skaffold/run
 	@echo Running tests...
-	cd $(PWD)/test/e2e && go test -v -tags e2e ./... \
+	cd $(PWD)/test/e2e && go test -v -timeout 5m -tags e2e ./... \
 		-kubeconfig=$(KUBECONFIG) \
 		-namespace=$(NAMESPACE) \
 		-node-name=$(NODE_NAME) \
