@@ -59,7 +59,7 @@ jobs:
       CHANGE_MINIKUBE_NONE_USER: true
       GOPATH: /home/circleci/go
       KUBECONFIG: /home/circleci/.kube/config
-      KUBERNETES_VERSION: v1.12.3
+      KUBERNETES_VERSION: v1.13.4
       MINIKUBE_HOME: /home/circleci
       MINIKUBE_VERSION: v0.30.0
       MINIKUBE_WANTUPDATENOTIFICATION: false
@@ -99,9 +99,22 @@ jobs:
               sleep 1;
             done
       - run:
+          name: Watch pods
+          command: kubectl get pods -o json --watch
+          background: true
+      - run:
+          name: Watch nodes
+          command: kubectl get nodes -o json --watch
+          background: true
+      - run:
           name: Run the end-to-end test suite
           command: |
             make e2e
+      - run:
+          name: Collect logs on failure from vkubelet-mock-0
+          command: |
+            kubectl logs vkubelet-mock-0
+          when: on_fail
 
 workflows:
   version: 2

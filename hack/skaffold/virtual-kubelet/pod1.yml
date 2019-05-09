@@ -1,8 +1,10 @@
+---
 apiVersion: v1
 kind: Pod
 metadata:
   name: vkubelet-mock-0
 spec:
+  serviceAccountName: virtual-kubelet
   containers:
   - name: vkubelet-mock-0
     image: virtual-kubelet
@@ -15,12 +17,27 @@ spec:
     - --provider
     - mock
     - --provider-config
-    - /vkubelet-mock-0-cfg.json
+    - /vkubelet-mock-cfg.json
+    - --startup-timeout
+    - 10s
+    - --klog.v
+    - "2"
+    - --klog.logtostderr
+    - --log-level
+    - debug
+    env:
+    - name: VKUBELET_POD_IP
+      valueFrom:
+        fieldRef:
+          fieldPath: status.podIP
+    - name: KUBELET_PORT
+      value: "10350"
     ports:
     - name: metrics
       containerPort: 10255
+    - name: api
+      containerPort: 10350
     readinessProbe:
       httpGet:
         path: /stats/summary
         port: metrics
-  serviceAccountName: virtual-kubelet

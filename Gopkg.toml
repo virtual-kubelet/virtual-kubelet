@@ -55,15 +55,15 @@
 
 [[constraint]]
   name = "k8s.io/api"
-  version = "kubernetes-1.13.1"
+  version = "kubernetes-1.13.5"
 
 [[constraint]]
   name = "k8s.io/apimachinery"
-  version = "kubernetes-1.13.1"
+  version = "kubernetes-1.13.5"
 
 [[constraint]]
   name = "k8s.io/client-go"
-  version = "kubernetes-1.13.1"
+  version = "kubernetes-1.13.5"
 
 # These are required for Zun
 [[constraint]]
@@ -138,3 +138,7 @@
 [[constraint]]
   name = "gotest.tools"
   version = "2.3.0"
+
+[[constraint]]
+  name = "k8s.io/kubernetes"
+  version = "1.13.4"

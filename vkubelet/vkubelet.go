@@ -2,20 +2,21 @@ package vkubelet
 
 import (
 	"context"
-	"strconv"
-	"time"
+	"encoding/json"
+	"sync"
 
+	"github.com/cpuguy83/strongerrors/status/ocstatus"
+	"github.com/pkg/errors"
+	pkgerrors "github.com/pkg/errors"
+	"github.com/virtual-kubelet/virtual-kubelet/log"
 	"github.com/virtual-kubelet/virtual-kubelet/manager"
 	"github.com/virtual-kubelet/virtual-kubelet/providers"
 	"github.com/virtual-kubelet/virtual-kubelet/trace"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/types"
 	corev1informers "k8s.io/client-go/informers/core/v1"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/util/workqueue"
-)
-
-const (
-	podStatusReasonProviderFailed = "ProviderFailed"
+	"k8s.io/client-go/tools/cache"
 )
 
 // Server masquarades itself as a kubelet and allows for the virtual node to be backed by non-vm/node providers.
@@ -28,6 +29,9 @@ type Server struct {
 	podSyncWorkers  int
 	podInformer     corev1informers.PodInformer
 	readyCh         chan struct{}
+
+	lock             *sync.Mutex
+	podStateMachines map[string]podStateMachineInterface
 }
 
 // Config is used to configure a new server.
@@ -56,6 +60,9 @@ func New(cfg Config) *Server {
 		podSyncWorkers:  cfg.PodSyncWorkers,
 		podInformer:     cfg.PodInformer,
 		readyCh:         make(chan struct{}),
+
+		podStateMachines: make(map[string]podStateMachineInterface),
+		lock:             &sync.Mutex{},
 	}
 }
 
@@ -65,18 +72,22 @@ func New(cfg Config) *Server {
 // info to the Kubernetes API Server, such as logs, metrics, exec, etc.
 // See `AttachPodRoutes` and `AttachMetricsRoutes` to set these up.
 func (s *Server) Run(ctx context.Context) error {
-	q := workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "podStatusUpdate")
-	s.runProviderSyncWorkers(ctx, q)
+	pn, ok := s.provider.(providers.PodNotifier)
 
-	if pn, ok := s.provider.(providers.PodNotifier); ok {
-		pn.NotifyPods(ctx, func(pod *corev1.Pod) {
-			s.enqueuePodStatusUpdate(ctx, q, pod)
-		})
-	} else {
-		go s.providerSyncLoop(ctx, q)
+	if !ok {
+		log.G(ctx).Warn("Initializing deprecated provider with synchronous interface")
+		ps := &providerSync{p: s.provider}
+		pn = ps
+		s.provider = ps
 	}
+	pn.NotifyPods(ctx, func(pod *corev1.Pod) {
+		s.handleNotifyPod(ctx, pod)
+	})
 
 	pc := NewPodController(s)
+	if err := s.createPodStateMachinesFromProvider(ctx, pc); err != nil {
+		return err
+	}
 
 	go func() {
 		select {
@@ -86,7 +97,7 @@ func (s *Server) Run(ctx context.Context) error {
 		close(s.readyCh)
 	}()
 
-	return pc.Run(ctx, s.podSyncWorkers)
+	return pc.Run(ctx)
 }
 
 // Ready returns a channel which will be closed once the VKubelet is running
@@ -99,53 +110,77 @@ func (s *Server) Ready() <-chan struct{} {
 	return s.readyCh
 }
 
-// providerSyncLoop syncronizes pod states from the provider back to kubernetes
-// Deprecated: This is only used when the provider does not support async updates
-// Providers should implement async update support, even if it just means copying
-// something like this in.
-func (s *Server) providerSyncLoop(ctx context.Context, q workqueue.RateLimitingInterface) {
-	const sleepTime = 5 * time.Second
-
-	t := time.NewTimer(sleepTime)
-	defer t.Stop()
-
-	for {
-		select {
-		case <-ctx.Done():
-			return
-		case <-t.C:
-			t.Stop()
-
-			ctx, span := trace.StartSpan(ctx, "syncActualState")
-			s.updatePodStatuses(ctx, q)
-			span.End()
-
-			// restart the timer
-			t.Reset(sleepTime)
-		}
-	}
-}
-
-func (s *Server) runProviderSyncWorkers(ctx context.Context, q workqueue.RateLimitingInterface) {
-	for i := 0; i < s.podSyncWorkers; i++ {
-		go func(index int) {
-			workerID := strconv.Itoa(index)
-			s.runProviderSyncWorker(ctx, workerID, q)
-		}(i)
-	}
-}
-
-func (s *Server) runProviderSyncWorker(ctx context.Context, workerID string, q workqueue.RateLimitingInterface) {
-	for s.processPodStatusUpdate(ctx, workerID, q) {
-	}
-}
-
-func (s *Server) processPodStatusUpdate(ctx context.Context, workerID string, q workqueue.RateLimitingInterface) bool {
-	ctx, span := trace.StartSpan(ctx, "processPodStatusUpdate")
+// This handles pod state notifications from the provider. These are not de-duped.
+func (s *Server) handleNotifyPod(ctx context.Context, pod *corev1.Pod) {
+	ctx, span := trace.StartSpan(ctx, "handleNotifyPod")
 	defer span.End()
 
-	// Add the ID of the current worker as an attribute to the current span.
-	ctx = span.WithField(ctx, "workerID", workerID)
+	key, err := cache.MetaNamespaceKeyFunc(pod)
+	if err != nil {
+		log.G(ctx).WithError(err).Error("Unable to calculate key")
+		return
+	}
 
-	return handleQueueItem(ctx, q, s.podStatusHandler)
+	s.lock.Lock()
+	defer s.lock.Unlock()
+
+	if psm, ok := s.podStateMachines[key]; ok {
+		psm.updateProviderPod(ctx, pod)
+	} else {
+		log.G(ctx).Error("Cannot find pod on notify")
+	}
+}
+
+// This creates (potentially) dangling pods from the provider at startup time. It does this in serial
+// so it doesn't need to hold s.lock
+func (s *Server) createPodStateMachinesFromProvider(ctx context.Context, pc *PodController) error {
+	ctx, span := trace.StartSpan(ctx, "createPodStateMachinesFromProvider")
+	defer span.End()
+
+	providerPods, err := s.provider.GetPods(ctx)
+	span.SetStatus(ocstatus.FromError(err))
+	if err != nil {
+		return errors.Wrapf(err, "Could not fetch pods from provider")
+	}
+	for idx := range providerPods {
+		pod := providerPods[idx]
+		key, err := cache.MetaNamespaceKeyFunc(pod)
+		if err != nil {
+			log.G(ctx).WithError(err).Error("Could not get key for pod")
+		} else {
+			psm := newPodStateMachineFromProvider(ctx, pod, pc, key)
+			s.podStateMachines[key] = psm
+			go psm.run(ctx)
+		}
+	}
+	return nil
+}
+
+func (s *Server) updateRawPodStatus(ctx context.Context, pod *corev1.Pod) (*corev1.Pod, error) {
+	ctx, span := trace.StartSpan(ctx, "updateRawPodStatus")
+
+	// Since our patch only applies to the status subtype, we should be safe in doing this
+	// We don't really have a better option, as this method is only called from the async pod notifier,
+	// which provides (ordered)
+	pod.ObjectMeta.ResourceVersion = ""
+	patch, err := json.Marshal(pod)
+	if err != nil {
+		span.SetStatus(ocstatus.FromError(err))
+		return nil, pkgerrors.Wrap(err, "Unable to serialize patch JSON")
+	}
+
+	newPod, err := s.k8sClient.CoreV1().Pods(pod.Namespace).Patch(pod.Name, types.MergePatchType, patch, "status")
+	if err != nil {
+		span.SetStatus(ocstatus.FromError(err))
+		return nil, pkgerrors.Wrap(err, "error while patching pod status in kubernetes")
+	}
+
+	log.G(ctx).WithFields(log.Fields{
+		"old phase":  string(pod.Status.Phase),
+		"old reason": pod.Status.Reason,
+		"new phase":  string(newPod.Status.Phase),
+		"new reason": newPod.Status.Reason,
+	}).Debug("Updated pod status in kubernetes")
+
+	return newPod, nil
 }

@@ -86,7 +86,8 @@ func setupHTTPServer(ctx context.Context, p providers.Provider, cfg *apiServerCo
 		}
 
 		mux := http.NewServeMux()
-		vkubelet.AttachPodRoutes(p, mux)
+		// TODO: Make debug configurable
+		vkubelet.AttachPodRoutes(p, mux, true)
 
 		s := &http.Server{
 			Handler:   mux,

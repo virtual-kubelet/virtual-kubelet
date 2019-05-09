@@ -13,13 +13,12 @@ import (
 	"github.com/cpuguy83/strongerrors"
 	"github.com/cpuguy83/strongerrors/status/ocstatus"
 	"github.com/virtual-kubelet/virtual-kubelet/log"
+	"github.com/virtual-kubelet/virtual-kubelet/providers"
 	"github.com/virtual-kubelet/virtual-kubelet/trace"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	stats "k8s.io/kubernetes/pkg/kubelet/apis/stats/v1alpha1"
-
-	"github.com/virtual-kubelet/virtual-kubelet/providers"
 )
 
 const (
@@ -34,8 +33,14 @@ const (
 	containerNameKey = "containerName"
 )
 
-// MockProvider implements the virtual-kubelet provider interface and stores pods in memory.
-type MockProvider struct {
+var (
+	_ providers.Provider           = (*MockLegacyProvider)(nil)
+	_ providers.PodMetricsProvider = (*MockLegacyProvider)(nil)
+	_ providers.PodNotifier        = (*MockProvider)(nil)
+)
+
+// MockLegacyProvider implements the virtual-kubelet provider interface and stores pods in memory.
+type MockLegacyProvider struct {
 	nodeName           string
 	operatingSystem    string
 	internalIP         string
@@ -43,23 +48,30 @@ type MockProvider struct {
 	pods               map[string]*v1.Pod
 	config             MockConfig
 	startTime          time.Time
+	notifier           func(*v1.Pod)
+}
+
+// MockLegacyProvider is MockLegacyProvider, but implements the PodNotifier interface
+type MockProvider struct {
+	MockLegacyProvider
 }
 
 // MockConfig contains a mock virtual-kubelet's configurable parameters.
 type MockConfig struct {
-	CPU    string `json:"cpu,omitempty"`
-	Memory string `json:"memory,omitempty"`
-	Pods   string `json:"pods,omitempty"`
+	CPU                string `json:"cpu,omitempty"`
+	Memory             string `json:"memory,omitempty"`
+	Pods               string `json:"pods,omitempty"`
+	DisableSoftDeletes bool   `json:"disableSoftDeletes,omitempty"`
 }
 
-// NewMockProvider creates a new MockProvider
-func NewMockProvider(providerConfig, nodeName, operatingSystem string, internalIP string, daemonEndpointPort int32) (*MockProvider, error) {
+// NewMockLegacyProvider creates a new MockLegacyProvider
+func NewMockLegacyProvider(providerConfig, nodeName, operatingSystem string, internalIP string, daemonEndpointPort int32) (*MockLegacyProvider, error) {
 	config, err := loadConfig(providerConfig, nodeName)
 	if err != nil {
 		return nil, err
 	}
 
-	provider := MockProvider{
+	provider := MockLegacyProvider{
 		nodeName:           nodeName,
 		operatingSystem:    operatingSystem,
 		internalIP:         internalIP,
@@ -67,12 +79,24 @@ func NewMockProvider(providerConfig, nodeName, operatingSystem string, internalI
 		pods:               make(map[string]*v1.Pod),
 		config:             config,
 		startTime:          time.Now(),
+		// notifier should not be called
+		notifier: func(*v1.Pod) {},
 	}
+
+	// TODO: Allow putting a pod in the provider at startup to debug the provider and dangling pods
 	return &provider, nil
 }
 
-// loadConfig loads the given json configuration files.
+func NewMockProvider(providerConfig, nodeName, operatingSystem, internalIP string, daemonEndpointPort int32) (*MockProvider, error) {
+	p, err := NewMockLegacyProvider(providerConfig, nodeName, operatingSystem, internalIP, daemonEndpointPort)
+	if err != nil {
+		return nil, err
+	}
 
+	return &MockProvider{*p}, nil
+}
+
+// loadConfig loads the given json configuration files.
 func loadConfig(providerConfig, nodeName string) (config MockConfig, err error) {
 	data, err := ioutil.ReadFile(providerConfig)
 	if err != nil {
@@ -109,27 +133,64 @@ func loadConfig(providerConfig, nodeName string) (config MockConfig, err error) 
 }
 
 // CreatePod accepts a Pod definition and stores it in memory.
-func (p *MockProvider) CreatePod(ctx context.Context, pod *v1.Pod) error {
+func (p *MockLegacyProvider) CreatePod(ctx context.Context, pod *v1.Pod) error {
 	ctx, span := trace.StartSpan(ctx, "CreatePod")
 	defer span.End()
 
 	// Add the pod's coordinates to the current span.
 	ctx = addAttributes(ctx, span, namespaceKey, pod.Namespace, nameKey, pod.Name)
 
-	log.G(ctx).Info("receive CreatePod %q", pod.Name)
+	log.G(ctx).Infof("receive CreatePod %q", pod.Name)
 
 	key, err := buildKey(pod)
 	if err != nil {
 		return err
 	}
 
+	now := metav1.NewTime(time.Now())
+	pod.Status = v1.PodStatus{
+		Phase:     v1.PodRunning,
+		HostIP:    "1.2.3.4",
+		PodIP:     "5.6.7.8",
+		StartTime: &now,
+		Conditions: []v1.PodCondition{
+			{
+				Type:   v1.PodInitialized,
+				Status: v1.ConditionTrue,
+			},
+			{
+				Type:   v1.PodReady,
+				Status: v1.ConditionTrue,
+			},
+			{
+				Type:   v1.PodScheduled,
+				Status: v1.ConditionTrue,
+			},
+		},
+	}
+
+	for _, container := range pod.Spec.Containers {
+		pod.Status.ContainerStatuses = append(pod.Status.ContainerStatuses, v1.ContainerStatus{
+			Name:         container.Name,
+			Image:        container.Image,
+			Ready:        true,
+			RestartCount: 0,
+			State: v1.ContainerState{
+				Running: &v1.ContainerStateRunning{
+					StartedAt: now,
+				},
+			},
+		})
+	}
+
 	p.pods[key] = pod
+	p.notifier(pod)
 
 	return nil
 }
 
 // UpdatePod accepts a Pod definition and updates its reference.
-func (p *MockProvider) UpdatePod(ctx context.Context, pod *v1.Pod) error {
+func (p *MockLegacyProvider) UpdatePod(ctx context.Context, pod *v1.Pod) error {
 	ctx, span := trace.StartSpan(ctx, "UpdatePod")
 	defer span.End()
 
@@ -144,12 +205,13 @@ func (p *MockProvider) UpdatePod(ctx context.Context, pod *v1.Pod) error {
 	}
 
 	p.pods[key] = pod
+	p.notifier(pod)
 
 	return nil
 }
 
 // DeletePod deletes the specified pod out of memory.
-func (p *MockProvider) DeletePod(ctx context.Context, pod *v1.Pod) (err error) {
+func (p *MockLegacyProvider) DeletePod(ctx context.Context, pod *v1.Pod) (err error) {
 	ctx, span := trace.StartSpan(ctx, "DeletePod")
 	defer span.End()
 
@@ -167,13 +229,30 @@ func (p *MockProvider) DeletePod(ctx context.Context, pod *v1.Pod) (err error) {
 		return strongerrors.NotFound(fmt.Errorf("pod not found"))
 	}
 
+	now := metav1.Now()
 	delete(p.pods, key)
+	pod.Status.Phase = v1.PodSucceeded
+	pod.Status.Reason = "MockProviderPodDeleted"
+
+	for idx := range pod.Status.ContainerStatuses {
+		pod.Status.ContainerStatuses[idx].Ready = false
+		pod.Status.ContainerStatuses[idx].State = v1.ContainerState{
+			Terminated: &v1.ContainerStateTerminated{
+				Message:    "Mock provider terminated container upon deletion",
+				FinishedAt: now,
+				Reason:     "MockProviderPodContainerDeleted",
+				StartedAt:  pod.Status.ContainerStatuses[idx].State.Running.StartedAt,
+			},
+		}
+	}
+
+	p.notifier(pod)
 
 	return nil
 }
 
 // GetPod returns a pod by name that is stored in memory.
-func (p *MockProvider) GetPod(ctx context.Context, namespace, name string) (pod *v1.Pod, err error) {
+func (p *MockLegacyProvider) GetPod(ctx context.Context, namespace, name string) (pod *v1.Pod, err error) {
 	ctx, span := trace.StartSpan(ctx, "GetPod")
 	defer func() {
 		span.SetStatus(ocstatus.FromError(err))
@@ -197,7 +276,7 @@ func (p *MockProvider) GetPod(ctx context.Context, namespace, name string) (pod 
 }
 
 // GetContainerLogs retrieves the logs of a container by name from the provider.
-func (p *MockProvider) GetContainerLogs(ctx context.Context, namespace, podName, containerName string, opts providers.ContainerLogOpts) (io.ReadCloser, error) {
+func (p *MockLegacyProvider) GetContainerLogs(ctx context.Context, namespace, podName, containerName string, opts providers.ContainerLogOpts) (io.ReadCloser, error) {
 	ctx, span := trace.StartSpan(ctx, "GetContainerLogs")
 	defer span.End()
 
@@ -210,20 +289,20 @@ func (p *MockProvider) GetContainerLogs(ctx context.Context, namespace, podName,
 
 // Get full pod name as defined in the provider context
 // TODO: Implementation
-func (p *MockProvider) GetPodFullName(namespace string, pod string) string {
+func (p *MockLegacyProvider) GetPodFullName(namespace string, pod string) string {
 	return ""
 }
 
 // RunInContainer executes a command in a container in the pod, copying data
 // between in/out/err and the container's stdin/stdout/stderr.
-func (p *MockProvider) RunInContainer(ctx context.Context, namespace, name, container string, cmd []string, attach providers.AttachIO) error {
-	log.G(context.TODO()).Infof("receive ExecInContainer %q", container)
+func (p *MockLegacyProvider) RunInContainer(ctx context.Context, namespace, name, container string, cmd []string, attach providers.AttachIO) error {
+	log.G(ctx).Infof("receive ExecInContainer %q", container)
 	return nil
 }
 
 // GetPodStatus returns the status of a pod by name that is "running".
 // returns nil if a pod by that name is not found.
-func (p *MockProvider) GetPodStatus(ctx context.Context, namespace, name string) (*v1.PodStatus, error) {
+func (p *MockLegacyProvider) GetPodStatus(ctx context.Context, namespace, name string) (*v1.PodStatus, error) {
 	ctx, span := trace.StartSpan(ctx, "GetPodStatus")
 	defer span.End()
 
@@ -232,53 +311,16 @@ func (p *MockProvider) GetPodStatus(ctx context.Context, namespace, name string)
 
 	log.G(ctx).Infof("receive GetPodStatus %q", name)
 
-	now := metav1.NewTime(time.Now())
-
-	status := &v1.PodStatus{
-		Phase:     v1.PodRunning,
-		HostIP:    "1.2.3.4",
-		PodIP:     "5.6.7.8",
-		StartTime: &now,
-		Conditions: []v1.PodCondition{
-			{
-				Type:   v1.PodInitialized,
-				Status: v1.ConditionTrue,
-			},
-			{
-				Type:   v1.PodReady,
-				Status: v1.ConditionTrue,
-			},
-			{
-				Type:   v1.PodScheduled,
-				Status: v1.ConditionTrue,
-			},
-		},
-	}
-
 	pod, err := p.GetPod(ctx, namespace, name)
 	if err != nil {
 		return nil, err
 	}
 
-	for _, container := range pod.Spec.Containers {
-		status.ContainerStatuses = append(status.ContainerStatuses, v1.ContainerStatus{
-			Name:         container.Name,
-			Image:        container.Image,
-			Ready:        true,
-			RestartCount: 0,
-			State: v1.ContainerState{
-				Running: &v1.ContainerStateRunning{
-					StartedAt: now,
-				},
-			},
-		})
-	}
-
-	return status, nil
+	return &pod.Status, nil
 }
 
 // GetPods returns a list of all pods known to be "running".
-func (p *MockProvider) GetPods(ctx context.Context) ([]*v1.Pod, error) {
+func (p *MockLegacyProvider) GetPods(ctx context.Context) ([]*v1.Pod, error) {
 	ctx, span := trace.StartSpan(ctx, "GetPods")
 	defer span.End()
 
@@ -294,7 +336,7 @@ func (p *MockProvider) GetPods(ctx context.Context) ([]*v1.Pod, error) {
 }
 
 // Capacity returns a resource list containing the capacity limits.
-func (p *MockProvider) Capacity(ctx context.Context) v1.ResourceList {
+func (p *MockLegacyProvider) Capacity(ctx context.Context) v1.ResourceList {
 	ctx, span := trace.StartSpan(ctx, "Capacity")
 	defer span.End()
 
@@ -307,7 +349,7 @@ func (p *MockProvider) Capacity(ctx context.Context) v1.ResourceList {
 
 // NodeConditions returns a list of conditions (Ready, OutOfDisk, etc), for updates to the node status
 // within Kubernetes.
-func (p *MockProvider) NodeConditions(ctx context.Context) []v1.NodeCondition {
+func (p *MockLegacyProvider) NodeConditions(ctx context.Context) []v1.NodeCondition {
 	ctx, span := trace.StartSpan(ctx, "NodeConditions")
 	defer span.End()
 
@@ -359,7 +401,7 @@ func (p *MockProvider) NodeConditions(ctx context.Context) []v1.NodeCondition {
 
 // NodeAddresses returns a list of addresses for the node status
 // within Kubernetes.
-func (p *MockProvider) NodeAddresses(ctx context.Context) []v1.NodeAddress {
+func (p *MockLegacyProvider) NodeAddresses(ctx context.Context) []v1.NodeAddress {
 	ctx, span := trace.StartSpan(ctx, "NodeAddresses")
 	defer span.End()
 
@@ -373,7 +415,7 @@ func (p *MockProvider) NodeAddresses(ctx context.Context) []v1.NodeAddress {
 
 // NodeDaemonEndpoints returns NodeDaemonEndpoints for the node status
 // within Kubernetes.
-func (p *MockProvider) NodeDaemonEndpoints(ctx context.Context) *v1.NodeDaemonEndpoints {
+func (p *MockLegacyProvider) NodeDaemonEndpoints(ctx context.Context) *v1.NodeDaemonEndpoints {
 	ctx, span := trace.StartSpan(ctx, "NodeDaemonEndpoints")
 	defer span.End()
 
@@ -386,12 +428,12 @@ func (p *MockProvider) NodeDaemonEndpoints(ctx context.Context) *v1.NodeDaemonEn
 
 // OperatingSystem returns the operating system for this provider.
 // This is a noop to default to Linux for now.
-func (p *MockProvider) OperatingSystem() string {
+func (p *MockLegacyProvider) OperatingSystem() string {
 	return providers.OperatingSystemLinux
 }
 
 // GetStatsSummary returns dummy stats for all pods known by this provider.
-func (p *MockProvider) GetStatsSummary(ctx context.Context) (*stats.Summary, error) {
+func (p *MockLegacyProvider) GetStatsSummary(ctx context.Context) (*stats.Summary, error) {
 	ctx, span := trace.StartSpan(ctx, "GetStatsSummary")
 	defer span.End()
 
@@ -465,6 +507,10 @@ func (p *MockProvider) GetStatsSummary(ctx context.Context) (*stats.Summary, err
 
 	// Return the dummy stats.
 	return res, nil
+}
+
+func (p *MockProvider) NotifyPods(ctx context.Context, notifier func(*v1.Pod)) {
+	p.notifier = notifier
 }
 
 func buildKeyFromNames(namespace string, name string) (string, error) {

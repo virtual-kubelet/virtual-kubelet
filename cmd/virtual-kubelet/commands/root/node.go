@@ -44,7 +44,8 @@ func NodeFromProvider(ctx context.Context, name string, taint *v1.Taint, p provi
 
 	node := &v1.Node{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: name,
+			Name:        name,
+			Annotations: map[string]string{},
 			Labels: map[string]string{
 				"type":                   "virtual-kubelet",
 				"kubernetes.io/role":     "agent",
@@ -69,6 +70,7 @@ func NodeFromProvider(ctx context.Context, name string, taint *v1.Taint, p provi
 			DaemonEndpoints: *p.NodeDaemonEndpoints(ctx),
 		},
 	}
+
 	return node
 }
 

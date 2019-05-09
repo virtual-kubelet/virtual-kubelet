@@ -7,15 +7,18 @@ import (
 	"testing"
 	"time"
 
+	"gotest.tools/assert"
+
 	"github.com/virtual-kubelet/virtual-kubelet/vkubelet"
-	v1 "k8s.io/api/core/v1"
+	"k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/kubernetes/pkg/kubelet/apis/stats/v1alpha1"
 )
 
 const (
-	// deleteGracePeriodForProvider is the amount of time we allow for the provider to react to deletion of a pod before proceeding to assert that the pod has been deleted.
-	deleteGracePeriodForProvider = 100 * time.Millisecond
+	// deleteGracePeriodForProvider is the maximum amount of time we allow for the provider to react to deletion of a pod
+	// before proceeding to assert that the pod has been deleted.
+	deleteGracePeriodForProvider = 1 * time.Second
 )
 
 // TestGetStatsSummary creates a pod having two containers and queries the /stats/summary endpoint of the virtual-kubelet.
@@ -28,13 +31,13 @@ func TestGetStatsSummary(t *testing.T) {
 	}
 	// Delete the "nginx-0-X" pod after the test finishes.
 	defer func() {
-		if err := f.DeletePod(pod.Namespace, pod.Name); err != nil && !apierrors.IsNotFound(err) {
+		if err := f.DeletePodImmediately(pod.Namespace, pod.Name); err != nil && !apierrors.IsNotFound(err) {
 			t.Error(err)
 		}
 	}()
 
 	// Wait for the "nginx-0-X" pod to be reported as running and ready.
-	if err := f.WaitUntilPodReady(pod.Namespace, pod.Name); err != nil {
+	if _, err := f.WaitUntilPodReady(pod.Namespace, pod.Name); err != nil {
 		t.Fatal(err)
 	}
 
@@ -63,131 +66,152 @@ func TestGetStatsSummary(t *testing.T) {
 	}
 }
 
-// TestPodLifecycle creates two pods and verifies that the provider has been asked to create them.
-// Then, it deletes one of the pods and verifies that the provider has been asked to delete it.
+// TestPodLifecycleGracefulDelete creates a pod and verifies that the provider has been asked to create it.
+// Then, it deletes the pods and verifies that the provider has been asked to delete it.
 // These verifications are made using the /stats/summary endpoint of the virtual-kubelet, by checking for the presence or absence of the pods.
 // Hence, the provider being tested must implement the PodMetricsProvider interface.
-func TestPodLifecycle(t *testing.T) {
+func TestPodLifecycleGracefulDelete(t *testing.T) {
 	// Create a pod with prefix "nginx-0-" having a single container.
-	pod0, err := f.CreatePod(f.CreateDummyPodObjectWithPrefix("nginx-0-", "foo"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	// Delete the "nginx-0-X" pod after the test finishes.
-	defer func() {
-		if err := f.DeletePod(pod0.Namespace, pod0.Name); err != nil && !apierrors.IsNotFound(err) {
-			t.Error(err)
-		}
-	}()
+	podSpec := f.CreateDummyPodObjectWithPrefix("nginx-"+t.Name()+"-", "foo")
+	podSpec.Spec.NodeName = nodeName
 
-	// Create a pod with prefix "nginx-1-" having a single container.
-	pod1, err := f.CreatePod(f.CreateDummyPodObjectWithPrefix("nginx-1-", "bar"))
+	pod, err := f.CreatePod(podSpec)
 	if err != nil {
 		t.Fatal(err)
 	}
-	// Delete the "nginx-1-Y" pod after the test finishes.
+	// Delete the pod after the test finishes.
 	defer func() {
-		if err := f.DeletePod(pod1.Namespace, pod1.Name); err != nil && !apierrors.IsNotFound(err) {
+		if err := f.DeletePodImmediately(pod.Namespace, pod.Name); err != nil && !apierrors.IsNotFound(err) {
 			t.Error(err)
 		}
 	}()
+	t.Log("Created pod: " + pod.Name)
 
 	// Wait for the "nginx-0-X" pod to be reported as running and ready.
-	if err := f.WaitUntilPodReady(pod0.Namespace, pod0.Name); err != nil {
+	if _, err := f.WaitUntilPodReady(pod.Namespace, pod.Name); err != nil {
 		t.Fatal(err)
 	}
-	// Wait for the "nginx-1-Y" pod to be reported as running and ready.
-	if err := f.WaitUntilPodReady(pod1.Namespace, pod1.Name); err != nil {
-		t.Fatal(err)
-	}
+	t.Logf("Pod %s ready", pod.Name)
 
-	// Grab the stats from the provider.
-	stats, err := f.GetStatsSummary()
-	if err != nil {
-		t.Fatal(err)
-	}
+	// Grab the pods from the provider.
+	pods, err := f.GetRunningPods()
+	assert.NilError(t, err)
 
-	// Make sure the "nginx-0-X" pod exists in the slice of PodStats.
-	if _, err := findPodInPodStats(stats, pod0); err != nil {
-		t.Fatal(err)
-	}
+	// Check if the pod exists in the slice of PodStats.
+	assert.NilError(t, findPodInPods(pods, pod))
 
-	// Make sure the "nginx-1-Y" pod exists in the slice of PodStats.
-	if _, err := findPodInPodStats(stats, pod1); err != nil {
-		t.Fatal(err)
-	}
-
-	// Wait for the "nginx-1-Y" pod to be deleted in a separate goroutine.
-	// This ensures that we don't possibly miss the MODIFIED/DELETED events due to establishing the watch too late in the process.
-	pod1Ch := make(chan error)
+	podCh := make(chan error)
+	var podLast *v1.Pod
 	go func() {
-		// Wait for the "nginx-1-Y" pod to be reported as having been marked for deletion.
-		if err := f.WaitUntilPodDeleted(pod1.Namespace, pod1.Name); err != nil {
+		// Close the podCh channel, signaling we've observed deletion of the pod.
+		defer close(podCh)
+
+		var err error
+		podLast, err = f.WaitUntilPodDeleted(pod.Namespace, pod.Name)
+		if err != nil {
 			// Propagate the error to the outside so we can fail the test.
-			pod1Ch <- err
-		} else {
-			// Close the pod0Ch channel, signaling we've observed deletion of the pod.
-			close(pod1Ch)
+			podCh <- err
 		}
 	}()
 
-	// Delete the "nginx-1" pod.
-	if err := f.DeletePod(pod1.Namespace, pod1.Name); err != nil {
+	// Gracefully delete the "nginx-0" pod.
+	if err := f.DeletePod(pod.Namespace, pod.Name); err != nil {
 		t.Fatal(err)
 	}
+	t.Log("Deleted pod: ", pod.Name)
+
 	// Wait for the delete event to be ACKed.
-	if err := <-pod1Ch; err != nil {
+	if err := <-podCh; err != nil {
+		t.Fatal(err)
+	}
+	// Give the provider some time to react to the MODIFIED/DELETED events before proceeding.
+	// Grab the pods from the provider.
+	pods, err = f.GetRunningPods()
+	assert.NilError(t, err)
+
+	time.Sleep(deleteGracePeriodForProvider)
+	// Make sure the pod DOES NOT exist in the slice of Pods anymore.
+	assert.Assert(t, findPodInPods(pods, pod) != nil)
+	assert.Assert(t, podLast != nil)
+	assert.Assert(t, podLast.ObjectMeta.GetDeletionGracePeriodSeconds() != nil)
+	assert.Assert(t, *podLast.ObjectMeta.GetDeletionGracePeriodSeconds() > 0)
+}
+
+// TestPodLifecycleNonGracefulDelete creates one podsand verifies that the provider has created them
+// and put them in the running lifecycle. It then does a force delete on the pod, and verifies the provider
+// has deleted it.
+func TestPodLifecycleForceDelete(t *testing.T) {
+
+	// Create a pod with prefix having a single container.
+	pod, err := f.CreatePod(f.CreateDummyPodObjectWithPrefix("nginx-0-", "foo"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Delete the pod after the test finishes.
+	defer func() {
+		if err := f.DeletePodImmediately(pod.Namespace, pod.Name); err != nil && !apierrors.IsNotFound(err) {
+			t.Error(err)
+		}
+	}()
+	t.Log("Created pod: " + pod.Name)
+
+	// Wait for the "nginx-0-X" pod to be reported as running and ready.
+	if _, err := f.WaitUntilPodReady(pod.Namespace, pod.Name); err != nil {
+		t.Fatal(err)
+	}
+	t.Logf("Pod %s ready", pod.Name)
+
+	// Grab the pods from the provider.
+	pods, err := f.GetRunningPods()
+	assert.NilError(t, err)
+
+	// Check if the pod exists in the slice of Pods.
+	assert.NilError(t, findPodInPods(pods, pod))
+
+	// Wait for the pod to be deleted in a separate goroutine.
+	// This ensures that we don't possibly miss the MODIFIED/DELETED events due to establishing the watch too late in the process.
+	// It also makes sure that in light of soft deletes, we properly handle non-graceful pod deletion
+	podCh := make(chan error)
+	var podLast *v1.Pod
+	go func() {
+		// Close the podCh channel, signaling we've observed deletion of the pod.
+		defer close(podCh)
+
+		var err error
+		// Wait for the pod to be reported as having been deleted.
+		podLast, err = f.WaitUntilPodDeleted(pod.Namespace, pod.Name)
+		if err != nil {
+			// Propagate the error to the outside so we can fail the test.
+			podCh <- err
+		}
+	}()
+
+	time.Sleep(deleteGracePeriodForProvider)
+	// Forcibly delete the pod.
+	if err := f.DeletePodImmediately(pod.Namespace, pod.Name); err != nil {
+		t.Logf("Last saw pod in state: %+v", podLast)
+		t.Fatal(err)
+	}
+	t.Log("Force deleted pod: ", pod.Name)
+
+	// Wait for the delete event to be ACKed.
+	if err := <-podCh; err != nil {
+		t.Logf("Last saw pod in state: %+v", podLast)
 		t.Fatal(err)
 	}
 	// Give the provider some time to react to the MODIFIED/DELETED events before proceeding.
 	time.Sleep(deleteGracePeriodForProvider)
 
-	// Grab the stats from the provider.
-	stats, err = f.GetStatsSummary()
-	if err != nil {
-		t.Fatal(err)
-	}
+	// Grab the pods from the provider.
+	pods, err = f.GetRunningPods()
+	assert.NilError(t, err)
 
-	// Make sure the "nginx-1-Y" pod DOES NOT exist in the slice of PodStats anymore.
-	if _, err := findPodInPodStats(stats, pod1); err == nil {
-		t.Fatalf("expected to NOT find pod \"%s/%s\" in the slice of pod stats", pod1.Namespace, pod1.Name)
-	}
+	// Make sure the "nginx-0-X" pod DOES NOT exist in the slice of Pods anymore.
+	assert.Assert(t, findPodInPods(pods, pod) != nil)
 
-	// Wait for the "nginx-0-X" pod to be deleted in a separate goroutine.
-	// This ensures that we don't possibly miss the MODIFIED/DELETED events due to establishing the watch too late in the process.
-	pod0Ch := make(chan error)
-	go func() {
-		// Wait for the "nginx-0-X" pod to be reported as having been deleted.
-		if err := f.WaitUntilPodDeleted(pod0.Namespace, pod0.Name); err != nil {
-			// Propagate the error to the outside so we can fail the test.
-			pod0Ch <- err
-		} else {
-			// Close the pod0Ch channel, signaling we've observed deletion of the pod.
-			close(pod0Ch)
-		}
-	}()
+	t.Logf("Pod ended as phase: %+v", podLast.Status.Phase)
+	t.Logf("Pod ended as phase: %+v", *podLast.GetObjectMeta().GetDeletionGracePeriodSeconds())
 
-	// Forcibly delete the "nginx-0" pod.
-	if err := f.DeletePodImmediately(pod0.Namespace, pod0.Name); err != nil {
-		t.Fatal(err)
-	}
-	// Wait for the delete event to be ACKed.
-	if err := <-pod0Ch; err != nil {
-		t.Fatal(err)
-	}
-	// Give the provider some time to react to the MODIFIED/DELETED events before proceeding.
-	time.Sleep(deleteGracePeriodForProvider)
-
-	// Grab the stats from the provider.
-	stats, err = f.GetStatsSummary()
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	// Make sure the "nginx-0-X" pod DOES NOT exist in the slice of PodStats anymore.
-	if _, err := findPodInPodStats(stats, pod0); err == nil {
-		t.Fatalf("expected to NOT find pod \"%s/%s\" in the slice of pod stats", pod0.Namespace, pod0.Name)
-	}
 }
 
 // TestCreatePodWithOptionalInexistentSecrets tries to create a pod referencing optional, inexistent secrets.
@@ -201,13 +225,13 @@ func TestCreatePodWithOptionalInexistentSecrets(t *testing.T) {
 
 	// Delete the pod after the test finishes.
 	defer func() {
-		if err := f.DeletePod(pod.Namespace, pod.Name); err != nil && !apierrors.IsNotFound(err) {
+		if err := f.DeletePodImmediately(pod.Namespace, pod.Name); err != nil && !apierrors.IsNotFound(err) {
 			t.Error(err)
 		}
 	}()
 
 	// Wait for the pod to be reported as running and ready.
-	if err := f.WaitUntilPodReady(pod.Namespace, pod.Name); err != nil {
+	if _, err := f.WaitUntilPodReady(pod.Namespace, pod.Name); err != nil {
 		t.Fatal(err)
 	}
 
@@ -216,14 +240,12 @@ func TestCreatePodWithOptionalInexistentSecrets(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// Check that the pod is known to the provider.
-	stats, err := f.GetStatsSummary()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if _, err := findPodInPodStats(stats, pod); err != nil {
-		t.Fatal(err)
-	}
+	// Grab the pods from the provider.
+	pods, err := f.GetRunningPods()
+	assert.NilError(t, err)
+
+	// Check if the pod exists in the slice of Pods.
+	assert.NilError(t, findPodInPods(pods, pod))
 }
 
 // TestCreatePodWithMandatoryInexistentSecrets tries to create a pod referencing inexistent secrets.
@@ -247,14 +269,12 @@ func TestCreatePodWithMandatoryInexistentSecrets(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// Check that the pod is NOT known to the provider.
-	stats, err := f.GetStatsSummary()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if _, err := findPodInPodStats(stats, pod); err == nil {
-		t.Fatalf("Expecting to NOT find pod \"%s/%s\" having mandatory, inexistent secrets.", pod.Namespace, pod.Name)
-	}
+	// Grab the pods from the provider.
+	pods, err := f.GetRunningPods()
+	assert.NilError(t, err)
+
+	// Check if the pod exists in the slice of PodStats.
+	assert.Assert(t, findPodInPods(pods, pod) != nil)
 }
 
 // TestCreatePodWithOptionalInexistentConfigMap tries to create a pod referencing optional, inexistent config map.
@@ -268,13 +288,13 @@ func TestCreatePodWithOptionalInexistentConfigMap(t *testing.T) {
 
 	// Delete the pod after the test finishes.
 	defer func() {
-		if err := f.DeletePod(pod.Namespace, pod.Name); err != nil && !apierrors.IsNotFound(err) {
+		if err := f.DeletePodImmediately(pod.Namespace, pod.Name); err != nil && !apierrors.IsNotFound(err) {
 			t.Error(err)
 		}
 	}()
 
 	// Wait for the pod to be reported as running and ready.
-	if err := f.WaitUntilPodReady(pod.Namespace, pod.Name); err != nil {
+	if _, err := f.WaitUntilPodReady(pod.Namespace, pod.Name); err != nil {
 		t.Fatal(err)
 	}
 
@@ -283,14 +303,12 @@ func TestCreatePodWithOptionalInexistentConfigMap(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// Check that the pod is known to the provider.
-	stats, err := f.GetStatsSummary()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if _, err := findPodInPodStats(stats, pod); err != nil {
-		t.Fatal(err)
-	}
+	// Grab the pods from the provider.
+	pods, err := f.GetRunningPods()
+	assert.NilError(t, err)
+
+	// Check if the pod exists in the slice of PodStats.
+	assert.NilError(t, findPodInPods(pods, pod))
 }
 
 // TestCreatePodWithMandatoryInexistentConfigMap tries to create a pod referencing inexistent secrets.
@@ -314,14 +332,12 @@ func TestCreatePodWithMandatoryInexistentConfigMap(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// Check that the pod is NOT known to the provider.
-	stats, err := f.GetStatsSummary()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if _, err := findPodInPodStats(stats, pod); err == nil {
-		t.Fatalf("Expecting to NOT find pod \"%s/%s\" having mandatory, inexistent config map.", pod.Namespace, pod.Name)
-	}
+	// Grab the pods from the provider.
+	pods, err := f.GetRunningPods()
+	assert.NilError(t, err)
+
+	// Check if the pod exists in the slice of PodStats.
+	assert.Assert(t, findPodInPods(pods, pod) != nil)
 }
 
 // findPodInPodStats returns the index of the specified pod in the .pods field of the specified Summary object.
@@ -333,4 +349,15 @@ func findPodInPodStats(summary *v1alpha1.Summary, pod *v1.Pod) (int, error) {
 		}
 	}
 	return -1, fmt.Errorf("failed to find pod \"%s/%s\" in the slice of pod stats", pod.Namespace, pod.Name)
+}
+
+// findPodInPodStats returns the index of the specified pod in the .pods field of the specified PodList object.
+// It returns error if the pod doesn't exist in the podlist
+func findPodInPods(pods *v1.PodList, pod *v1.Pod) error {
+	for _, p := range pods.Items {
+		if p.Namespace == pod.Namespace && p.Name == pod.Name && string(p.UID) == string(pod.UID) {
+			return nil
+		}
+	}
+	return fmt.Errorf("failed to find pod \"%s/%s\" in the slice of pod list", pod.Namespace, pod.Name)
 }
