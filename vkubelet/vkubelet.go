@@ -22,7 +22,7 @@ const (
 type Server struct {
 	namespace       string
 	nodeName        string
-	k8sClient       *kubernetes.Clientset
+	k8sClient       kubernetes.Interface
 	provider        providers.Provider
 	resourceManager *manager.ResourceManager
 	podSyncWorkers  int

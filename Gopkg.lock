@@ -1334,6 +1334,7 @@
     "github.com/cpuguy83/strongerrors",
     "github.com/cpuguy83/strongerrors/status",
     "github.com/cpuguy83/strongerrors/status/ocstatus",
+    "github.com/davecgh/go-spew/spew",
     "github.com/google/go-cmp/cmp",
     "github.com/google/uuid",
     "github.com/gophercloud/gophercloud",
