@@ -11,6 +11,7 @@ deploy:
     manifests:
     - hack/skaffold/virtual-kubelet/base.yml
     - hack/skaffold/virtual-kubelet/pod1.yml
+    - hack/skaffold/virtual-kubelet/pod2.yml
 profiles:
 - name: local
   build:
