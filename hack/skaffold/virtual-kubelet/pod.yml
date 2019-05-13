@@ -16,6 +16,13 @@ spec:
     - mock
     - --provider-config
     - /vkubelet-mock-0-cfg.json
+    - --startup-timeout
+    - 10s
+    - --klog.v
+    - "2"
+    - --klog.logtostderr
+    - --log-level
+    - debug
     ports:
     - name: metrics
       containerPort: 10255
