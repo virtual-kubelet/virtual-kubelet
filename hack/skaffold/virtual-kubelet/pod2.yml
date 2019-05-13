@@ -1,0 +1,38 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: vkubelet-mock-1
+spec:
+  containers:
+  - name: vkubelet-mock-1
+    image: virtual-kubelet
+    # "IfNotPresent" is used to prevent Minikube from trying to pull from the registry (and failing) in the first place.
+    imagePullPolicy: IfNotPresent
+    args:
+    - /virtual-kubelet
+    - --nodename
+    - vkubelet-mock-1
+    - --provider
+    - mock
+    - --provider-config
+    - /vkubelet-mock-cfg.json
+    - --startup-timeout
+    - 10s
+    - --klog.v
+    - "2"
+    - --klog.logtostderr
+    - --log-level
+    - debug
+    - --metrics-addr
+    - :10256
+    env:
+    - name: KUBELET_PORT
+      value: "10251"
+    ports:
+    - name: metrics
+      containerPort: 10256
+    readinessProbe:
+      httpGet:
+        path: /stats/summary
+        port: metrics
+  serviceAccountName: virtual-kubelet

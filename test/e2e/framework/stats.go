@@ -17,7 +17,7 @@ func (f *Framework) GetStatsSummary() (*stats.Summary, error) {
 		Namespace(f.Namespace).
 		Resource("pods").
 		SubResource("proxy").
-		Name(net.JoinSchemeNamePort("http", f.NodeName, strconv.Itoa(10255))).
+		Name(net.JoinSchemeNamePort("http", f.NodeName, strconv.Itoa(f.StatsPort))).
 		Suffix("/stats/summary").DoRaw()
 	if err != nil {
 		return nil, err
