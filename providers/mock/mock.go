@@ -58,9 +58,9 @@ type MockProvider struct {
 
 // MockConfig contains a mock virtual-kubelet's configurable parameters.
 type MockConfig struct {
-	CPU                string `json:"cpu,omitempty"`
-	Memory             string `json:"memory,omitempty"`
-	Pods               string `json:"pods,omitempty"`
+	CPU    string `json:"cpu,omitempty"`
+	Memory string `json:"memory,omitempty"`
+	Pods   string `json:"pods,omitempty"`
 }
 
 // NewMockLegacyProvider creates a new MockLegacyProvider. Mock legacy provider does not implement the new asynchronous podnotifier interface
@@ -94,7 +94,7 @@ func NewMockProvider(providerConfig, nodeName, operatingSystem, internalIP strin
 		return nil, err
 	}
 
-	return &MockProvider{MockLegacyProvider:p}, nil
+	return &MockProvider{MockLegacyProvider: p}, nil
 }
 
 // loadConfig loads the given json configuration files.
@@ -297,7 +297,7 @@ func (p *MockLegacyProvider) GetPodFullName(namespace string, pod string) string
 // RunInContainer executes a command in a container in the pod, copying data
 // between in/out/err and the container's stdin/stdout/stderr.
 func (p *MockLegacyProvider) RunInContainer(ctx context.Context, namespace, name, container string, cmd []string, attach providers.AttachIO) error {
-	log.G(ctx).Infof("receive ExecInContainer %q", container)
+	log.G(context.TODO()).Infof("receive ExecInContainer %q", container)
 	return nil
 }
 
@@ -510,6 +510,8 @@ func (p *MockLegacyProvider) GetStatsSummary(ctx context.Context) (*stats.Summar
 	return res, nil
 }
 
+// NotifyPods is called to set a pod notifier callback function. This should be called before any operations are done
+// within the provider.
 func (p *MockProvider) NotifyPods(ctx context.Context, notifier func(*v1.Pod)) {
 	p.notifier = notifier
 }
