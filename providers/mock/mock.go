@@ -51,7 +51,7 @@ type MockLegacyProvider struct {
 	notifier           func(*v1.Pod)
 }
 
-// MockLegacyProvider is MockLegacyProvider, but implements the PodNotifier interface
+// MockProvider is like MockLegacyProvider, but implements the PodNotifier interface
 type MockProvider struct {
 	*MockLegacyProvider
 }
