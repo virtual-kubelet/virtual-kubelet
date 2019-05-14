@@ -13,7 +13,7 @@ spec:
     - --nodename
     - vkubelet-mock-0
     - --provider
-    - mocklegacy
+    - mock
     - --provider-config
     - /vkubelet-mock-cfg.json
     - --startup-timeout
