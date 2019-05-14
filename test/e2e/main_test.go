@@ -7,11 +7,8 @@ import (
 	"os"
 	"testing"
 
-	"k8s.io/klog"
-
-	"k8s.io/api/core/v1"
-
 	"github.com/virtual-kubelet/virtual-kubelet/test/e2e/framework"
+	"k8s.io/api/core/v1"
 )
 
 const (
@@ -39,7 +36,6 @@ func init() {
 	flag.StringVar(&kubeconfig, "kubeconfig", "", "path to the kubeconfig file to use when running the test suite outside a kubernetes cluster")
 	flag.StringVar(&namespace, "namespace", defaultNamespace, "the name of the kubernetes namespace to use for running the test suite (i.e. where to create pods)")
 	flag.StringVar(&nodeName, "node-name", defaultNodeName, "the name of the virtual-kubelet node to test")
-	klog.InitFlags(nil)
 }
 
 func TestMain(m *testing.M) {
