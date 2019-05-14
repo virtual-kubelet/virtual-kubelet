@@ -3,10 +3,5 @@
     "cpu": "2",
     "memory": "32Gi",
     "pods": "128"
-  },
-  "vkubelet-mock-1": {
-    "cpu": "2",
-    "memory": "32Gi",
-    "pods": "128"
   }
 }
