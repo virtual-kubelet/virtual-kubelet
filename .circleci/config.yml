@@ -26,13 +26,6 @@ jobs:
     steps:
       - checkout
       - run:
-          name: Create the credentials file
-          command: sh scripts/createCredentials.sh
-      - run: |
-          echo 'export AZURE_AUTH_LOCATION=${outputPathCredsfile}' >> $BASH_ENV
-      - run: |
-          echo 'export KUBECONFIG=${outputPathKubeConfigFile}' >> $BASH_ENV
-      - run:
           name: Build
           command: V=1 make build
       - run:
