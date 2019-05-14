@@ -14,7 +14,7 @@ func getMetricsPort(pod *v1.Pod) string {
 	for _, container := range pod.Spec.Containers {
 		for _, port := range container.Ports {
 			if port.Name == "metrics" {
-				return strconv.Itoa(int(port.HostPort))
+				return strconv.Itoa(int(port.ContainerPort))
 			}
 		}
 	}

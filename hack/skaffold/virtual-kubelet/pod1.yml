@@ -23,6 +23,13 @@ spec:
     - --klog.logtostderr
     - --log-level
     - debug
+    env:
+    - name: KUBELET_PORT
+      value: "10250"
+    - name: VKUBELET_POD_IP
+      valueFrom:
+        fieldRef:
+          fieldPath: status.podIP
     ports:
     - name: metrics
       containerPort: 10255

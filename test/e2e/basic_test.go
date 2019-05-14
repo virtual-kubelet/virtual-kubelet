@@ -124,14 +124,17 @@ func TestPodLifecycleGracefulDelete(t *testing.T) {
 	if err := <-podCh; err != nil {
 		t.Fatal(err)
 	}
+
+	time.Sleep(deleteGracePeriodForProvider)
 	// Give the provider some time to react to the MODIFIED/DELETED events before proceeding.
 	// Grab the pods from the provider.
 	pods, err = f.GetRunningPods()
 	assert.NilError(t, err)
 
-	time.Sleep(deleteGracePeriodForProvider)
-	// Make sure the pod DOES NOT exist in the slice of Pods anymore.
+	// Make sure the pod DOES NOT exist in the provider's set of running pods
 	assert.Assert(t, findPodInPods(pods, pod) != nil)
+
+	// Make sure we saw the delete event, and the delete event was graceful
 	assert.Assert(t, podLast != nil)
 	assert.Assert(t, podLast.ObjectMeta.GetDeletionGracePeriodSeconds() != nil)
 	assert.Assert(t, *podLast.ObjectMeta.GetDeletionGracePeriodSeconds() > 0)

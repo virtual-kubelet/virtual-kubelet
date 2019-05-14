@@ -27,7 +27,11 @@ spec:
     - :10256
     env:
     - name: KUBELET_PORT
-      value: "10251"
+      value: "10350"
+    - name: VKUBELET_POD_IP
+      valueFrom:
+        fieldRef:
+          fieldPath: status.podIP
     ports:
     - name: metrics
       containerPort: 10256

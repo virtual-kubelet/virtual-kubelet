@@ -12,12 +12,8 @@ import (
 )
 
 const (
-	defaultNamespace   = v1.NamespaceDefault
-	defaultNodeName    = "vkubelet-mock-0"
-	defaultTaintKey    = "virtual-kubelet.io/provider"
-	defaultTaintValue  = "mock"
-	defaultTaintEffect = string(v1.TaintEffectNoSchedule)
-	defaultStatsPort   = 10255
+	defaultNamespace = v1.NamespaceDefault
+	defaultNodeName  = "vkubelet-mock-0"
 )
 
 var (
