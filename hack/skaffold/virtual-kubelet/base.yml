@@ -13,6 +13,7 @@ rules:
   resources:
   - configmaps
   - secrets
+  - services
   verbs:
   - get
   - list
@@ -26,6 +27,7 @@ rules:
   - get
   - list
   - watch
+  - patch
 - apiGroups:
   - ""
   resources:
@@ -39,12 +41,14 @@ rules:
   - nodes/status
   verbs:
   - update
+  - patch
 - apiGroups:
   - ""
   resources:
   - pods/status
   verbs:
   - update
+  - patch
 - apiGroups:
   - ""
   resources:
