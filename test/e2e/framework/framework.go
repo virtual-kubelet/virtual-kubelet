@@ -8,25 +8,18 @@ import (
 
 // Framework encapsulates the configuration for the current run, and provides helper methods to be used during testing.
 type Framework struct {
-	KubeClient  kubernetes.Interface
-	Namespace   string
-	NodeName    string
-	TaintKey    string
-	TaintValue  string
-	TaintEffect string
-	StatsPort   int
+	KubeClient kubernetes.Interface
+	Namespace  string
+	NodeName   string
+	StatsPort  int
 }
 
 // NewTestingFramework returns a new instance of the testing framework.
-func NewTestingFramework(kubeconfig, namespace, nodeName, taintKey, taintValue, taintEffect string, statsPort int) *Framework {
+func NewTestingFramework(kubeconfig, namespace, nodeName string) *Framework {
 	return &Framework{
-		KubeClient:  createKubeClient(kubeconfig),
-		Namespace:   namespace,
-		NodeName:    nodeName,
-		TaintKey:    taintKey,
-		TaintValue:  taintValue,
-		TaintEffect: taintEffect,
-		StatsPort:   statsPort,
+		KubeClient: createKubeClient(kubeconfig),
+		Namespace:  namespace,
+		NodeName:   nodeName,
 	}
 }
 
