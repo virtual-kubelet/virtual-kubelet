@@ -43,11 +43,12 @@ func TestMain(m *testing.M) {
 	// Set sane defaults in case no values (or empty ones) have been provided.
 	setDefaults()
 	// Create a new instance of the test framework targeting the specified node.
+	f = framework.NewTestingFramework(kubeconfig, namespace, nodeName)
+	// Wait for the virtual-kubelet pod to be ready.
 	_, err := f.WaitUntilPodReady(namespace, nodeName)
 	if err != nil {
 		panic(err)
 	}
-	f = framework.NewTestingFramework(kubeconfig, namespace, nodeName)
 	// Run the test suite.
 	os.Exit(m.Run())
 }
