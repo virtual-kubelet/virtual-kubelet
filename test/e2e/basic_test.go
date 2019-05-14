@@ -144,8 +144,9 @@ func TestPodLifecycleGracefulDelete(t *testing.T) {
 // and put them in the running lifecycle. It then does a force delete on the pod, and verifies the provider
 // has deleted it.
 func TestPodLifecycleForceDelete(t *testing.T) {
+	podSpec := f.CreateDummyPodObjectWithPrefix("nginx-"+t.Name()+"-", "foo")
 	// Create a pod with prefix having a single container.
-	pod, err := f.CreatePod(f.CreateDummyPodObjectWithPrefix("nginx-0-", "foo"))
+	pod, err := f.CreatePod(podSpec)
 	if err != nil {
 		t.Fatal(err)
 	}
