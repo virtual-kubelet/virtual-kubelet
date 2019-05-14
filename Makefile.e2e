@@ -47,5 +47,5 @@ e2e.clean: skaffold/delete
 	if [ -f bin/e2e/virtual-kubelet ]; then  rm bin/e2e/virtual-kubelet; fi
 
 .PHONY: e2e.clean/%
-e2e.clean/%:
+e2e.clean/%: e2e.clean
 	kubectl delete --ignore-not-found node $(*)
