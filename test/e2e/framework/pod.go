@@ -15,10 +15,7 @@ import (
 	podutil "k8s.io/kubernetes/pkg/api/v1/pod"
 )
 
-const (
-	defaultWatchTimeout       = 2 * time.Minute
-	hostnameNodeSelectorLabel = "kubernetes.io/hostname"
-)
+const defaultWatchTimeout = 2 * time.Minute
 
 // CreateDummyPodObjectWithPrefix creates a dujmmy pod object using the specified prefix as the value of .metadata.generateName.
 // A variable number of strings can be provided.
@@ -33,16 +30,7 @@ func (f *Framework) CreateDummyPodObjectWithPrefix(prefix string, images ...stri
 			Namespace:    f.Namespace,
 		},
 		Spec: corev1.PodSpec{
-			NodeSelector: map[string]string{
-				hostnameNodeSelectorLabel: f.NodeName,
-			},
-			Tolerations: []corev1.Toleration{
-				{
-					Key:    f.TaintKey,
-					Value:  f.TaintValue,
-					Effect: corev1.TaintEffect(f.TaintEffect),
-				},
-			},
+			NodeName:           f.NodeName,
 			EnableServiceLinks: &enableServiceLink,
 		},
 	}
