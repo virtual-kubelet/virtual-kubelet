@@ -19,7 +19,7 @@ var (
 		"ca-central-1",   // Canada (Central)
 		"eu-central-1",   // EU (Frankfurt)
 		"eu-west-1",      // EU (Ireland)
-		"eu-west-2", 			// EU (London)
+		"eu-west-2",      // EU (London)
 		"us-east-1",      // US East (N. Virginia)
 		"us-east-2",      // US East (Ohio)
 		"us-west-1",      // US West (N. California)
