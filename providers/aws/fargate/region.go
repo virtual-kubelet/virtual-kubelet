@@ -12,7 +12,7 @@ var (
 	// FargateRegions are AWS regions where Fargate is available.
 	FargateRegions = Regions{
 		"ap-northeast-1", // Asia Pacific (Tokyo)
-		"ap-northeast-2"  // Asia Pacific (Seoul)
+		"ap-northeast-2",  // Asia Pacific (Seoul)
 		"ap-southeast-1", // Asia Pacific (Singapore)
 		"ap-southeast-2", // Asia Pacific (Sydney)
 		"ap-south-1",     // Asia Pacific (Mumbai)
