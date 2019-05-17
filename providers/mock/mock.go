@@ -71,6 +71,32 @@ func NewMockProvider(providerConfig, nodeName, operatingSystem string, internalI
 	return &provider, nil
 }
 
+// NewMockProviderMockConfig creates a new MockProvider with the given Mock Config
+func NewMockProviderMockConfig(config MockConfig, nodeName, operatingSystem string, internalIP string, daemonEndpointPort int32) (*MockProvider, error) {
+
+	//set defaults
+	if config.CPU == "" {
+		config.CPU = defaultCPUCapacity
+	}
+	if config.Memory == "" {
+		config.Memory = defaultMemoryCapacity
+	}
+	if config.Pods == "" {
+		config.Pods = defaultPodCapacity
+	}
+
+	provider := MockProvider{
+		nodeName:           nodeName,
+		operatingSystem:    operatingSystem,
+		internalIP:         internalIP,
+		daemonEndpointPort: daemonEndpointPort,
+		pods:               make(map[string]*v1.Pod),
+		config:             config,
+		startTime:          time.Now(),
+	}
+	return &provider, nil
+}
+
 // loadConfig loads the given json configuration files.
 
 func loadConfig(providerConfig, nodeName string) (config MockConfig, err error) {
