@@ -30,7 +30,7 @@ import (
 
 	"github.com/cenkalti/backoff"
 	"github.com/cpuguy83/strongerrors"
-	"github.com/virtual-kubelet/virtual-kubelet/providers"
+	"github.com/virtual-kubelet/virtual-kubelet/vkubelet/api"
 	v1 "k8s.io/api/core/v1"
 )
 
@@ -109,7 +109,7 @@ func (p *BrokerProvider) GetPod(ctx context.Context, namespace, name string) (*v
 }
 
 // GetContainerLogs returns the logs of a container running in a pod by name.
-func (p *BrokerProvider) GetContainerLogs(ctx context.Context, namespace, podName, containerName string, opts providers.ContainerLogOpts) (io.ReadCloser, error) {
+func (p *BrokerProvider) GetContainerLogs(ctx context.Context, namespace, podName, containerName string, opts api.ContainerLogOpts) (io.ReadCloser, error) {
 	urlPathStr := fmt.Sprintf(
 		"/getContainerLogs?namespace=%s&podName=%s&containerName=%s&tail=%d",
 		url.QueryEscape(namespace),
@@ -134,7 +134,7 @@ func (p *BrokerProvider) GetPodFullName(namespace string, pod string) string {
 // RunInContainer executes a command in a container in the pod, copying data
 // between in/out/err and the container's stdin/stdout/stderr.
 // TODO: Implementation
-func (p *BrokerProvider) RunInContainer(ctx context.Context, namespace, name, container string, cmd []string, attach providers.AttachIO) error {
+func (p *BrokerProvider) RunInContainer(ctx context.Context, namespace, name, container string, cmd []string, attach api.AttachIO) error {
 	log.Printf("receive ExecInContainer %q\n", container)
 	return nil
 }

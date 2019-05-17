@@ -26,8 +26,8 @@ import (
 	"github.com/virtual-kubelet/azure-aci/client/network"
 	"github.com/virtual-kubelet/virtual-kubelet/log"
 	"github.com/virtual-kubelet/virtual-kubelet/manager"
-	"github.com/virtual-kubelet/virtual-kubelet/providers"
 	"github.com/virtual-kubelet/virtual-kubelet/trace"
+	"github.com/virtual-kubelet/virtual-kubelet/vkubelet/api"
 	v1 "k8s.io/api/core/v1"
 	k8serr "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -766,7 +766,7 @@ func (p *ACIProvider) GetPod(ctx context.Context, namespace, name string) (*v1.P
 }
 
 // GetContainerLogs returns the logs of a pod by name that is running inside ACI.
-func (p *ACIProvider) GetContainerLogs(ctx context.Context, namespace, podName, containerName string, opts providers.ContainerLogOpts) (io.ReadCloser, error) {
+func (p *ACIProvider) GetContainerLogs(ctx context.Context, namespace, podName, containerName string, opts api.ContainerLogOpts) (io.ReadCloser, error) {
 	ctx, span := trace.StartSpan(ctx, "aci.GetContainerLogs")
 	defer span.End()
 	ctx = addAzureAttributes(ctx, span, p)
@@ -804,7 +804,7 @@ func (p *ACIProvider) GetPodFullName(namespace string, pod string) string {
 
 // RunInContainer executes a command in a container in the pod, copying data
 // between in/out/err and the container's stdin/stdout/stderr.
-func (p *ACIProvider) RunInContainer(ctx context.Context, namespace, name, container string, cmd []string, attach providers.AttachIO) error {
+func (p *ACIProvider) RunInContainer(ctx context.Context, namespace, name, container string, cmd []string, attach api.AttachIO) error {
 	out := attach.Stdout()
 	if out != nil {
 		defer out.Close()
@@ -816,7 +816,7 @@ func (p *ACIProvider) RunInContainer(ctx context.Context, namespace, name, conta
 	}
 
 	// Set default terminal size
-	size := providers.TermSize{
+	size := api.TermSize{
 		Height: 60,
 		Width:  120,
 	}

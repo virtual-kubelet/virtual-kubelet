@@ -18,6 +18,7 @@ import (
 	"github.com/gophercloud/gophercloud/pagination"
 	"github.com/virtual-kubelet/virtual-kubelet/manager"
 	"github.com/virtual-kubelet/virtual-kubelet/providers"
+	"github.com/virtual-kubelet/virtual-kubelet/vkubelet/api"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -215,7 +216,7 @@ func (p *ZunProvider) getContainers(ctx context.Context, pod *v1.Pod) ([]Contain
 
 // RunInContainer executes a command in a container in the pod, copying data
 // between in/out/err and the container's stdin/stdout/stderr.
-func (p *ZunProvider) RunInContainer(ctx context.Context, namespace, name, container string, cmd []string, attach providers.AttachIO) error {
+func (p *ZunProvider) RunInContainer(ctx context.Context, namespace, name, container string, cmd []string, attach api.AttachIO) error {
 	log.Printf("receive ExecInContainer %q\n", container)
 	return nil
 }
@@ -235,7 +236,7 @@ func (p *ZunProvider) GetPodStatus(ctx context.Context, namespace, name string) 
 	return &pod.Status, nil
 }
 
-func (p *ZunProvider) GetContainerLogs(ctx context.Context, namespace, podName, containerName string, opts providers.ContainerLogOpts) (io.ReadCloser, error) {
+func (p *ZunProvider) GetContainerLogs(ctx context.Context, namespace, podName, containerName string, opts api.ContainerLogOpts) (io.ReadCloser, error) {
 	return ioutil.NopCloser(strings.NewReader("not support in Zun Provider")), nil
 }
 

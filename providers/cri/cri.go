@@ -20,6 +20,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/virtual-kubelet/virtual-kubelet/manager"
 	"github.com/virtual-kubelet/virtual-kubelet/providers"
+	"github.com/virtual-kubelet/virtual-kubelet/vkubelet/api"
 	"google.golang.org/grpc"
 	v1 "k8s.io/api/core/v1"
 	k8serr "k8s.io/apimachinery/pkg/api/errors"
@@ -607,7 +608,7 @@ func (p *CRIProvider) GetPod(ctx context.Context, namespace, name string) (*v1.P
 }
 
 // Reads a log file into a string
-func readLogFile(filename string, opts providers.ContainerLogOpts) (io.ReadCloser, error) {
+func readLogFile(filename string, opts api.ContainerLogOpts) (io.ReadCloser, error) {
 	file, err := os.Open(filename)
 	if err != nil {
 		return nil, err
@@ -627,7 +628,7 @@ func readLogFile(filename string, opts providers.ContainerLogOpts) (io.ReadClose
 }
 
 // Provider function to read the logs of a container
-func (p *CRIProvider) GetContainerLogs(ctx context.Context, namespace, podName, containerName string, opts providers.ContainerLogOpts) (io.ReadCloser, error) {
+func (p *CRIProvider) GetContainerLogs(ctx context.Context, namespace, podName, containerName string, opts api.ContainerLogOpts) (io.ReadCloser, error) {
 	log.Printf("receive GetContainerLogs %q", containerName)
 
 	err := p.refreshNodeState()
@@ -656,7 +657,7 @@ func (p *CRIProvider) GetPodFullName(namespace string, pod string) string {
 // RunInContainer executes a command in a container in the pod, copying data
 // between in/out/err and the container's stdin/stdout/stderr.
 // TODO: Implementation
-func (p *CRIProvider) RunInContainer(ctx context.Context, namespace, name, container string, cmd []string, attach providers.AttachIO) error {
+func (p *CRIProvider) RunInContainer(ctx context.Context, namespace, name, container string, cmd []string, attach api.AttachIO) error {
 	log.Printf("receive ExecInContainer %q\n", container)
 	return nil
 }

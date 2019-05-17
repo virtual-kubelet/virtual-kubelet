@@ -17,8 +17,8 @@ import (
 	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/lawrencegripper/pod2docker"
 	"github.com/virtual-kubelet/virtual-kubelet/manager"
-	"github.com/virtual-kubelet/virtual-kubelet/providers"
 	azureCreds "github.com/virtual-kubelet/virtual-kubelet/providers/azure"
+	"github.com/virtual-kubelet/virtual-kubelet/vkubelet/api"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -260,7 +260,7 @@ const (
 )
 
 // GetContainerLogs returns the logs of a container running in a pod by name.
-func (p *Provider) GetContainerLogs(ctx context.Context, namespace, podName, containerName string, opts providers.ContainerLogOpts) (io.ReadCloser, error) {
+func (p *Provider) GetContainerLogs(ctx context.Context, namespace, podName, containerName string, opts api.ContainerLogOpts) (io.ReadCloser, error) {
 	log.Println("Getting pod logs ....")
 
 	taskID := getTaskIDForPod(namespace, podName)
@@ -319,7 +319,7 @@ func (p *Provider) GetPodFullName(namespace string, pod string) string {
 // RunInContainer executes a command in a container in the pod, copying data
 // between in/out/err and the container's stdin/stdout/stderr.
 // TODO: Implementation
-func (p *Provider) RunInContainer(ctx context.Context, namespace, name, container string, cmd []string, attach providers.AttachIO) error {
+func (p *Provider) RunInContainer(ctx context.Context, namespace, name, container string, cmd []string, attach api.AttachIO) error {
 	log.Printf("receive ExecInContainer %q\n", container)
 	return nil
 }

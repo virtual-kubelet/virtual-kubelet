@@ -15,8 +15,8 @@ import (
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/ecs"
 	"github.com/aws/aws-sdk-go/service/iam"
-	"github.com/virtual-kubelet/virtual-kubelet/providers"
 	vkAWS "github.com/virtual-kubelet/virtual-kubelet/providers/aws"
+	"github.com/virtual-kubelet/virtual-kubelet/vkubelet/api"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -283,7 +283,7 @@ func TestAWSFargateProviderPodLifecycle(t *testing.T) {
 		// Wait a few seconds for the logs to settle.
 		time.Sleep(10 * time.Second)
 
-		logs, err := provider.GetContainerLogs(context.Background(), "default", podName, "echo-container", providers.ContainerLogOpts{Tail: 100})
+		logs, err := provider.GetContainerLogs(context.Background(), "default", podName, "echo-container", api.ContainerLogOpts{Tail: 100})
 		if err != nil {
 			t.Fatal(err)
 		}

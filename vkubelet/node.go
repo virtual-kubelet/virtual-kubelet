@@ -9,7 +9,6 @@ import (
 	"github.com/cpuguy83/strongerrors/status/ocstatus"
 	pkgerrors "github.com/pkg/errors"
 	"github.com/virtual-kubelet/virtual-kubelet/log"
-	"github.com/virtual-kubelet/virtual-kubelet/providers"
 	"github.com/virtual-kubelet/virtual-kubelet/trace"
 	coord "k8s.io/api/coordination/v1beta1"
 	corev1 "k8s.io/api/core/v1"
@@ -21,12 +20,33 @@ import (
 	v1 "k8s.io/client-go/kubernetes/typed/core/v1"
 )
 
+// NodeProvider is the interface used for registering a node and updating its
+// status in Kubernetes.
+//
+// Note: Implementers can choose to manage a node themselves, in which case
+// it is not needed to provide an implementation for this interface.
+type NodeProvider interface {
+	// Ping checks if the node is still active.
+	// This is intended to be lightweight as it will be called periodically as a
+	// heartbeat to keep the node marked as ready in Kubernetes.
+	Ping(context.Context) error
+
+	// NotifyNodeStatus is used to asynchronously monitor the node.
+	// The passed in callback should be called any time there is a change to the
+	// node's status.
+	// This will generally trigger a call to the Kubernetes API server to update
+	// the status.
+	//
+	// NotifyNodeStatus should not block callers.
+	NotifyNodeStatus(ctx context.Context, cb func(*corev1.Node))
+}
+
 // NewNode creates a new node.
 // This does not have any side-effects on the system or kubernetes.
 //
 // Use the node's `Run` method to register and run the loops to update the node
 // in Kubernetes.
-func NewNode(p providers.NodeProvider, node *corev1.Node, leases v1beta1.LeaseInterface, nodes v1.NodeInterface, opts ...NodeOpt) (*Node, error) {
+func NewNode(p NodeProvider, node *corev1.Node, leases v1beta1.LeaseInterface, nodes v1.NodeInterface, opts ...NodeOpt) (*Node, error) {
 	n := &Node{p: p, n: node, leases: leases, nodes: nodes}
 	for _, o := range opts {
 		if err := o(n); err != nil {
@@ -79,7 +99,7 @@ func WithNodeLease(l *coord.Lease) NodeOpt {
 // Node deals with creating and managing a node object in Kubernetes.
 // It can register a node with Kubernetes and periodically update its status.
 type Node struct {
-	p providers.NodeProvider
+	p NodeProvider
 	n *corev1.Node
 
 	leases v1beta1.LeaseInterface

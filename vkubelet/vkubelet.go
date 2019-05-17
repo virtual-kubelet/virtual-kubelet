@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/virtual-kubelet/virtual-kubelet/manager"
-	"github.com/virtual-kubelet/virtual-kubelet/providers"
 	"github.com/virtual-kubelet/virtual-kubelet/trace"
 	corev1 "k8s.io/api/core/v1"
 	corev1informers "k8s.io/client-go/informers/core/v1"
@@ -23,7 +22,7 @@ type Server struct {
 	namespace       string
 	nodeName        string
 	k8sClient       kubernetes.Interface
-	provider        providers.Provider
+	provider        PodLifecycleHandler
 	resourceManager *manager.ResourceManager
 	podSyncWorkers  int
 	podInformer     corev1informers.PodInformer
@@ -35,7 +34,7 @@ type Config struct {
 	Client          *kubernetes.Clientset
 	Namespace       string
 	NodeName        string
-	Provider        providers.Provider
+	Provider        PodLifecycleHandler
 	ResourceManager *manager.ResourceManager
 	PodSyncWorkers  int
 	PodInformer     corev1informers.PodInformer
@@ -68,7 +67,7 @@ func (s *Server) Run(ctx context.Context) error {
 	q := workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "podStatusUpdate")
 	s.runProviderSyncWorkers(ctx, q)
 
-	if pn, ok := s.provider.(providers.PodNotifier); ok {
+	if pn, ok := s.provider.(PodNotifier); ok {
 		pn.NotifyPods(ctx, func(pod *corev1.Pod) {
 			s.enqueuePodStatusUpdate(ctx, q, pod)
 		})

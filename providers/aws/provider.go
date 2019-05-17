@@ -8,8 +8,8 @@ import (
 	"time"
 
 	"github.com/virtual-kubelet/virtual-kubelet/manager"
-	"github.com/virtual-kubelet/virtual-kubelet/providers"
 	"github.com/virtual-kubelet/virtual-kubelet/providers/aws/fargate"
+	"github.com/virtual-kubelet/virtual-kubelet/vkubelet/api"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -172,7 +172,7 @@ func (p *FargateProvider) GetPod(ctx context.Context, namespace, name string) (*
 }
 
 // GetContainerLogs retrieves the logs of a container by name from the provider.
-func (p *FargateProvider) GetContainerLogs(ctx context.Context, namespace, podName, containerName string, opts providers.ContainerLogOpts) (io.ReadCloser, error) {
+func (p *FargateProvider) GetContainerLogs(ctx context.Context, namespace, podName, containerName string, opts api.ContainerLogOpts) (io.ReadCloser, error) {
 	log.Printf("Received GetContainerLogs request for %s/%s/%s.\n", namespace, podName, containerName)
 	return p.cluster.GetContainerLogs(namespace, podName, containerName, opts)
 }
@@ -184,7 +184,7 @@ func (p *FargateProvider) GetPodFullName(namespace string, pod string) string {
 
 // RunInContainer executes a command in a container in the pod, copying data
 // between in/out/err and the container's stdin/stdout/stderr.
-func (p *FargateProvider) RunInContainer(ctx context.Context, namespace, podName, containerName string, cmd []string, attach providers.AttachIO) error {
+func (p *FargateProvider) RunInContainer(ctx context.Context, namespace, podName, containerName string, cmd []string, attach api.AttachIO) error {
 	return errNotImplemented
 }
 

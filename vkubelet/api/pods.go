@@ -6,18 +6,14 @@ import (
 
 	"github.com/cpuguy83/strongerrors"
 	"github.com/virtual-kubelet/virtual-kubelet/log"
-	"k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 )
 
-// ContainerLogsBackend is used in place of backend implementations for the provider's pods
-type RunningPodsBackend interface {
-	// GetPods retrieves a list of all pods running on the provider (can be cached).
-	GetPods(context.Context) ([]*v1.Pod, error)
-}
+type PodListerFunc func(context.Context) ([]*v1.Pod, error)
 
-func RunningPodsHandlerFunc(p RunningPodsBackend) http.HandlerFunc {
+func HandleRunningPods(getPods PodListerFunc) http.HandlerFunc {
 	scheme := runtime.NewScheme()
 	v1.SchemeBuilder.AddToScheme(scheme)
 	codecs := serializer.NewCodecFactory(scheme)
@@ -25,7 +21,7 @@ func RunningPodsHandlerFunc(p RunningPodsBackend) http.HandlerFunc {
 	return handleError(func(w http.ResponseWriter, req *http.Request) error {
 		ctx := req.Context()
 		ctx = log.WithLogger(ctx, log.L)
-		pods, err := p.GetPods(ctx)
+		pods, err := getPods(ctx)
 		if err != nil {
 			return err
 		}
