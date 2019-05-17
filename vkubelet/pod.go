@@ -57,7 +57,7 @@ func (s *Server) createOrUpdatePod(ctx context.Context, pod *corev1.Pod, recorde
 		// compare the hashes of the pod specs to see if the specs actually changed
 		expected := hashPodSpec(pp.Spec)
 		if actual := hashPodSpec(pod.Spec); actual != expected {
-			log.G(ctx).Info("Pod %s exists, updating pod in provider", pp.Name)
+			log.G(ctx).Debugf("Pod %s exists, updating pod in provider", pp.Name)
 			if origErr := s.provider.UpdatePod(ctx, pod); origErr != nil {
 				s.handleProviderError(ctx, span, origErr, pod)
 				return origErr
