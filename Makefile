@@ -10,7 +10,7 @@ include Makefile.e2e
 # should consider installing it locally
 # Also, we will want to lock our tool versions using go mod:
 # https://github.com/golang/go/wiki/Modules#how-can-i-track-tool-dependencies-for-a-module
-gobin_tool ?= $(shell which gobin || echo $(GOPATH)/gobin)
+gobin_tool ?= $(shell which gobin || echo $(GOPATH)/bin/gobin)
 goimports := golang.org/x/tools/cmd/goimports@release-branch.go1.10
 gocovmerge := github.com/wadey/gocovmerge@b5bfa59ec0adc420475f97f89b58045c721d761c
 goreleaser := github.com/goreleaser/goreleaser@v0.82.2
@@ -152,20 +152,20 @@ allpackages = $(if $(__allpackages),,$(eval __allpackages := $$(_allpackages)))$
 
 .PHONY: goimports
 goimports: $(gobin_tool)
-	gobin -d $(goimports)
+	$(gobin_tool) -d $(goimports)
 
 .PHONY: gocovmerge
 gocovmerge: $(gobin_tool)
-	gobin -d $(gocovmerge)
+	$(gobin_tool) -d $(gocovmerge)
 
 .PHONY: goreleaser
 goreleaser: $(gobin_tool)
-	gobin -d $(goreleaser)
+	$(gobin_tool) -d $(goreleaser)
 
 .PHONY: gox
 gox: $(gobin_tool)
 	# We make gox globally available, for people to use by hand
-	gobin $(gox)
+	$(gobin_tool) $(gox)
 
 Q := $(if $V,,@)
 

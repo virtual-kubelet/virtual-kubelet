@@ -21,9 +21,14 @@ type ServeMux interface {
 }
 
 // PodHandler creates an http handler for interacting with pods/containers.
-func PodHandler(p providers.Provider) http.Handler {
+func PodHandler(p providers.Provider, debug bool) http.Handler {
 	r := mux.NewRouter()
 
+	// This matches the behaviour in the reference kubelet
+	r.StrictSlash(true)
+	if debug {
+		r.HandleFunc("/runningpods/", api.RunningPodsHandlerFunc(p)).Methods("GET")
+	}
 	r.HandleFunc("/containerLogs/{namespace}/{pod}/{container}", api.PodLogsHandlerFunc(p)).Methods("GET")
 	r.HandleFunc("/exec/{namespace}/{pod}/{container}", api.PodExecHandlerFunc(p)).Methods("POST")
 	r.NotFoundHandler = http.HandlerFunc(NotFound)
@@ -58,8 +63,8 @@ func MetricsSummaryHandler(p providers.Provider) http.Handler {
 //
 // Callers should take care to namespace the serve mux as they see fit, however
 // these routes get called by the Kubernetes API server.
-func AttachPodRoutes(p providers.Provider, mux ServeMux) {
-	mux.Handle("/", InstrumentHandler(PodHandler(p)))
+func AttachPodRoutes(p providers.Provider, mux ServeMux, debug bool) {
+	mux.Handle("/", InstrumentHandler(PodHandler(p, debug)))
 }
 
 // AttachMetricsRoutes adds the http routes for pod/node metrics to the passed in serve mux.
