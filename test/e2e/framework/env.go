@@ -10,8 +10,8 @@ var (
 )
 
 // CreatePodObjectWithMandatoryConfigMapKey creates a pod object that references the "key_0" key from the "config-map-0" config map as mandatory.
-func (f *Framework) CreatePodObjectWithMandatoryConfigMapKey() *corev1.Pod {
-	return f.CreatePodObjectWithEnv([]corev1.EnvVar{
+func (f *Framework) CreatePodObjectWithMandatoryConfigMapKey(testName string) *corev1.Pod {
+	return f.CreatePodObjectWithEnv(testName, []corev1.EnvVar{
 		{
 			Name: "CONFIG_MAP_0_KEY_0",
 			ValueFrom: &corev1.EnvVarSource{
@@ -26,8 +26,8 @@ func (f *Framework) CreatePodObjectWithMandatoryConfigMapKey() *corev1.Pod {
 }
 
 // CreatePodObjectWithOptionalConfigMapKey creates a pod object that references the "key_0" key from the "config-map-0" config map as optional.
-func (f *Framework) CreatePodObjectWithOptionalConfigMapKey() *corev1.Pod {
-	return f.CreatePodObjectWithEnv([]corev1.EnvVar{
+func (f *Framework) CreatePodObjectWithOptionalConfigMapKey(testName string) *corev1.Pod {
+	return f.CreatePodObjectWithEnv(testName, []corev1.EnvVar{
 		{
 			Name: "CONFIG_MAP_0_KEY_0",
 			ValueFrom: &corev1.EnvVarSource{
@@ -42,8 +42,8 @@ func (f *Framework) CreatePodObjectWithOptionalConfigMapKey() *corev1.Pod {
 }
 
 // CreatePodObjectWithMandatorySecretKey creates a pod object that references the "key_0" key from the "secret-0" config map as mandatory.
-func (f *Framework) CreatePodObjectWithMandatorySecretKey() *corev1.Pod {
-	return f.CreatePodObjectWithEnv([]corev1.EnvVar{
+func (f *Framework) CreatePodObjectWithMandatorySecretKey(testName string) *corev1.Pod {
+	return f.CreatePodObjectWithEnv(testName, []corev1.EnvVar{
 		{
 			Name: "SECRET_0_KEY_0",
 			ValueFrom: &corev1.EnvVarSource{
@@ -58,8 +58,8 @@ func (f *Framework) CreatePodObjectWithMandatorySecretKey() *corev1.Pod {
 }
 
 // CreatePodObjectWithOptionalSecretKey creates a pod object that references the "key_0" key from the "secret-0" config map as optional.
-func (f *Framework) CreatePodObjectWithOptionalSecretKey() *corev1.Pod {
-	return f.CreatePodObjectWithEnv([]corev1.EnvVar{
+func (f *Framework) CreatePodObjectWithOptionalSecretKey(testName string) *corev1.Pod {
+	return f.CreatePodObjectWithEnv(testName, []corev1.EnvVar{
 		{
 			Name: "SECRET_0_KEY_0",
 			ValueFrom: &corev1.EnvVarSource{
@@ -74,8 +74,8 @@ func (f *Framework) CreatePodObjectWithOptionalSecretKey() *corev1.Pod {
 }
 
 // CreatePodObjectWithEnv creates a pod object whose name starts with "env-test-" and that uses the specified environment configuration for its first container.
-func (f *Framework) CreatePodObjectWithEnv(env []corev1.EnvVar) *corev1.Pod {
-	pod := f.CreateDummyPodObjectWithPrefix("env-test-", "foo")
+func (f *Framework) CreatePodObjectWithEnv(testName string, env []corev1.EnvVar) *corev1.Pod {
+	pod := f.CreateDummyPodObjectWithPrefix(testName, "env-test-", "foo")
 	pod.Spec.Containers[0].Env = env
 	return pod
 }

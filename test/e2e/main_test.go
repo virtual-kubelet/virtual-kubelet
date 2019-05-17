@@ -42,7 +42,7 @@ func TestMain(m *testing.M) {
 	// Create a new instance of the test framework targeting the specified node.
 	f = framework.NewTestingFramework(kubeconfig, namespace, nodeName)
 	// Wait for the virtual-kubelet pod to be ready.
-	if err := f.WaitUntilPodReady(namespace, nodeName); err != nil {
+	if _, err := f.WaitUntilPodReady(namespace, nodeName); err != nil {
 		panic(err)
 	}
 	// Run the test suite.
