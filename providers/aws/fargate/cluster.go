@@ -13,7 +13,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/cloudwatchlogs"
 	"github.com/aws/aws-sdk-go/service/ecs"
 	"github.com/cpuguy83/strongerrors"
-	"github.com/virtual-kubelet/virtual-kubelet/providers"
+	"github.com/virtual-kubelet/virtual-kubelet/vkubelet/api"
 	k8sTypes "k8s.io/apimachinery/pkg/types"
 )
 
@@ -313,7 +313,7 @@ func (c *Cluster) RemovePod(tag string) {
 }
 
 // GetContainerLogs returns the logs of a container from this cluster.
-func (c *Cluster) GetContainerLogs(namespace, podName, containerName string, opts providers.ContainerLogOpts) (io.ReadCloser, error) {
+func (c *Cluster) GetContainerLogs(namespace, podName, containerName string, opts api.ContainerLogOpts) (io.ReadCloser, error) {
 	if c.cloudWatchLogGroupName == "" {
 		return nil, fmt.Errorf("logs not configured, please specify a \"CloudWatchLogGroupName\"")
 	}

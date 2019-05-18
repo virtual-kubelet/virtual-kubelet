@@ -12,7 +12,7 @@ import (
 
 	"github.com/Azure/azure-sdk-for-go/services/batch/2017-09-01.6.0/batch"
 	"github.com/Azure/go-autorest/autorest"
-	"github.com/virtual-kubelet/virtual-kubelet/providers"
+	"github.com/virtual-kubelet/virtual-kubelet/vkubelet/api"
 
 	apiv1 "k8s.io/api/core/v1"
 )
@@ -121,7 +121,7 @@ func Test_readLogs_404Response_expectReturnStartupLogs(t *testing.T) {
 		return batch.ReadCloser{}, fmt.Errorf("Failed in test mock of getFileFromTask")
 	}
 
-	logs, err := provider.GetContainerLogs(context.Background(), pod.Namespace, pod.Name, containerName, providers.ContainerLogOpts{})
+	logs, err := provider.GetContainerLogs(context.Background(), pod.Namespace, pod.Name, containerName, api.ContainerLogOpts{})
 	if err != nil {
 		t.Fatalf("GetContainerLogs return error: %v", err)
 	}
@@ -161,7 +161,7 @@ func Test_readLogs_JsonResponse_expectFormattedLogs(t *testing.T) {
 		return batch.ReadCloser{}, fmt.Errorf("Failed in test mock of getFileFromTask")
 	}
 
-	logs, err := provider.GetContainerLogs(context.Background(), pod.Namespace, pod.Name, containerName, providers.ContainerLogOpts{})
+	logs, err := provider.GetContainerLogs(context.Background(), pod.Namespace, pod.Name, containerName, api.ContainerLogOpts{})
 	if err != nil {
 		t.Errorf("GetContainerLogs return error: %v", err)
 	}

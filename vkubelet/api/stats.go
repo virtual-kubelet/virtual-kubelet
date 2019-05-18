@@ -10,15 +10,16 @@ import (
 	stats "k8s.io/kubernetes/pkg/kubelet/apis/stats/v1alpha1"
 )
 
-// PodMetricsBackend is used in place of backend implementations to get k8s pod metrics.
-type PodMetricsBackend interface {
-	GetStatsSummary(context.Context) (*stats.Summary, error)
-}
+// PodStatsSummaryHandlerFunc defines the handler for getting pod stats summaries
+type PodStatsSummaryHandlerFunc func(context.Context) (*stats.Summary, error)
 
-// PodMetricsHandlerFunc makes an HTTP handler for implementing the kubelet summary stats endpoint
-func PodMetricsHandlerFunc(b PodMetricsBackend) http.HandlerFunc {
+// HandlePodStatsSummary makes an HTTP handler for implementing the kubelet summary stats endpoint
+func HandlePodStatsSummary(h PodStatsSummaryHandlerFunc) http.HandlerFunc {
+	if h == nil {
+		return NotImplemented
+	}
 	return handleError(func(w http.ResponseWriter, req *http.Request) error {
-		stats, err := b.GetStatsSummary(req.Context())
+		stats, err := h(req.Context())
 		if err != nil {
 			if errors.Cause(err) == context.Canceled {
 				return strongerrors.Cancelled(err)

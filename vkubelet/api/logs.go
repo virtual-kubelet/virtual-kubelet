@@ -5,21 +5,31 @@ import (
 	"io"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/cpuguy83/strongerrors"
 	"github.com/gorilla/mux"
 	"github.com/pkg/errors"
 	"github.com/virtual-kubelet/virtual-kubelet/log"
-	"github.com/virtual-kubelet/virtual-kubelet/providers"
 )
 
-// ContainerLogsBackend is used in place of backend implementations for getting container logs
-type ContainerLogsBackend interface {
-	GetContainerLogs(ctx context.Context, namespace, podName, containerName string, opts providers.ContainerLogOpts) (io.ReadCloser, error)
+// ContainerLogsHandlerFunc is used in place of backend implementations for getting container logs
+type ContainerLogsHandlerFunc func(ctx context.Context, namespace, podName, containerName string, opts ContainerLogOpts) (io.ReadCloser, error)
+
+// ContainerLogOpts are used to pass along options to be set on the container
+// log stream.
+type ContainerLogOpts struct {
+	Tail       int
+	Since      time.Duration
+	LimitBytes int
+	Timestamps bool
 }
 
-// PodLogsHandlerFunc creates an http handler function from a provider to serve logs from a pod
-func PodLogsHandlerFunc(p ContainerLogsBackend) http.HandlerFunc {
+// HandleContainerLogs creates an http handler function from a provider to serve logs from a pod
+func HandleContainerLogs(h ContainerLogsHandlerFunc) http.HandlerFunc {
+	if h == nil {
+		return NotImplemented
+	}
 	return handleError(func(w http.ResponseWriter, req *http.Request) error {
 		vars := mux.Vars(req)
 		if len(vars) != 3 {
@@ -45,11 +55,11 @@ func PodLogsHandlerFunc(p ContainerLogsBackend) http.HandlerFunc {
 		// TODO(@cpuguy83): support v1.PodLogOptions
 		// The kubelet decoding here is not straight forward, so this needs to be disected
 
-		opts := providers.ContainerLogOpts{
+		opts := ContainerLogOpts{
 			Tail: tail,
 		}
 
-		logs, err := p.GetContainerLogs(ctx, namespace, pod, container, opts)
+		logs, err := h(ctx, namespace, pod, container, opts)
 		if err != nil {
 			return errors.Wrap(err, "error getting container logs?)")
 		}

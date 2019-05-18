@@ -39,6 +39,39 @@ import (
 	"github.com/virtual-kubelet/virtual-kubelet/log"
 )
 
+// PodLifecycleHandler defines the interface used by the PodController to react
+// to new and changed pods scheduled to the node that is being managed.
+type PodLifecycleHandler interface {
+	// CreatePod takes a Kubernetes Pod and deploys it within the provider.
+	CreatePod(ctx context.Context, pod *corev1.Pod) error
+
+	// UpdatePod takes a Kubernetes Pod and updates it within the provider.
+	UpdatePod(ctx context.Context, pod *corev1.Pod) error
+
+	// DeletePod takes a Kubernetes Pod and deletes it from the provider.
+	DeletePod(ctx context.Context, pod *corev1.Pod) error
+
+	// GetPod retrieves a pod by name from the provider (can be cached).
+	GetPod(ctx context.Context, namespace, name string) (*corev1.Pod, error)
+
+	// GetPodStatus retrieves the status of a pod by name from the provider.
+	GetPodStatus(ctx context.Context, namespace, name string) (*corev1.PodStatus, error)
+
+	// GetPods retrieves a list of all pods running on the provider (can be cached).
+	GetPods(context.Context) ([]*corev1.Pod, error)
+}
+
+// PodNotifier notifies callers of pod changes.
+// Providers should implement this interface to enable callers to be notified
+// of pod status updates asyncronously.
+type PodNotifier interface {
+	// NotifyPods instructs the notifier to call the passed in function when
+	// the pod status changes.
+	//
+	// NotifyPods should not block callers.
+	NotifyPods(context.Context, func(*corev1.Pod))
+}
+
 // PodController is the controller implementation for Pod resources.
 type PodController struct {
 	// server is the instance to which this controller belongs.
