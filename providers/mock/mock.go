@@ -13,9 +13,7 @@ import (
 	"github.com/cpuguy83/strongerrors"
 	"github.com/cpuguy83/strongerrors/status/ocstatus"
 	"github.com/virtual-kubelet/virtual-kubelet/log"
-	"github.com/virtual-kubelet/virtual-kubelet/providers"
 	"github.com/virtual-kubelet/virtual-kubelet/trace"
-	"github.com/virtual-kubelet/virtual-kubelet/vkubelet"
 	"github.com/virtual-kubelet/virtual-kubelet/vkubelet/api"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -35,11 +33,14 @@ const (
 	containerNameKey = "containerName"
 )
 
+// See: https://github.com/virtual-kubelet/virtual-kubelet/issues/632
+/*
 var (
 	_ providers.Provider           = (*MockLegacyProvider)(nil)
 	_ providers.PodMetricsProvider = (*MockLegacyProvider)(nil)
 	_ vkubelet.PodNotifier         = (*MockProvider)(nil)
 )
+*/
 
 // MockLegacyProvider implements the virtual-kubelet provider interface and stores pods in memory.
 type MockLegacyProvider struct {
@@ -455,7 +456,8 @@ func (p *MockLegacyProvider) NodeDaemonEndpoints(ctx context.Context) *v1.NodeDa
 // This is a noop to default to Linux for now.
 
 func (p *MockLegacyProvider) OperatingSystem() string {
-	return providers.OperatingSystemLinux
+	// This is harcoded due to: https://github.com/virtual-kubelet/virtual-kubelet/issues/632
+	return "Linux"
 }
 
 // GetStatsSummary returns dummy stats for all pods known by this provider.
