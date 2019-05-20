@@ -19,11 +19,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/cpuguy83/strongerrors"
 	"github.com/gorilla/websocket"
 	client "github.com/virtual-kubelet/azure-aci/client"
 	"github.com/virtual-kubelet/azure-aci/client/aci"
 	"github.com/virtual-kubelet/azure-aci/client/network"
+	"github.com/virtual-kubelet/virtual-kubelet/errdefs"
 	"github.com/virtual-kubelet/virtual-kubelet/log"
 	"github.com/virtual-kubelet/virtual-kubelet/manager"
 	"github.com/virtual-kubelet/virtual-kubelet/trace"
@@ -777,7 +777,7 @@ func (p *ACIProvider) GetContainerLogs(ctx context.Context, namespace, podName, 
 	}
 
 	if cg.Tags["NodeName"] != p.nodeName {
-		return nil, strongerrors.NotFound(errors.New("got unexpected pod node name"))
+		return nil, errdefs.NotFound("got unexpected pod node name")
 	}
 
 	// get logs from cg

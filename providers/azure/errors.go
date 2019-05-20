@@ -3,8 +3,8 @@ package azure
 import (
 	"net/http"
 
-	"github.com/cpuguy83/strongerrors"
 	"github.com/virtual-kubelet/azure-aci/client/api"
+	"github.com/virtual-kubelet/virtual-kubelet/errdefs"
 )
 
 func wrapError(err error) error {
@@ -19,7 +19,7 @@ func wrapError(err error) error {
 
 	switch e.StatusCode {
 	case http.StatusNotFound:
-		return strongerrors.NotFound(err)
+		return errdefs.AsNotFound(err)
 	default:
 		return err
 	}

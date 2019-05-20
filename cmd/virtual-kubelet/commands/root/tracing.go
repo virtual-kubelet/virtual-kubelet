@@ -22,8 +22,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/cpuguy83/strongerrors"
 	"github.com/pkg/errors"
+	"github.com/virtual-kubelet/virtual-kubelet/errdefs"
 	"github.com/virtual-kubelet/virtual-kubelet/log"
 	"github.com/virtual-kubelet/virtual-kubelet/trace/opencensus"
 	octrace "go.opencensus.io/trace"
@@ -41,7 +41,7 @@ var (
 func setupTracing(ctx context.Context, c Opts) error {
 	for k := range c.TraceConfig.Tags {
 		if reservedTagNames[k] {
-			return strongerrors.InvalidArgument(errors.Errorf("invalid trace tag %q, must not use a reserved tag key", k))
+			return errdefs.InvalidInputf("invalid trace tag %q, must not use a reserved tag key", k)
 		}
 	}
 	if c.TraceConfig.Tags == nil {
@@ -72,10 +72,10 @@ func setupTracing(ctx context.Context, c Opts) error {
 		default:
 			rate, err := strconv.Atoi(c.TraceSampleRate)
 			if err != nil {
-				return strongerrors.InvalidArgument(errors.Wrap(err, "unsupported trace sample rate"))
+				return errdefs.AsInvalidInput(errors.Wrap(err, "unsupported trace sample rate"))
 			}
 			if rate < 0 || rate > 100 {
-				return strongerrors.InvalidArgument(errors.Wrap(err, "trace sample rate must be between 0 and 100"))
+				return errdefs.AsInvalidInput(errors.Wrap(err, "trace sample rate must be between 0 and 100"))
 			}
 			s = octrace.ProbabilitySampler(float64(rate) / 100)
 		}

@@ -22,9 +22,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/cpuguy83/strongerrors"
 	"github.com/cpuguy83/strongerrors/status/ocstatus"
 	pkgerrors "github.com/pkg/errors"
+	"github.com/virtual-kubelet/virtual-kubelet/errdefs"
 	"github.com/virtual-kubelet/virtual-kubelet/log"
 	"github.com/virtual-kubelet/virtual-kubelet/manager"
 	"github.com/virtual-kubelet/virtual-kubelet/trace"
@@ -117,13 +117,13 @@ type PodControllerConfig struct {
 
 func NewPodController(cfg PodControllerConfig) (*PodController, error) {
 	if cfg.PodClient == nil {
-		return nil, strongerrors.InvalidArgument(pkgerrors.New("must set core client"))
+		return nil, errdefs.InvalidInput("must set core client")
 	}
 	if cfg.EventRecorder == nil {
-		return nil, strongerrors.InvalidArgument(pkgerrors.New("must set event recorder"))
+		return nil, errdefs.InvalidInput("must set event recorder")
 	}
 	if cfg.PodInformer == nil {
-		return nil, strongerrors.InvalidArgument(pkgerrors.New("must set informer"))
+		return nil, errdefs.InvalidInput("must set informer")
 	}
 
 	return &PodController{

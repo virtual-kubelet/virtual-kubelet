@@ -7,9 +7,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/cpuguy83/strongerrors"
 	"github.com/gorilla/mux"
 	"github.com/pkg/errors"
+	"github.com/virtual-kubelet/virtual-kubelet/errdefs"
 	"k8s.io/apimachinery/pkg/types"
 	remoteutils "k8s.io/client-go/tools/remotecommand"
 	api "k8s.io/kubernetes/pkg/apis/core"
@@ -56,7 +56,7 @@ func HandleContainerExec(h ContainerExecHandlerFunc) http.HandlerFunc {
 
 		streamOpts, err := getExecOptions(req)
 		if err != nil {
-			return strongerrors.InvalidArgument(err)
+			return errdefs.AsInvalidInput(err)
 		}
 
 		idleTimeout := time.Second * 30

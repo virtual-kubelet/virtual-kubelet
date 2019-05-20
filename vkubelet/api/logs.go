@@ -7,9 +7,9 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/cpuguy83/strongerrors"
 	"github.com/gorilla/mux"
 	"github.com/pkg/errors"
+	"github.com/virtual-kubelet/virtual-kubelet/errdefs"
 	"github.com/virtual-kubelet/virtual-kubelet/log"
 )
 
@@ -33,7 +33,7 @@ func HandleContainerLogs(h ContainerLogsHandlerFunc) http.HandlerFunc {
 	return handleError(func(w http.ResponseWriter, req *http.Request) error {
 		vars := mux.Vars(req)
 		if len(vars) != 3 {
-			return strongerrors.NotFound(errors.New("not found"))
+			return errdefs.NotFound("not found")
 		}
 
 		ctx := req.Context()
@@ -47,7 +47,7 @@ func HandleContainerLogs(h ContainerLogsHandlerFunc) http.HandlerFunc {
 		if queryTail := q.Get("tailLines"); queryTail != "" {
 			t, err := strconv.Atoi(queryTail)
 			if err != nil {
-				return strongerrors.InvalidArgument(errors.Wrap(err, "could not parse \"tailLines\""))
+				return errdefs.AsInvalidInput(errors.Wrap(err, "could not parse \"tailLines\""))
 			}
 			tail = t
 		}
@@ -73,7 +73,7 @@ func HandleContainerLogs(h ContainerLogsHandlerFunc) http.HandlerFunc {
 		}
 
 		if _, err := io.Copy(flushOnWrite(w), logs); err != nil {
-			return strongerrors.Unknown(errors.Wrap(err, "error writing response to client"))
+			return errors.Wrap(err, "error writing response to client")
 		}
 		return nil
 	})

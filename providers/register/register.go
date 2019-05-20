@@ -3,8 +3,7 @@ package register
 import (
 	"sort"
 
-	"github.com/cpuguy83/strongerrors"
-	"github.com/pkg/errors"
+	"github.com/virtual-kubelet/virtual-kubelet/errdefs"
 	"github.com/virtual-kubelet/virtual-kubelet/manager"
 	"github.com/virtual-kubelet/virtual-kubelet/providers"
 )
@@ -27,7 +26,7 @@ type initFunc func(InitConfig) (providers.Provider, error)
 func GetProvider(name string, cfg InitConfig) (providers.Provider, error) {
 	f, ok := providerInits[name]
 	if !ok {
-		return nil, strongerrors.NotFound(errors.Errorf("provider not found: %s", name))
+		return nil, errdefs.NotFoundf("provider not found: %s", name)
 	}
 	return f(cfg)
 }
