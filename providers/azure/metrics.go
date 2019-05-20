@@ -5,7 +5,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/cpuguy83/strongerrors/status/ocstatus"
 	"github.com/pkg/errors"
 	"github.com/virtual-kubelet/azure-aci/client/aci"
 	"github.com/virtual-kubelet/virtual-kubelet/log"
@@ -97,7 +96,7 @@ func (p *ACIProvider) GetStatsSummary(ctx context.Context) (summary *stats.Summa
 				Types:        []aci.MetricType{aci.MetricTypeCPUUsage, aci.MetricTypeMemoryUsage},
 			})
 			if err != nil {
-				span.SetStatus(ocstatus.FromError(err))
+				span.SetStatus(err)
 				return errors.Wrapf(err, "error fetching cpu/mem stats for container group %s", cgName)
 			}
 			logger.Debug("Got system stats")
@@ -109,7 +108,7 @@ func (p *ACIProvider) GetStatsSummary(ctx context.Context) (summary *stats.Summa
 				Types:        []aci.MetricType{aci.MetricTyperNetworkBytesRecievedPerSecond, aci.MetricTyperNetworkBytesTransmittedPerSecond},
 			})
 			if err != nil {
-				span.SetStatus(ocstatus.FromError(err))
+				span.SetStatus(err)
 				return errors.Wrapf(err, "error fetching network stats for container group %s", cgName)
 			}
 			logger.Debug("Got network stats")
@@ -120,7 +119,7 @@ func (p *ACIProvider) GetStatsSummary(ctx context.Context) (summary *stats.Summa
 	}
 
 	if err := errGroup.Wait(); err != nil {
-		span.SetStatus(ocstatus.FromError(err))
+		span.SetStatus(err)
 		return nil, errors.Wrap(err, "error in request to fetch container group metrics")
 	}
 	close(chResult)

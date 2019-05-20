@@ -5,7 +5,6 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/cpuguy83/strongerrors/status/ocstatus"
 	pkgerrors "github.com/pkg/errors"
 	"github.com/virtual-kubelet/virtual-kubelet/log"
 	"github.com/virtual-kubelet/virtual-kubelet/trace"
@@ -71,7 +70,7 @@ func handleQueueItem(ctx context.Context, q workqueue.RateLimitingInterface, han
 
 	if err != nil {
 		// We've actually hit an error, so we set the span's status based on the error.
-		span.SetStatus(ocstatus.FromError(err))
+		span.SetStatus(err)
 		log.G(ctx).Error(err)
 		return true
 	}

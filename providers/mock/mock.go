@@ -10,7 +10,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/cpuguy83/strongerrors/status/ocstatus"
 	"github.com/virtual-kubelet/virtual-kubelet/errdefs"
 	"github.com/virtual-kubelet/virtual-kubelet/log"
 	"github.com/virtual-kubelet/virtual-kubelet/trace"
@@ -201,7 +200,7 @@ func (p *MockProvider) DeletePod(ctx context.Context, pod *v1.Pod) (err error) {
 func (p *MockProvider) GetPod(ctx context.Context, namespace, name string) (pod *v1.Pod, err error) {
 	ctx, span := trace.StartSpan(ctx, "GetPod")
 	defer func() {
-		span.SetStatus(ocstatus.FromError(err))
+		span.SetStatus(err)
 		span.End()
 	}()
 

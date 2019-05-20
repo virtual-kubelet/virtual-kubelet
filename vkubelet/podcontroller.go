@@ -22,7 +22,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/cpuguy83/strongerrors/status/ocstatus"
 	pkgerrors "github.com/pkg/errors"
 	"github.com/virtual-kubelet/virtual-kubelet/errdefs"
 	"github.com/virtual-kubelet/virtual-kubelet/log"
@@ -261,14 +260,14 @@ func (pc *PodController) syncHandler(ctx context.Context, key string) error {
 			// We've failed to fetch the pod from the lister, but the error is not a 404.
 			// Hence, we add the key back to the work queue so we can retry processing it later.
 			err := pkgerrors.Wrapf(err, "failed to fetch pod with key %q from lister", key)
-			span.SetStatus(ocstatus.FromError(err))
+			span.SetStatus(err)
 			return err
 		}
 		// At this point we know the Pod resource doesn't exist, which most probably means it was deleted.
 		// Hence, we must delete it from the provider if it still exists there.
 		if err := pc.deletePod(ctx, namespace, name); err != nil {
 			err := pkgerrors.Wrapf(err, "failed to delete pod %q in the provider", loggablePodNameFromCoordinates(namespace, name))
-			span.SetStatus(ocstatus.FromError(err))
+			span.SetStatus(err)
 			return err
 		}
 		return nil
@@ -290,7 +289,7 @@ func (pc *PodController) syncPodInProvider(ctx context.Context, pod *corev1.Pod)
 	if pod.DeletionTimestamp != nil {
 		if err := pc.deletePod(ctx, pod.Namespace, pod.Name); err != nil {
 			err := pkgerrors.Wrapf(err, "failed to delete pod %q in the provider", loggablePodName(pod))
-			span.SetStatus(ocstatus.FromError(err))
+			span.SetStatus(err)
 			return err
 		}
 		return nil
@@ -305,7 +304,7 @@ func (pc *PodController) syncPodInProvider(ctx context.Context, pod *corev1.Pod)
 	// Create or update the pod in the provider.
 	if err := pc.createOrUpdatePod(ctx, pod); err != nil {
 		err := pkgerrors.Wrapf(err, "failed to sync pod %q in the provider", loggablePodName(pod))
-		span.SetStatus(ocstatus.FromError(err))
+		span.SetStatus(err)
 		return err
 	}
 	return nil
@@ -320,7 +319,7 @@ func (pc *PodController) deleteDanglingPods(ctx context.Context, threadiness int
 	pps, err := pc.provider.GetPods(ctx)
 	if err != nil {
 		err := pkgerrors.Wrap(err, "failed to fetch the list of pods from the provider")
-		span.SetStatus(ocstatus.FromError(err))
+		span.SetStatus(err)
 		log.G(ctx).Error(err)
 		return
 	}
@@ -339,7 +338,7 @@ func (pc *PodController) deleteDanglingPods(ctx context.Context, threadiness int
 			}
 			// For some reason we couldn't fetch the pod from the lister, so we propagate the error.
 			err := pkgerrors.Wrap(err, "failed to fetch pod from the lister")
-			span.SetStatus(ocstatus.FromError(err))
+			span.SetStatus(err)
 			log.G(ctx).Error(err)
 			return
 		}
@@ -367,7 +366,7 @@ func (pc *PodController) deleteDanglingPods(ctx context.Context, threadiness int
 			ctx = addPodAttributes(ctx, span, pod)
 			// Actually delete the pod.
 			if err := pc.deletePod(ctx, pod.Namespace, pod.Name); err != nil {
-				span.SetStatus(ocstatus.FromError(err))
+				span.SetStatus(err)
 				log.G(ctx).Errorf("failed to delete pod %q in provider", loggablePodName(pod))
 			} else {
 				log.G(ctx).Infof("deleted leaked pod %q in provider", loggablePodName(pod))
