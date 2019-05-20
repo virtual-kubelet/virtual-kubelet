@@ -7,7 +7,7 @@ import (
 	"os"
 	"testing"
 
-	"k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 
 	"github.com/virtual-kubelet/virtual-kubelet/test/e2e/framework"
 )
