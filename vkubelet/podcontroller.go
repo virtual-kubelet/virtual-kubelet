@@ -41,6 +41,10 @@ import (
 
 // PodLifecycleHandler defines the interface used by the PodController to react
 // to new and changed pods scheduled to the node that is being managed.
+//
+// Errors produced by these methods should implement an interface from
+// github.com/virtual-kubelet/virtual-kubelet/errdefs package in order for the
+// core logic to be able to understand the type of failure.
 type PodLifecycleHandler interface {
 	// CreatePod takes a Kubernetes Pod and deploys it within the provider.
 	CreatePod(ctx context.Context, pod *corev1.Pod) error

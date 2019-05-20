@@ -11,6 +11,10 @@ import (
 )
 
 // Provider contains the methods required to implement a virtual-kubelet provider.
+//
+// Errors produced by these methods should implement an interface from
+// github.com/virtual-kubelet/virtual-kubelet/errdefs package in order for the
+// core logic to be able to understand the type of failure.
 type Provider interface {
 	vkubelet.PodLifecycleHandler
 
