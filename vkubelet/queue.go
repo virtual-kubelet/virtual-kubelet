@@ -55,7 +55,7 @@ func handleQueueItem(ctx context.Context, q workqueue.RateLimitingInterface, han
 		if err := handler(ctx, key); err != nil {
 			if q.NumRequeues(key) < maxRetries {
 				// Put the item back on the work queue to handle any transient errors.
-				log.G(ctx).Warnf("requeuing %q due to failed sync: %v", key, err)
+				log.G(ctx).WithError(err).Warnf("requeuing %q due to failed sync", key)
 				q.AddRateLimited(key)
 				return nil
 			}
