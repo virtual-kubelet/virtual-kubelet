@@ -1430,6 +1430,9 @@ func (p *ACIProvider) getVolumes(pod *v1.Pod) ([]aci.Volume, error) {
 				continue
 			}
 
+			for k, v := range configMap.Data {
+				paths[k] = base64.StdEncoding.EncodeToString([]byte(v))
+			}
 			for k, v := range configMap.BinaryData {
 				paths[k] = base64.StdEncoding.EncodeToString(v)
 			}
