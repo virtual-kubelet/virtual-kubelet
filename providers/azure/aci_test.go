@@ -383,7 +383,7 @@ func TestCreatePodWithResourceRequestAndLimit(t *testing.T) {
 		assert.Check(t, is.Equal(1.98, cg.ContainerGroupProperties.Containers[0].Resources.Requests.CPU), "Request CPU is not expected")
 		assert.Check(t, is.Equal(3.4, cg.ContainerGroupProperties.Containers[0].Resources.Requests.MemoryInGB), "Request Memory is not expected")
 		assert.Check(t, is.Equal(3.999, cg.ContainerGroupProperties.Containers[0].Resources.Limits.CPU), "Limit CPU is not expected")
-		assert.Check(t, is.Equal(8.01, cg.ContainerGroupProperties.Containers[0].Resources.Limits.MemoryInGB), "Limit Memory is not expected")
+		assert.Check(t, is.Equal(8.0, cg.ContainerGroupProperties.Containers[0].Resources.Limits.MemoryInGB), "Limit Memory is not expected")
 
 		return http.StatusOK, cg
 	}

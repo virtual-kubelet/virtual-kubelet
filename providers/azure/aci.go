@@ -1220,11 +1220,11 @@ func (p *ACIProvider) getContainers(pod *v1.Pod) ([]aci.Container, error) {
 				cpuLimit = float64(container.Resources.Limits.Cpu().MilliValue()) / 1000.00
 			}
 
+			// NOTE(jahstreet): ACI memory limit must be times of 0.1 GB
 			memoryLimit := memoryRequest
 			if _, ok := container.Resources.Limits[v1.ResourceMemory]; ok {
-				memoryLimit = float64(container.Resources.Limits.Memory().Value()) / 1000000000.00
+				memoryLimit = float64(container.Resources.Limits.Memory().Value()/100000000.00) / 10.00
 			}
-
 			c.Resources.Limits = &aci.ComputeResources{
 				CPU:        cpuLimit,
 				MemoryInGB: memoryLimit,
