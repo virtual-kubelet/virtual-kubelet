@@ -1272,7 +1272,7 @@
   revision = "0317810137be915b9cf888946c6e115c1bfac693"
 
 [[projects]]
-  digest = "1:4ff70ea1888545c3a245a76657ba38a308d2c068bd26fa4310f63560ebaf265c"
+  digest = "1:b78561dbff036b36f419a270993ca22bb6fdafd84085686f24e4a5f8e31056be"
   name = "k8s.io/kubernetes"
   packages = [
     "pkg/api/v1/pod",
@@ -1285,6 +1285,7 @@
     "pkg/kubelet/apis/stats/v1alpha1",
     "pkg/kubelet/envvars",
     "pkg/kubelet/server/remotecommand",
+    "third_party/forked/golang/expansion",
   ]
   pruneopts = "NUT"
   revision = "c27b913fddd1a6c480c229191a087698aa92f0b1"
@@ -1409,6 +1410,7 @@
     "k8s.io/kubernetes/pkg/kubelet/apis/stats/v1alpha1",
     "k8s.io/kubernetes/pkg/kubelet/envvars",
     "k8s.io/kubernetes/pkg/kubelet/server/remotecommand",
+    "k8s.io/kubernetes/third_party/forked/golang/expansion",
   ]
   solver-name = "gps-cdcl"
   solver-version = 1
