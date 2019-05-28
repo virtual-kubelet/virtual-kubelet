@@ -14,12 +14,11 @@ import (
 	"github.com/cpuguy83/strongerrors/status/ocstatus"
 	"github.com/virtual-kubelet/virtual-kubelet/log"
 	"github.com/virtual-kubelet/virtual-kubelet/trace"
+	"github.com/virtual-kubelet/virtual-kubelet/vkubelet/api"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	stats "k8s.io/kubernetes/pkg/kubelet/apis/stats/v1alpha1"
-
-	"github.com/virtual-kubelet/virtual-kubelet/providers"
 )
 
 const (
@@ -57,6 +56,32 @@ func NewMockProvider(providerConfig, nodeName, operatingSystem string, internalI
 	config, err := loadConfig(providerConfig, nodeName)
 	if err != nil {
 		return nil, err
+	}
+
+	provider := MockProvider{
+		nodeName:           nodeName,
+		operatingSystem:    operatingSystem,
+		internalIP:         internalIP,
+		daemonEndpointPort: daemonEndpointPort,
+		pods:               make(map[string]*v1.Pod),
+		config:             config,
+		startTime:          time.Now(),
+	}
+	return &provider, nil
+}
+
+// NewMockProviderMockConfig creates a new MockProvider with the given Mock Config
+func NewMockProviderMockConfig(config MockConfig, nodeName, operatingSystem string, internalIP string, daemonEndpointPort int32) (*MockProvider, error) {
+
+	//set defaults
+	if config.CPU == "" {
+		config.CPU = defaultCPUCapacity
+	}
+	if config.Memory == "" {
+		config.Memory = defaultMemoryCapacity
+	}
+	if config.Pods == "" {
+		config.Pods = defaultPodCapacity
 	}
 
 	provider := MockProvider{
@@ -197,7 +222,7 @@ func (p *MockProvider) GetPod(ctx context.Context, namespace, name string) (pod 
 }
 
 // GetContainerLogs retrieves the logs of a container by name from the provider.
-func (p *MockProvider) GetContainerLogs(ctx context.Context, namespace, podName, containerName string, opts providers.ContainerLogOpts) (io.ReadCloser, error) {
+func (p *MockProvider) GetContainerLogs(ctx context.Context, namespace, podName, containerName string, opts api.ContainerLogOpts) (io.ReadCloser, error) {
 	ctx, span := trace.StartSpan(ctx, "GetContainerLogs")
 	defer span.End()
 
@@ -216,7 +241,7 @@ func (p *MockProvider) GetPodFullName(namespace string, pod string) string {
 
 // RunInContainer executes a command in a container in the pod, copying data
 // between in/out/err and the container's stdin/stdout/stderr.
-func (p *MockProvider) RunInContainer(ctx context.Context, namespace, name, container string, cmd []string, attach providers.AttachIO) error {
+func (p *MockProvider) RunInContainer(ctx context.Context, namespace, name, container string, cmd []string, attach api.AttachIO) error {
 	log.G(context.TODO()).Infof("receive ExecInContainer %q", container)
 	return nil
 }
@@ -387,7 +412,7 @@ func (p *MockProvider) NodeDaemonEndpoints(ctx context.Context) *v1.NodeDaemonEn
 // OperatingSystem returns the operating system for this provider.
 // This is a noop to default to Linux for now.
 func (p *MockProvider) OperatingSystem() string {
-	return providers.OperatingSystemLinux
+	return "Linux"
 }
 
 // GetStatsSummary returns dummy stats for all pods known by this provider.

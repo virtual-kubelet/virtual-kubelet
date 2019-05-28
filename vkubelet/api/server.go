@@ -1,12 +1,10 @@
-package vkubelet
+package api
 
 import (
 	"net/http"
 
 	"github.com/gorilla/mux"
 	"github.com/virtual-kubelet/virtual-kubelet/log"
-	"github.com/virtual-kubelet/virtual-kubelet/providers"
-	"github.com/virtual-kubelet/virtual-kubelet/vkubelet/api"
 	"go.opencensus.io/plugin/ochttp"
 	"go.opencensus.io/plugin/ochttp/propagation/b3"
 )
@@ -20,37 +18,40 @@ type ServeMux interface {
 	Handle(path string, h http.Handler)
 }
 
+type PodHandlerConfig struct {
+	RunInContainer   ContainerExecHandlerFunc
+	GetContainerLogs ContainerLogsHandlerFunc
+	GetPods          PodListerFunc
+}
+
 // PodHandler creates an http handler for interacting with pods/containers.
-func PodHandler(p providers.Provider, debug bool) http.Handler {
+func PodHandler(p PodHandlerConfig, debug bool) http.Handler {
 	r := mux.NewRouter()
 
 	// This matches the behaviour in the reference kubelet
 	r.StrictSlash(true)
 	if debug {
-		r.HandleFunc("/runningpods/", api.RunningPodsHandlerFunc(p)).Methods("GET")
+		r.HandleFunc("/runningpods/", HandleRunningPods(p.GetPods)).Methods("GET")
 	}
-	r.HandleFunc("/containerLogs/{namespace}/{pod}/{container}", api.PodLogsHandlerFunc(p)).Methods("GET")
-	r.HandleFunc("/exec/{namespace}/{pod}/{container}", api.PodExecHandlerFunc(p)).Methods("POST")
+	r.HandleFunc("/containerLogs/{namespace}/{pod}/{container}", HandleContainerLogs(p.GetContainerLogs)).Methods("GET")
+	r.HandleFunc("/exec/{namespace}/{pod}/{container}", HandleContainerExec(p.RunInContainer)).Methods("POST")
 	r.NotFoundHandler = http.HandlerFunc(NotFound)
 	return r
 }
 
-// MetricsSummaryHandler creates an http handler for serving pod metrics.
+// PodStatsSummaryHandler creates an http handler for serving pod metrics.
 //
-// If the passed in provider does not implement providers.PodMetricsProvider,
-// it will create handlers that just serves http.StatusNotImplemented
-func MetricsSummaryHandler(p providers.Provider) http.Handler {
+// If the passed in handler func is nil this will create handlers which only
+//  serves http.StatusNotImplemented
+func PodStatsSummaryHandler(f PodStatsSummaryHandlerFunc) http.Handler {
+	if f == nil {
+		return http.HandlerFunc(NotImplemented)
+	}
+
 	r := mux.NewRouter()
 
 	const summaryRoute = "/stats/summary"
-	var h http.HandlerFunc
-
-	mp, ok := p.(providers.PodMetricsProvider)
-	if !ok {
-		h = NotImplemented
-	} else {
-		h = api.PodMetricsHandlerFunc(mp)
-	}
+	h := HandlePodStatsSummary(f)
 
 	r.Handle(summaryRoute, ochttp.WithRouteTag(h, "PodStatsSummaryHandler")).Methods("GET")
 	r.Handle(summaryRoute+"/", ochttp.WithRouteTag(h, "PodStatsSummaryHandler")).Methods("GET")
@@ -63,16 +64,25 @@ func MetricsSummaryHandler(p providers.Provider) http.Handler {
 //
 // Callers should take care to namespace the serve mux as they see fit, however
 // these routes get called by the Kubernetes API server.
-func AttachPodRoutes(p providers.Provider, mux ServeMux, debug bool) {
+func AttachPodRoutes(p PodHandlerConfig, mux ServeMux, debug bool) {
 	mux.Handle("/", InstrumentHandler(PodHandler(p, debug)))
 }
 
-// AttachMetricsRoutes adds the http routes for pod/node metrics to the passed in serve mux.
+// PodMetricsConfig stores the handlers for pod metrics routes
+// It is used by AttachPodMetrics.
+//
+// The main reason for this struct is in case of expansion we do not need to break
+// the package level API.
+type PodMetricsConfig struct {
+	GetStatsSummary PodStatsSummaryHandlerFunc
+}
+
+// AttachPodMetricsRoutes adds the http routes for pod/node metrics to the passed in serve mux.
 //
 // Callers should take care to namespace the serve mux as they see fit, however
 // these routes get called by the Kubernetes API server.
-func AttachMetricsRoutes(p providers.Provider, mux ServeMux) {
-	mux.Handle("/", InstrumentHandler(MetricsSummaryHandler(p)))
+func AttachPodMetricsRoutes(p PodMetricsConfig, mux ServeMux) {
+	mux.Handle("/", InstrumentHandler(HandlePodStatsSummary(p.GetStatsSummary)))
 }
 
 func instrumentRequest(r *http.Request) *http.Request {

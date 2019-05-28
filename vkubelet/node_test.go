@@ -6,7 +6,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/virtual-kubelet/virtual-kubelet/providers"
 	"gotest.tools/assert"
 	"gotest.tools/assert/cmp"
 	coord "k8s.io/api/coordination/v1beta1"
@@ -232,7 +231,7 @@ func testNode(t *testing.T) *corev1.Node {
 }
 
 type testNodeProvider struct {
-	providers.NodeProvider
+	NodeProvider
 	statusHandlers []func(*corev1.Node)
 }
 

@@ -41,7 +41,7 @@ var (
 func setupTracing(ctx context.Context, c Opts) error {
 	for k := range c.TraceConfig.Tags {
 		if reservedTagNames[k] {
-			return strongerrors.InvalidArgument(errors.Errorf("invalid trace tag %q, must not use a reserved tag key"))
+			return strongerrors.InvalidArgument(errors.Errorf("invalid trace tag %q, must not use a reserved tag key", k))
 		}
 	}
 	if c.TraceConfig.Tags == nil {

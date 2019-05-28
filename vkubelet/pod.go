@@ -2,9 +2,11 @@ package vkubelet
 
 import (
 	"context"
+	"hash/fnv"
 	"time"
 
 	"github.com/cpuguy83/strongerrors/status/ocstatus"
+	"github.com/davecgh/go-spew/spew"
 	pkgerrors "github.com/pkg/errors"
 	"github.com/virtual-kubelet/virtual-kubelet/log"
 	"github.com/virtual-kubelet/virtual-kubelet/trace"
@@ -28,60 +30,87 @@ func addPodAttributes(ctx context.Context, span trace.Span, pod *corev1.Pod) con
 }
 
 func (s *Server) createOrUpdatePod(ctx context.Context, pod *corev1.Pod, recorder record.EventRecorder) error {
-	// Check if the pod is already known by the provider.
-	// NOTE: Some providers return a non-nil error in their GetPod implementation when the pod is not found while some other don't.
-	// Hence, we ignore the error and just act upon the pod if it is non-nil (meaning that the provider still knows about the pod).
-	if pp, _ := s.provider.GetPod(ctx, pod.Namespace, pod.Name); pp != nil {
-		// The pod has already been created in the provider.
-		// Hence, we return since pod updates are not yet supported.
-		log.G(ctx).Warnf("skipping update of pod %s as pod updates are not supported", pp.Name)
-		return nil
-	}
 
 	ctx, span := trace.StartSpan(ctx, "createOrUpdatePod")
 	defer span.End()
 	addPodAttributes(ctx, span, pod)
-
-	if err := populateEnvironmentVariables(ctx, pod, s.resourceManager, recorder); err != nil {
-		span.SetStatus(ocstatus.FromError(err))
-		return err
-	}
 
 	ctx = span.WithFields(ctx, log.Fields{
 		"pod":       pod.GetName(),
 		"namespace": pod.GetNamespace(),
 	})
 
-	if origErr := s.provider.CreatePod(ctx, pod); origErr != nil {
-		podPhase := corev1.PodPending
-		if pod.Spec.RestartPolicy == corev1.RestartPolicyNever {
-			podPhase = corev1.PodFailed
-		}
-
-		pod.ResourceVersion = "" // Blank out resource version to prevent object has been modified error
-		pod.Status.Phase = podPhase
-		pod.Status.Reason = podStatusReasonProviderFailed
-		pod.Status.Message = origErr.Error()
-
-		logger := log.G(ctx).WithFields(log.Fields{
-			"podPhase": podPhase,
-			"reason":   pod.Status.Reason,
-		})
-
-		_, err := s.k8sClient.CoreV1().Pods(pod.Namespace).UpdateStatus(pod)
-		if err != nil {
-			logger.WithError(err).Warn("Failed to update pod status")
-		} else {
-			logger.Info("Updated k8s pod status")
-		}
-
-		span.SetStatus(ocstatus.FromError(origErr))
-		return origErr
+	if err := populateEnvironmentVariables(ctx, pod, s.resourceManager, recorder); err != nil {
+		span.SetStatus(ocstatus.FromError(err))
+		return err
 	}
 
-	log.G(ctx).Info("Created pod in provider")
-
+	// Check if the pod is already known by the provider.
+	// NOTE: Some providers return a non-nil error in their GetPod implementation when the pod is not found while some other don't.
+	// Hence, we ignore the error and just act upon the pod if it is non-nil (meaning that the provider still knows about the pod).
+	if pp, _ := s.provider.GetPod(ctx, pod.Namespace, pod.Name); pp != nil {
+		// Pod Update Only Permits update of:
+		// - `spec.containers[*].image`
+		// - `spec.initContainers[*].image`
+		// - `spec.activeDeadlineSeconds`
+		// - `spec.tolerations` (only additions to existing tolerations)
+		// compare the hashes of the pod specs to see if the specs actually changed
+		expected := hashPodSpec(pp.Spec)
+		if actual := hashPodSpec(pod.Spec); actual != expected {
+			log.G(ctx).Debugf("Pod %s exists, updating pod in provider", pp.Name)
+			if origErr := s.provider.UpdatePod(ctx, pod); origErr != nil {
+				s.handleProviderError(ctx, span, origErr, pod)
+				return origErr
+			}
+			log.G(ctx).Info("Updated pod in provider")
+		}
+	} else {
+		if origErr := s.provider.CreatePod(ctx, pod); origErr != nil {
+			s.handleProviderError(ctx, span, origErr, pod)
+			return origErr
+		}
+		log.G(ctx).Info("Created pod in provider")
+	}
 	return nil
+}
+
+// This is basically the kube runtime's hash container functionality.
+// VK only operates at the Pod level so this is adapted for that
+func hashPodSpec(spec corev1.PodSpec) uint64 {
+	hash := fnv.New32a()
+	printer := spew.ConfigState{
+		Indent:         " ",
+		SortKeys:       true,
+		DisableMethods: true,
+		SpewKeys:       true,
+	}
+	printer.Fprintf(hash, "%#v", spec)
+	return uint64(hash.Sum32())
+}
+
+func (s *Server) handleProviderError(ctx context.Context, span trace.Span, origErr error, pod *corev1.Pod) {
+	podPhase := corev1.PodPending
+	if pod.Spec.RestartPolicy == corev1.RestartPolicyNever {
+		podPhase = corev1.PodFailed
+	}
+
+	pod.ResourceVersion = "" // Blank out resource version to prevent object has been modified error
+	pod.Status.Phase = podPhase
+	pod.Status.Reason = podStatusReasonProviderFailed
+	pod.Status.Message = origErr.Error()
+
+	logger := log.G(ctx).WithFields(log.Fields{
+		"podPhase": podPhase,
+		"reason":   pod.Status.Reason,
+	})
+
+	_, err := s.k8sClient.CoreV1().Pods(pod.Namespace).UpdateStatus(pod)
+	if err != nil {
+		logger.WithError(err).Warn("Failed to update pod status")
+	} else {
+		logger.Info("Updated k8s pod status")
+	}
+	span.SetStatus(ocstatus.FromError(origErr))
 }
 
 func (s *Server) deletePod(ctx context.Context, namespace, name string) error {
