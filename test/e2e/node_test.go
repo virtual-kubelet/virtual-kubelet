@@ -26,7 +26,7 @@ func TestNodeCreateAfterDelete(t *testing.T) {
 	})
 
 	assert.NilError(t, err)
-	assert.Assert(t, is.Len(podList.Items, 0), "Kubernetes does not allow node deletion with dependent objects (pods) in existence: %v", podList.Items)
+	assert.Assert(t, is.Len(podList.Items, 0), "Kubernetes does not allow node deletion with dependent objects (pods) in existence: %v")
 
 	chErr := make(chan error, 1)
 

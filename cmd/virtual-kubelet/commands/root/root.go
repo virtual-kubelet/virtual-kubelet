@@ -28,6 +28,7 @@ import (
 	"github.com/virtual-kubelet/virtual-kubelet/providers/register"
 	"github.com/virtual-kubelet/virtual-kubelet/vkubelet"
 	corev1 "k8s.io/api/core/v1"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	kubeinformers "k8s.io/client-go/informers"
@@ -143,6 +144,21 @@ func runRootCommand(ctx context.Context, c Opts) error {
 		client.CoordinationV1beta1().Leases(corev1.NamespaceNodeLease),
 		client.CoreV1().Nodes(),
 		vkubelet.WithNodeDisableLease(!c.EnableNodeLease),
+		vkubelet.WithNodeStatusUpdateErrorHandler(func(ctx context.Context, err error) error {
+			if !k8serrors.IsNotFound(err) {
+				return err
+			}
+
+			log.G(ctx).Debug("node not found")
+			newNode := pNode.DeepCopy()
+			newNode.ResourceVersion = ""
+			_, err = client.CoreV1().Nodes().Create(newNode)
+			if err != nil {
+				return err
+			}
+			log.G(ctx).Debug("created new node")
+			return nil
+		}),
 	)
 	if err != nil {
 		log.G(ctx).Fatal(err)
