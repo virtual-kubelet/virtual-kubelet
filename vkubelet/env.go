@@ -92,7 +92,7 @@ func populateContainerEnvironment(ctx context.Context, pod *corev1.Pod, containe
 	// This is in accordance with what the Kubelet itself does.
 	// https://github.com/kubernetes/kubernetes/blob/v1.13.1/pkg/kubelet/kubelet_pods.go#L557-L558
 	container.EnvFrom = []corev1.EnvFromSource{}
-	container.Env = mergeEnvironments(envFrom, env)
+	container.Env = append(envFrom, env...)
 	return nil
 }
 
@@ -144,9 +144,9 @@ func getServiceEnvVarMap(rm *manager.ResourceManager, ns string, enableServiceLi
 }
 
 // makeEnvironmentMapBasedOnEnvFrom returns a map representing the resolved environment of the specified container after being populated from the entries in the ".envFrom" field.
-func makeEnvironmentMapBasedOnEnvFrom(ctx context.Context, pod *corev1.Pod, container *corev1.Container, rm *manager.ResourceManager, recorder record.EventRecorder) (map[string]string, error) {
+func makeEnvironmentMapBasedOnEnvFrom(ctx context.Context, pod *corev1.Pod, container *corev1.Container, rm *manager.ResourceManager, recorder record.EventRecorder) ([]corev1.EnvVar, error) {
 	// Create a map to hold the resulting environment.
-	res := make(map[string]string, 0)
+	var res []corev1.EnvVar
 	// Iterate over "envFrom" references in order to populate the environment.
 loop:
 	for _, envFrom := range container.EnvFrom {
@@ -198,7 +198,7 @@ loop:
 					continue mKeys
 				}
 				// Add the key and its value to the environment.
-				res[key] = val
+				res = append(res, corev1.EnvVar{Name: key, Value: val})
 			}
 			// Report any invalid keys.
 			if len(invalidKeys) > 0 {
@@ -252,7 +252,7 @@ loop:
 					continue sKeys
 				}
 				// Add the key and its value to the environment.
-				res[key] = string(val)
+				res = append(res, corev1.EnvVar{Name:key, Value:string(val)})
 			}
 			// Report any invalid keys.
 			if len(invalidKeys) > 0 {
@@ -266,16 +266,16 @@ loop:
 }
 
 // makeEnvironmentMapBasedOnEnv returns a map representing the resolved environment of the specified container after being populated from the entries in the ".env" field.
-func makeEnvironmentMapBasedOnEnv(ctx context.Context, pod *corev1.Pod, container *corev1.Container, rm *manager.ResourceManager, recorder record.EventRecorder) (map[string]string, error) {
+func makeEnvironmentMapBasedOnEnv(ctx context.Context, pod *corev1.Pod, container *corev1.Container, rm *manager.ResourceManager, recorder record.EventRecorder) ([]corev1.EnvVar, error) {
 	// Create a map to hold the resolved environment variables.
-	res := make(map[string]string, len(container.Env))
+	var res []corev1.EnvVar
 	// Iterate over environment variables in order to populate the map.
 loop:
 	for _, env := range container.Env {
 		switch {
 		// Handle values that have been directly provided.
 		case env.Value != "":
-			res[env.Name] = env.Value
+			res = append(res, corev1.EnvVar{Name:env.Name, Value:env.Value})
 			continue loop
 		// Handle population from a configmap key.
 		case env.ValueFrom != nil && env.ValueFrom.ConfigMapKeyRef != nil:
@@ -328,7 +328,7 @@ loop:
 				return nil, fmt.Errorf("configmap %q doesn't contain the %q key required by pod %s", vf.Name, vf.Key, pod.Name)
 			}
 			// Populate the environment variable and continue on to the next reference.
-			res[env.Name] = keyValue
+			res = append(res, corev1.EnvVar{Name:env.Name, Value:keyValue})
 			continue loop
 		// Handle population from a secret key.
 		case env.ValueFrom != nil && env.ValueFrom.SecretKeyRef != nil:
@@ -380,7 +380,7 @@ loop:
 				return nil, fmt.Errorf("secret %q doesn't contain the %q key required by pod %s", vf.Name, vf.Key, pod.Name)
 			}
 			// Populate the environment variable and continue on to the next reference.
-			res[env.Name] = string(keyValue)
+			res = append(res, corev1.EnvVar{Name:env.Name, Value:string(keyValue)})
 			continue loop
 		// Handle population from a field (downward API).
 		case env.ValueFrom != nil && env.ValueFrom.FieldRef != nil:
@@ -392,8 +392,7 @@ loop:
 				return res, err
 			}
 
-			res[env.Name] = runtimeVal
-
+			res = append(res, corev1.EnvVar{Name:env.Name, Value:runtimeVal})
 			continue loop
 		// Handle population from a resource request/limit.
 		case env.ValueFrom != nil && env.ValueFrom.ResourceFieldRef != nil:
@@ -419,8 +418,15 @@ loop:
 
 	// Append service env vars.
 	for k, v := range svcEnv {
-		if _, present := res[k]; !present {
-			res[k] = v
+		exist := false
+		for _, env := range res {
+			if env.Name == k {
+				exist = true
+				break
+			}
+		}
+		if !exist {
+			res = append(res, corev1.EnvVar{Name:k, Value:v})
 		}
 	}
 
