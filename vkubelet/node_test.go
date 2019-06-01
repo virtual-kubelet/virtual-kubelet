@@ -149,6 +149,56 @@ func testNodeRun(t *testing.T, enableLease bool) {
 	}
 }
 
+func TestNodeCustomUpdateStatusErrorHandler(t *testing.T) {
+	c := testclient.NewSimpleClientset()
+	testP := &testNodeProvider{NodeProvider: &NaiveNodeProvider{}}
+	nodes := c.CoreV1().Nodes()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	node, err := NewNode(testP, testNode(t), nil, nodes,
+		WithNodeStatusUpdateErrorHandler(func(_ context.Context, err error) error {
+			cancel()
+			return nil
+		}),
+		WithNodeDisableLease(true),
+	)
+	assert.NilError(t, err)
+
+	chErr := make(chan error, 1)
+	go func() {
+		chErr <- node.Run(ctx)
+	}()
+
+	timer := time.NewTimer(10 * time.Second)
+	defer timer.Stop()
+
+	// wait for the node to be ready
+	select {
+	case <-timer.C:
+		t.Fatal("timeout waiting for node to be ready")
+	case <-chErr:
+		t.Fatalf("node.Run returned earlier than expected: %v", err)
+	case <-node.Ready():
+	}
+
+	err = nodes.Delete(node.n.Name, nil)
+	assert.NilError(t, err)
+
+	testP.triggerStatusUpdate(node.n.DeepCopy())
+
+	timer = time.NewTimer(10 * time.Second)
+	defer timer.Stop()
+
+	select {
+	case err := <-chErr:
+		assert.Equal(t, err, nil)
+	case <-timer.C:
+		t.Fatal("timeout waiting for node shutdown")
+	}
+}
+
 func TestEnsureLease(t *testing.T) {
 	c := testclient.NewSimpleClientset().Coordination().Leases(corev1.NamespaceNodeLease)
 	n := testNode(t)
@@ -177,6 +227,14 @@ func TestUpdateNodeStatus(t *testing.T) {
 
 	ctx := context.Background()
 	updated, err := UpdateNodeStatus(ctx, nodes, n.DeepCopy())
+	assert.Equal(t, errors.IsNotFound(err), true, err)
+
+	_, err = nodes.Create(n)
+	assert.NilError(t, err)
+
+	updated, err = UpdateNodeStatus(ctx, nodes, n.DeepCopy())
+	assert.NilError(t, err)
+
 	assert.NilError(t, err)
 	assert.Check(t, cmp.DeepEqual(n.Status, updated.Status))
 
@@ -191,10 +249,8 @@ func TestUpdateNodeStatus(t *testing.T) {
 	_, err = nodes.Get(n.Name, metav1.GetOptions{})
 	assert.Equal(t, errors.IsNotFound(err), true, err)
 
-	updated, err = UpdateNodeStatus(ctx, nodes, updated.DeepCopy())
-	assert.NilError(t, err)
-	_, err = nodes.Get(n.Name, metav1.GetOptions{})
-	assert.NilError(t, err)
+	_, err = UpdateNodeStatus(ctx, nodes, updated.DeepCopy())
+	assert.Equal(t, errors.IsNotFound(err), true, err)
 }
 
 func TestUpdateNodeLease(t *testing.T) {
