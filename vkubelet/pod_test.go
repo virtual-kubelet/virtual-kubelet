@@ -64,8 +64,8 @@ func (m *mockProvider) GetPods(_ context.Context) ([]*corev1.Pod, error) {
 	return ls, nil
 }
 
-type TestServer struct {
-	*Server
+type TestController struct {
+	*PodController
 	mock   *mockProvider
 	client *fake.Clientset
 }
@@ -74,24 +74,22 @@ func newMockProvider() *mockProvider {
 	return &mockProvider{pods: make(map[string]*corev1.Pod)}
 }
 
-func newTestServer() *TestServer {
+func newTestController() *TestController {
 	fk8s := fake.NewSimpleClientset()
 
 	rm := testutil.FakeResourceManager()
 	p := newMockProvider()
 
-	tsvr := &TestServer{
-		Server: &Server{
-			namespace:       "default",
-			nodeName:        "vk123",
+	return &TestController{
+		PodController: &PodController{
+			client:          fk8s.CoreV1(),
 			provider:        p,
 			resourceManager: rm,
-			k8sClient:       fk8s,
+			recorder:        testutil.FakeEventRecorder(5),
 		},
 		mock:   p,
 		client: fk8s,
 	}
-	return tsvr
 }
 
 func TestPodHashingEqual(t *testing.T) {
@@ -169,7 +167,7 @@ func TestPodHashingDifferent(t *testing.T) {
 }
 
 func TestPodCreateNewPod(t *testing.T) {
-	svr := newTestServer()
+	svr := newTestController()
 
 	pod := &corev1.Pod{}
 	pod.ObjectMeta.Namespace = "default"
@@ -189,8 +187,8 @@ func TestPodCreateNewPod(t *testing.T) {
 		},
 	}
 
-	er := testutil.FakeEventRecorder(5)
-	err := svr.createOrUpdatePod(context.Background(), pod, er)
+	err := svr.createOrUpdatePod(context.Background(), pod)
+
 	assert.Check(t, is.Nil(err))
 	// createOrUpdate called CreatePod but did not call UpdatePod because the pod did not exist
 	assert.Check(t, is.Equal(svr.mock.creates, 1))
@@ -198,7 +196,7 @@ func TestPodCreateNewPod(t *testing.T) {
 }
 
 func TestPodUpdateExisting(t *testing.T) {
-	svr := newTestServer()
+	svr := newTestController()
 
 	pod := &corev1.Pod{}
 	pod.ObjectMeta.Namespace = "default"
@@ -241,8 +239,7 @@ func TestPodUpdateExisting(t *testing.T) {
 		},
 	}
 
-	er := testutil.FakeEventRecorder(5)
-	err = svr.createOrUpdatePod(context.Background(), pod2, er)
+	err = svr.createOrUpdatePod(context.Background(), pod2)
 	assert.Check(t, is.Nil(err))
 
 	// createOrUpdate didn't call CreatePod but did call UpdatePod because the spec changed
@@ -251,7 +248,7 @@ func TestPodUpdateExisting(t *testing.T) {
 }
 
 func TestPodNoSpecChange(t *testing.T) {
-	svr := newTestServer()
+	svr := newTestController()
 
 	pod := &corev1.Pod{}
 	pod.ObjectMeta.Namespace = "default"
@@ -276,8 +273,7 @@ func TestPodNoSpecChange(t *testing.T) {
 	assert.Check(t, is.Equal(svr.mock.creates, 1))
 	assert.Check(t, is.Equal(svr.mock.updates, 0))
 
-	er := testutil.FakeEventRecorder(5)
-	err = svr.createOrUpdatePod(context.Background(), pod, er)
+	err = svr.createOrUpdatePod(context.Background(), pod)
 	assert.Check(t, is.Nil(err))
 
 	// createOrUpdate didn't call CreatePod or UpdatePod, spec didn't change
