@@ -1,10 +1,10 @@
 package errdefs
 
 import (
-	"errors"
 	"fmt"
 	"testing"
 
+	"github.com/pkg/errors"
 	"gotest.tools/assert"
 	"gotest.tools/assert/cmp"
 )
@@ -76,5 +76,7 @@ func TestIsNotFound(t *testing.T) {
 
 func TestNotFoundCause(t *testing.T) {
 	err := errors.New("test")
-	assert.Equal(t, (&notFoundError{err}).Cause(), err)
+	e := &notFoundError{err}
+	assert.Check(t, cmp.Equal(e.Cause(), err))
+	assert.Check(t, IsNotFound(errors.Wrap(e, "some details")))
 }

@@ -58,7 +58,7 @@ func IsInvalidInput(err error) bool {
 	}
 
 	if e, ok := err.(causal); ok {
-		return IsInvalidInput(e)
+		return IsInvalidInput(e.Cause())
 	}
 
 	return false
