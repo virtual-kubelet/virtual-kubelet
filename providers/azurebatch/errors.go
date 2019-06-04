@@ -5,7 +5,7 @@ import (
 
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
-	"github.com/cpuguy83/strongerrors"
+	"github.com/virtual-kubelet/virtual-kubelet/errdefs"
 )
 
 func wrapError(err error) error {
@@ -14,7 +14,7 @@ func wrapError(err error) error {
 	}
 	switch {
 	case isStatus(err, http.StatusNotFound):
-		return strongerrors.NotFound(err)
+		return errdefs.AsNotFound(err)
 	default:
 		return err
 	}

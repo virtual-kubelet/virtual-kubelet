@@ -5,8 +5,7 @@ import (
 	"path"
 	"testing"
 
-	"github.com/cpuguy83/strongerrors"
-	pkgerrors "github.com/pkg/errors"
+	"github.com/virtual-kubelet/virtual-kubelet/errdefs"
 	testutil "github.com/virtual-kubelet/virtual-kubelet/test/util"
 	"gotest.tools/assert"
 	is "gotest.tools/assert/cmp"
@@ -37,7 +36,7 @@ func (m *mockProvider) UpdatePod(ctx context.Context, pod *corev1.Pod) error {
 func (m *mockProvider) GetPod(ctx context.Context, namespace, name string) (*corev1.Pod, error) {
 	p := m.pods[path.Join(namespace, name)]
 	if p == nil {
-		return nil, strongerrors.NotFound(pkgerrors.New("not found"))
+		return nil, errdefs.NotFound("not found")
 	}
 	return p, nil
 }
@@ -45,7 +44,7 @@ func (m *mockProvider) GetPod(ctx context.Context, namespace, name string) (*cor
 func (m *mockProvider) GetPodStatus(ctx context.Context, namespace, name string) (*corev1.PodStatus, error) {
 	p := m.pods[path.Join(namespace, name)]
 	if p == nil {
-		return nil, strongerrors.NotFound(pkgerrors.New("not found"))
+		return nil, errdefs.NotFound("not found")
 	}
 	return &p.Status, nil
 }

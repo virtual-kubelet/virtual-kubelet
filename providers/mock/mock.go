@@ -10,8 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/cpuguy83/strongerrors"
-	"github.com/cpuguy83/strongerrors/status/ocstatus"
+	"github.com/virtual-kubelet/virtual-kubelet/errdefs"
 	"github.com/virtual-kubelet/virtual-kubelet/log"
 	"github.com/virtual-kubelet/virtual-kubelet/trace"
 	"github.com/virtual-kubelet/virtual-kubelet/vkubelet/api"
@@ -189,7 +188,7 @@ func (p *MockProvider) DeletePod(ctx context.Context, pod *v1.Pod) (err error) {
 	}
 
 	if _, exists := p.pods[key]; !exists {
-		return strongerrors.NotFound(fmt.Errorf("pod not found"))
+		return errdefs.NotFound("pod not found")
 	}
 
 	delete(p.pods, key)
@@ -201,7 +200,7 @@ func (p *MockProvider) DeletePod(ctx context.Context, pod *v1.Pod) (err error) {
 func (p *MockProvider) GetPod(ctx context.Context, namespace, name string) (pod *v1.Pod, err error) {
 	ctx, span := trace.StartSpan(ctx, "GetPod")
 	defer func() {
-		span.SetStatus(ocstatus.FromError(err))
+		span.SetStatus(err)
 		span.End()
 	}()
 
@@ -218,7 +217,7 @@ func (p *MockProvider) GetPod(ctx context.Context, namespace, name string) (pod 
 	if pod, ok := p.pods[key]; ok {
 		return pod, nil
 	}
-	return nil, strongerrors.NotFound(fmt.Errorf("pod \"%s/%s\" is not known to the provider", namespace, name))
+	return nil, errdefs.NotFoundf("pod \"%s/%s\" is not known to the provider", namespace, name)
 }
 
 // GetContainerLogs retrieves the logs of a container by name from the provider.

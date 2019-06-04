@@ -5,7 +5,6 @@ import (
 	"hash/fnv"
 	"time"
 
-	"github.com/cpuguy83/strongerrors/status/ocstatus"
 	"github.com/davecgh/go-spew/spew"
 	pkgerrors "github.com/pkg/errors"
 	"github.com/virtual-kubelet/virtual-kubelet/log"
@@ -44,7 +43,7 @@ func (pc *PodController) createOrUpdatePod(ctx context.Context, pod *corev1.Pod)
 	})
 
 	if err := populateEnvironmentVariables(ctx, pod, pc.resourceManager, pc.recorder); err != nil {
-		span.SetStatus(ocstatus.FromError(err))
+		span.SetStatus(err)
 		return err
 	}
 
@@ -113,7 +112,7 @@ func (pc *PodController) handleProviderError(ctx context.Context, span trace.Spa
 	} else {
 		logger.Info("Updated k8s pod status")
 	}
-	span.SetStatus(ocstatus.FromError(origErr))
+	span.SetStatus(origErr)
 }
 
 func (pc *PodController) deletePod(ctx context.Context, namespace, name string) error {
@@ -132,7 +131,7 @@ func (pc *PodController) deletePod(ctx context.Context, namespace, name string) 
 
 	var delErr error
 	if delErr = pc.provider.DeletePod(ctx, pod); delErr != nil && errors.IsNotFound(delErr) {
-		span.SetStatus(ocstatus.FromError(delErr))
+		span.SetStatus(delErr)
 		return delErr
 	}
 
@@ -140,7 +139,7 @@ func (pc *PodController) deletePod(ctx context.Context, namespace, name string) 
 
 	if !errors.IsNotFound(delErr) {
 		if err := pc.forceDeletePodResource(ctx, namespace, name); err != nil {
-			span.SetStatus(ocstatus.FromError(err))
+			span.SetStatus(err)
 			return err
 		}
 		log.G(ctx).Info("Deleted pod from Kubernetes")
@@ -163,7 +162,7 @@ func (pc *PodController) forceDeletePodResource(ctx context.Context, namespace, 
 			log.G(ctx).Debug("Pod does not exist in Kubernetes, nothing to delete")
 			return nil
 		}
-		span.SetStatus(ocstatus.FromError(err))
+		span.SetStatus(err)
 		return pkgerrors.Wrap(err, "Failed to delete Kubernetes pod")
 	}
 	return nil
@@ -178,7 +177,7 @@ func (pc *PodController) updatePodStatuses(ctx context.Context, q workqueue.Rate
 	pods, err := pc.podsLister.List(labels.Everything())
 	if err != nil {
 		err = pkgerrors.Wrap(err, "error getting pod list")
-		span.SetStatus(ocstatus.FromError(err))
+		span.SetStatus(err)
 		log.G(ctx).WithError(err).Error("Error updating pod statuses")
 		return
 	}
@@ -208,7 +207,7 @@ func (pc *PodController) updatePodStatus(ctx context.Context, pod *corev1.Pod) e
 
 	status, err := pc.provider.GetPodStatus(ctx, pod.Namespace, pod.Name)
 	if err != nil {
-		span.SetStatus(ocstatus.FromError(err))
+		span.SetStatus(err)
 		return pkgerrors.Wrap(err, "error retreiving pod status")
 	}
 
@@ -238,7 +237,7 @@ func (pc *PodController) updatePodStatus(ctx context.Context, pod *corev1.Pod) e
 	}
 
 	if _, err := pc.client.Pods(pod.Namespace).UpdateStatus(pod); err != nil {
-		span.SetStatus(ocstatus.FromError(err))
+		span.SetStatus(err)
 		return pkgerrors.Wrap(err, "error while updating pod status in kubernetes")
 	}
 
@@ -265,7 +264,7 @@ func (pc *PodController) podStatusHandler(ctx context.Context, key string) (retE
 	ctx = span.WithField(ctx, "key", key)
 	log.G(ctx).Debug("processing pod status update")
 	defer func() {
-		span.SetStatus(ocstatus.FromError(retErr))
+		span.SetStatus(retErr)
 		if retErr != nil {
 			log.G(ctx).WithError(retErr).Error("Error processing pod status update")
 		}

@@ -4,7 +4,6 @@ import (
 	"context"
 	"net/http"
 
-	"github.com/cpuguy83/strongerrors"
 	"github.com/virtual-kubelet/virtual-kubelet/log"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -36,13 +35,13 @@ func HandleRunningPods(getPods PodListerFunc) http.HandlerFunc {
 		codec := codecs.LegacyCodec(v1.SchemeGroupVersion)
 		data, err := runtime.Encode(codec, podList)
 		if err != nil {
-			return strongerrors.System(err)
+			return err
 		}
 
 		w.Header().Set("Content-Type", "application/json")
 		_, err = w.Write(data)
 		if err != nil {
-			return strongerrors.System(err)
+			return err
 		}
 		return nil
 	})

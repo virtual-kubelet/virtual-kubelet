@@ -6,8 +6,7 @@ import (
 	"os"
 
 	"contrib.go.opencensus.io/exporter/ocagent"
-	"github.com/cpuguy83/strongerrors"
-	"github.com/pkg/errors"
+	"github.com/virtual-kubelet/virtual-kubelet/errdefs"
 	"go.opencensus.io/trace"
 )
 
@@ -22,7 +21,7 @@ func NewOCAgentExporter(opts TracingExporterOptions) (trace.Exporter, error) {
 	if endpoint := os.Getenv("OCAGENT_ENDPOINT"); endpoint != "" {
 		agentOpts = append(agentOpts, ocagent.WithAddress(endpoint))
 	} else {
-		return nil, strongerrors.InvalidArgument(errors.New("must set endpoint address in OCAGENT_ENDPOINT"))
+		return nil, errdefs.InvalidInput("must set endpoint address in OCAGENT_ENDPOINT")
 	}
 
 	switch os.Getenv("OCAGENT_INSECURE") {
@@ -30,7 +29,7 @@ func NewOCAgentExporter(opts TracingExporterOptions) (trace.Exporter, error) {
 	case "1", "yes", "y", "on":
 		agentOpts = append(agentOpts, ocagent.WithInsecure())
 	default:
-		return nil, strongerrors.InvalidArgument(errors.New("invalid value for OCAGENT_INSECURE"))
+		return nil, errdefs.InvalidInput("invalid value for OCAGENT_INSECURE")
 	}
 
 	return ocagent.NewExporter(agentOpts...)

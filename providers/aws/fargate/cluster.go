@@ -12,7 +12,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudwatchlogs"
 	"github.com/aws/aws-sdk-go/service/ecs"
-	"github.com/cpuguy83/strongerrors"
+	"github.com/virtual-kubelet/virtual-kubelet/errdefs"
 	"github.com/virtual-kubelet/virtual-kubelet/vkubelet/api"
 	k8sTypes "k8s.io/apimachinery/pkg/types"
 )
@@ -276,7 +276,7 @@ func (c *Cluster) GetPod(namespace string, name string) (*Pod, error) {
 	tag := buildTaskDefinitionTag(c.name, namespace, name)
 	pod, ok := c.pods[tag]
 	if !ok {
-		return nil, strongerrors.NotFound(fmt.Errorf("pod %s/%s is not found", namespace, name))
+		return nil, errdefs.NotFoundf("pod %s/%s is not found", namespace, name)
 	}
 
 	return pod, nil

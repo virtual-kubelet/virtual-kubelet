@@ -22,9 +22,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/cpuguy83/strongerrors"
-	"github.com/cpuguy83/strongerrors/status/ocstatus"
 	pkgerrors "github.com/pkg/errors"
+	"github.com/virtual-kubelet/virtual-kubelet/errdefs"
 	"github.com/virtual-kubelet/virtual-kubelet/log"
 	"github.com/virtual-kubelet/virtual-kubelet/manager"
 	"github.com/virtual-kubelet/virtual-kubelet/trace"
@@ -41,6 +40,10 @@ import (
 
 // PodLifecycleHandler defines the interface used by the PodController to react
 // to new and changed pods scheduled to the node that is being managed.
+//
+// Errors produced by these methods should implement an interface from
+// github.com/virtual-kubelet/virtual-kubelet/errdefs package in order for the
+// core logic to be able to understand the type of failure.
 type PodLifecycleHandler interface {
 	// CreatePod takes a Kubernetes Pod and deploys it within the provider.
 	CreatePod(ctx context.Context, pod *corev1.Pod) error
@@ -113,13 +116,13 @@ type PodControllerConfig struct {
 
 func NewPodController(cfg PodControllerConfig) (*PodController, error) {
 	if cfg.PodClient == nil {
-		return nil, strongerrors.InvalidArgument(pkgerrors.New("must set core client"))
+		return nil, errdefs.InvalidInput("must set core client")
 	}
 	if cfg.EventRecorder == nil {
-		return nil, strongerrors.InvalidArgument(pkgerrors.New("must set event recorder"))
+		return nil, errdefs.InvalidInput("must set event recorder")
 	}
 	if cfg.PodInformer == nil {
-		return nil, strongerrors.InvalidArgument(pkgerrors.New("must set informer"))
+		return nil, errdefs.InvalidInput("must set informer")
 	}
 
 	return &PodController{
@@ -257,14 +260,14 @@ func (pc *PodController) syncHandler(ctx context.Context, key string) error {
 			// We've failed to fetch the pod from the lister, but the error is not a 404.
 			// Hence, we add the key back to the work queue so we can retry processing it later.
 			err := pkgerrors.Wrapf(err, "failed to fetch pod with key %q from lister", key)
-			span.SetStatus(ocstatus.FromError(err))
+			span.SetStatus(err)
 			return err
 		}
 		// At this point we know the Pod resource doesn't exist, which most probably means it was deleted.
 		// Hence, we must delete it from the provider if it still exists there.
 		if err := pc.deletePod(ctx, namespace, name); err != nil {
 			err := pkgerrors.Wrapf(err, "failed to delete pod %q in the provider", loggablePodNameFromCoordinates(namespace, name))
-			span.SetStatus(ocstatus.FromError(err))
+			span.SetStatus(err)
 			return err
 		}
 		return nil
@@ -286,7 +289,7 @@ func (pc *PodController) syncPodInProvider(ctx context.Context, pod *corev1.Pod)
 	if pod.DeletionTimestamp != nil {
 		if err := pc.deletePod(ctx, pod.Namespace, pod.Name); err != nil {
 			err := pkgerrors.Wrapf(err, "failed to delete pod %q in the provider", loggablePodName(pod))
-			span.SetStatus(ocstatus.FromError(err))
+			span.SetStatus(err)
 			return err
 		}
 		return nil
@@ -301,7 +304,7 @@ func (pc *PodController) syncPodInProvider(ctx context.Context, pod *corev1.Pod)
 	// Create or update the pod in the provider.
 	if err := pc.createOrUpdatePod(ctx, pod); err != nil {
 		err := pkgerrors.Wrapf(err, "failed to sync pod %q in the provider", loggablePodName(pod))
-		span.SetStatus(ocstatus.FromError(err))
+		span.SetStatus(err)
 		return err
 	}
 	return nil
@@ -316,7 +319,7 @@ func (pc *PodController) deleteDanglingPods(ctx context.Context, threadiness int
 	pps, err := pc.provider.GetPods(ctx)
 	if err != nil {
 		err := pkgerrors.Wrap(err, "failed to fetch the list of pods from the provider")
-		span.SetStatus(ocstatus.FromError(err))
+		span.SetStatus(err)
 		log.G(ctx).Error(err)
 		return
 	}
@@ -335,7 +338,7 @@ func (pc *PodController) deleteDanglingPods(ctx context.Context, threadiness int
 			}
 			// For some reason we couldn't fetch the pod from the lister, so we propagate the error.
 			err := pkgerrors.Wrap(err, "failed to fetch pod from the lister")
-			span.SetStatus(ocstatus.FromError(err))
+			span.SetStatus(err)
 			log.G(ctx).Error(err)
 			return
 		}
@@ -363,7 +366,7 @@ func (pc *PodController) deleteDanglingPods(ctx context.Context, threadiness int
 			ctx = addPodAttributes(ctx, span, pod)
 			// Actually delete the pod.
 			if err := pc.deletePod(ctx, pod.Namespace, pod.Name); err != nil {
-				span.SetStatus(ocstatus.FromError(err))
+				span.SetStatus(err)
 				log.G(ctx).Errorf("failed to delete pod %q in provider", loggablePodName(pod))
 			} else {
 				log.G(ctx).Infof("deleted leaked pod %q in provider", loggablePodName(pod))

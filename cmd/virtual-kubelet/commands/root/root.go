@@ -20,9 +20,9 @@ import (
 	"path"
 	"time"
 
-	"github.com/cpuguy83/strongerrors"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
+	"github.com/virtual-kubelet/virtual-kubelet/errdefs"
 	"github.com/virtual-kubelet/virtual-kubelet/log"
 	"github.com/virtual-kubelet/virtual-kubelet/manager"
 	"github.com/virtual-kubelet/virtual-kubelet/providers"
@@ -64,11 +64,11 @@ func runRootCommand(ctx context.Context, c Opts) error {
 	defer cancel()
 
 	if ok := providers.ValidOperatingSystems[c.OperatingSystem]; !ok {
-		return strongerrors.InvalidArgument(errors.Errorf("operating system %q is not supported", c.OperatingSystem))
+		return errdefs.InvalidInputf("operating system %q is not supported", c.OperatingSystem)
 	}
 
 	if c.PodSyncWorkers == 0 {
-		return strongerrors.InvalidArgument(errors.New("pod sync workers must be greater than 0"))
+		return errdefs.InvalidInput("pod sync workers must be greater than 0")
 	}
 
 	var taint *corev1.Taint

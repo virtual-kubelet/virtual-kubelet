@@ -15,7 +15,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/cpuguy83/strongerrors"
+	"github.com/virtual-kubelet/virtual-kubelet/errdefs"
 	"github.com/virtual-kubelet/virtual-kubelet/manager"
 	"github.com/virtual-kubelet/virtual-kubelet/providers/huawei/auth"
 	"github.com/virtual-kubelet/virtual-kubelet/vkubelet/api"
@@ -257,7 +257,7 @@ func errorFromResponse(resp *http.Response) error {
 
 	switch resp.StatusCode {
 	case http.StatusNotFound:
-		return strongerrors.NotFound(err)
+		return errdefs.AsNotFound(err)
 	default:
 		return err
 	}

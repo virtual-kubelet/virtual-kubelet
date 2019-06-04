@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/cpuguy83/strongerrors/status/ocstatus"
 	pkgerrors "github.com/pkg/errors"
 	"github.com/virtual-kubelet/virtual-kubelet/log"
 	"github.com/virtual-kubelet/virtual-kubelet/trace"
@@ -275,7 +274,7 @@ func (n *Node) handlePing(ctx context.Context) (retErr error) {
 	ctx, span := trace.StartSpan(ctx, "node.handlePing")
 	defer span.End()
 	defer func() {
-		span.SetStatus(ocstatus.FromError(retErr))
+		span.SetStatus(retErr)
 	}()
 
 	if err := n.p.Ping(ctx); err != nil {
@@ -367,7 +366,7 @@ func UpdateNodeLease(ctx context.Context, leases v1beta1.LeaseInterface, lease *
 			l, err = ensureLease(ctx, leases, lease)
 		}
 		if err != nil {
-			span.SetStatus(ocstatus.FromError(err))
+			span.SetStatus(err)
 			return nil, err
 		}
 		log.G(ctx).Debug("created new lease")
@@ -429,7 +428,7 @@ func UpdateNodeStatus(ctx context.Context, nodes v1.NodeInterface, n *corev1.Nod
 	ctx, span := trace.StartSpan(ctx, "UpdateNodeStatus")
 	defer func() {
 		span.End()
-		span.SetStatus(ocstatus.FromError(retErr))
+		span.SetStatus(retErr)
 	}()
 
 	var node *corev1.Node
