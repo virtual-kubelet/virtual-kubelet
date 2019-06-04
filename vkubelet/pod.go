@@ -7,6 +7,7 @@ import (
 
 	"github.com/davecgh/go-spew/spew"
 	pkgerrors "github.com/pkg/errors"
+	"github.com/virtual-kubelet/virtual-kubelet/errdefs"
 	"github.com/virtual-kubelet/virtual-kubelet/log"
 	"github.com/virtual-kubelet/virtual-kubelet/trace"
 	corev1 "k8s.io/api/core/v1"
@@ -206,7 +207,7 @@ func (pc *PodController) updatePodStatus(ctx context.Context, pod *corev1.Pod) e
 	ctx = addPodAttributes(ctx, span, pod)
 
 	status, err := pc.provider.GetPodStatus(ctx, pod.Namespace, pod.Name)
-	if err != nil {
+	if err != nil && !errdefs.IsNotFound(err) {
 		span.SetStatus(err)
 		return pkgerrors.Wrap(err, "error retreiving pod status")
 	}
@@ -277,6 +278,10 @@ func (pc *PodController) podStatusHandler(ctx context.Context, key string) (retE
 
 	pod, err := pc.podsLister.Pods(namespace).Get(name)
 	if err != nil {
+		if errors.IsNotFound(err) {
+			log.G(ctx).WithError(err).Debug("Skipping pod status update for pod missing in Kubernetes")
+			return nil
+		}
 		return pkgerrors.Wrap(err, "error looking up pod")
 	}
 
