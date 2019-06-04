@@ -58,7 +58,7 @@ func IsNotFound(err error) bool {
 	}
 
 	if e, ok := err.(causal); ok {
-		return IsNotFound(e)
+		return IsNotFound(e.Cause())
 	}
 
 	return false

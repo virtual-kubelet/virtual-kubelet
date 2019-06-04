@@ -1,10 +1,10 @@
 package errdefs
 
 import (
-	"errors"
 	"fmt"
 	"testing"
 
+	"github.com/pkg/errors"
 	"gotest.tools/assert"
 	"gotest.tools/assert/cmp"
 )
@@ -76,5 +76,7 @@ func TestIsInvalidInput(t *testing.T) {
 
 func TestInvalidInputCause(t *testing.T) {
 	err := errors.New("test")
-	assert.Equal(t, (&invalidInputError{err}).Cause(), err)
+	e := &invalidInputError{err}
+	assert.Check(t, cmp.Equal(e.Cause(), err))
+	assert.Check(t, IsInvalidInput(errors.Wrap(e, "some details")))
 }
