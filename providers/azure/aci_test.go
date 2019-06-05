@@ -88,12 +88,12 @@ func TestMakeRegistryCredential(t *testing.T) {
 			cred, err := makeRegistryCredential(server, tc.authConfig)
 
 			if tc.shouldFail {
-				assert.Check(t, err != nil, "convertion should fail")
+				assert.Check(t, err != nil, "conversion should fail")
 				assert.Check(t, strings.Contains(err.Error(), tc.failMessage), "failed message is not expected")
 				return
 			}
 
-			assert.Check(t, err, "convertion should not fail")
+			assert.Check(t, err, "conversion should not fail")
 			assert.Check(t, cred != nil, "credential should not be nil")
 			assert.Check(t, is.Equal(server, cred.Server), "server doesn't match")
 			assert.Check(t, is.Equal(username, cred.Username), "username doesn't match")

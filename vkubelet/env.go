@@ -16,6 +16,7 @@ import (
 	v1helper "k8s.io/kubernetes/pkg/apis/core/v1/helper"
 	fieldpath "k8s.io/kubernetes/pkg/fieldpath"
 	"k8s.io/kubernetes/pkg/kubelet/envvars"
+	"k8s.io/kubernetes/third_party/forked/golang/expansion"
 
 	"github.com/virtual-kubelet/virtual-kubelet/log"
 	"github.com/virtual-kubelet/virtual-kubelet/manager"
@@ -78,12 +79,13 @@ func populateEnvironmentVariables(ctx context.Context, pod *corev1.Pod, rm *mana
 // populateContainerEnvironment populates the environment of a single container in the specified pod.
 func populateContainerEnvironment(ctx context.Context, pod *corev1.Pod, container *corev1.Container, rm *manager.ResourceManager, recorder record.EventRecorder) error {
 	// Create an "environment map" based on the value of the specified container's ".envFrom" field.
-	envFrom, err := makeEnvironmentMapBasedOnEnvFrom(ctx, pod, container, rm, recorder)
+	tmpEnv, err := makeEnvironmentMapBasedOnEnvFrom(ctx, pod, container, rm, recorder)
 	if err != nil {
 		return err
 	}
-	// Create an "environment map" based on the value of the specified container's ".env" field.
-	env, err := makeEnvironmentMapBasedOnEnv(ctx, pod, container, rm, recorder)
+	// Create the final "environment map" for the container using the ".env" and ".envFrom" field
+	// and service environment variables.
+	err = makeEnvironmentMap(ctx, pod, container, rm, recorder, tmpEnv)
 	if err != nil {
 		return err
 	}
@@ -92,7 +94,17 @@ func populateContainerEnvironment(ctx context.Context, pod *corev1.Pod, containe
 	// This is in accordance with what the Kubelet itself does.
 	// https://github.com/kubernetes/kubernetes/blob/v1.13.1/pkg/kubelet/kubelet_pods.go#L557-L558
 	container.EnvFrom = []corev1.EnvFromSource{}
-	container.Env = mergeEnvironments(envFrom, env)
+
+	res := make([]corev1.EnvVar, 0)
+
+	for key, val := range tmpEnv {
+		res = append(res, corev1.EnvVar{
+			Name:  key,
+			Value: val,
+		})
+	}
+	container.Env = res
+
 	return nil
 }
 
@@ -265,17 +277,37 @@ loop:
 	return res, nil
 }
 
-// makeEnvironmentMapBasedOnEnv returns a map representing the resolved environment of the specified container after being populated from the entries in the ".env" field.
-func makeEnvironmentMapBasedOnEnv(ctx context.Context, pod *corev1.Pod, container *corev1.Container, rm *manager.ResourceManager, recorder record.EventRecorder) (map[string]string, error) {
-	// Create a map to hold the resolved environment variables.
-	res := make(map[string]string, len(container.Env))
+// makeEnvironmentMap returns a map representing the resolved environment of the specified container after being populated from the entries in the ".env" and ".envFrom" field.
+func makeEnvironmentMap(ctx context.Context, pod *corev1.Pod, container *corev1.Container, rm *manager.ResourceManager, recorder record.EventRecorder, res map[string]string) error {
+
+	// TODO If pod.Spec.EnableServiceLinks is nil then fail as per 1.14 kubelet.
+	enableServiceLinks := corev1.DefaultEnableServiceLinks
+	if pod.Spec.EnableServiceLinks != nil {
+		enableServiceLinks = *pod.Spec.EnableServiceLinks
+	}
+
+	// Note that there is a race between Kubelet seeing the pod and kubelet seeing the service.
+	// To avoid this users can: (1) wait between starting a service and starting; or (2) detect
+	// missing service env var and exit and be restarted; or (3) use DNS instead of env vars
+	// and keep trying to resolve the DNS name of the service (recommended).
+	svcEnv, err := getServiceEnvVarMap(rm, pod.Namespace, enableServiceLinks)
+	if err != nil {
+		return err
+	}
+
+	// If the variable's Value is set, expand the `$(var)` references to other
+	// variables in the .Value field; the sources of variables are the declared
+	// variables of the container and the service environment variables.
+	mappingFunc := expansion.MappingFuncFor(res, svcEnv)
+
 	// Iterate over environment variables in order to populate the map.
 loop:
 	for _, env := range container.Env {
 		switch {
 		// Handle values that have been directly provided.
 		case env.Value != "":
-			res[env.Name] = env.Value
+			// Expand variable references
+			res[env.Name] = expansion.Expand(env.Value, mappingFunc)
 			continue loop
 		// Handle population from a configmap key.
 		case env.ValueFrom != nil && env.ValueFrom.ConfigMapKeyRef != nil:
@@ -303,10 +335,10 @@ loop:
 				// Hence, we should return a meaningful error.
 				if errors.IsNotFound(err) {
 					recorder.Eventf(pod, corev1.EventTypeWarning, ReasonMandatoryConfigMapNotFound, "configmap %q not found", vf.Name)
-					return nil, fmt.Errorf("configmap %q not found", vf.Name)
+					return fmt.Errorf("configmap %q not found", vf.Name)
 				}
 				recorder.Eventf(pod, corev1.EventTypeWarning, ReasonFailedToReadMandatoryConfigMap, "failed to read configmap %q", vf.Name)
-				return nil, fmt.Errorf("failed to read configmap %q: %v", vf.Name, err)
+				return fmt.Errorf("failed to read configmap %q: %v", vf.Name, err)
 			}
 			// At this point we have successfully fetched the target configmap.
 			// We must now try to grab the requested key.
@@ -325,7 +357,7 @@ loop:
 				// At this point we know the key reference is mandatory.
 				// Hence, we should fail.
 				recorder.Eventf(pod, corev1.EventTypeWarning, ReasonMandatoryConfigMapKeyNotFound, "key %q does not exist in configmap %q", vf.Key, vf.Name)
-				return nil, fmt.Errorf("configmap %q doesn't contain the %q key required by pod %s", vf.Name, vf.Key, pod.Name)
+				return fmt.Errorf("configmap %q doesn't contain the %q key required by pod %s", vf.Name, vf.Key, pod.Name)
 			}
 			// Populate the environment variable and continue on to the next reference.
 			res[env.Name] = keyValue
@@ -355,10 +387,10 @@ loop:
 				// Hence, we should return a meaningful error.
 				if errors.IsNotFound(err) {
 					recorder.Eventf(pod, corev1.EventTypeWarning, ReasonMandatorySecretNotFound, "secret %q not found", vf.Name)
-					return nil, fmt.Errorf("secret %q not found", vf.Name)
+					return fmt.Errorf("secret %q not found", vf.Name)
 				}
 				recorder.Eventf(pod, corev1.EventTypeWarning, ReasonFailedToReadMandatorySecret, "failed to read secret %q", vf.Name)
-				return nil, fmt.Errorf("failed to read secret %q: %v", vf.Name, err)
+				return fmt.Errorf("failed to read secret %q: %v", vf.Name, err)
 			}
 			// At this point we have successfully fetched the target secret.
 			// We must now try to grab the requested key.
@@ -377,7 +409,7 @@ loop:
 				// At this point we know the key reference is mandatory.
 				// Hence, we should fail.
 				recorder.Eventf(pod, corev1.EventTypeWarning, ReasonMandatorySecretKeyNotFound, "key %q does not exist in secret %q", vf.Key, vf.Name)
-				return nil, fmt.Errorf("secret %q doesn't contain the %q key required by pod %s", vf.Name, vf.Key, pod.Name)
+				return fmt.Errorf("secret %q doesn't contain the %q key required by pod %s", vf.Name, vf.Key, pod.Name)
 			}
 			// Populate the environment variable and continue on to the next reference.
 			res[env.Name] = string(keyValue)
@@ -389,7 +421,7 @@ loop:
 
 			runtimeVal, err := podFieldSelectorRuntimeValue(vf, pod)
 			if err != nil {
-				return res, err
+				return err
 			}
 
 			res[env.Name] = runtimeVal
@@ -402,21 +434,6 @@ loop:
 		}
 	}
 
-	// TODO If pod.Spec.EnableServiceLinks is nil then fail as per 1.14 kubelet.
-	enableServiceLinks := corev1.DefaultEnableServiceLinks
-	if pod.Spec.EnableServiceLinks != nil {
-		enableServiceLinks = *pod.Spec.EnableServiceLinks
-	}
-
-	// Note that there is a race between Kubelet seeing the pod and kubelet seeing the service.
-	// To avoid this users can: (1) wait between starting a service and starting; or (2) detect
-	// missing service env var and exit and be restarted; or (3) use DNS instead of env vars
-	// and keep trying to resolve the DNS name of the service (recommended).
-	svcEnv, err := getServiceEnvVarMap(rm, pod.Namespace, enableServiceLinks)
-	if err != nil {
-		return nil, err
-	}
-
 	// Append service env vars.
 	for k, v := range svcEnv {
 		if _, present := res[k]; !present {
@@ -424,8 +441,7 @@ loop:
 		}
 	}
 
-	// Return the populated environment.
-	return res, nil
+	return nil
 }
 
 // podFieldSelectorRuntimeValue returns the runtime value of the given
@@ -443,26 +459,4 @@ func podFieldSelectorRuntimeValue(fs *corev1.ObjectFieldSelector, pod *corev1.Po
 
 	}
 	return fieldpath.ExtractFieldPathAsString(pod, internalFieldPath)
-}
-
-// mergeEnvironments creates the final environment for a container by merging "envFrom" and "env".
-// Values in "env" override any values with the same key defined in "envFrom".
-// This is in accordance with what the Kubelet itself does.
-// https://github.com/kubernetes/kubernetes/blob/v1.13.1/pkg/kubelet/kubelet_pods.go#L557-L558
-func mergeEnvironments(envFrom map[string]string, env map[string]string) []corev1.EnvVar {
-	tmp := make(map[string]string, 0)
-	res := make([]corev1.EnvVar, 0)
-	for key, val := range envFrom {
-		tmp[key] = val
-	}
-	for key, val := range env {
-		tmp[key] = val
-	}
-	for key, val := range tmp {
-		res = append(res, corev1.EnvVar{
-			Name:  key,
-			Value: val,
-		})
-	}
-	return res
 }

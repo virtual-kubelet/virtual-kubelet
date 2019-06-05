@@ -26,7 +26,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/virtual-kubelet/virtual-kubelet/log"
 	"github.com/virtual-kubelet/virtual-kubelet/providers"
-	"github.com/virtual-kubelet/virtual-kubelet/vkubelet"
+	"github.com/virtual-kubelet/virtual-kubelet/vkubelet/api"
 )
 
 // AcceptedCiphers is the list of accepted TLS ciphers, with known weak ciphers elided
@@ -86,7 +86,13 @@ func setupHTTPServer(ctx context.Context, p providers.Provider, cfg *apiServerCo
 		}
 
 		mux := http.NewServeMux()
-		vkubelet.AttachPodRoutes(p, mux)
+
+		podRoutes := api.PodHandlerConfig{
+			RunInContainer:   p.RunInContainer,
+			GetContainerLogs: p.GetContainerLogs,
+			GetPods:          p.GetPods,
+		}
+		api.AttachPodRoutes(podRoutes, mux, true)
 
 		s := &http.Server{
 			Handler:   mux,
@@ -105,7 +111,15 @@ func setupHTTPServer(ctx context.Context, p providers.Provider, cfg *apiServerCo
 		}
 
 		mux := http.NewServeMux()
-		vkubelet.AttachMetricsRoutes(p, mux)
+
+		var summaryHandlerFunc api.PodStatsSummaryHandlerFunc
+		if mp, ok := p.(providers.PodMetricsProvider); ok {
+			summaryHandlerFunc = mp.GetStatsSummary
+		}
+		podMetricsRoutes := api.PodMetricsConfig{
+			GetStatsSummary: summaryHandlerFunc,
+		}
+		api.AttachPodMetricsRoutes(podMetricsRoutes, mux)
 		s := &http.Server{
 			Handler: mux,
 		}

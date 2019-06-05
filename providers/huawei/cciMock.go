@@ -7,7 +7,7 @@ import (
 	"net/http/httptest"
 
 	"github.com/gorilla/mux"
-	"k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 )
 
 // CCIMock implements a CCI service mock server.

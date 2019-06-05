@@ -19,11 +19,11 @@ controller.
 
 Up to this point you have a running virtual kubelet controller, but no HTTP
 handlers to deal with requests forwarded from the API server for things like
-pod logs (e.g. user calls `kubectl logs myVKPod`).  This package provides some
-helpers for this: `AttachPodRoutes` and `AttachMetricsRoutes`.
+pod logs (e.g. user calls `kubectl logs myVKPod`).  The api package provides some
+helpers for this: `api.AttachPodRoutes` and `api.AttachMetricsRoutes`.
 
 	mux := http.NewServeMux()
-	vkubelet.AttachPodRoutes(provider, mux)
+	api.AttachPodRoutes(provider, mux)
 
 You must configure your own HTTP server, but these helpers will add handlers at
 the correct URI paths to your serve mux. You are not required to use go's

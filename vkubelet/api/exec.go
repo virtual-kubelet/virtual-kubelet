@@ -7,24 +7,41 @@ import (
 	"strings"
 	"time"
 
-	"github.com/cpuguy83/strongerrors"
 	"github.com/gorilla/mux"
 	"github.com/pkg/errors"
-	"github.com/virtual-kubelet/virtual-kubelet/providers"
+	"github.com/virtual-kubelet/virtual-kubelet/errdefs"
 	"k8s.io/apimachinery/pkg/types"
 	remoteutils "k8s.io/client-go/tools/remotecommand"
 	api "k8s.io/kubernetes/pkg/apis/core"
 	"k8s.io/kubernetes/pkg/kubelet/server/remotecommand"
 )
 
-type ExecBackend interface {
-	RunInContainer(ctx context.Context, namespace, podName, containerName string, cmd []string, attach providers.AttachIO) error
+// ContainerExecHandlerFunc defines the handler function used for "execing" into a
+// container in a pod.
+type ContainerExecHandlerFunc func(ctx context.Context, namespace, podName, containerName string, cmd []string, attach AttachIO) error
+
+// AttachIO is used to pass in streams to attach to a container process
+type AttachIO interface {
+	Stdin() io.Reader
+	Stdout() io.WriteCloser
+	Stderr() io.WriteCloser
+	TTY() bool
+	Resize() <-chan TermSize
 }
 
-// PodExecHandlerFunc makes an http handler func from a Provider which execs a command in a pod's container
+// TermSize is used to set the terminal size from attached clients.
+type TermSize struct {
+	Width  uint16
+	Height uint16
+}
+
+// HandleContainerExec makes an http handler func from a Provider which execs a command in a pod's container
 // Note that this handler currently depends on gorrilla/mux to get url parts as variables.
 // TODO(@cpuguy83): don't force gorilla/mux on consumers of this function
-func PodExecHandlerFunc(backend ExecBackend) http.HandlerFunc {
+func HandleContainerExec(h ContainerExecHandlerFunc) http.HandlerFunc {
+	if h == nil {
+		return NotImplemented
+	}
 	return handleError(func(w http.ResponseWriter, req *http.Request) error {
 		vars := mux.Vars(req)
 
@@ -39,7 +56,7 @@ func PodExecHandlerFunc(backend ExecBackend) http.HandlerFunc {
 
 		streamOpts, err := getExecOptions(req)
 		if err != nil {
-			return strongerrors.InvalidArgument(err)
+			return errdefs.AsInvalidInput(err)
 		}
 
 		idleTimeout := time.Second * 30
@@ -48,7 +65,7 @@ func PodExecHandlerFunc(backend ExecBackend) http.HandlerFunc {
 		ctx, cancel := context.WithCancel(context.TODO())
 		defer cancel()
 
-		exec := &containerExecContext{ctx: ctx, b: backend, pod: pod, namespace: namespace, container: container}
+		exec := &containerExecContext{ctx: ctx, h: h, pod: pod, namespace: namespace, container: container}
 		remotecommand.ServeExec(w, req, exec, "", "", container, command, streamOpts, idleTimeout, streamCreationTimeout, supportedStreamProtocols)
 
 		return nil
@@ -77,7 +94,7 @@ func getExecOptions(req *http.Request) (*remotecommand.Options, error) {
 }
 
 type containerExecContext struct {
-	b                         ExecBackend
+	h                         ContainerExecHandlerFunc
 	eio                       *execIO
 	namespace, pod, container string
 	ctx                       context.Context
@@ -95,7 +112,7 @@ func (c *containerExecContext) ExecInContainer(name string, uid types.UID, conta
 	}
 
 	if tty {
-		eio.chResize = make(chan providers.TermSize)
+		eio.chResize = make(chan TermSize)
 	}
 
 	ctx, cancel := context.WithCancel(c.ctx)
@@ -105,7 +122,7 @@ func (c *containerExecContext) ExecInContainer(name string, uid types.UID, conta
 		go func() {
 			send := func(s remoteutils.TerminalSize) bool {
 				select {
-				case eio.chResize <- providers.TermSize{Width: s.Width, Height: s.Height}:
+				case eio.chResize <- TermSize{Width: s.Width, Height: s.Height}:
 					return false
 				case <-ctx.Done():
 					return true
@@ -125,7 +142,7 @@ func (c *containerExecContext) ExecInContainer(name string, uid types.UID, conta
 		}()
 	}
 
-	return c.b.RunInContainer(c.ctx, c.namespace, c.pod, c.container, cmd, eio)
+	return c.h(c.ctx, c.namespace, c.pod, c.container, cmd, eio)
 }
 
 type execIO struct {
@@ -133,7 +150,7 @@ type execIO struct {
 	stdin    io.Reader
 	stdout   io.WriteCloser
 	stderr   io.WriteCloser
-	chResize chan providers.TermSize
+	chResize chan TermSize
 }
 
 func (e *execIO) TTY() bool {
@@ -152,6 +169,6 @@ func (e *execIO) Stderr() io.WriteCloser {
 	return e.stderr
 }
 
-func (e *execIO) Resize() <-chan providers.TermSize {
+func (e *execIO) Resize() <-chan TermSize {
 	return e.chResize
 }

@@ -6,6 +6,15 @@ github_repo := virtual-kubelet/virtual-kubelet
 binary := virtual-kubelet
 
 include Makefile.e2e
+# Currently this looks for a globally installed gobin. When we move to modules,
+# should consider installing it locally
+# Also, we will want to lock our tool versions using go mod:
+# https://github.com/golang/go/wiki/Modules#how-can-i-track-tool-dependencies-for-a-module
+gobin_tool ?= $(shell which gobin || echo $(GOPATH)/bin/gobin)
+goimports := golang.org/x/tools/cmd/goimports@release-branch.go1.12
+gocovmerge := github.com/wadey/gocovmerge@b5bfa59ec0adc420475f97f89b58045c721d761c
+goreleaser := github.com/goreleaser/goreleaser@v0.82.2
+gox := github.com/mitchellh/gox@v1.0.1
 
 # comment this line out for quieter things
 # V := 1 # When V is set, print commands and build progress.
@@ -27,7 +36,7 @@ build: build_tags := netgo osusergo
 build: OUTPUT_DIR ?= bin
 build: authors
 	@echo "Building..."
-	$Q CGO_ENABLED=0 go build -a --tags '$(shell scripts/process_build_tags.sh $(build_tags) $(VK_BUILD_TAGS))' -ldflags '-extldflags "-static"' -o $(OUTPUT_DIR)/$(binary) $(if $V,-v) $(VERSION_FLAGS) ./cmd/$(binary)
+	$Q CGO_ENABLED=0 go build --tags '$(shell scripts/process_build_tags.sh $(build_tags) $(VK_BUILD_TAGS))' -ldflags '-extldflags "-static"' -o $(OUTPUT_DIR)/$(binary) $(if $V,-v) $(VERSION_FLAGS) ./cmd/$(binary)
 
 .PHONY: tags
 tags:
@@ -35,8 +44,8 @@ tags:
 	$Q @git tag
 
 .PHONY: release
-release: build $(GOPATH)/bin/goreleaser
-	goreleaser
+release: build goreleaser
+	$(gobin_tool) -run $(goreleaser)
 
 ##### =====> Utility targets <===== #####
 
@@ -84,7 +93,7 @@ list:
 	@echo "List..."
 	@echo $(allpackages)
 
-cover: $(GOPATH)/bin/gocovmerge
+cover: gocovmerge
 	@echo "Coverage Report..."
 	@echo "NOTE: make cover does not exit 1 on failure, don't use it to check for tests success!"
 	$Q rm -f .GOPATH/cover/*.out cover/all.merged
@@ -94,7 +103,7 @@ cover: $(GOPATH)/bin/gocovmerge
             -coverprofile=cover/unit-`echo $$MOD|tr "/" "_"`.out \
             $$MOD 2>&1 | grep -v "no packages being tested depend on"; \
     done
-	$Q gocovmerge cover/*.out > cover/all.merged
+	$Q $(gobin_tool) -run $(gocovmerge) cover/*.out > cover/all.merged
 ifndef CI
 	@echo "Coverage Report..."
 	$Q go tool cover -html .GOPATH/cover/all.merged
@@ -107,17 +116,18 @@ endif
 	@echo ""
 	$Q go tool cover -func .GOPATH/cover/all.merged
 
-format: $(GOPATH)/bin/goimports
+format: goimports
 	@echo "Formatting..."
 	$Q find . -iname \*.go | grep -v \
-        -e "^$$" $(addprefix -e ,$(IGNORED_PACKAGES)) | xargs goimports -w
+        -e "^$$" $(addprefix -e ,$(IGNORED_PACKAGES)) | xargs $(gobin_tool) -run $(goimports) -w
 
 
 
 ##### =====> Internals <===== #####
 
 .PHONY: setup
-setup: clean
+setup: goimports gocovmerge goreleaser gox clean
+	env
 	@echo "Setup..."
 	if ! grep "/bin" .gitignore > /dev/null 2>&1; then \
         echo "/bin" >> .gitignore; \
@@ -129,10 +139,6 @@ setup: clean
 	mkdir -p bin
 	mkdir -p test
 	go get -u github.com/golang/dep/cmd/dep
-	go get github.com/wadey/gocovmerge
-	go get golang.org/x/tools/cmd/goimports
-	go get github.com/mitchellh/gox
-	go get github.com/goreleaser/goreleaser
 
 VERSION          := $(shell git describe --tags --always --dirty="-dev")
 DATE             := $(shell date -u '+%Y-%m-%d-%H:%M UTC')
@@ -144,23 +150,27 @@ _allpackages = $(shell go list ./...)
 # memoize allpackages, so that it's executed only once and only if used
 allpackages = $(if $(__allpackages),,$(eval __allpackages := $$(_allpackages)))$(__allpackages)
 
+.PHONY: goimports
+goimports: $(gobin_tool)
+	$(gobin_tool) -d $(goimports)
+
+.PHONY: gocovmerge
+gocovmerge: $(gobin_tool)
+	$(gobin_tool) -d $(gocovmerge)
+
+.PHONY: goreleaser
+goreleaser: $(gobin_tool)
+	$(gobin_tool) -d $(goreleaser)
+
+.PHONY: gox
+gox: $(gobin_tool)
+	# We make gox globally available, for people to use by hand
+	$(gobin_tool) $(gox)
 
 Q := $(if $V,,@)
 
-
-$(GOPATH)/bin/gocovmerge:
-	@echo "Checking Coverage Tool Installation..."
-	@test -d $(GOPATH)/src/github.com/wadey/gocovmerge || \
-        { echo "Vendored gocovmerge not found, try running 'make setup'..."; exit 1; }
-	$Q go install github.com/wadey/gocovmerge
-$(GOPATH)/bin/goimports:
-	@echo "Checking Import Tool Installation..."
-	@test -d $(GOPATH)/src/golang.org/x/tools/cmd/goimports || \
-        { echo "Vendored goimports not found, try running 'make setup'..."; exit 1; }
-	$Q go install golang.org/x/tools/cmd/goimports
-
-$(GOPATH)/bin/goreleaser:
-	go get -u github.com/goreleaser/goreleaser
+$(gobin_tool):
+	GO111MODULE=off go get -u github.com/myitcv/gobin
 
 authors:
 	$Q git log --all --format='%aN <%cE>' | sort -u  | sed -n '/github/!p' > GITAUTHORS

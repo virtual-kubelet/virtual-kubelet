@@ -18,8 +18,7 @@ import (
 	"context"
 	"strings"
 
-	"github.com/cpuguy83/strongerrors"
-	"github.com/pkg/errors"
+	"github.com/virtual-kubelet/virtual-kubelet/errdefs"
 	"github.com/virtual-kubelet/virtual-kubelet/providers"
 	"github.com/virtual-kubelet/virtual-kubelet/version"
 	corev1 "k8s.io/api/core/v1"
@@ -100,7 +99,7 @@ func getTaint(c Opts) (*corev1.Taint, error) {
 	case "PreferNoSchedule":
 		effect = corev1.TaintEffectPreferNoSchedule
 	default:
-		return nil, strongerrors.InvalidArgument(errors.Errorf("taint effect %q is not supported", effectEnv))
+		return nil, errdefs.InvalidInputf("taint effect %q is not supported", effectEnv)
 	}
 
 	return &corev1.Taint{

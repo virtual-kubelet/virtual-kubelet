@@ -2,11 +2,13 @@ package vkubelet
 
 import (
 	"context"
+	"strconv"
+	"time"
 
-	"github.com/cpuguy83/strongerrors/status/ocstatus"
 	pkgerrors "github.com/pkg/errors"
 	"github.com/virtual-kubelet/virtual-kubelet/log"
 	"github.com/virtual-kubelet/virtual-kubelet/trace"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/util/workqueue"
 )
 
@@ -26,7 +28,10 @@ func handleQueueItem(ctx context.Context, q workqueue.RateLimitingInterface, han
 		return false
 	}
 
+	log.G(ctx).Debug("Got queue object")
+
 	err := func(obj interface{}) error {
+		defer log.G(ctx).Debug("Processed queue item")
 		// We call Done here so the work queue knows we have finished processing this item.
 		// We also must remember to call Forget if we do not want this work item being re-queued.
 		// For example, we do not call Forget if a transient error occurs.
@@ -43,13 +48,14 @@ func handleQueueItem(ctx context.Context, q workqueue.RateLimitingInterface, han
 			log.G(ctx).Warnf("expected string in work queue item but got %#v", obj)
 			return nil
 		}
+
 		// Add the current key as an attribute to the current span.
 		ctx = span.WithField(ctx, "key", key)
 		// Run the syncHandler, passing it the namespace/name string of the Pod resource to be synced.
 		if err := handler(ctx, key); err != nil {
 			if q.NumRequeues(key) < maxRetries {
 				// Put the item back on the work queue to handle any transient errors.
-				log.G(ctx).Warnf("requeuing %q due to failed sync: %v", key, err)
+				log.G(ctx).WithError(err).Warnf("requeuing %q due to failed sync", key)
 				q.AddRateLimited(key)
 				return nil
 			}
@@ -64,10 +70,71 @@ func handleQueueItem(ctx context.Context, q workqueue.RateLimitingInterface, han
 
 	if err != nil {
 		// We've actually hit an error, so we set the span's status based on the error.
-		span.SetStatus(ocstatus.FromError(err))
+		span.SetStatus(err)
 		log.G(ctx).Error(err)
 		return true
 	}
 
 	return true
+}
+
+func (pc *PodController) runProviderSyncWorkers(ctx context.Context, q workqueue.RateLimitingInterface, numWorkers int) {
+	for i := 0; i < numWorkers; i++ {
+		go func(index int) {
+			workerID := strconv.Itoa(index)
+			pc.runProviderSyncWorker(ctx, workerID, q)
+		}(i)
+	}
+}
+
+func (pc *PodController) runProviderSyncWorker(ctx context.Context, workerID string, q workqueue.RateLimitingInterface) {
+	for pc.processPodStatusUpdate(ctx, workerID, q) {
+	}
+}
+
+func (pc *PodController) processPodStatusUpdate(ctx context.Context, workerID string, q workqueue.RateLimitingInterface) bool {
+	ctx, span := trace.StartSpan(ctx, "processPodStatusUpdate")
+	defer span.End()
+
+	// Add the ID of the current worker as an attribute to the current span.
+	ctx = span.WithField(ctx, "workerID", workerID)
+
+	return handleQueueItem(ctx, q, pc.podStatusHandler)
+}
+
+// providerSyncLoop syncronizes pod states from the provider back to kubernetes
+// Deprecated: This is only used when the provider does not support async updates
+// Providers should implement async update support, even if it just means copying
+// something like this in.
+func (pc *PodController) providerSyncLoop(ctx context.Context, q workqueue.RateLimitingInterface) {
+	const sleepTime = 5 * time.Second
+
+	t := time.NewTimer(sleepTime)
+	defer t.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-t.C:
+			t.Stop()
+
+			ctx, span := trace.StartSpan(ctx, "syncActualState")
+			pc.updatePodStatuses(ctx, q)
+			span.End()
+
+			// restart the timer
+			t.Reset(sleepTime)
+		}
+	}
+}
+
+func (pc *PodController) runSyncFromProvider(ctx context.Context, q workqueue.RateLimitingInterface) {
+	if pn, ok := pc.provider.(PodNotifier); ok {
+		pn.NotifyPods(ctx, func(pod *corev1.Pod) {
+			enqueuePodStatusUpdate(ctx, q, pod)
+		})
+	} else {
+		go pc.providerSyncLoop(ctx, q)
+	}
 }

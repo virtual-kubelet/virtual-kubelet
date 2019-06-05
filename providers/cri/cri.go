@@ -6,6 +6,7 @@ import (
 	"bufio"
 	"context"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net"
 	"os"
@@ -15,10 +16,11 @@ import (
 	"syscall"
 	"time"
 
-	log "github.com/Sirupsen/logrus"
-	"github.com/cpuguy83/strongerrors"
+	log "github.com/sirupsen/logrus"
+	"github.com/virtual-kubelet/virtual-kubelet/errdefs"
 	"github.com/virtual-kubelet/virtual-kubelet/manager"
 	"github.com/virtual-kubelet/virtual-kubelet/providers"
+	"github.com/virtual-kubelet/virtual-kubelet/vkubelet/api"
 	"google.golang.org/grpc"
 	v1 "k8s.io/api/core/v1"
 	k8serr "k8s.io/apimachinery/pkg/api/errors"
@@ -567,7 +569,7 @@ func (p *CRIProvider) DeletePod(ctx context.Context, pod *v1.Pod) error {
 
 	ps, ok := p.podStatus[pod.UID]
 	if !ok {
-		return strongerrors.NotFound(fmt.Errorf("Pod %s not found", pod.UID))
+		return errdefs.NotFoundf("Pod %s not found", pod.UID)
 	}
 
 	// TODO: Check pod status for running state
@@ -599,17 +601,17 @@ func (p *CRIProvider) GetPod(ctx context.Context, namespace, name string) (*v1.P
 
 	pod := p.findPodByName(namespace, name)
 	if pod == nil {
-		return nil, strongerrors.NotFound(fmt.Errorf("Pod %s in namespace %s could not be found on the node", name, namespace))
+		return nil, errdefs.NotFoundf("Pod %s in namespace %s could not be found on the node", name, namespace)
 	}
 
 	return createPodSpecFromCRI(pod, p.nodeName), nil
 }
 
 // Reads a log file into a string
-func readLogFile(filename string, tail int) (string, error) {
+func readLogFile(filename string, opts api.ContainerLogOpts) (io.ReadCloser, error) {
 	file, err := os.Open(filename)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	defer file.Close()
 
@@ -619,31 +621,31 @@ func readLogFile(filename string, tail int) (string, error) {
 	for scanner.Scan() {
 		lines = append(lines, scanner.Text())
 	}
-	if tail > 0 && tail < len(lines) {
-		lines = lines[len(lines)-tail:]
+	if opts.Tail > 0 && opts.Tail < len(lines) {
+		lines = lines[len(lines)-opts.Tail:]
 	}
-	return strings.Join(lines, ""), nil
+	return ioutil.NopCloser(strings.NewReader(strings.Join(lines, ""))), nil
 }
 
 // Provider function to read the logs of a container
-func (p *CRIProvider) GetContainerLogs(ctx context.Context, namespace, podName, containerName string, tail int) (string, error) {
+func (p *CRIProvider) GetContainerLogs(ctx context.Context, namespace, podName, containerName string, opts api.ContainerLogOpts) (io.ReadCloser, error) {
 	log.Printf("receive GetContainerLogs %q", containerName)
 
 	err := p.refreshNodeState()
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	pod := p.findPodByName(namespace, podName)
 	if pod == nil {
-		return "", strongerrors.NotFound(fmt.Errorf("Pod %s in namespace %s not found", podName, namespace))
+		return nil, errdefs.NotFoundf("Pod %s in namespace %s not found", podName, namespace)
 	}
 	container := pod.containers[containerName]
 	if container == nil {
-		return "", strongerrors.NotFound(fmt.Errorf("Cannot find container %s in pod %s namespace %s", containerName, podName, namespace))
+		return nil, errdefs.NotFoundf("Cannot find container %s in pod %s namespace %s", containerName, podName, namespace)
 	}
 
-	return readLogFile(container.LogPath, tail)
+	return readLogFile(container.LogPath, opts)
 }
 
 // Get full pod name as defined in the provider context
@@ -655,7 +657,7 @@ func (p *CRIProvider) GetPodFullName(namespace string, pod string) string {
 // RunInContainer executes a command in a container in the pod, copying data
 // between in/out/err and the container's stdin/stdout/stderr.
 // TODO: Implementation
-func (p *CRIProvider) RunInContainer(ctx context.Context, namespace, name, container string, cmd []string, attach providers.AttachIO) error {
+func (p *CRIProvider) RunInContainer(ctx context.Context, namespace, name, container string, cmd []string, attach api.AttachIO) error {
 	log.Printf("receive ExecInContainer %q\n", container)
 	return nil
 }
@@ -684,7 +686,7 @@ func (p *CRIProvider) GetPodStatus(ctx context.Context, namespace, name string) 
 
 	pod := p.findPodByName(namespace, name)
 	if pod == nil {
-		return nil, strongerrors.NotFound(fmt.Errorf("Pod %s in namespace %s could not be found on the node", name, namespace))
+		return nil, errdefs.NotFoundf("Pod %s in namespace %s could not be found on the node", name, namespace)
 	}
 
 	return createPodStatusFromCRI(pod), nil

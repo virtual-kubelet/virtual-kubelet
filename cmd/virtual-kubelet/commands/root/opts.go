@@ -78,6 +78,9 @@ type Opts struct {
 	TraceExporters  []string
 	TraceSampleRate string
 	TraceConfig     opencensus.TracingExporterOptions
+
+	// Startup Timeout is how long to wait for the kubelet to start
+	StartupTimeout time.Duration
 }
 
 // SetDefaultOpts sets default options for unset values on the passed in option struct.
@@ -114,8 +117,9 @@ func SetDefaultOpts(c *Opts) error {
 				return errors.Wrap(err, "error parsing KUBELET_PORT environment variable")
 			}
 			c.ListenPort = int32(p)
+		} else {
+			c.ListenPort = DefaultListenPort
 		}
-		c.ListenPort = DefaultListenPort
 	}
 
 	if c.KubeNamespace == "" {

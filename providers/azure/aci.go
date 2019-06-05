@@ -23,10 +23,11 @@ import (
 	client "github.com/virtual-kubelet/azure-aci/client"
 	"github.com/virtual-kubelet/azure-aci/client/aci"
 	"github.com/virtual-kubelet/azure-aci/client/network"
+	"github.com/virtual-kubelet/virtual-kubelet/errdefs"
 	"github.com/virtual-kubelet/virtual-kubelet/log"
 	"github.com/virtual-kubelet/virtual-kubelet/manager"
-	"github.com/virtual-kubelet/virtual-kubelet/providers"
 	"github.com/virtual-kubelet/virtual-kubelet/trace"
+	"github.com/virtual-kubelet/virtual-kubelet/vkubelet/api"
 	v1 "k8s.io/api/core/v1"
 	k8serr "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -765,25 +766,26 @@ func (p *ACIProvider) GetPod(ctx context.Context, namespace, name string) (*v1.P
 }
 
 // GetContainerLogs returns the logs of a pod by name that is running inside ACI.
-func (p *ACIProvider) GetContainerLogs(ctx context.Context, namespace, podName, containerName string, tail int) (string, error) {
+func (p *ACIProvider) GetContainerLogs(ctx context.Context, namespace, podName, containerName string, opts api.ContainerLogOpts) (io.ReadCloser, error) {
 	ctx, span := trace.StartSpan(ctx, "aci.GetContainerLogs")
 	defer span.End()
 	ctx = addAzureAttributes(ctx, span, p)
 
-	logContent := ""
 	cg, _, err := p.aciClient.GetContainerGroup(ctx, p.resourceGroup, fmt.Sprintf("%s-%s", namespace, podName))
 	if err != nil {
-		return logContent, err
+		return nil, err
 	}
 
 	if cg.Tags["NodeName"] != p.nodeName {
-		return logContent, nil
+		return nil, errdefs.NotFound("got unexpected pod node name")
 	}
+
 	// get logs from cg
 	retry := 10
+	logContent := ""
 	var retries int
 	for retries = 0; retries < retry; retries++ {
-		cLogs, err := p.aciClient.GetContainerLogs(ctx, p.resourceGroup, cg.Name, containerName, tail)
+		cLogs, err := p.aciClient.GetContainerLogs(ctx, p.resourceGroup, cg.Name, containerName, opts.Tail)
 		if err != nil {
 			log.G(ctx).WithField("method", "GetContainerLogs").WithError(err).Debug("Error getting container logs, retrying")
 			time.Sleep(5000 * time.Millisecond)
@@ -792,7 +794,7 @@ func (p *ACIProvider) GetContainerLogs(ctx context.Context, namespace, podName, 
 			break
 		}
 	}
-	return logContent, err
+	return ioutil.NopCloser(strings.NewReader(logContent)), err
 }
 
 // GetPodFullName as defined in the provider context
@@ -802,7 +804,7 @@ func (p *ACIProvider) GetPodFullName(namespace string, pod string) string {
 
 // RunInContainer executes a command in a container in the pod, copying data
 // between in/out/err and the container's stdin/stdout/stderr.
-func (p *ACIProvider) RunInContainer(ctx context.Context, namespace, name, container string, cmd []string, attach providers.AttachIO) error {
+func (p *ACIProvider) RunInContainer(ctx context.Context, namespace, name, container string, cmd []string, attach api.AttachIO) error {
 	out := attach.Stdout()
 	if out != nil {
 		defer out.Close()
@@ -814,7 +816,7 @@ func (p *ACIProvider) RunInContainer(ctx context.Context, namespace, name, conta
 	}
 
 	// Set default terminal size
-	size := providers.TermSize{
+	size := api.TermSize{
 		Height: 60,
 		Width:  120,
 	}

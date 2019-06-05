@@ -1,8 +1,7 @@
 package opencensus
 
 import (
-	"github.com/cpuguy83/strongerrors"
-	"github.com/pkg/errors"
+	"github.com/virtual-kubelet/virtual-kubelet/errdefs"
 	"go.opencensus.io/trace"
 )
 
@@ -30,7 +29,7 @@ func RegisterTracingExporter(name string, f TracingExporterInitFunc) {
 func GetTracingExporter(name string, opts TracingExporterOptions) (trace.Exporter, error) {
 	f, ok := tracingExporters[name]
 	if !ok {
-		return nil, strongerrors.NotFound(errors.Errorf("tracing exporter %q not found", name))
+		return nil, errdefs.NotFoundf("tracing exporter %q not found", name)
 	}
 	return f(opts)
 }

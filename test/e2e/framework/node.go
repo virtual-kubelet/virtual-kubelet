@@ -43,16 +43,18 @@ func (f *Framework) WaitUntilNodeCondition(fn watch.ConditionFunc) error {
 	return nil
 }
 
-// WaitUntilNodeAdded is a watch condition which waits until the VK node object
-// is added.
-func (f *Framework) WaitUntilNodeAdded(event watchapi.Event) (bool, error) {
-	if event.Type != watchapi.Added {
-		return false, nil
-	}
-	return event.Object.(*corev1.Node).Name == f.NodeName, nil
-}
-
 // DeleteNode deletes the vk node used by the framework
 func (f *Framework) DeleteNode() error {
-	return f.KubeClient.CoreV1().Nodes().Delete(f.NodeName, nil)
+	var gracePeriod int64
+	propagation := metav1.DeletePropagationBackground
+	opts := metav1.DeleteOptions{
+		PropagationPolicy:  &propagation,
+		GracePeriodSeconds: &gracePeriod,
+	}
+	return f.KubeClient.CoreV1().Nodes().Delete(f.NodeName, &opts)
+}
+
+// GetNode gets the vk nodeused by the framework
+func (f *Framework) GetNode() (*corev1.Node, error) {
+	return f.KubeClient.CoreV1().Nodes().Get(f.NodeName, metav1.GetOptions{})
 }

@@ -3,8 +3,7 @@ package opencensus
 import (
 	"testing"
 
-	"github.com/cpuguy83/strongerrors"
-
+	"github.com/virtual-kubelet/virtual-kubelet/errdefs"
 	"go.opencensus.io/trace"
 )
 
@@ -16,7 +15,7 @@ func TestGetTracingExporter(t *testing.T) {
 	}
 
 	_, err := GetTracingExporter("notexist", TracingExporterOptions{})
-	if !strongerrors.IsNotFound(err) {
+	if !errdefs.IsNotFound(err) {
 		t.Fatalf("expected not found error, got: %v", err)
 	}
 

@@ -33,7 +33,8 @@ site    = "/img/color-logo.png"
 hero    = "/img/white-logo.png"
 navbar  = "/img/white-logo.png"
 sidebar = "/img/stacked-white-logo.png"
-footer  = "/img/stacked-white-logo.png"
+footer  = "/img/virtualkubelet-icon-white.png"
+cncf    = "/img/cncf-color.png"
 
 [[params.fonts]]
 name  = "Noto Sans TC"

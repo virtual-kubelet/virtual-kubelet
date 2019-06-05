@@ -9,17 +9,19 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
+	"io/ioutil"
 	"os"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/aliyun/alibaba-cloud-sdk-go/sdk/requests"
-	"github.com/cpuguy83/strongerrors"
+	"github.com/virtual-kubelet/virtual-kubelet/errdefs"
 	"github.com/virtual-kubelet/virtual-kubelet/log"
 	"github.com/virtual-kubelet/virtual-kubelet/manager"
-	"github.com/virtual-kubelet/virtual-kubelet/providers"
 	"github.com/virtual-kubelet/virtual-kubelet/providers/alibabacloud/eci"
+	"github.com/virtual-kubelet/virtual-kubelet/vkubelet/api"
 	v1 "k8s.io/api/core/v1"
 	k8serr "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -252,7 +254,7 @@ func (p *ECIProvider) DeletePod(ctx context.Context, pod *v1.Pod) error {
 		}
 	}
 	if eciId == "" {
-		return strongerrors.NotFound(fmt.Errorf("DeletePod can't find Pod %s-%s", pod.Namespace, pod.Name))
+		return errdefs.NotFoundf("DeletePod can't find Pod %s-%s", pod.Namespace, pod.Name)
 	}
 
 	request := eci.CreateDeleteContainerGroupRequest()
@@ -277,7 +279,7 @@ func (p *ECIProvider) GetPod(ctx context.Context, namespace, name string) (*v1.P
 }
 
 // GetContainerLogs returns the logs of a pod by name that is running inside ECI.
-func (p *ECIProvider) GetContainerLogs(ctx context.Context, namespace, podName, containerName string, tail int) (string, error) {
+func (p *ECIProvider) GetContainerLogs(ctx context.Context, namespace, podName, containerName string, opts api.ContainerLogOpts) (io.ReadCloser, error) {
 	eciId := ""
 	for _, cg := range p.GetCgs() {
 		if getECITagValue(&cg, "PodName") == podName && getECITagValue(&cg, "NameSpace") == namespace {
@@ -286,13 +288,13 @@ func (p *ECIProvider) GetContainerLogs(ctx context.Context, namespace, podName, 
 		}
 	}
 	if eciId == "" {
-		return "", errors.New(fmt.Sprintf("GetContainerLogs can't find Pod %s-%s", namespace, podName))
+		return nil, errors.New(fmt.Sprintf("GetContainerLogs can't find Pod %s-%s", namespace, podName))
 	}
 
 	request := eci.CreateDescribeContainerLogRequest()
 	request.ContainerGroupId = eciId
 	request.ContainerName = containerName
-	request.Tail = requests.Integer(tail)
+	request.Tail = requests.Integer(opts.Tail)
 
 	// get logs from cg
 	logContent := ""
@@ -309,7 +311,7 @@ func (p *ECIProvider) GetContainerLogs(ctx context.Context, namespace, podName, 
 		}
 	}
 
-	return logContent, nil
+	return ioutil.NopCloser(strings.NewReader(logContent)), nil
 }
 
 // Get full pod name as defined in the provider context
@@ -319,7 +321,7 @@ func (p *ECIProvider) GetPodFullName(namespace string, pod string) string {
 
 // RunInContainer executes a command in a container in the pod, copying data
 // between in/out/err and the container's stdin/stdout/stderr.
-func (p *ECIProvider) RunInContainer(ctx context.Context, namespace, podName, containerName string, cmd []string, attach providers.AttachIO) error {
+func (p *ECIProvider) RunInContainer(ctx context.Context, namespace, podName, containerName string, cmd []string, attach api.AttachIO) error {
 	return nil
 }
 

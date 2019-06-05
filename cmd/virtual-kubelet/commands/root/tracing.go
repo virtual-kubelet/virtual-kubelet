@@ -16,13 +16,14 @@ package root
 
 import (
 	"context"
+	"net"
 	"net/http"
 	"os"
 	"strconv"
 	"strings"
 
-	"github.com/cpuguy83/strongerrors"
 	"github.com/pkg/errors"
+	"github.com/virtual-kubelet/virtual-kubelet/errdefs"
 	"github.com/virtual-kubelet/virtual-kubelet/log"
 	"github.com/virtual-kubelet/virtual-kubelet/trace/opencensus"
 	octrace "go.opencensus.io/trace"
@@ -40,7 +41,7 @@ var (
 func setupTracing(ctx context.Context, c Opts) error {
 	for k := range c.TraceConfig.Tags {
 		if reservedTagNames[k] {
-			return strongerrors.InvalidArgument(errors.Errorf("invalid trace tag %q, must not use a reserved tag key"))
+			return errdefs.InvalidInputf("invalid trace tag %q, must not use a reserved tag key", k)
 		}
 	}
 	if c.TraceConfig.Tags == nil {
@@ -51,7 +52,7 @@ func setupTracing(ctx context.Context, c Opts) error {
 	c.TraceConfig.Tags["nodeName"] = c.NodeName
 	for _, e := range c.TraceExporters {
 		if e == "zpages" {
-			go setupZpages(ctx)
+			setupZpages(ctx)
 			continue
 		}
 		exporter, err := opencensus.GetTracingExporter(e, c.TraceConfig)
@@ -71,10 +72,10 @@ func setupTracing(ctx context.Context, c Opts) error {
 		default:
 			rate, err := strconv.Atoi(c.TraceSampleRate)
 			if err != nil {
-				return strongerrors.InvalidArgument(errors.Wrap(err, "unsupported trace sample rate"))
+				return errdefs.AsInvalidInput(errors.Wrap(err, "unsupported trace sample rate"))
 			}
 			if rate < 0 || rate > 100 {
-				return strongerrors.InvalidArgument(errors.Wrap(err, "trace sample rate must be between 0 and 100"))
+				return errdefs.AsInvalidInput(errors.Wrap(err, "trace sample rate must be between 0 and 100"))
 			}
 			s = octrace.ProbabilitySampler(float64(rate) / 100)
 		}
@@ -96,7 +97,19 @@ func setupZpages(ctx context.Context) {
 	if p == "" {
 		log.G(ctx).Error("Missing ZPAGES_PORT env var, cannot setup zpages endpoint")
 	}
+	listener, err := net.Listen("tcp", p)
+	if err != nil {
+		log.G(ctx).WithError(err).Error("Cannot bind to ZPAGES PORT, cannot setup listener")
+		return
+	}
 	mux := http.NewServeMux()
 	zpages.Handle(mux, "/debug")
-	http.ListenAndServe(p, mux)
+	go func() {
+		// This should never terminate, if it does, it will always terminate with an error
+		e := http.Serve(listener, mux)
+		if e == http.ErrServerClosed {
+			return
+		}
+		log.G(ctx).WithError(e).Error("Zpages server exited")
+	}()
 }

@@ -29,8 +29,8 @@ import (
 	"time"
 
 	"github.com/cenkalti/backoff"
-	"github.com/cpuguy83/strongerrors"
-	"github.com/virtual-kubelet/virtual-kubelet/providers"
+	"github.com/virtual-kubelet/virtual-kubelet/errdefs"
+	"github.com/virtual-kubelet/virtual-kubelet/vkubelet/api"
 	v1 "k8s.io/api/core/v1"
 )
 
@@ -86,8 +86,7 @@ func (p *BrokerProvider) DeletePod(ctx context.Context, pod *v1.Pod) error {
 		return err
 	}
 
-	_, err = p.doRequest("DELETE", urlPath, podJSON, false)
-	return err
+	return checkResponseStatus(p.doRequest("DELETE", urlPath, podJSON))
 }
 
 // GetPod returns a pod by name that is being managed by the web server
@@ -110,20 +109,20 @@ func (p *BrokerProvider) GetPod(ctx context.Context, namespace, name string) (*v
 }
 
 // GetContainerLogs returns the logs of a container running in a pod by name.
-func (p *BrokerProvider) GetContainerLogs(ctx context.Context, namespace, podName, containerName string, tail int) (string, error) {
+func (p *BrokerProvider) GetContainerLogs(ctx context.Context, namespace, podName, containerName string, opts api.ContainerLogOpts) (io.ReadCloser, error) {
 	urlPathStr := fmt.Sprintf(
 		"/getContainerLogs?namespace=%s&podName=%s&containerName=%s&tail=%d",
 		url.QueryEscape(namespace),
 		url.QueryEscape(podName),
 		url.QueryEscape(containerName),
-		tail)
+		opts.Tail)
 
-	response, err := p.doGetRequestBytes(urlPathStr)
-	if err != nil {
-		return "", err
+	r, err := p.doGetRequestRaw(urlPathStr)
+	if err := checkResponseStatus(r, err); err != nil {
+		return nil, err
 	}
 
-	return string(response), nil
+	return r.Body, nil
 }
 
 // Get full pod name as defined in the provider context
@@ -135,7 +134,7 @@ func (p *BrokerProvider) GetPodFullName(namespace string, pod string) string {
 // RunInContainer executes a command in a container in the pod, copying data
 // between in/out/err and the container's stdin/stdout/stderr.
 // TODO: Implementation
-func (p *BrokerProvider) RunInContainer(ctx context.Context, namespace, name, container string, cmd []string, attach providers.AttachIO) error {
+func (p *BrokerProvider) RunInContainer(ctx context.Context, namespace, name, container string, cmd []string, attach api.AttachIO) error {
 	log.Printf("receive ExecInContainer %q\n", container)
 	return nil
 }
@@ -231,13 +230,16 @@ func (p *BrokerProvider) doGetRequest(urlPathStr string, v interface{}) error {
 	return json.Unmarshal(response, &v)
 }
 
-func (p *BrokerProvider) doGetRequestBytes(urlPathStr string) ([]byte, error) {
+func (p *BrokerProvider) doGetRequestRaw(urlPathStr string) (*http.Response, error) {
 	urlPath, err := url.Parse(urlPathStr)
 	if err != nil {
 		return nil, err
 	}
+	return p.doRequest("GET", urlPath, nil)
+}
 
-	return p.doRequest("GET", urlPath, nil, true)
+func (p *BrokerProvider) doGetRequestBytes(urlPathStr string) ([]byte, error) {
+	return readResponse(p.doGetRequestRaw(urlPathStr))
 }
 
 func (p *BrokerProvider) createUpdatePod(pod *v1.Pod, method, postPath string) error {
@@ -252,11 +254,10 @@ func (p *BrokerProvider) createUpdatePod(pod *v1.Pod, method, postPath string) e
 	if err != nil {
 		return err
 	}
-	_, err = p.doRequest(method, postPathURL, podJSON, false)
-	return err
+	return checkResponseStatus(p.doRequest(method, postPathURL, podJSON))
 }
 
-func (p *BrokerProvider) doRequest(method string, urlPath *url.URL, body []byte, readResponse bool) ([]byte, error) {
+func (p *BrokerProvider) doRequest(method string, urlPath *url.URL, body []byte) (*http.Response, error) {
 	// build full URL
 	requestURL := p.endpoint.ResolveReference(urlPath)
 
@@ -281,20 +282,33 @@ func (p *BrokerProvider) doRequest(method string, urlPath *url.URL, body []byte,
 		return nil, err
 	}
 
-	defer response.Body.Close()
-	if response.StatusCode < 200 || response.StatusCode > 299 {
-		switch response.StatusCode {
+	return response, nil
+}
+
+func checkResponseStatus(r *http.Response, err error) error {
+	if err != nil {
+		return err
+	}
+	if r.StatusCode < 200 || r.StatusCode > 299 {
+		switch r.StatusCode {
 		case http.StatusNotFound:
-			return nil, strongerrors.NotFound(errors.New(response.Status))
+			return errdefs.NotFound(r.Status)
 		default:
-			return nil, errors.New(response.Status)
+			return errors.New(r.Status)
 		}
 	}
+	return nil
+}
 
-	// read response body if asked to
-	if readResponse {
-		return ioutil.ReadAll(response.Body)
+func readResponse(r *http.Response, err error) ([]byte, error) {
+	if r.Body != nil {
+		defer r.Body.Close()
 	}
 
-	return nil, nil
+	if err := checkResponseStatus(r, err); err != nil {
+		return nil, err
+	}
+
+	lr := io.LimitReader(r.Body, 1e6)
+	return ioutil.ReadAll(lr)
 }
