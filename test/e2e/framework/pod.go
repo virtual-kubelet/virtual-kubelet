@@ -3,6 +3,7 @@ package framework
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
@@ -21,7 +22,13 @@ const defaultWatchTimeout = 2 * time.Minute
 // A variable number of strings can be provided.
 // For each one of these strings, a container that uses the string as its image will be appended to the pod.
 // This method DOES NOT create the pod in the Kubernetes API.
-func (f *Framework) CreateDummyPodObjectWithPrefix(prefix string, images ...string) *corev1.Pod {
+func (f *Framework) CreateDummyPodObjectWithPrefix(testName string, prefix string, images ...string) *corev1.Pod {
+	// Safe the test name
+	if testName != "" {
+		testName = strings.Replace(testName, "/", "-", -1)
+		testName = strings.ToLower(testName)
+		prefix = prefix + "-" + testName + "-"
+	}
 	enableServiceLink := false
 
 	pod := &corev1.Pod{
@@ -66,7 +73,7 @@ func (f *Framework) DeletePodImmediately(namespace, name string) error {
 
 // WaitUntilPodCondition establishes a watch on the pod with the specified name and namespace.
 // Then, it waits for the specified condition function to be verified.
-func (f *Framework) WaitUntilPodCondition(namespace, name string, fn watch.ConditionFunc) error {
+func (f *Framework) WaitUntilPodCondition(namespace, name string, fn watch.ConditionFunc) (*corev1.Pod, error) {
 	// Create a field selector that matches the specified Pod resource.
 	fs := fields.ParseSelectorOrDie(fmt.Sprintf("metadata.namespace==%s,metadata.name==%s", namespace, name))
 	// Create a ListWatch so we can receive events for the matched Pod resource.
@@ -85,27 +92,41 @@ func (f *Framework) WaitUntilPodCondition(namespace, name string, fn watch.Condi
 	defer cfn()
 	last, err := watch.UntilWithSync(ctx, lw, &corev1.Pod{}, nil, fn)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if last == nil {
-		return fmt.Errorf("no events received for pod %q", name)
+		return nil, fmt.Errorf("no events received for pod %q", name)
 	}
-	return nil
+	pod := last.Object.(*corev1.Pod)
+	return pod, nil
 }
 
 // WaitUntilPodReady blocks until the pod with the specified name and namespace is reported to be running and ready.
-func (f *Framework) WaitUntilPodReady(namespace, name string) error {
+func (f *Framework) WaitUntilPodReady(namespace, name string) (*corev1.Pod, error) {
 	return f.WaitUntilPodCondition(namespace, name, func(event watchapi.Event) (bool, error) {
 		pod := event.Object.(*corev1.Pod)
 		return pod.Status.Phase == corev1.PodRunning && podutil.IsPodReady(pod) && pod.Status.PodIP != "", nil
 	})
 }
 
-// WaitUntilPodDeleted blocks until the pod with the specified name and namespace is marked for deletion (or, alternatively, effectively deleted).
-func (f *Framework) WaitUntilPodDeleted(namespace, name string) error {
+// WaitUntilPodDeleted blocks until the pod with the specified name and namespace is deleted from apiserver.
+func (f *Framework) WaitUntilPodDeleted(namespace, name string) (*corev1.Pod, error) {
 	return f.WaitUntilPodCondition(namespace, name, func(event watchapi.Event) (bool, error) {
 		pod := event.Object.(*corev1.Pod)
-		return event.Type == watchapi.Deleted || pod.DeletionTimestamp != nil, nil
+		return event.Type == watchapi.Deleted || pod.ObjectMeta.DeletionTimestamp != nil, nil
+	})
+}
+
+// WaitUntilPodInPhase blocks until the pod with the specified name and namespace is in one of the specified phases
+func (f *Framework) WaitUntilPodInPhase(namespace, name string, phases ...corev1.PodPhase) (*corev1.Pod, error) {
+	return f.WaitUntilPodCondition(namespace, name, func(event watchapi.Event) (bool, error) {
+		pod := event.Object.(*corev1.Pod)
+		for _, p := range phases {
+			if pod.Status.Phase == p {
+				return true, nil
+			}
+		}
+		return false, nil
 	})
 }
 
@@ -145,4 +166,21 @@ func (f *Framework) WaitUntilPodEventWithReason(pod *corev1.Pod, reason string) 
 		return fmt.Errorf("no events involving pod \"%s/%s\" have been seen", pod.Namespace, pod.Name)
 	}
 	return nil
+}
+
+// GetRunningPods gets the running pods from the provider of the virtual kubelet
+func (f *Framework) GetRunningPods() (*corev1.PodList, error) {
+	result := &corev1.PodList{}
+
+	err := f.KubeClient.CoreV1().
+		RESTClient().
+		Get().
+		Resource("nodes").
+		Name(f.NodeName).
+		SubResource("proxy").
+		Suffix("runningpods/").
+		Do().
+		Into(result)
+
+	return result, err
 }
