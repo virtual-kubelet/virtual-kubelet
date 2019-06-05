@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/virtual-kubelet/virtual-kubelet/errdefs"
 	"github.com/virtual-kubelet/virtual-kubelet/log"
 	"github.com/virtual-kubelet/virtual-kubelet/trace"
 	octrace "go.opencensus.io/trace"
@@ -46,7 +47,30 @@ func (s *span) End() {
 	s.s.End()
 }
 
-func (s *span) SetStatus(status trace.Status) {
+func (s *span) SetStatus(err error) {
+	if !s.s.IsRecordingEvents() {
+		return
+	}
+
+	var status octrace.Status
+
+	if err == nil {
+		status.Code = octrace.StatusCodeOK
+		s.s.SetStatus(status)
+		return
+	}
+
+	switch {
+	case errdefs.IsNotFound(err):
+		status.Code = octrace.StatusCodeNotFound
+	case errdefs.IsInvalidInput(err):
+		status.Code = octrace.StatusCodeInvalidArgument
+		// TODO: other error types
+	default:
+		status.Code = octrace.StatusCodeUnknown
+	}
+
+	status.Message = err.Error()
 	s.s.SetStatus(status)
 }
 

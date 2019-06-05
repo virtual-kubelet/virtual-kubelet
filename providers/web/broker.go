@@ -29,7 +29,7 @@ import (
 	"time"
 
 	"github.com/cenkalti/backoff"
-	"github.com/cpuguy83/strongerrors"
+	"github.com/virtual-kubelet/virtual-kubelet/errdefs"
 	"github.com/virtual-kubelet/virtual-kubelet/vkubelet/api"
 	v1 "k8s.io/api/core/v1"
 )
@@ -292,7 +292,7 @@ func checkResponseStatus(r *http.Response, err error) error {
 	if r.StatusCode < 200 || r.StatusCode > 299 {
 		switch r.StatusCode {
 		case http.StatusNotFound:
-			return strongerrors.NotFound(errors.New(r.Status))
+			return errdefs.NotFound(r.Status)
 		default:
 			return errors.New(r.Status)
 		}

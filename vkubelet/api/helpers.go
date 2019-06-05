@@ -4,7 +4,7 @@ import (
 	"io"
 	"net/http"
 
-	"github.com/cpuguy83/strongerrors/status"
+	"github.com/virtual-kubelet/virtual-kubelet/errdefs"
 	"github.com/virtual-kubelet/virtual-kubelet/log"
 )
 
@@ -17,7 +17,7 @@ func handleError(f handlerFunc) http.HandlerFunc {
 			return
 		}
 
-		code, _ := status.HTTPCode(err)
+		code := httpStatusCode(err)
 		w.WriteHeader(code)
 		io.WriteString(w, err.Error())
 		logger := log.G(req.Context()).WithError(err).WithField("httpStatusCode", code)
@@ -54,4 +54,17 @@ func (fw *flushWriter) Write(p []byte) (int, error) {
 		}
 	}
 	return n, err
+}
+
+func httpStatusCode(err error) int {
+	switch {
+	case err == nil:
+		return http.StatusOK
+	case errdefs.IsNotFound(err):
+		return http.StatusNotFound
+	case errdefs.IsInvalidInput(err):
+		return http.StatusBadRequest
+	default:
+		return http.StatusInternalServerError
+	}
 }

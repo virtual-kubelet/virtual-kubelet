@@ -9,7 +9,7 @@ import (
 
 	"gotest.tools/assert"
 	is "gotest.tools/assert/cmp"
-	"k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	watchapi "k8s.io/apimachinery/pkg/watch"
@@ -26,7 +26,7 @@ func TestNodeCreateAfterDelete(t *testing.T) {
 	})
 
 	assert.NilError(t, err)
-	assert.Assert(t, is.Len(podList.Items, 0), "Kubernetes does not allow node deletion with dependent objects (pods) in existence: %v", podList.Items)
+	assert.Assert(t, is.Len(podList.Items, 0), "Kubernetes does not allow node deletion with dependent objects (pods) in existence: %v")
 
 	chErr := make(chan error, 1)
 

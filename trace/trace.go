@@ -9,14 +9,7 @@ import (
 	"context"
 
 	"github.com/virtual-kubelet/virtual-kubelet/log"
-	"go.opencensus.io/trace"
 )
-
-// Status is an alias to opencensus's trace status.
-// The main reason we use this instead of implementing our own is library re-use,
-// namely for converting an error to a tracing status.
-// In the future this may be defined completely in this package.
-type Status = trace.Status
 
 // Tracer is the interface used for creating a tracing span
 type Tracer interface {
@@ -41,7 +34,13 @@ func StartSpan(ctx context.Context, name string) (context.Context, Span) {
 // Span encapsulates a tracing event
 type Span interface {
 	End()
-	SetStatus(Status)
+
+	// SetStatus sets the final status of the span.
+	// errors passed to this should use interfaces defined in
+	// github.com/virtual-kubelet/virtual-kubelet/errdefs
+	//
+	// If the error is nil, the span should be considered successful.
+	SetStatus(err error)
 
 	// WithField and WithFields adds attributes to an entire span
 	//

@@ -4,7 +4,7 @@ import (
 	"net/http"
 
 	"github.com/aliyun/alibaba-cloud-sdk-go/sdk/errors"
-	"github.com/cpuguy83/strongerrors"
+	"github.com/virtual-kubelet/virtual-kubelet/errdefs"
 )
 
 func wrapError(err error) error {
@@ -19,7 +19,7 @@ func wrapError(err error) error {
 
 	switch se.HttpStatus() {
 	case http.StatusNotFound:
-		return strongerrors.NotFound(err)
+		return errdefs.AsNotFound(err)
 	default:
 		return err
 	}

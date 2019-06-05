@@ -23,6 +23,10 @@ const (
 	envVarValue1 = "foo_value"
 	// envVarName2 is a string that can be used as the name of an environment value.
 	envVarName2 = "BAR"
+	// envVarValue2 is a string meant to be used as the value of the "envVarName2" environment value.
+	envVarValue2 = "bar_value"
+	// envVarName12 is a key that can be used as the name of an environment variable.
+	envVarName12 = "FOOBAR"
 	// envVarName3 is a string that can be used as the name of an environment value.
 	envVarName3 = "CHO"
 	// envVarName4 is a string that can be used as the name of an environment value.
@@ -1010,4 +1014,65 @@ func TestServiceEnvVar(t *testing.T) {
 		assert.Check(t, is.DeepEqual(pod.Spec.Containers[0].Env, tc.expectedEnvs, sortOpt))
 	}
 
+}
+
+// TestComposingEnv tests that env var can be composed from the existing env vars.
+func TestComposingEnv(t *testing.T) {
+	rm := testutil.FakeResourceManager()
+	er := testutil.FakeEventRecorder(defaultEventRecorderBufferSize)
+
+	// Create a pod object having a single container.
+	// The container's third environment variable is composed of the previous two.
+	pod := &corev1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: namespace,
+			Name:      "pod-0",
+		},
+		Spec: corev1.PodSpec{
+			Containers: []corev1.Container{
+				{
+					Env: []corev1.EnvVar{
+						{
+							Name:  envVarName1,
+							Value: envVarValue1,
+						},
+						{
+							Name:  envVarName2,
+							Value: envVarValue2,
+						},
+						{
+							Name:  envVarName12,
+							Value: "$(" + envVarName1 + ")$(" + envVarName2 + ")", // "$(envVarName1)$(envVarName2)"
+						},
+					},
+				},
+			},
+			EnableServiceLinks: &bFalse,
+		},
+	}
+
+	// Populate the pods's environment.
+	err := populateEnvironmentVariables(context.Background(), pod, rm, er)
+	assert.Check(t, err)
+
+	// Make sure that the container's environment contains all the expected keys and values.
+	assert.Check(t, is.DeepEqual(pod.Spec.Containers[0].Env, []corev1.EnvVar{
+		{
+			Name:  envVarName1,
+			Value: envVarValue1,
+		},
+		{
+			Name:  envVarName2,
+			Value: envVarValue2,
+		},
+		{
+			Name:  envVarName12,
+			Value: envVarValue1 + envVarValue2,
+		},
+	},
+		sortOpt,
+	))
+
+	// Make sure that no events have been recorded.
+	assert.Check(t, is.Len(er.Events, 0))
 }

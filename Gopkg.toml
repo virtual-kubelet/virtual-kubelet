@@ -70,10 +70,6 @@
   name = "github.com/gophercloud/gophercloud"
   revision = "954aa14363ced787c28efcfcd15ae6945eb862fb"
 
-[[constraint]]
-  name = "github.com/cpuguy83/strongerrors"
-  version = "0.2.1"
-
 [[override]]
   name = "github.com/docker/docker"
   revision = "49bf474f9ed7ce7143a59d1964ff7b7fd9b52178"
