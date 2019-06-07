@@ -18,6 +18,7 @@ import (
 	"context"
 	"os"
 	"path"
+	"sync"
 	"time"
 
 	"github.com/pkg/errors"
@@ -60,6 +61,9 @@ This allows users to schedule kubernetes workloads on nodes that aren't running 
 }
 
 func runRootCommand(ctx context.Context, c Opts) error {
+	var wg sync.WaitGroup
+	defer wg.Wait()
+
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
@@ -102,8 +106,15 @@ func runRootCommand(ctx context.Context, c Opts) error {
 	configMapInformer := scmInformerFactory.Core().V1().ConfigMaps()
 	serviceInformer := scmInformerFactory.Core().V1().Services()
 
-	go podInformerFactory.Start(ctx.Done())
-	go scmInformerFactory.Start(ctx.Done())
+	wg.Add(2)
+	go func() {
+		defer wg.Done()
+		podInformerFactory.Start(ctx.Done())
+	}()
+	go func() {
+		defer wg.Done()
+		scmInformerFactory.Start(ctx.Done())
+	}()
 
 	rm, err := manager.NewResourceManager(podInformer.Lister(), secretInformer.Lister(), configMapInformer.Lister(), serviceInformer.Lister())
 	if err != nil {
@@ -188,7 +199,9 @@ func runRootCommand(ctx context.Context, c Opts) error {
 	}
 	defer cancelHTTP()
 
+	wg.Add(1)
 	go func() {
+		defer wg.Done()
 		if err := pc.Run(ctx, c.PodSyncWorkers); err != nil && errors.Cause(err) != context.Canceled {
 			log.G(ctx).Fatal(err)
 		}
@@ -204,7 +217,9 @@ func runRootCommand(ctx context.Context, c Opts) error {
 		}
 	}
 
+	wg.Add(1)
 	go func() {
+		defer wg.Done()
 		if err := node.Run(ctx); err != nil {
 			log.G(ctx).Fatal(err)
 		}

@@ -233,7 +233,7 @@ func (n *Node) controlLoop(ctx context.Context) error {
 	for {
 		select {
 		case <-ctx.Done():
-			return nil
+			return n.nodes.Delete(n.n.Name, &metav1.DeleteOptions{})
 		case updated := <-n.chStatusUpdate:
 			var t *time.Timer
 			if n.disableLease {
