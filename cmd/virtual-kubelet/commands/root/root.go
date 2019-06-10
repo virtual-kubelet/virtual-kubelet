@@ -35,6 +35,7 @@ import (
 	kubeinformers "k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme"
+	"k8s.io/client-go/kubernetes/typed/coordination/v1beta1"
 	corev1client "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
@@ -140,13 +141,17 @@ func runRootCommand(ctx context.Context, c Opts) error {
 		"watchedNamespace": c.KubeNamespace,
 	}))
 
+	var leaseClient v1beta1.LeaseInterface
+	if c.EnableNodeLease {
+		leaseClient = client.CoordinationV1beta1().Leases(corev1.NamespaceNodeLease)
+	}
+
 	pNode := NodeFromProvider(ctx, c.NodeName, taint, p)
 	node, err := vkubelet.NewNode(
 		vkubelet.NaiveNodeProvider{},
 		pNode,
-		client.CoordinationV1beta1().Leases(corev1.NamespaceNodeLease),
 		client.CoreV1().Nodes(),
-		vkubelet.WithNodeDisableLease(!c.EnableNodeLease),
+		vkubelet.WithNodeEnableLeaseV1Beta1(leaseClient, nil),
 		vkubelet.WithNodeStatusUpdateErrorHandler(func(ctx context.Context, err error) error {
 			if !k8serrors.IsNotFound(err) {
 				return err
