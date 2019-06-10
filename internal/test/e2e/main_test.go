@@ -9,7 +9,7 @@ import (
 
 	v1 "k8s.io/api/core/v1"
 
-	"github.com/virtual-kubelet/virtual-kubelet/test/e2e/framework"
+	"github.com/virtual-kubelet/virtual-kubelet/internal/test/e2e/framework"
 )
 
 const (
