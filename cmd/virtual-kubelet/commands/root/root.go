@@ -181,7 +181,9 @@ func runRootCommand(ctx context.Context, c Opts) error {
 		PodInformer:     podInformer,
 		EventRecorder:   eb.NewRecorder(scheme.Scheme, corev1.EventSource{Component: path.Join(pNode.Name, "pod-controller")}),
 		Provider:        p,
-		ResourceManager: rm,
+		SecretLister:    secretInformer.Lister(),
+		ConfigMapLister: configMapInformer.Lister(),
+		ServiceLister:   serviceInformer.Lister(),
 	})
 	if err != nil {
 		return errors.Wrap(err, "error setting up pod controller")

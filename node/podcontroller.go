@@ -93,7 +93,7 @@ type PodController struct {
 
 	client corev1client.PodsGetter
 
-	resourceManager *manager.ResourceManager // TODO: can we eliminate this?
+	resourceManager *manager.ResourceManager
 }
 
 // PodControllerConfig is used to configure a new PodController.
@@ -110,8 +110,10 @@ type PodControllerConfig struct {
 
 	Provider PodLifecycleHandler
 
-	// TODO: get rid of this
-	ResourceManager *manager.ResourceManager
+	// Listers used for filling details for things like downward API in pod spec.
+	ConfigMapLister corev1listers.ConfigMapLister
+	SecretLister    corev1listers.SecretLister
+	ServiceLister   corev1listers.ServiceLister
 }
 
 func NewPodController(cfg PodControllerConfig) (*PodController, error) {
@@ -124,13 +126,27 @@ func NewPodController(cfg PodControllerConfig) (*PodController, error) {
 	if cfg.PodInformer == nil {
 		return nil, errdefs.InvalidInput("must set informer")
 	}
+	if cfg.ConfigMapLister == nil {
+		return nil, errdefs.InvalidInput("must set config map lister")
+	}
+	if cfg.SecretLister == nil {
+		return nil, errdefs.InvalidInput("must set secret lister")
+	}
+	if cfg.ServiceLister == nil {
+		return nil, errdefs.InvalidInput("must set service lister")
+	}
+
+	rm, err := manager.NewResourceManager(cfg.PodInformer.Lister(), cfg.SecretLister, cfg.ConfigMapLister, cfg.ServiceLister)
+	if err != nil {
+		return nil, pkgerrors.Wrap(err, "could not create resource manager")
+	}
 
 	return &PodController{
 		client:          cfg.PodClient,
 		podsInformer:    cfg.PodInformer,
 		podsLister:      cfg.PodInformer.Lister(),
 		provider:        cfg.Provider,
-		resourceManager: cfg.ResourceManager,
+		resourceManager: rm,
 		ready:           make(chan struct{}),
 		recorder:        cfg.EventRecorder,
 	}, nil
