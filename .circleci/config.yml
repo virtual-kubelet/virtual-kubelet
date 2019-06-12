@@ -120,4 +120,7 @@ workflows:
     jobs:
       - validate
       - test
-      - e2e
+      - e2e:
+          requires:
+            - validate
+            - test

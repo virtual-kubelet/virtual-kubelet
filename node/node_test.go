@@ -71,14 +71,14 @@ func testNodeRun(t *testing.T, enableLease bool) {
 		expectAtLeast = iters / 5
 	)
 
-	timeout := time.After(10 * time.Second)
+	timeout := time.After(30 * time.Second)
 	for i := 0; i < iters; i++ {
 		var l *coord.Lease
 
 		select {
 		case <-timeout:
 			t.Fatal("timed out waiting for expected events")
-		case <-time.After(4 * interval):
+		case <-time.After(time.Second):
 			t.Errorf("timeout waiting for event")
 			continue
 		case err := <-chErr:
