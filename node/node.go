@@ -72,7 +72,7 @@ type NodeControllerOpt func(*NodeController) error // nolint: golint
 // This also affects the frequency of node status updates:
 //   - When leases are *not* enabled (or are disabled due to no support on the cluster)
 //     the node status is updated at every ping interval.
-//   - When node leases are enabled, node status updates are colled by the
+//   - When node leases are enabled, node status updates are controlled by the
 //     node status update interval option.
 // To set a custom node status update interval, see WithNodeStatusUpdateInterval().
 func WithNodeEnableLeaseV1Beta1(client v1beta1.LeaseInterface, baseLease *coord.Lease) NodeControllerOpt {
