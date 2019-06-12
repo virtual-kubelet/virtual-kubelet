@@ -1,4 +1,4 @@
-package opencensus
+package root
 
 import (
 	"testing"

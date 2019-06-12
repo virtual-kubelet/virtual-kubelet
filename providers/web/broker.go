@@ -30,7 +30,7 @@ import (
 
 	"github.com/cenkalti/backoff"
 	"github.com/virtual-kubelet/virtual-kubelet/errdefs"
-	"github.com/virtual-kubelet/virtual-kubelet/vkubelet/api"
+	"github.com/virtual-kubelet/virtual-kubelet/node/api"
 	v1 "k8s.io/api/core/v1"
 )
 

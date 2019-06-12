@@ -22,7 +22,6 @@ import (
 
 	"github.com/mitchellh/go-homedir"
 	"github.com/pkg/errors"
-	"github.com/virtual-kubelet/virtual-kubelet/trace/opencensus"
 	corev1 "k8s.io/api/core/v1"
 )
 
@@ -77,7 +76,7 @@ type Opts struct {
 
 	TraceExporters  []string
 	TraceSampleRate string
-	TraceConfig     opencensus.TracingExporterOptions
+	TraceConfig     TracingExporterOptions
 
 	// Startup Timeout is how long to wait for the kubelet to start
 	StartupTimeout time.Duration

@@ -1,4 +1,4 @@
-package vkubelet
+package node
 
 import (
 	"context"
@@ -33,14 +33,14 @@ func testNodeRun(t *testing.T, enableLease bool) {
 	leases := c.Coordination().Leases(corev1.NamespaceNodeLease)
 
 	interval := 1 * time.Millisecond
-	opts := []NodeOpt{
+	opts := []NodeControllerOpt{
 		WithNodePingInterval(interval),
 		WithNodeStatusUpdateInterval(interval),
 	}
 	if enableLease {
 		opts = append(opts, WithNodeEnableLeaseV1Beta1(leases, nil))
 	}
-	node, err := NewNode(testP, testNode(t), nodes, opts...)
+	node, err := NewNodeController(testP, testNode(t), nodes, opts...)
 	assert.NilError(t, err)
 
 	chErr := make(chan error)
@@ -160,7 +160,7 @@ func TestNodeCustomUpdateStatusErrorHandler(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	node, err := NewNode(testP, testNode(t), nodes,
+	node, err := NewNodeController(testP, testNode(t), nodes,
 		WithNodeStatusUpdateErrorHandler(func(_ context.Context, err error) error {
 			cancel()
 			return nil

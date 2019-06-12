@@ -1,6 +1,6 @@
 // +build !no_jaeger_exporter
 
-package opencensus
+package root
 
 import (
 	"errors"
