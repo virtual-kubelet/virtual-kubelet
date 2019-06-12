@@ -1,4 +1,4 @@
-package vkubelet
+package node
 
 import (
 	"context"
@@ -40,16 +40,16 @@ type NodeProvider interface {
 	NotifyNodeStatus(ctx context.Context, cb func(*corev1.Node))
 }
 
-// NewNode creates a new node.
+// NewNodeController creates a new node controller.
 // This does not have any side-effects on the system or kubernetes.
 //
 // Use the node's `Run` method to register and run the loops to update the node
 // in Kubernetes.
 //
-// Note: When if there are multiple NodeOpts which apply against the same
-// underlying options, the last NodeOpt will win.
-func NewNode(p NodeProvider, node *corev1.Node, nodes v1.NodeInterface, opts ...NodeOpt) (*Node, error) {
-	n := &Node{p: p, n: node, nodes: nodes, chReady: make(chan struct{})}
+// Note: When if there are multiple NodeControllerOpts which apply against the same
+// underlying options, the last NodeControllerOpt will win.
+func NewNodeController(p NodeProvider, node *corev1.Node, nodes v1.NodeInterface, opts ...NodeControllerOpt) (*NodeController, error) {
+	n := &NodeController{p: p, n: node, nodes: nodes, chReady: make(chan struct{})}
 	for _, o := range opts {
 		if err := o(n); err != nil {
 			return nil, pkgerrors.Wrap(err, "error applying node option")
@@ -58,8 +58,8 @@ func NewNode(p NodeProvider, node *corev1.Node, nodes v1.NodeInterface, opts ...
 	return n, nil
 }
 
-// NodeOpt are the functional options used for configuring a node
-type NodeOpt func(*Node) error
+// NodeControllerOpt are the functional options used for configuring a node
+type NodeControllerOpt func(*NodeController) error // nolint: golint
 
 // WithNodeEnableLeaseV1Beta1 enables support for v1beta1 leases.
 // If client is nil, leases will not be enabled.
@@ -75,8 +75,8 @@ type NodeOpt func(*Node) error
 //   - When node leases are enabled, node status updates are colled by the
 //     node status update interval option.
 // To set a custom node status update interval, see WithNodeStatusUpdateInterval().
-func WithNodeEnableLeaseV1Beta1(client v1beta1.LeaseInterface, baseLease *coord.Lease) NodeOpt {
-	return func(n *Node) error {
+func WithNodeEnableLeaseV1Beta1(client v1beta1.LeaseInterface, baseLease *coord.Lease) NodeControllerOpt {
+	return func(n *NodeController) error {
 		n.leases = client
 		n.lease = baseLease
 		return nil
@@ -86,8 +86,8 @@ func WithNodeEnableLeaseV1Beta1(client v1beta1.LeaseInterface, baseLease *coord.
 // WithNodePingInterval sets the interval for checking node status
 // If node leases are not supported (or not enabled), this is the frequency
 // with which the node status will be updated in Kubernetes.
-func WithNodePingInterval(d time.Duration) NodeOpt {
-	return func(n *Node) error {
+func WithNodePingInterval(d time.Duration) NodeControllerOpt {
+	return func(n *NodeController) error {
 		n.pingInterval = d
 		return nil
 	}
@@ -98,8 +98,8 @@ func WithNodePingInterval(d time.Duration) NodeOpt {
 // node status, not the node lease.
 // When node leases are not enabled (or are not supported on the cluster) this
 // has no affect and node status is updated on the "ping" interval.
-func WithNodeStatusUpdateInterval(d time.Duration) NodeOpt {
-	return func(n *Node) error {
+func WithNodeStatusUpdateInterval(d time.Duration) NodeControllerOpt {
+	return func(n *NodeController) error {
 		n.statusInterval = d
 		return nil
 	}
@@ -112,8 +112,8 @@ func WithNodeStatusUpdateInterval(d time.Duration) NodeOpt {
 //
 // The error passed to the handler will be the error received from kubernetes
 // when updating node status.
-func WithNodeStatusUpdateErrorHandler(h ErrorHandler) NodeOpt {
-	return func(n *Node) error {
+func WithNodeStatusUpdateErrorHandler(h ErrorHandler) NodeControllerOpt {
+	return func(n *NodeController) error {
 		n.nodeStatusUpdateErrorHandler = h
 		return nil
 	}
@@ -124,9 +124,10 @@ func WithNodeStatusUpdateErrorHandler(h ErrorHandler) NodeOpt {
 // progress can continue (or a retry is possible).
 type ErrorHandler func(context.Context, error) error
 
-// Node deals with creating and managing a node object in Kubernetes.
+// NodeController deals with creating and managing a node object in Kubernetes.
 // It can register a node with Kubernetes and periodically update its status.
-type Node struct {
+// NodeController manages a single node entity.
+type NodeController struct { // nolint: golint
 	p NodeProvider
 	n *corev1.Node
 
@@ -162,7 +163,7 @@ const (
 // node status update (because some things still expect the node to be updated
 // periodically), otherwise it will only use node status update with the configured
 // ping interval.
-func (n *Node) Run(ctx context.Context) error {
+func (n *NodeController) Run(ctx context.Context) error {
 	if n.pingInterval == time.Duration(0) {
 		n.pingInterval = DefaultPingInterval
 	}
@@ -201,7 +202,7 @@ func (n *Node) Run(ctx context.Context) error {
 	return n.controlLoop(ctx)
 }
 
-func (n *Node) ensureNode(ctx context.Context) error {
+func (n *NodeController) ensureNode(ctx context.Context) error {
 	err := n.updateStatus(ctx, true)
 	if err == nil || !errors.IsNotFound(err) {
 		return err
@@ -219,11 +220,11 @@ func (n *Node) ensureNode(ctx context.Context) error {
 // Ready returns a channel that gets closed when the node is fully up and
 // running. Note that if there is an error on startup this channel will never
 // be started.
-func (n *Node) Ready() <-chan struct{} {
+func (n *NodeController) Ready() <-chan struct{} {
 	return n.chReady
 }
 
-func (n *Node) controlLoop(ctx context.Context) error {
+func (n *NodeController) controlLoop(ctx context.Context) error {
 	pingTimer := time.NewTimer(n.pingInterval)
 	defer pingTimer.Stop()
 
@@ -278,7 +279,7 @@ func (n *Node) controlLoop(ctx context.Context) error {
 	}
 }
 
-func (n *Node) handlePing(ctx context.Context) (retErr error) {
+func (n *NodeController) handlePing(ctx context.Context) (retErr error) {
 	ctx, span := trace.StartSpan(ctx, "node.handlePing")
 	defer span.End()
 	defer func() {
@@ -296,7 +297,7 @@ func (n *Node) handlePing(ctx context.Context) (retErr error) {
 	return n.updateLease(ctx)
 }
 
-func (n *Node) updateLease(ctx context.Context) error {
+func (n *NodeController) updateLease(ctx context.Context) error {
 	l, err := UpdateNodeLease(ctx, n.leases, newLease(n.lease))
 	if err != nil {
 		return err
@@ -306,7 +307,7 @@ func (n *Node) updateLease(ctx context.Context) error {
 	return nil
 }
 
-func (n *Node) updateStatus(ctx context.Context, skipErrorCb bool) error {
+func (n *NodeController) updateStatus(ctx context.Context, skipErrorCb bool) error {
 	updateNodeStatusHeartbeat(n.n)
 
 	node, err := UpdateNodeStatus(ctx, n.nodes, n.n)

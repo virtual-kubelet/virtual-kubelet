@@ -25,7 +25,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/virtual-kubelet/virtual-kubelet/errdefs"
 	"github.com/virtual-kubelet/virtual-kubelet/log"
-	"github.com/virtual-kubelet/virtual-kubelet/trace/opencensus"
 	octrace "go.opencensus.io/trace"
 	"go.opencensus.io/zpages"
 )
@@ -55,7 +54,7 @@ func setupTracing(ctx context.Context, c Opts) error {
 			setupZpages(ctx)
 			continue
 		}
-		exporter, err := opencensus.GetTracingExporter(e, c.TraceConfig)
+		exporter, err := GetTracingExporter(e, c.TraceConfig)
 		if err != nil {
 			return err
 		}

@@ -1,6 +1,6 @@
 // +build !no_ocagent_exporter
 
-package opencensus
+package root
 
 import (
 	"os"

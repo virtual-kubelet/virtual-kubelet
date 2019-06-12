@@ -25,9 +25,9 @@ import (
 	"github.com/virtual-kubelet/virtual-kubelet/errdefs"
 	"github.com/virtual-kubelet/virtual-kubelet/log"
 	"github.com/virtual-kubelet/virtual-kubelet/manager"
+	"github.com/virtual-kubelet/virtual-kubelet/node"
 	"github.com/virtual-kubelet/virtual-kubelet/providers"
 	"github.com/virtual-kubelet/virtual-kubelet/providers/register"
-	"github.com/virtual-kubelet/virtual-kubelet/vkubelet"
 	corev1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -147,12 +147,12 @@ func runRootCommand(ctx context.Context, c Opts) error {
 	}
 
 	pNode := NodeFromProvider(ctx, c.NodeName, taint, p)
-	node, err := vkubelet.NewNode(
-		vkubelet.NaiveNodeProvider{},
+	nodeRunner, err := node.NewNodeController(
+		node.NaiveNodeProvider{},
 		pNode,
 		client.CoreV1().Nodes(),
-		vkubelet.WithNodeEnableLeaseV1Beta1(leaseClient, nil),
-		vkubelet.WithNodeStatusUpdateErrorHandler(func(ctx context.Context, err error) error {
+		node.WithNodeEnableLeaseV1Beta1(leaseClient, nil),
+		node.WithNodeStatusUpdateErrorHandler(func(ctx context.Context, err error) error {
 			if !k8serrors.IsNotFound(err) {
 				return err
 			}
@@ -176,7 +176,7 @@ func runRootCommand(ctx context.Context, c Opts) error {
 	eb.StartLogging(log.G(ctx).Infof)
 	eb.StartRecordingToSink(&corev1client.EventSinkImpl{Interface: client.CoreV1().Events(c.KubeNamespace)})
 
-	pc, err := vkubelet.NewPodController(vkubelet.PodControllerConfig{
+	pc, err := node.NewPodController(node.PodControllerConfig{
 		PodClient:       client.CoreV1(),
 		PodInformer:     podInformer,
 		EventRecorder:   eb.NewRecorder(scheme.Scheme, corev1.EventSource{Component: path.Join(pNode.Name, "pod-controller")}),
@@ -210,7 +210,7 @@ func runRootCommand(ctx context.Context, c Opts) error {
 	}
 
 	go func() {
-		if err := node.Run(ctx); err != nil {
+		if err := nodeRunner.Run(ctx); err != nil {
 			log.G(ctx).Fatal(err)
 		}
 	}()

@@ -12,7 +12,7 @@ import (
 
 	"github.com/Azure/azure-sdk-for-go/services/batch/2017-09-01.6.0/batch"
 	"github.com/Azure/go-autorest/autorest"
-	"github.com/virtual-kubelet/virtual-kubelet/vkubelet/api"
+	"github.com/virtual-kubelet/virtual-kubelet/node/api"
 
 	apiv1 "k8s.io/api/core/v1"
 )
