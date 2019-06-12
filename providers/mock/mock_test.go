@@ -6,7 +6,7 @@ package mock
 /*
 func TestMockLegacyInterface(t *testing.T) {
 	var mlp providers.Provider = &MockLegacyProvider{}
-	_, ok := mlp.(vkubelet.PodNotifier)
+	_, ok := mlp.(node.PodNotifier)
 	assert.Assert(t, !ok)
 }
 */

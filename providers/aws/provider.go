@@ -8,8 +8,8 @@ import (
 	"time"
 
 	"github.com/virtual-kubelet/virtual-kubelet/manager"
+	"github.com/virtual-kubelet/virtual-kubelet/node/api"
 	"github.com/virtual-kubelet/virtual-kubelet/providers/aws/fargate"
-	"github.com/virtual-kubelet/virtual-kubelet/vkubelet/api"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"

@@ -4,8 +4,8 @@ import (
 	"context"
 	"io"
 
-	"github.com/virtual-kubelet/virtual-kubelet/vkubelet"
-	"github.com/virtual-kubelet/virtual-kubelet/vkubelet/api"
+	"github.com/virtual-kubelet/virtual-kubelet/node"
+	"github.com/virtual-kubelet/virtual-kubelet/node/api"
 	v1 "k8s.io/api/core/v1"
 	stats "k8s.io/kubernetes/pkg/kubelet/apis/stats/v1alpha1"
 )
@@ -16,7 +16,7 @@ import (
 // github.com/virtual-kubelet/virtual-kubelet/errdefs package in order for the
 // core logic to be able to understand the type of failure.
 type Provider interface {
-	vkubelet.PodLifecycleHandler
+	node.PodLifecycleHandler
 
 	// GetContainerLogs retrieves the logs of a container by name from the provider.
 	GetContainerLogs(ctx context.Context, namespace, podName, containerName string, opts api.ContainerLogOpts) (io.ReadCloser, error)
