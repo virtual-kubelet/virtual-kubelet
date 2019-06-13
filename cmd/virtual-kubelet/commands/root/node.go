@@ -20,21 +20,14 @@ import (
 
 	"github.com/virtual-kubelet/virtual-kubelet/errdefs"
 	"github.com/virtual-kubelet/virtual-kubelet/providers"
-	"github.com/virtual-kubelet/virtual-kubelet/version"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-var (
-	// vkVersion is a concatenation of the Kubernetes version the VK is built against, the string "vk" and the VK release version.
-	// TODO @pires revisit after VK 1.0 is released as agreed in https://github.com/virtual-kubelet/virtual-kubelet/pull/446#issuecomment-448423176.
-	vkVersion = strings.Join([]string{"v1.13.1", "vk", version.Version}, "-")
-)
-
 // NodeFromProvider builds a kubernetes node object from a provider
 // This is a temporary solution until node stuff actually split off from the provider interface itself.
-func NodeFromProvider(ctx context.Context, name string, taint *v1.Taint, p providers.Provider) *v1.Node {
+func NodeFromProvider(ctx context.Context, name string, taint *v1.Taint, p providers.Provider, version string) *v1.Node {
 	taints := make([]v1.Taint, 0)
 
 	if taint != nil {
@@ -59,7 +52,7 @@ func NodeFromProvider(ctx context.Context, name string, taint *v1.Taint, p provi
 			NodeInfo: v1.NodeSystemInfo{
 				OperatingSystem: p.OperatingSystem(),
 				Architecture:    "amd64",
-				KubeletVersion:  vkVersion,
+				KubeletVersion:  version,
 			},
 			Capacity:        p.Capacity(ctx),
 			Allocatable:     p.Capacity(ctx),

@@ -146,7 +146,7 @@ func runRootCommand(ctx context.Context, c Opts) error {
 		leaseClient = client.CoordinationV1beta1().Leases(corev1.NamespaceNodeLease)
 	}
 
-	pNode := NodeFromProvider(ctx, c.NodeName, taint, p)
+	pNode := NodeFromProvider(ctx, c.NodeName, taint, p, c.Version)
 	nodeRunner, err := node.NewNodeController(
 		node.NaiveNodeProvider{},
 		pNode,

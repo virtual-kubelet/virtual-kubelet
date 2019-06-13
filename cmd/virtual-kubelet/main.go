@@ -19,6 +19,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"strings"
 	"syscall"
 
 	"github.com/pkg/errors"
@@ -31,6 +32,12 @@ import (
 	logruslogger "github.com/virtual-kubelet/virtual-kubelet/log/logrus"
 	"github.com/virtual-kubelet/virtual-kubelet/trace"
 	"github.com/virtual-kubelet/virtual-kubelet/trace/opencensus"
+)
+
+var (
+	buildVersion = "N/A"
+	buildTime    = "N/A"
+	k8sVersion   = "v1.13.1" // This should follow the version of k8s.io/kubernetes we are importing
 )
 
 func main() {
@@ -47,9 +54,10 @@ func main() {
 
 	var opts root.Opts
 	optsErr := root.SetDefaultOpts(&opts)
+	opts.Version = strings.Join([]string{k8sVersion, "vk", buildVersion}, "-")
 
 	rootCmd := root.NewCommand(ctx, filepath.Base(os.Args[0]), opts)
-	rootCmd.AddCommand(version.NewCommand(), providers.NewCommand())
+	rootCmd.AddCommand(version.NewCommand(buildVersion, buildTime), providers.NewCommand())
 	preRun := rootCmd.PreRunE
 
 	var logLevel string
