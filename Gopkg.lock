@@ -19,11 +19,10 @@
   source = "github.com/apache/thrift"
 
 [[projects]]
-  digest = "1:9a03bb56966318a3668ed18e91ac069b816961b736486e973034893905da67a3"
+  digest = "1:200bf216bb4fb6db5282657a1366dcab9dbd26112d43b9411a2e061944387e8e"
   name = "github.com/Azure/azure-sdk-for-go"
   packages = [
     "services/batch/2017-09-01.6.0/batch",
-    "services/network/mgmt/2018-08-01/network",
     "version",
   ]
   pruneopts = "NUT"
@@ -31,13 +30,12 @@
   version = "v21.1.0"
 
 [[projects]]
-  digest = "1:f5ebea42286dc1adc789f62e7718426505370cf64b9c8a17775952037b1e2c87"
+  digest = "1:b09b0c35e2157afee27951ec594924c69883c6bd6800cbc15ddbb12fae169e12"
   name = "github.com/Azure/go-autorest"
   packages = [
     "autorest",
     "autorest/adal",
     "autorest/azure",
-    "autorest/azure/auth",
     "autorest/date",
     "autorest/to",
     "autorest/validation",
@@ -160,14 +158,6 @@
   pruneopts = "NUT"
   revision = "06ea1031745cb8b3dab3f6a236daf2b0aa468b7e"
   version = "v3.2.0"
-
-[[projects]]
-  branch = "master"
-  digest = "1:ec6271918b59b872a2d25e374569a4f75f1839d91e4191470c297b7eaaaf7641"
-  name = "github.com/dimchansky/utfbom"
-  packages = ["."]
-  pruneopts = "NUT"
-  revision = "6c6132ff69f0f6c088739067407b5d32c52e1d0f"
 
 [[projects]]
   branch = "master"
@@ -336,14 +326,6 @@
   pruneopts = "NUT"
   revision = "53c1911da2b537f792e7cafcb446b05ffe33b996"
   version = "v1.6.1"
-
-[[projects]]
-  digest = "1:3b708ebf63bfa9ba3313bedb8526bc0bb284e51474e65e958481476a9d4a12aa"
-  name = "github.com/gorilla/websocket"
-  packages = ["."]
-  pruneopts = "NUT"
-  revision = "ea4d1f681babbce9545c9c5f3d5194a789c89f5b"
-  version = "v1.2.0"
 
 [[projects]]
   branch = "master"
@@ -722,19 +704,6 @@
   revision = "0053ebfd9d0ee06ccefbfe17072021e1d4acebee"
 
 [[projects]]
-  digest = "1:868e54a0d7eefb6a5fc88b7379c56ea70d50fb2c7905690f83bb9b7474a321e1"
-  name = "github.com/virtual-kubelet/azure-aci"
-  packages = [
-    "client",
-    "client/aci",
-    "client/api",
-    "client/network",
-  ]
-  pruneopts = "NUT"
-  revision = "a846478f02b6b4219bf5bd8ea5d608513ef623f7"
-  version = "v0.2.0"
-
-[[projects]]
   digest = "1:a3cb0432171318ddfe4c7cc40c6edf94cb6a61859ffa5cec27f4d5162dfc4db7"
   name = "go.opencensus.io"
   packages = [
@@ -763,12 +732,10 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:79847878995c2d6116f60bfda3346b9ed1e2b214208d991bdfcce2bb25b1cf2f"
+  digest = "1:4da326880280c5362d4b695c7a3a567e5da02f6779c137332966fd8b34507e39"
   name = "golang.org/x/crypto"
   packages = [
     "blake2b",
-    "pkcs12",
-    "pkcs12/internal/rc2",
     "ssh/terminal",
   ]
   pruneopts = "NUT"
@@ -805,12 +772,9 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:c313aef534e493304f3666fbd24dca5932ebf776a82b7a40f961c9355794a1b1"
+  digest = "1:e0140c0c868c6e0f01c0380865194592c011fe521d6e12d78bfd33e756fe018a"
   name = "golang.org/x/sync"
-  packages = [
-    "errgroup",
-    "semaphore",
-  ]
+  packages = ["semaphore"]
   pruneopts = "NUT"
   revision = "1d60e4601c6fd243af51cc01ddf169918a5407ca"
 
@@ -1328,7 +1292,6 @@
     "github.com/gophercloud/gophercloud/openstack/container/v1/capsules",
     "github.com/gophercloud/gophercloud/pagination",
     "github.com/gorilla/mux",
-    "github.com/gorilla/websocket",
     "github.com/hashicorp/nomad/api",
     "github.com/hashicorp/nomad/testutil",
     "github.com/lawrencegripper/pod2docker",
@@ -1337,17 +1300,12 @@
     "github.com/sirupsen/logrus",
     "github.com/spf13/cobra",
     "github.com/spf13/pflag",
-    "github.com/virtual-kubelet/azure-aci/client",
-    "github.com/virtual-kubelet/azure-aci/client/aci",
-    "github.com/virtual-kubelet/azure-aci/client/api",
-    "github.com/virtual-kubelet/azure-aci/client/network",
     "go.opencensus.io/exporter/jaeger",
     "go.opencensus.io/plugin/ochttp",
     "go.opencensus.io/plugin/ochttp/propagation/b3",
     "go.opencensus.io/trace",
     "go.opencensus.io/zpages",
     "golang.org/x/net/context",
-    "golang.org/x/sync/errgroup",
     "google.golang.org/grpc",
     "gotest.tools/assert",
     "gotest.tools/assert/cmp",
@@ -1380,7 +1338,6 @@
     "k8s.io/client-go/rest",
     "k8s.io/client-go/tools/cache",
     "k8s.io/client-go/tools/clientcmd",
-    "k8s.io/client-go/tools/clientcmd/api/v1",
     "k8s.io/client-go/tools/record",
     "k8s.io/client-go/tools/remotecommand",
     "k8s.io/client-go/tools/watch",

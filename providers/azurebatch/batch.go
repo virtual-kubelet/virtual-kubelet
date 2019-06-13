@@ -16,9 +16,9 @@ import (
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/lawrencegripper/pod2docker"
+	vklog "github.com/virtual-kubelet/virtual-kubelet/log"
 	"github.com/virtual-kubelet/virtual-kubelet/manager"
 	"github.com/virtual-kubelet/virtual-kubelet/node/api"
-	azureCreds "github.com/virtual-kubelet/virtual-kubelet/providers/azure"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -62,13 +62,45 @@ type Config struct {
 	AccountLocation string
 }
 
+// AcsCredential represents the credential file for ACS
+type acsCredential struct {
+	Cloud             string `json:"cloud"`
+	TenantID          string `json:"tenantId"`
+	SubscriptionID    string `json:"subscriptionId"`
+	ClientID          string `json:"aadClientId"`
+	ClientSecret      string `json:"aadClientSecret"`
+	ResourceGroup     string `json:"resourceGroup"`
+	Region            string `json:"location"`
+	VNetName          string `json:"vnetName"`
+	VNetResourceGroup string `json:"vnetResourceGroup"`
+}
+
+func newACSCredential(p string) (*acsCredential, error) {
+	logger := vklog.G(context.TODO()).WithField("method", "NewAcsCredential").WithField("file", p)
+	logger.Debug("Reading ACS credential file")
+
+	b, err := ioutil.ReadFile(p)
+	if err != nil {
+		return nil, fmt.Errorf("Reading ACS credential file %q failed: %v", p, err)
+	}
+
+	// Unmarshal the authentication file.
+	var cred acsCredential
+	if err := json.Unmarshal(b, &cred); err != nil {
+		return nil, err
+	}
+
+	logger.Debug("Load ACS credential file successfully")
+	return &cred, nil
+}
+
 // NewBatchProvider Creates a batch provider
 func NewBatchProvider(configString string, rm *manager.ResourceManager, nodeName, operatingSystem string, internalIP string, daemonEndpointPort int32) (*Provider, error) {
 	fmt.Println("Starting create provider")
 
 	config := &Config{}
 	if azureCredsFilepath := os.Getenv("AZURE_CREDENTIALS_LOCATION"); azureCredsFilepath != "" {
-		creds, err := azureCreds.NewAcsCredential(azureCredsFilepath)
+		creds, err := newACSCredential(azureCredsFilepath)
 		if err != nil {
 			return nil, err
 		}
