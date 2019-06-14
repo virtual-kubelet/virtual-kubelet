@@ -1,8 +1,0 @@
-# example configuration file for ACI virtual-kubelet
-
-Region = "westus"
-ResourceGroup = "virtual-kubeletrg"
-OperatingSystem = "Linux"
-CPU = "100"
-Memory = "100Gi"
-Pods = "50"
