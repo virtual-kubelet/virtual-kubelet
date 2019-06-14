@@ -19,34 +19,6 @@
   source = "github.com/apache/thrift"
 
 [[projects]]
-  digest = "1:200bf216bb4fb6db5282657a1366dcab9dbd26112d43b9411a2e061944387e8e"
-  name = "github.com/Azure/azure-sdk-for-go"
-  packages = [
-    "services/batch/2017-09-01.6.0/batch",
-    "version",
-  ]
-  pruneopts = "NUT"
-  revision = "6d20bdbae88c06c36d72eb512295417693bfdf4e"
-  version = "v21.1.0"
-
-[[projects]]
-  digest = "1:b09b0c35e2157afee27951ec594924c69883c6bd6800cbc15ddbb12fae169e12"
-  name = "github.com/Azure/go-autorest"
-  packages = [
-    "autorest",
-    "autorest/adal",
-    "autorest/azure",
-    "autorest/date",
-    "autorest/to",
-    "autorest/validation",
-    "logger",
-    "version",
-  ]
-  pruneopts = "NUT"
-  revision = "9bc4033dd347c7f416fca46b2f42a043dc1fbdf6"
-  version = "v10.15.5"
-
-[[projects]]
   digest = "1:167b6f65a6656de568092189ae791253939f076df60231fdd64588ac703892a1"
   name = "github.com/BurntSushi/toml"
   packages = ["."]
@@ -150,14 +122,6 @@
   pruneopts = "NUT"
   revision = "346938d642f2ec3594ed81d874461961cd0faa76"
   version = "v1.1.0"
-
-[[projects]]
-  digest = "1:7a6852b35eb5bbc184561443762d225116ae630c26a7c4d90546619f1e7d2ad2"
-  name = "github.com/dgrijalva/jwt-go"
-  packages = ["."]
-  pruneopts = "NUT"
-  revision = "06ea1031745cb8b3dab3f6a236daf2b0aa468b7e"
-  version = "v3.2.0"
 
 [[projects]]
   branch = "master"
@@ -540,14 +504,6 @@
   pruneopts = "NUT"
   revision = "f55edac94c9bbba5d6182a4be46d86a2c9b5b50e"
   version = "v1.0.2"
-
-[[projects]]
-  digest = "1:648ad8414e400ae89650dea8db781f129d14cb4cc70a271fdcbb6fb0ede91883"
-  name = "github.com/lawrencegripper/pod2docker"
-  packages = ["."]
-  pruneopts = "NUT"
-  revision = "9a9182c0c682798fe214fa11df7bfca83048d433"
-  version = "v0.5.1"
 
 [[projects]]
   digest = "1:1e5a8bf6fb005f1808852ad1a4bedb7b4b3291af90dec12c4c9e4a955a42c9b2"
@@ -1264,11 +1220,6 @@
   analyzer-version = 1
   input-imports = [
     "contrib.go.opencensus.io/exporter/ocagent",
-    "github.com/Azure/azure-sdk-for-go/services/batch/2017-09-01.6.0/batch",
-    "github.com/Azure/go-autorest/autorest",
-    "github.com/Azure/go-autorest/autorest/adal",
-    "github.com/Azure/go-autorest/autorest/azure",
-    "github.com/Azure/go-autorest/autorest/to",
     "github.com/BurntSushi/toml",
     "github.com/aliyun/alibaba-cloud-sdk-go/sdk",
     "github.com/aliyun/alibaba-cloud-sdk-go/sdk/auth",
@@ -1294,7 +1245,6 @@
     "github.com/gorilla/mux",
     "github.com/hashicorp/nomad/api",
     "github.com/hashicorp/nomad/testutil",
-    "github.com/lawrencegripper/pod2docker",
     "github.com/mitchellh/go-homedir",
     "github.com/pkg/errors",
     "github.com/sirupsen/logrus",
