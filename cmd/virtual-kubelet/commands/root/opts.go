@@ -80,6 +80,8 @@ type Opts struct {
 
 	// Startup Timeout is how long to wait for the kubelet to start
 	StartupTimeout time.Duration
+
+	Version string
 }
 
 // SetDefaultOpts sets default options for unset values on the passed in option struct.
