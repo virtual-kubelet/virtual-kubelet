@@ -110,33 +110,36 @@ type PodControllerConfig struct {
 
 	Provider PodLifecycleHandler
 
-	// Listers used for filling details for things like downward API in pod spec.
-	ConfigMapLister corev1listers.ConfigMapLister
-	SecretLister    corev1listers.SecretLister
-	ServiceLister   corev1listers.ServiceLister
+	// Informers used for filling details for things like downward API in pod spec.
+	//
+	// We are using informers here instead of listers because we'll need the
+	// informer for certain features (like notifications for updated ConfigMaps)
+	ConfigMapInformer corev1informers.ConfigMapInformer
+	SecretInformer    corev1informers.SecretInformer
+	ServiceInformer   corev1informers.ServiceInformer
 }
 
 func NewPodController(cfg PodControllerConfig) (*PodController, error) {
 	if cfg.PodClient == nil {
-		return nil, errdefs.InvalidInput("must set core client")
+		return nil, errdefs.InvalidInput("missing core client")
 	}
 	if cfg.EventRecorder == nil {
-		return nil, errdefs.InvalidInput("must set event recorder")
+		return nil, errdefs.InvalidInput("missing event recorder")
 	}
 	if cfg.PodInformer == nil {
-		return nil, errdefs.InvalidInput("must set informer")
+		return nil, errdefs.InvalidInput("missing pod informer")
 	}
-	if cfg.ConfigMapLister == nil {
-		return nil, errdefs.InvalidInput("must set config map lister")
+	if cfg.ConfigMapInformer == nil {
+		return nil, errdefs.InvalidInput("missing config map informer")
 	}
-	if cfg.SecretLister == nil {
-		return nil, errdefs.InvalidInput("must set secret lister")
+	if cfg.SecretInformer == nil {
+		return nil, errdefs.InvalidInput("missing secret informer")
 	}
-	if cfg.ServiceLister == nil {
-		return nil, errdefs.InvalidInput("must set service lister")
+	if cfg.ServiceInformer == nil {
+		return nil, errdefs.InvalidInput("missing service informer")
 	}
 
-	rm, err := manager.NewResourceManager(cfg.PodInformer.Lister(), cfg.SecretLister, cfg.ConfigMapLister, cfg.ServiceLister)
+	rm, err := manager.NewResourceManager(cfg.PodInformer.Lister(), cfg.SecretInformer.Lister(), cfg.ConfigMapInformer.Lister(), cfg.ServiceInformer.Lister())
 	if err != nil {
 		return nil, pkgerrors.Wrap(err, "could not create resource manager")
 	}
