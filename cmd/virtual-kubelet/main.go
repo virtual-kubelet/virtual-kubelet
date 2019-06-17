@@ -25,11 +25,12 @@ import (
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-	"github.com/virtual-kubelet/virtual-kubelet/cmd/virtual-kubelet/commands/providers"
+	cmdproviders "github.com/virtual-kubelet/virtual-kubelet/cmd/virtual-kubelet/commands/providers"
 	"github.com/virtual-kubelet/virtual-kubelet/cmd/virtual-kubelet/commands/root"
 	"github.com/virtual-kubelet/virtual-kubelet/cmd/virtual-kubelet/commands/version"
 	"github.com/virtual-kubelet/virtual-kubelet/log"
 	logruslogger "github.com/virtual-kubelet/virtual-kubelet/log/logrus"
+	"github.com/virtual-kubelet/virtual-kubelet/providers"
 	"github.com/virtual-kubelet/virtual-kubelet/trace"
 	"github.com/virtual-kubelet/virtual-kubelet/trace/opencensus"
 )
@@ -56,8 +57,11 @@ func main() {
 	optsErr := root.SetDefaultOpts(&opts)
 	opts.Version = strings.Join([]string{k8sVersion, "vk", buildVersion}, "-")
 
-	rootCmd := root.NewCommand(ctx, filepath.Base(os.Args[0]), opts)
-	rootCmd.AddCommand(version.NewCommand(buildVersion, buildTime), providers.NewCommand())
+	s := providers.NewStore()
+	registerMock(s)
+
+	rootCmd := root.NewCommand(ctx, filepath.Base(os.Args[0]), s, opts)
+	rootCmd.AddCommand(version.NewCommand(buildVersion, buildTime), cmdproviders.NewCommand(s))
 	preRun := rootCmd.PreRunE
 
 	var logLevel string
