@@ -1,7 +1,6 @@
 # Contributing Guidelines
 
-The Virtual Kubelet accepts contributions via GitHub pull requests. This document outlines the process to help get your contribution
-accepted.
+The Virtual Kubelet accepts contributions via GitHub pull requests. This document outlines the process to help get your contribution accepted.
 
 ## Contributor License Agreements
 
@@ -14,58 +13,6 @@ requests.
 
 ***NOTE***: Only original source code from you and other people that have
 signed the CLA can be accepted into the repository.
-
-## Maintainers
-
-Each provider is responsible for reviewing PRs. Each provider has a primary and secondary maintainer for the purposes of maintaining their own code.
-Here's the current list of maintainers.
-
-Otherwise for the primary Virtual Kubelet code, and overall project maintenance, these are the current maintainers. If you want to become a maintainer for the overall project, or be a provider for Virtual Kubelet, please email Ria Bhatia at ria.bhatia@microsoft.com.
-
-### Overall Maintainers
-
-Ria Bhatia (ribhatia@microsoft.com)
-
-Robbie Zhang (junjiez@microsoft.com)
-
-Brian Goff (brian.goff@microsoft.com)
-
-Paulo Pires (Mesosphere)
-
-
-### Provider maintainers
-
-**Azure**
-
-Robbie Zhang (junjiez@microsoft.com)
-
-**AWS Fargate**
-
-Onur Filiz (onfiliz@amazon.com)
-
-**Alibaba Cloud**
-
-(TBA)
-
-**Huawei**
-
-Fei Xu (xufei40@huawei.com)
-
-**Azure Batch**
-
-Lawrence Gripper (lawrence.gripper@microsoft.com)
-
-**CRI**
-
-Ben Corrie (bcorrie@vmware.com)
-
-**HashiCorp Nomad**
-
-Anubhav Mishra (mishra@hashicorp.com)
-
-**OpenStack**
-
-OpenStack Zun team (https://governance.openstack.org/tc/reference/projects/zun.html)
 
 ## Support Channels
 
