@@ -1,0 +1,147 @@
+{{ $fonts    := site.Params.fonts }}
+{{ $fontSlice := (slice) }}
+{{ range $fonts }}
+{{ $fontSlice = $fontSlice | append (printf "%s:%s" (replace .name " " "+") (delimit .sizes ",")) }}
+{{ end }}
+{{ $fontsUrl := printf "https://fonts.googleapis.com/css?family=%s" (delimit $fontSlice "|") }}
+{{ $sansSerifFont := site.Params.sansSerifFont }}
+{{ $monospaceFont := site.Params.monospaceFont }}
+{{ $fontAwesomeVersion := site.Params.fontAwesomeVersion }}
+{{ $fontAwesomeUrl     := printf "https://use.fontawesome.com/releases/v%s/css/all.css" $fontAwesomeVersion }}
+
+@charset "utf-8"
+@import url({{ $fontsUrl }})
+@import url({{ $fontAwesomeUrl }})
+
+@import "bulma/sass/utilities/initial-variables"
+@import "bulma/sass/utilities/functions"
+
+// Project-specific colors and variables
+$vk-blue: #3e71db
+$vk-dark: #383d49
+
+// Other colors
+$twitter-blue: #1da1f2
+$slack-green: #74cdb0
+// Bulma variable overwrites
+$primary: $vk-blue
+$dark: $vk-dark
+
+$link: $primary
+$link-hover: $dark
+$code: $primary
+
+$family-sans-serif: "{{ $sansSerifFont }}", BlinkMacSystemFont, -apple-system, "Segoe UI", "Roboto", "Oxygen", "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue", "Helvetica", "Arial", sans-serif
+$family-code: "{{ $monospaceFont }}", monospace
+$section-padding: 3rem 4rem
+
+$navbar-height: 5rem
+$navbar-item-img-max-height: 3.5rem
+$dashboard-panel-padding: 3rem 2.5rem 5rem 2.5rem
+$dashboard-panel-header-bottom-margin: 2rem
+$toc-item-color: $white
+$toc-item-font-size: 1.75rem
+$toc-item-icon-color: $white-bis
+$toc-item-icon-right-margin: 1.5rem
+$toc-item-top-margin: 1rem
+
+@import "bulma/sass/utilities/derived-variables"
+
+$colors: mergeColorMaps(("twitter-blue": ($twitter-blue, $white), "slack-green": ($slack-green, $white)), $colors)
+
+@import "bulma/bulma"
+@import "bulma-dashboard/bulma-dashboard.sass"
+@import "bulma-toc/bulma-toc.sass"
+
+@import "cli"
+
+// Ensure sticky footer at the bottom of the page
+.page
+  display: flex
+  flex-direction: column
+  min-height: 100vh
+
+  .main
+    flex: 1
+
+blockquote
+  code
+    background-color: $grey-lighter
+
+=hide
+  display: none
+
+=logo($tablet, $mobile)
+  +tablet
+    width: $tablet
+  
+  +mobile
+    width: $mobile
+
+.menu-item
+  font-size: 1.75rem
+   
+  .icon
+    color: $white
+    margin-right: 1.5rem
+
+.is-main-logo
+  +logo(40%, 90%)
+
+.is-cncf-logo
+  margin-top: 1.5rem
+  +logo(40%, 100%)
+
+.is-footer-logo
+  +logo(10%, 20%)
+
+.has-extra-padding
+  padding: 3rem
+
+.has-bottom-spacing
+  margin-bottom: 1rem
+
+.is-home-page .navbar
+  +hide
+
+.button
+  &.is-radiusless
+    border-radius: none
+
+.dashboard
+  &-panel-header
+    img
+      width: 50%
+
+  .footer
+    flex: 1
+
+.toc-panel
+  padding: 1.75rem
+  border-left: 1px solid $grey-light
+
+.toc-bar
+  margin-top: 1.5rem
+
+  li
+    line-height: 110%
+    font-size: 1rem
+
+    a
+      color: $dark
+
+  ul
+    li
+      & + li
+        margin-top: .8rem
+
+.content
+  blockquote
+    code
+      background-color: $white-bis
+
+  figure
+    img
+    figcaption
+      font-size: 1.75rem
+      font-style: normal

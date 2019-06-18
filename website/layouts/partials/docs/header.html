@@ -1,0 +1,11 @@
+{{ $description := .Params.description }}
+<section class="dashboard-main-header section has-background-dark">
+  <p class="title is-size-1 has-text-white-bis has-text-weight-light{{ if $description }} is-spaced{{ end }}">
+    {{ .Title }}
+  </p>
+  {{ with $description }}
+  <p class="subtitle is-size-3 is-size-4-mobile has-text-white-bis has-text-weight-light">
+    {{ . }}
+  </p>
+  {{ end }}
+</section>

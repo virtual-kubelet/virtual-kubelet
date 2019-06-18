@@ -1,0 +1,64 @@
+# Basic site config
+title           = "Virtual Kubelet"
+baseURL         = "https://virtual-kubelet.io"
+languageCode    = "en-us"
+enableRobotsTxt = true
+
+# Taxonomy configuration (disable taxonomies for now)
+disableKinds = ["taxonomyTerm"]
+
+# Syntax highlighting config
+pygmentsCodeFences = true
+pygmentsStyle      = "fruity"
+
+# BlackFriday Markdown settings
+[blackfriday]
+hrefTargetBlank = true
+
+# General site-level parameters
+[params]
+favicon            = "https://raw.githubusercontent.com/cncf/artwork/master/projects/virtualkubelet/icon/color/virtualkubelet-icon-color.png"
+sansSerifFont      = "Noto Sans TC"
+monospaceFont      = "Fira Mono"
+fontAwesomeVersion = "5.5.0"
+description        = "Virtual Kubelet is an open-source Kubernetes kubelet implementation that masquerades as a kubelet"
+intro              = """
+**Virtual Kubelet** is an open-source [Kubernetes kubelet](https://kubernetes.io/docs/reference/generated/kubelet/) implementation that *masquerades* as a kubelet. 
+
+This allows Kubernetes nodes to be backed by Virtual Kubelet [**providers**](/docs/providers) such as serverless cloud container platforms.
+"""
+
+[params.logos]
+site    = "/img/color-logo.png"
+hero    = "/img/white-logo.png"
+navbar  = "/img/white-logo.png"
+sidebar = "/img/stacked-white-logo.png"
+footer  = "/img/virtualkubelet-icon-white.png"
+cncf    = "/img/cncf-color.png"
+
+[[params.fonts]]
+name  = "Noto Sans TC"
+sizes = [300,400,600,700]
+
+[[params.fonts]]
+name  = "Fira Mono"
+sizes = [400]
+
+[[params.social]]
+name  = "GitHub"
+color = "black"
+url   = "https://github.com/virtual-kubelet/virtual-kubelet"
+icon  = "github"
+
+[[params.social]]
+name   = "Twitter"
+color  = "twitter-blue"
+url    = "https://twitter.com/virtualkubelet"
+icon   = "twitter"
+handle = "virtualkubelet"
+
+[[params.social]]
+name  = "Slack"
+color = "slack-green"
+url   = "https://kubernetes.slack.com"
+icon  = "slack"

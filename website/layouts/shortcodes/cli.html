@@ -1,0 +1,57 @@
+{{ $cli         := site.Data.cli }}
+{{ $description := $cli.description | markdownify }}
+{{ $flags       := $cli.flags }}
+<div class="cli">
+  <span class="cli-title" id="virtual-kubelet-cli">
+    <h2>
+      virtual-kubelet
+    </h2>
+  </span>
+
+  <p class="cli-description">
+    {{ $description }}
+  </p>
+
+  <div class="cli-example">
+    <span class="dollar">$</span> virtual-kubelet <span class="flags">flags</span>
+  </div>
+
+  <div class="cli-flags">
+    <h3>
+      Flags
+    </h3>
+
+    <table>
+      <thead>
+        <tr>
+          <th>
+            Flag
+          </th>
+          <th>
+            Description
+          </th>
+          <th>
+            Default
+          </th>
+        </tr>
+      </thead>
+      <tbody>
+        {{ range $flags }}
+        <tr>
+          <td class="flag">
+            {{ .name }}{{ with .arg }} <span class="arg">{{ . }}</span>{{ end }}
+          </td>
+          <td>
+            {{ .description | markdownify }}
+          </td>
+          <td>
+            {{ with .default }}
+            <code>{{ . }}</code>
+            {{ end }}
+          </td>
+        </tr>
+        {{ end }}
+      </tbody>
+    </table>
+  </div>
+</div>

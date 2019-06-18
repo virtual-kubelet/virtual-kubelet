@@ -1,0 +1,16 @@
+- name: Alibaba Cloud Elastic Container Instance (**ECI**)
+  tag: alibabacloud
+- name: AWS Fargate
+  tag: aws
+- name: Azure Batch
+  tag: azurebatch
+- name: Azure Container Instances (**ACI**)
+  tag: azure
+- name: Kubernetes Container Runtime Interface (**CRI**)
+  tag: cri
+- name: Huawei Cloud Container Instance (**CCI**)
+  tag: huawei
+- name: HashiCorp Nomad
+  tag: nomad
+- name: OpenStack Zun
+  tag: openstack

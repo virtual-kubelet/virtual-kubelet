@@ -2,7 +2,7 @@
 
 Virtual Kubelet is an open source [Kubernetes kubelet](https://kubernetes.io/docs/reference/generated/kubelet/)
 implementation that masquerades as a kubelet for the purposes of connecting Kubernetes to other APIs.
-This allows the nodes to be backed by other services like ACI, AWS Fargate, Hyper.sh, [IoT Edge](https://github.com/Azure/iot-edge-virtual-kubelet-provider) etc. The primary scenario for VK is enabling the extension of the Kubernetes API into serverless container platforms like ACI, Fargate, and Hyper.sh, though we are open to others. However, it should be noted that VK is explicitly not intended to be an alternative to Kubernetes federation.
+This allows the nodes to be backed by other services like ACI, AWS Fargate, [IoT Edge](https://github.com/Azure/iot-edge-virtual-kubelet-provider) etc. The primary scenario for VK is enabling the extension of the Kubernetes API into serverless container platforms like ACI and Fargate, though we are open to others. However, it should be noted that VK is explicitly not intended to be an alternative to Kubernetes federation.
  
 Virtual Kubelet features a pluggable architecture and direct use of Kubernetes primitives, making it much easier to build on.
 
@@ -23,8 +23,8 @@ The best description is "Kubernetes API on top, programmable back."
     + [Azure Container Instances Provider](#azure-container-instances-provider)
 	+ [Azure Batch GPU Provider](./providers/azurebatch/README.md)
     + [AWS Fargate Provider](#aws-fargate-provider)
-    + [Hyper.sh Provider](#hypersh-provider)
-    + [Service Fabric Mesh Provider](#service-fabric-mesh-provider)
+	+ [HashiCorp Nomad](#hashicorp-nomad-provider)
+    + [OpenStack Zun](#openstack-zun-provider)
     + [Adding a New Provider via the Provider Interface](#adding-a-new-provider-via-the-provider-interface)
 * [Testing](#testing)
     + [Unit tests](#unit-tests)
@@ -37,7 +37,7 @@ The best description is "Kubernetes API on top, programmable back."
 
 The diagram below illustrates how Virtual-Kubelet works.
 
-![diagram](diagram.svg)
+![diagram](website/static/img/diagram.svg)
 
 ## Usage
 
@@ -139,13 +139,13 @@ Providers must provide the following functionality to be considered a supported 
 
 Alibaba Cloud ECI(Elastic Container Instance) is a service that allow you run containers without having to manage servers or clusters.
 
-You can find more details in the [Alibaba Cloud ECI provider documentation](./providers/alicloud/README.md).
+You can find more details in the [Alibaba Cloud ECI provider documentation](./providers/alibabacloud/README.md).
 
 #### Configuration File
 
 The alibaba ECI provider will read configuration file specified by the `--provider-config` flag.
 
-The example configure file is `providers/alicloud/eci.toml`.
+The example configure file is `providers/alibabacloud/eci.toml`.
 
 ### Azure Container Instances Provider
 
@@ -177,28 +177,34 @@ co-exist with pods on regular worker nodes in the same Kubernetes cluster.
 
 Easy instructions and a sample configuration file is available in the [AWS Fargate provider documentation](providers/aws/README.md).
 
-### Hyper.sh Provider
+### HashiCorp Nomad Provider
 
-The Hyper.sh Provider allows Kubernetes clusters to deploy Hyper.sh containers
-and manage both typical pods on VMs and Hyper.sh containers in the same
-Kubernetes cluster.
+HashiCorp [Nomad](https://nomadproject.io) provider for Virtual Kubelet connects your Kubernetes cluster
+with Nomad cluster by exposing the Nomad cluster as a node in Kubernetes. By
+using the provider, pods that are scheduled on the virtual Nomad node
+registered on Kubernetes will run as jobs on Nomad clients as they
+would on a Kubernetes node.
 
 ```bash
-./bin/virtual-kubelet --provider hyper
+./bin/virtual-kubelet --provider="nomad"
 ```
 
-### Service Fabric Mesh Provider
+For detailed instructions, follow the guide [here](providers/nomad/README.md).
 
-The Service Fabric Mesh Provider allows you to deploy pods to Azure [Service Fabric Mesh](https://docs.microsoft.com/en-us/azure/service-fabric-mesh/service-fabric-mesh-overview).
+### OpenStack Zun Provider
 
-Service Fabric Mesh is a fully managed service that lets developers deploy microservices without managing the underlying infrastructure.
- Pods deployed to Service Fabric Mesh will be assigned Public IPs from the Service Fabric Mesh network.
+OpenStack [Zun](https://docs.openstack.org/zun/latest/) provider for Virtual Kubelet connects
+your Kubernetes cluster with OpenStack in order to run Kubernetes pods on OpenStack Cloud.
+Your pods on OpenStack have access to OpenStack tenant networks because they have Neutron ports
+in your subnets. Each pod will have private IP addresses to connect to other OpenStack resources
+(i.e. VMs) within your tenant, optionally have floating IP addresses to connect to the internet,
+and bind-mount Cinder volumes into a path inside a pod's container.
 
+```bash
+./bin/virtual-kubelet --provider="openstack"
 ```
-./bin/virtual-kubelet --provider sfmesh --taint azure.com/sfmesh
-```
 
-More detailed instructions can be found [here](providers/sfmesh/README.md).
+For detailed instructions, follow the guide [here](providers/openstack/README.md).
 
 ### Adding a New Provider via the Provider Interface
 
@@ -209,8 +215,8 @@ Create a new directory for your provider under `providers` and implement the
 following interface. Then add register your provider in
 `providers/register/<provider_name>_provider.go`. Make sure to add a build tag so that
 your provider can be excluded from being built. The format for this build tag
-should be `no_<provider_name>_provider`. Also make sure your provdider has all
-neccessary platform build tags, e.g. "linux" if your provider only compiles on Linux.
+should be `no_<provider_name>_provider`. Also make sure your provider has all
+necessary platform build tags, e.g. "linux" if your provider only compiles on Linux.
 
 ```go
 // Provider contains the methods required to implement a virtual-kubelet provider.
@@ -339,7 +345,7 @@ Enable the ServiceNodeExclusion flag, by modifying the Controller Manager manife
 Virtual Kubelet follows the [CNCF Code of Conduct](https://github.com/cncf/foundation/blob/master/code-of-conduct.md).
 Sign the [CNCF CLA](https://github.com/kubernetes/community/blob/master/CLA.md) to be able to make Pull Requests to this repo. 
 
-Bi-weekly Virtual Kubelet Architecture meetings are held at 11am PST in this [zoom meeting room](https://zoom.us/j/245165908). Our virtual kubelet google calander has the architecture meetings listed and Tuesday & Thursday scrums for anyone interested. Check out the calander [here](https://calendar.google.com/calendar?cid=bjRtbGMxYWNtNXR0NXQ1a2hqZmRkNTRncGNAZ3JvdXAuY2FsZW5kYXIuZ29vZ2xlLmNvbQ).
+Bi-weekly Virtual Kubelet Architecture meetings are held at 11am PST in this [zoom meeting room](https://zoom.us/j/245165908).  Check out the calendar [here](https://calendar.google.com/calendar?cid=bjRtbGMxYWNtNXR0NXQ1a2hqZmRkNTRncGNAZ3JvdXAuY2FsZW5kYXIuZ29vZ2xlLmNvbQ).
 
 Our google drive with design specifications and meeting notes are [here](https://drive.google.com/drive/folders/19Ndu11WBCCBDowo9CrrGUHoIfd2L8Ueg?usp=sharing).
 

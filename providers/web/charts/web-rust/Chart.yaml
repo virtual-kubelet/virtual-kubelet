@@ -1,4 +1,0 @@
-name: virtual-kubelet-web
-version: 0.1.0
-description: a Helm chart to install virtual kubelet in Kubernetes setup with a web provider
-

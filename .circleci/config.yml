@@ -2,7 +2,7 @@ version: 2
 jobs:
   validate:
     docker:
-      - image: circleci/golang:1.10
+      - image: circleci/golang:1.12
     working_directory: /go/src/github.com/virtual-kubelet/virtual-kubelet
     steps:
       - checkout
@@ -21,20 +21,25 @@ jobs:
 
   test:
     docker:
-      - image: circleci/golang:1.10
+      - image: circleci/golang:1.12
     working_directory: /go/src/github.com/virtual-kubelet/virtual-kubelet
     steps:
       - checkout
       - run:
-          name: Create the credentials file
-          command: sh scripts/createCredentials.sh
-      - run: |
-          echo 'export AZURE_AUTH_LOCATION=${outputPathCredsfile}' >> $BASH_ENV
-      - run: |
-          echo 'export KUBECONFIG=${outputPathKubeConfigFile}' >> $BASH_ENV
-      - run:
           name: Build
           command: V=1 make build
+      - run:
+          name: Install Nomad
+          command: |
+            curl \
+              --silent \
+              --location \
+              --output nomad.zip \
+              https://releases.hashicorp.com/nomad/0.8.6/nomad_0.8.6_linux_amd64.zip && \
+            unzip nomad.zip && \
+            chmod +x nomad && \
+            mv nomad /go/bin/nomad && \
+            rm nomad.zip
       - run:
           name: Tests
           command: V=1 CI=1 SKIP_AWS_E2E=1 make test
@@ -87,9 +92,27 @@ jobs:
               sleep 1;
             done
       - run:
+          name: Watch pods
+          command: kubectl get pods -o json --watch
+          background: true
+      - run:
+          name: Watch nodes
+          command: kubectl get nodes -o json --watch
+          background: true
+      - run:
           name: Run the end-to-end test suite
           command: |
+            mkdir $HOME/.go
+            export PATH=$HOME/.go/bin:${PATH}
+            curl -fsSL -o "/tmp/go.tar.gz" "https://dl.google.com/go/go1.12.5.linux-amd64.tar.gz"
+            tar -C $HOME/.go --strip-components=1 -xzf "/tmp/go.tar.gz"
+            go version
             make e2e
+      - run:
+          name: Collect logs on failure from vkubelet-mock-0
+          command: |
+            kubectl logs vkubelet-mock-0
+          when: on_fail
 
 workflows:
   version: 2
@@ -97,4 +120,7 @@ workflows:
     jobs:
       - validate
       - test
-      - e2e
+      - e2e:
+          requires:
+            - validate
+            - test

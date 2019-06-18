@@ -33,6 +33,9 @@ loganalytics.json
 # VS Code files
 .vscode/
 
+# IntelliJ Goland files
+.idea
+
 # Terraform ignores
 **/.terraform/**
 **/terraform-provider-kubernetes

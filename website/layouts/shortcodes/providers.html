@@ -1,0 +1,26 @@
+{{- $providers := site.Data.providers }}
+<table>
+  <tbody>
+    {{ range $providers }}
+    {{ $name     := .name | markdownify }}
+    {{ $pkgName  := printf "github.com/virtual-kubelet/virtual-kubelet/providers/%s" .tag }}
+    {{ $pkgUrl   := printf "https://github.com/virtual-kubelet/virtual-kubelet/tree/master/providers/%s" .tag }}
+    {{ $godocUrl := printf "https://godoc.org/%s" $pkgName }}
+    <tr>
+      <td>
+        {{ $name }}
+      </td>
+      <td>
+        <a href="{{ $pkgUrl }}" target="_blank">
+          Docs
+        </a>
+      </td>
+      <td>
+        <a href="{{ $godocUrl }}" target="_blank">
+          GoDoc
+        </a>
+      </td>
+    </tr>
+    {{ end }}
+  </tbody>
+</table>

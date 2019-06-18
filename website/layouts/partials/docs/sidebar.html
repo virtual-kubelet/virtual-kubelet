@@ -1,0 +1,23 @@
+{{ $sidebarLogo := site.Params.logos.sidebar | relURL }}
+{{ $docs        := where site.Pages "Section" "docs" }}
+<div class="dashboard-panel is-medium is-hidden-mobile has-background-primary">
+  <div class="dashboard-panel-header has-text-centered">
+    <a href="{{ site.BaseURL }}">
+      <img src="{{ $sidebarLogo }}">
+    </a>
+  </div>
+
+  <br />
+
+  <div class="dashboard-panel-main">
+    <div class="toc">
+      {{ range $docs }}
+      <div class="toc-item has-text-weight-light">
+        <a href="{{ .RelPermalink }}">
+            {{ .Title }}
+          </a>
+      </div>
+      {{ end }}
+    </div>
+  </div>
+</div>

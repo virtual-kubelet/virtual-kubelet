@@ -1,0 +1,10 @@
+{{ $logo := site.Params.logos.cncf | relURL }}
+<section class="section has-background-grey-lightest">
+  <div class="container has-text-centered">
+    <p class="title is-size-4 is-size-5-mobile has-text-weight-light">
+      Virtual Kubelet is a <a href="https://cncf.io">Cloud Native Computing Foundation</a> sandbox project
+    </p>
+
+    <img class="is-cncf-logo" src="{{ $logo }}" alt="Cloud Native Computing Foundation logo">
+  </div>
+</section>

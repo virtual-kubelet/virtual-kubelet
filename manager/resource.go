@@ -1,9 +1,21 @@
+// Copyright © 2017 The virtual-kubelet authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package manager
 
 import (
-	"sync"
-
-	"k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	corev1listers "k8s.io/client-go/listers/core/v1"
 
@@ -13,19 +25,19 @@ import (
 // ResourceManager acts as a passthrough to a cache (lister) for pods assigned to the current node.
 // It is also a passthrough to a cache (lister) for Kubernetes secrets and config maps.
 type ResourceManager struct {
-	sync.RWMutex
-
 	podLister       corev1listers.PodLister
 	secretLister    corev1listers.SecretLister
 	configMapLister corev1listers.ConfigMapLister
+	serviceLister   corev1listers.ServiceLister
 }
 
 // NewResourceManager returns a ResourceManager with the internal maps initialized.
-func NewResourceManager(podLister corev1listers.PodLister, secretLister corev1listers.SecretLister, configMapLister corev1listers.ConfigMapLister) (*ResourceManager, error) {
+func NewResourceManager(podLister corev1listers.PodLister, secretLister corev1listers.SecretLister, configMapLister corev1listers.ConfigMapLister, serviceLister corev1listers.ServiceLister) (*ResourceManager, error) {
 	rm := ResourceManager{
 		podLister:       podLister,
 		secretLister:    secretLister,
 		configMapLister: configMapLister,
+		serviceLister:   serviceLister,
 	}
 	return &rm, nil
 }
@@ -48,4 +60,9 @@ func (rm *ResourceManager) GetConfigMap(name, namespace string) (*v1.ConfigMap, 
 // GetSecret retrieves the specified secret from Kubernetes.
 func (rm *ResourceManager) GetSecret(name, namespace string) (*v1.Secret, error) {
 	return rm.secretLister.Secrets(namespace).Get(name)
+}
+
+// ListServices retrieves the list of services from Kubernetes.
+func (rm *ResourceManager) ListServices() ([]*v1.Service, error) {
+	return rm.serviceLister.List(labels.Everything())
 }

@@ -3,40 +3,27 @@ package providers
 import (
 	"context"
 	"io"
-	"time"
 
-	"k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/tools/remotecommand"
+	"github.com/virtual-kubelet/virtual-kubelet/node"
+	"github.com/virtual-kubelet/virtual-kubelet/node/api"
+	v1 "k8s.io/api/core/v1"
 	stats "k8s.io/kubernetes/pkg/kubelet/apis/stats/v1alpha1"
 )
 
 // Provider contains the methods required to implement a virtual-kubelet provider.
+//
+// Errors produced by these methods should implement an interface from
+// github.com/virtual-kubelet/virtual-kubelet/errdefs package in order for the
+// core logic to be able to understand the type of failure.
 type Provider interface {
-	// CreatePod takes a Kubernetes Pod and deploys it within the provider.
-	CreatePod(ctx context.Context, pod *v1.Pod) error
-
-	// UpdatePod takes a Kubernetes Pod and updates it within the provider.
-	UpdatePod(ctx context.Context, pod *v1.Pod) error
-
-	// DeletePod takes a Kubernetes Pod and deletes it from the provider.
-	DeletePod(ctx context.Context, pod *v1.Pod) error
-
-	// GetPod retrieves a pod by name from the provider (can be cached).
-	GetPod(ctx context.Context, namespace, name string) (*v1.Pod, error)
+	node.PodLifecycleHandler
 
 	// GetContainerLogs retrieves the logs of a container by name from the provider.
-	GetContainerLogs(ctx context.Context, namespace, podName, containerName string, tail int) (string, error)
+	GetContainerLogs(ctx context.Context, namespace, podName, containerName string, opts api.ContainerLogOpts) (io.ReadCloser, error)
 
-	// ExecInContainer executes a command in a container in the pod, copying data
+	// RunInContainer executes a command in a container in the pod, copying data
 	// between in/out/err and the container's stdin/stdout/stderr.
-	ExecInContainer(name string, uid types.UID, container string, cmd []string, in io.Reader, out, err io.WriteCloser, tty bool, resize <-chan remotecommand.TerminalSize, timeout time.Duration) error
-
-	// GetPodStatus retrieves the status of a pod by name from the provider.
-	GetPodStatus(ctx context.Context, namespace, name string) (*v1.PodStatus, error)
-
-	// GetPods retrieves a list of all pods running on the provider (can be cached).
-	GetPods(context.Context) ([]*v1.Pod, error)
+	RunInContainer(ctx context.Context, namespace, podName, containerName string, cmd []string, attach api.AttachIO) error
 
 	// Capacity returns a resource list with the capacity constraints of the provider.
 	Capacity(context.Context) v1.ResourceList

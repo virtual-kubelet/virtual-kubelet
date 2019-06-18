@@ -1,0 +1,13 @@
+{{ $year := now.Year }}
+{{ $logo := site.Params.logos.footer | relURL }}
+<footer class="footer has-background-black">
+  <div class="has-text-centered">
+    <img class="is-footer-logo" src="{{ $logo }}">
+
+    <br /><br />
+
+    <p class="is-size-5 is-size-6-mobile has-text-grey-lighter has-text-weight-light">
+      &copy; {{ $year }} The Virtual Kubelet authors
+    </p>
+  </div>
+</footer>

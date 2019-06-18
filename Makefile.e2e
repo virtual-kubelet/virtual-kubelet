@@ -1,0 +1,48 @@
+.PHONY: skaffold.validate
+skaffold.validate: kubectl_context := $(shell kubectl config current-context)
+skaffold.validate:
+	if [[ ! "minikube,docker-for-desktop,docker-desktop" =~ .*"$(kubectl_context)".* ]]; then \
+		echo current-context is [$(kubectl_context)]. Must be one of [minikube,docker-for-desktop,docker-desktop]; \
+		false; \
+	fi
+
+# skaffold deploys the virtual-kubelet to the Kubernetes cluster targeted by the current kubeconfig using skaffold.
+# The current context (as indicated by "kubectl config current-context") must be one of "minikube" or "docker-for-desktop".
+# MODE must be set to one of "dev" (default), "delete" or "run", and is used as the skaffold command to be run.
+.PHONY: skaffold
+skaffold: MODE ?= dev
+skaffold: skaffold/$(MODE)
+
+.PHONY: skaffold/%
+skaffold/%: PROFILE := local
+skaffold/%: skaffold.validate
+	skaffold $(*) \
+		-f $(PWD)/hack/skaffold/virtual-kubelet/skaffold.yml \
+		-p $(PROFILE)
+
+bin/e2e:
+	@mkdir -p bin/e2e
+
+bin/e2e/virtual-kubelet: bin/e2e
+	GOOS=linux GOARCH=amd64 $(MAKE) OUTPUT_DIR=$(@D) build
+
+# e2e runs the end-to-end test suite against the Kubernetes cluster targeted by the current kubeconfig.
+# It automatically deploys the virtual-kubelet with the mock provider by running "make skaffold MODE=run".
+# It is the caller's responsibility to cleanup the deployment after running this target (e.g. by running "make skaffold MODE=delete").
+.PHONY: e2e
+e2e: KUBECONFIG ?= $(HOME)/.kube/config
+e2e: NAMESPACE := default
+e2e: NODE_NAME := vkubelet-mock-0
+e2e: export VK_BUILD_TAGS += mock_provider
+e2e: e2e.clean bin/e2e/virtual-kubelet skaffold/run
+	@echo Running tests...
+	cd $(PWD)/internal/test/e2e && go test -v -timeout 5m -tags e2e ./... \
+		-kubeconfig=$(KUBECONFIG) \
+		-namespace=$(NAMESPACE) \
+		-node-name=$(NODE_NAME) \
+
+.PHONY: e2e.clean
+e2e.clean: NODE_NAME ?= vkubelet-mock-0
+e2e.clean: skaffold/delete
+	kubectl delete --ignore-not-found node $(NODE_NAME); \
+	if [ -f bin/e2e/virtual-kubelet ]; then  rm bin/e2e/virtual-kubelet; fi

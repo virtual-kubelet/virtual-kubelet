@@ -1,0 +1,16 @@
+{{ $heroLogo := site.Params.logos.hero | relURL }}
+<div class="hero is-primary">
+  <div class="hero-body">
+    <div class="section has-text-centered">
+      <img class="is-main-logo" src="{{ $heroLogo }}" alt="Main Virtual Kubelet hero logo">
+
+      <br /><br /><br />
+
+      <div class="buttons is-centered">
+        <a class="button is-large is-black" href="/docs">
+          Documentation
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
