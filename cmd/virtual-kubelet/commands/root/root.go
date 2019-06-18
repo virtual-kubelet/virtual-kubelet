@@ -27,7 +27,6 @@ import (
 	"github.com/virtual-kubelet/virtual-kubelet/manager"
 	"github.com/virtual-kubelet/virtual-kubelet/node"
 	"github.com/virtual-kubelet/virtual-kubelet/providers"
-	"github.com/virtual-kubelet/virtual-kubelet/providers/register"
 	corev1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -44,7 +43,7 @@ import (
 
 // NewCommand creates a new top-level command.
 // This command is used to start the virtual-kubelet daemon
-func NewCommand(ctx context.Context, name string, c Opts) *cobra.Command {
+func NewCommand(ctx context.Context, name string, s *providers.Store, c Opts) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   name,
 		Short: name + " provides a virtual kubelet interface for your kubernetes cluster.",
@@ -52,7 +51,7 @@ func NewCommand(ctx context.Context, name string, c Opts) *cobra.Command {
 backend implementation allowing users to create kubernetes nodes without running the kubelet.
 This allows users to schedule kubernetes workloads on nodes that aren't running Kubernetes.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runRootCommand(ctx, c)
+			return runRootCommand(ctx, s, c)
 		},
 	}
 
@@ -60,7 +59,7 @@ This allows users to schedule kubernetes workloads on nodes that aren't running 
 	return cmd
 }
 
-func runRootCommand(ctx context.Context, c Opts) error {
+func runRootCommand(ctx context.Context, s *providers.Store, c Opts) error {
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
@@ -120,7 +119,7 @@ func runRootCommand(ctx context.Context, c Opts) error {
 		return err
 	}
 
-	initConfig := register.InitConfig{
+	initConfig := providers.InitConfig{
 		ConfigPath:      c.ProviderConfigPath,
 		NodeName:        c.NodeName,
 		OperatingSystem: c.OperatingSystem,
@@ -129,9 +128,14 @@ func runRootCommand(ctx context.Context, c Opts) error {
 		InternalIP:      os.Getenv("VKUBELET_POD_IP"),
 	}
 
-	p, err := register.GetProvider(c.Provider, initConfig)
+	pInit := s.Get(c.Provider)
+	if pInit == nil {
+		return errors.Errorf("provider %q not found", c.Provider)
+	}
+
+	p, err := pInit(initConfig)
 	if err != nil {
-		return err
+		return errors.Wrapf(err, "error initializing provider %s", c.Provider)
 	}
 
 	ctx = log.WithLogger(ctx, log.G(ctx).WithFields(log.Fields{

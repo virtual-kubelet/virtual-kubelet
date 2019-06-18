@@ -19,12 +19,12 @@ import (
 	"os"
 
 	"github.com/spf13/cobra"
-	"github.com/virtual-kubelet/virtual-kubelet/providers/register"
+	"github.com/virtual-kubelet/virtual-kubelet/providers"
 )
 
 // NewCommand creates a new providers subcommand
 // This subcommand is used to determine which providers are registered.
-func NewCommand() *cobra.Command {
+func NewCommand(s *providers.Store) *cobra.Command {
 	return &cobra.Command{
 		Use:   "providers",
 		Short: "Show the list of supported providers",
@@ -33,12 +33,11 @@ func NewCommand() *cobra.Command {
 		Run: func(cmd *cobra.Command, args []string) {
 			switch len(args) {
 			case 0:
-				ls := register.List()
-				for _, p := range ls {
+				for _, p := range s.List() {
 					fmt.Fprintln(cmd.OutOrStdout(), p)
 				}
 			case 1:
-				if !register.Exists(args[0]) {
+				if !s.Exists(args[0]) {
 					fmt.Fprintln(cmd.OutOrStderr(), "no such provider", args[0])
 
 					// TODO(@cpuuy83): would be nice to not short-circuit the exit here
