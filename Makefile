@@ -5,6 +5,8 @@ exec := $(DOCKER_IMAGE)
 github_repo := virtual-kubelet/virtual-kubelet
 binary := virtual-kubelet
 
+export GO111MODULE ?= on
+
 include Makefile.e2e
 # Currently this looks for a globally installed gobin. When we move to modules,
 # should consider installing it locally
@@ -36,7 +38,7 @@ build: build_tags := netgo osusergo
 build: OUTPUT_DIR ?= bin
 build: authors
 	@echo "Building..."
-	$Q CGO_ENABLED=0 go build -ldflags '-extldflags "-static"' -o $(OUTPUT_DIR)/$(binary) $(if $V,-v) $(VERSION_FLAGS) ./cmd/$(binary)
+	$Q CGO_ENABLED=0 go build -mod=vendor -ldflags '-extldflags "-static"' -o $(OUTPUT_DIR)/$(binary) $(if $V,-v) $(VERSION_FLAGS) ./cmd/$(binary)
 
 .PHONY: tags
 tags:
@@ -49,12 +51,16 @@ release: build goreleaser
 
 ##### =====> Utility targets <===== #####
 
-.PHONY: clean test list cover format docker deps
+.PHONY: clean test list cover format docker vendor
 
-deps: setup
+vendor:
 	@echo "Ensuring Dependencies..."
 	$Q go env
-	$Q dep ensure
+	$Q go mod vendor
+
+mod:
+	@echo "Prune Dependencies..."
+	$Q go mod tidy
 
 docker:
 	@echo "Docker Build..."
@@ -78,14 +84,14 @@ endif
 
 test:
 	@echo "Testing..."
-	$Q go test $(if $V,-v) -i $(allpackages) # install -race libs to speed up next run
+	$Q go test -mod=vendor $(if $V,-v) $(allpackages) # install -race libs to speed up next run
 ifndef CI
 	@echo "Testing Outside CI..."
-	$Q GODEBUG=cgocheck=2 go test $(allpackages)
+	$Q GODEBUG=cgocheck=2 go test -mod=vendor $(allpackages)
 else
 	@echo "Testing in CI..."
 	$Q mkdir -p test
-	$Q ( GODEBUG=cgocheck=2 go test -v $(allpackages); echo $$? ) | \
+	$Q ( GODEBUG=cgocheck=2 go test -mod=vendor -v $(allpackages); echo $$? ) | \
        tee test/output.txt | sed '$$ d'; exit $$(tail -1 test/output.txt)
 endif
 
@@ -99,7 +105,7 @@ cover: gocovmerge
 	$Q rm -f .GOPATH/cover/*.out cover/all.merged
 	$(if $V,@echo "-- go test -coverpkg=./... -coverprofile=cover/... ./...")
 	@for MOD in $(allpackages); do \
-        go test -coverpkg=`echo $(allpackages)|tr " " ","` \
+        go test -mod=vendor -coverpkg=`echo $(allpackages)|tr " " ","` \
             -coverprofile=cover/unit-`echo $$MOD|tr "/" "_"`.out \
             $$MOD 2>&1 | grep -v "no packages being tested depend on"; \
     done
@@ -138,7 +144,6 @@ setup: goimports gocovmerge goreleaser gox clean
 	mkdir -p cover
 	mkdir -p bin
 	mkdir -p test
-	go get -u github.com/golang/dep/cmd/dep
 
 VERSION          := $(shell git describe --tags --always --dirty="-dev")
 DATE             := $(shell date -u '+%Y-%m-%d-%H:%M UTC')
