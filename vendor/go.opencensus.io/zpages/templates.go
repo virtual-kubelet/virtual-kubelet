@@ -57,23 +57,27 @@ func parseTemplate(name string) *template.Template {
 	return template.Must(template.New(name).Funcs(templateFunctions).Parse(string(text)))
 }
 
-func countFormatter(num int) string {
+func countFormatter(num uint64) string {
 	if num <= 0 {
 		return " "
 	}
 	var floatVal float64
 	var suffix string
 
-	num64 := int64(num)
-
-	if num64 >= 1e12 {
-		floatVal = float64(num64) / 1e12
+	if num >= 1e18 {
+		floatVal = float64(num) / 1e18
+		suffix = " E "
+	} else if num >= 1e15 {
+		floatVal = float64(num) / 1e15
+		suffix = " P "
+	} else if num >= 1e12 {
+		floatVal = float64(num) / 1e12
 		suffix = " T "
-	} else if num64 >= 1e9 {
-		floatVal = float64(num64) / 1e9
+	} else if num >= 1e9 {
+		floatVal = float64(num) / 1e9
 		suffix = " G "
-	} else if num64 >= 1e6 {
-		floatVal = float64(num64) / 1e6
+	} else if num >= 1e6 {
+		floatVal = float64(num) / 1e6
 		suffix = " M "
 	}
 

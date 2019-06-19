@@ -25,7 +25,7 @@ import (
 	"log"
 	"net/http"
 
-	"git.apache.org/thrift.git/lib/go/thrift"
+	"github.com/apache/thrift/lib/go/thrift"
 	gen "go.opencensus.io/exporter/jaeger/internal/gen-go/jaeger"
 	"go.opencensus.io/trace"
 	"google.golang.org/api/support/bundler"
@@ -37,7 +37,13 @@ const defaultServiceName = "OpenCensus"
 type Options struct {
 	// Endpoint is the Jaeger HTTP Thrift endpoint.
 	// For example, http://localhost:14268.
+	//
+	// Deprecated: Use CollectorEndpoint instead.
 	Endpoint string
+
+	// CollectorEndpoint is the full url to the Jaeger HTTP Thrift collector.
+	// For example, http://localhost:14268/api/traces
+	CollectorEndpoint string
 
 	// AgentEndpoint instructs exporter to send spans to jaeger-agent at this address.
 	// For example, localhost:6831.
@@ -63,20 +69,26 @@ type Options struct {
 
 	// Process contains the information about the exporting process.
 	Process Process
+
+	//BufferMaxCount defines the total number of traces that can be buffered in memory
+	BufferMaxCount int
 }
 
 // NewExporter returns a trace.Exporter implementation that exports
 // the collected spans to Jaeger.
 func NewExporter(o Options) (*Exporter, error) {
-	endpoint := o.Endpoint
-	if endpoint == "" && o.AgentEndpoint == "" {
+	if o.Endpoint == "" && o.CollectorEndpoint == "" && o.AgentEndpoint == "" {
 		return nil, errors.New("missing endpoint for Jaeger exporter")
 	}
 
+	var endpoint string
 	var client *agentClientUDP
 	var err error
-	if endpoint != "" {
-		endpoint = endpoint + "/api/traces?format=jaeger.thrift"
+	if o.Endpoint != "" {
+		endpoint = o.Endpoint + "/api/traces?format=jaeger.thrift"
+		log.Printf("Endpoint has been deprecated. Please use CollectorEndpoint instead.")
+	} else if o.CollectorEndpoint != "" {
+		endpoint = o.CollectorEndpoint
 	} else {
 		client, err = newAgentClientUDP(o.AgentEndpoint, udpPacketMaxLength)
 		if err != nil {
@@ -117,6 +129,14 @@ func NewExporter(o Options) (*Exporter, error) {
 			onError(err)
 		}
 	})
+
+	// Set BufferedByteLimit with the total number of spans that are permissible to be held in memory.
+	// This needs to be done since the size of messages is always set to 1. Failing to set this would allow
+	// 1G messages to be held in memory since that is the default value of BufferedByteLimit.
+	if o.BufferMaxCount != 0 {
+		bundler.BufferedByteLimit = o.BufferMaxCount
+	}
+
 	e.bundler = bundler
 	return e, nil
 }
@@ -172,6 +192,11 @@ func (e *Exporter) ExportSpan(data *trace.SpanData) {
 	// TODO(jbd): Handle oversized bundlers.
 }
 
+// As per the OpenCensus Status code mapping in
+//    https://opencensus.io/tracing/span/status/
+// the status is OK if the code is 0.
+const opencensusStatusCodeOK = 0
+
 func spanDataToThrift(data *trace.SpanData) *gen.Span {
 	tags := make([]*gen.Tag, 0, len(data.Attributes))
 	for k, v := range data.Attributes {
@@ -185,6 +210,12 @@ func spanDataToThrift(data *trace.SpanData) *gen.Span {
 		attributeToTag("status.code", data.Status.Code),
 		attributeToTag("status.message", data.Status.Message),
 	)
+
+	// Ensure that if Status.Code is not OK, that we set the "error" tag on the Jaeger span.
+	// See Issue https://github.com/census-instrumentation/opencensus-go/issues/1041
+	if data.Status.Code != opencensusStatusCodeOK {
+		tags = append(tags, attributeToTag("error", true))
+	}
 
 	var logs []*gen.Log
 	for _, a := range data.Annotations {
@@ -262,6 +293,13 @@ func attributeToTag(key string, a interface{}) *gen.Tag {
 			Key:   key,
 			VLong: &v,
 			VType: gen.TagType_LONG,
+		}
+	case float64:
+		v := float64(value)
+		tag = &gen.Tag{
+			Key:     key,
+			VDouble: &v,
+			VType:   gen.TagType_DOUBLE,
 		}
 	}
 	return tag
