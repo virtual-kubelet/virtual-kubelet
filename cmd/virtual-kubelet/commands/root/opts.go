@@ -34,6 +34,7 @@ const (
 	DefaultListenPort           = 10250 // TODO(cpuguy83)(VK1.0): Change this to an addr instead of just a port.. we should not be listening on all interfaces.
 	DefaultPodSyncWorkers       = 10
 	DefaultKubeNamespace        = corev1.NamespaceAll
+	DefaultKubeClusterDomain    = "cluster.local"
 
 	DefaultTaintEffect = string(corev1.TaintEffectNoSchedule)
 	DefaultTaintKey    = "virtual-kubelet.io/provider"
@@ -49,6 +50,9 @@ type Opts struct {
 	KubeConfigPath string
 	// Namespace to watch for pods and other resources
 	KubeNamespace string
+	// Domain suffix to append to search domains for the pods created by virtual-kubelet
+	KubeClusterDomain string
+
 	// Sets the port to listen for requests from the Kubernetes API server
 	ListenPort int32
 
@@ -125,6 +129,10 @@ func SetDefaultOpts(c *Opts) error {
 
 	if c.KubeNamespace == "" {
 		c.KubeNamespace = DefaultKubeNamespace
+	}
+
+	if c.KubeClusterDomain == "" {
+		c.KubeClusterDomain = DefaultKubeClusterDomain
 	}
 
 	if c.TaintKey == "" {
