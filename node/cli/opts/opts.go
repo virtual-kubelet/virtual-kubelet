@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package root
+package opts
 
 import (
 	"os"
@@ -67,6 +67,7 @@ type Opts struct {
 
 	TaintKey     string
 	TaintEffect  string
+	TaintValue   string
 	DisableTaint bool
 
 	MetricsAddr string
@@ -78,79 +79,66 @@ type Opts struct {
 	// Use node leases when supported by Kubernetes (instead of node status updates)
 	EnableNodeLease bool
 
-	TraceExporters  []string
-	TraceSampleRate string
-	TraceConfig     TracingExporterOptions
-
 	// Startup Timeout is how long to wait for the kubelet to start
 	StartupTimeout time.Duration
 
 	Version string
 }
 
-// SetDefaultOpts sets default options for unset values on the passed in option struct.
+// FromEnv sets default options for unset values on the passed in option struct.
 // Fields tht are already set will not be modified.
-func SetDefaultOpts(c *Opts) error {
-	if c.OperatingSystem == "" {
-		c.OperatingSystem = DefaultOperatingSystem
+func FromEnv() (*Opts, error) {
+	o := &Opts{}
+	setDefaults(o)
+
+	o.NodeName = getEnv("DEFAULTNODE_NAME", o.NodeName)
+
+	if kp := os.Getenv("KUBELET_PORT"); kp != "" {
+		p, err := strconv.Atoi(kp)
+		if err != nil {
+			return o, errors.Wrap(err, "error parsing KUBELET_PORT environment variable")
+		}
+		o.ListenPort = int32(p)
 	}
 
-	if c.NodeName == "" {
-		c.NodeName = getEnv("DEFAULT_NODE_NAME", DefaultNodeName)
-	}
-
-	if c.InformerResyncPeriod == 0 {
-		c.InformerResyncPeriod = DefaultInformerResyncPeriod
-	}
-
-	if c.MetricsAddr == "" {
-		c.MetricsAddr = DefaultMetricsAddr
-	}
-
-	if c.PodSyncWorkers == 0 {
-		c.PodSyncWorkers = DefaultPodSyncWorkers
-	}
-
-	if c.TraceConfig.ServiceName == "" {
-		c.TraceConfig.ServiceName = DefaultNodeName
-	}
-
-	if c.ListenPort == 0 {
-		if kp := os.Getenv("KUBELET_PORT"); kp != "" {
-			p, err := strconv.Atoi(kp)
-			if err != nil {
-				return errors.Wrap(err, "error parsing KUBELET_PORT environment variable")
-			}
-			c.ListenPort = int32(p)
-		} else {
-			c.ListenPort = DefaultListenPort
+	o.KubeConfigPath = os.Getenv("KUBECONFIG")
+	if o.KubeConfigPath == "" {
+		home, _ := homedir.Dir()
+		if home != "" {
+			o.KubeConfigPath = filepath.Join(home, ".kube", "config")
 		}
 	}
 
-	if c.KubeNamespace == "" {
-		c.KubeNamespace = DefaultKubeNamespace
-	}
+	o.TaintKey = getEnv("VKUBELET_TAINT_KEY", o.TaintKey)
+	o.TaintValue = getEnv("VKUBELET_TAINT_VALUE", o.TaintValue)
+	o.TaintEffect = getEnv("VKUBELET_TAINT_EFFECT", o.TaintEffect)
 
-	if c.KubeClusterDomain == "" {
-		c.KubeClusterDomain = DefaultKubeClusterDomain
-	}
+	return o, nil
+}
 
-	if c.TaintKey == "" {
-		c.TaintKey = DefaultTaintKey
-	}
-	if c.TaintEffect == "" {
-		c.TaintEffect = DefaultTaintEffect
-	}
+func New() *Opts {
+	o := &Opts{}
+	setDefaults(o)
+	return o
+}
 
-	if c.KubeConfigPath == "" {
-		c.KubeConfigPath = os.Getenv("KUBECONFIG")
-		if c.KubeConfigPath == "" {
-			home, _ := homedir.Dir()
-			if home != "" {
-				c.KubeConfigPath = filepath.Join(home, ".kube", "config")
-			}
-		}
-	}
+func setDefaults(o *Opts) {
+	o.OperatingSystem = DefaultOperatingSystem
+	o.NodeName = DefaultNodeName
+	o.TaintKey = DefaultTaintKey
+	o.TaintEffect = DefaultTaintEffect
+	o.KubeNamespace = DefaultKubeNamespace
+	o.PodSyncWorkers = DefaultPodSyncWorkers
+	o.ListenPort = DefaultListenPort
+	o.MetricsAddr = DefaultMetricsAddr
+	o.InformerResyncPeriod = DefaultInformerResyncPeriod
+	o.KubeClusterDomain = DefaultKubeClusterDomain
+}
 
-	return nil
+func getEnv(key, defaultValue string) string {
+	value, found := os.LookupEnv(key)
+	if found {
+		return value
+	}
+	return defaultValue
 }

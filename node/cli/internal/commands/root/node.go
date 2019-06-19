@@ -19,7 +19,8 @@ import (
 	"strings"
 
 	"github.com/virtual-kubelet/virtual-kubelet/errdefs"
-	"github.com/virtual-kubelet/virtual-kubelet/providers"
+	"github.com/virtual-kubelet/virtual-kubelet/node/cli/opts"
+	"github.com/virtual-kubelet/virtual-kubelet/node/cli/provider"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -29,7 +30,7 @@ const osLabel = "beta.kubernetes.io/os"
 
 // NodeFromProvider builds a kubernetes node object from a provider
 // This is a temporary solution until node stuff actually split off from the provider interface itself.
-func NodeFromProvider(ctx context.Context, name string, taint *v1.Taint, p providers.Provider, version string) *v1.Node {
+func NodeFromProvider(ctx context.Context, name string, taint *v1.Taint, p provider.Provider, version string) *v1.Node {
 	taints := make([]v1.Taint, 0)
 
 	if taint != nil {
@@ -66,24 +67,13 @@ func NodeFromProvider(ctx context.Context, name string, taint *v1.Taint, p provi
 // getTaint creates a taint using the provided key/value.
 // Taint effect is read from the environment
 // The taint key/value may be overwritten by the environment.
-func getTaint(c Opts) (*corev1.Taint, error) {
-	value := c.Provider
-
-	key := c.TaintKey
-	if key == "" {
-		key = DefaultTaintKey
+func getTaint(o *opts.Opts) (*corev1.Taint, error) {
+	if o.TaintValue == "" {
+		o.TaintValue = o.Provider
 	}
-
-	if c.TaintEffect == "" {
-		c.TaintEffect = DefaultTaintEffect
-	}
-
-	key = getEnv("VKUBELET_TAINT_KEY", key)
-	value = getEnv("VKUBELET_TAINT_VALUE", value)
-	effectEnv := getEnv("VKUBELET_TAINT_EFFECT", string(c.TaintEffect))
 
 	var effect corev1.TaintEffect
-	switch effectEnv {
+	switch o.TaintEffect {
 	case "NoSchedule":
 		effect = corev1.TaintEffectNoSchedule
 	case "NoExecute":
@@ -91,12 +81,12 @@ func getTaint(c Opts) (*corev1.Taint, error) {
 	case "PreferNoSchedule":
 		effect = corev1.TaintEffectPreferNoSchedule
 	default:
-		return nil, errdefs.InvalidInputf("taint effect %q is not supported", effectEnv)
+		return nil, errdefs.InvalidInputf("taint effect %q is not supported", o.TaintEffect)
 	}
 
 	return &corev1.Taint{
-		Key:    key,
-		Value:  value,
+		Key:    o.TaintKey,
+		Value:  o.TaintValue,
 		Effect: effect,
 	}, nil
 }

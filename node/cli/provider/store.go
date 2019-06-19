@@ -1,9 +1,8 @@
-package providers
+package provider
 
 import (
 	"sync"
 
-	"github.com/virtual-kubelet/virtual-kubelet/errdefs"
 	"github.com/virtual-kubelet/virtual-kubelet/manager"
 )
 
@@ -20,14 +19,10 @@ func NewStore() *Store {
 }
 
 // Register registers a providers init func by name
-func (s *Store) Register(name string, f InitFunc) error {
-	if f == nil {
-		return errdefs.InvalidInput("provided init function cannot not be nil")
-	}
+func (s *Store) Register(name string, f InitFunc) {
 	s.mu.Lock()
 	s.ls[name] = f
 	s.mu.Unlock()
-	return nil
 }
 
 // Get gets the registered init func for the given name

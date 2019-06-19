@@ -26,7 +26,8 @@ import (
 	"github.com/virtual-kubelet/virtual-kubelet/log"
 	"github.com/virtual-kubelet/virtual-kubelet/manager"
 	"github.com/virtual-kubelet/virtual-kubelet/node"
-	"github.com/virtual-kubelet/virtual-kubelet/providers"
+	"github.com/virtual-kubelet/virtual-kubelet/node/cli/opts"
+	"github.com/virtual-kubelet/virtual-kubelet/node/cli/provider"
 	corev1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -43,7 +44,7 @@ import (
 
 // NewCommand creates a new top-level command.
 // This command is used to start the virtual-kubelet daemon
-func NewCommand(ctx context.Context, name string, s *providers.Store, c Opts) *cobra.Command {
+func NewCommand(ctx context.Context, name string, s *provider.Store, o *opts.Opts) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   name,
 		Short: name + " provides a virtual kubelet interface for your kubernetes cluster.",
@@ -51,19 +52,19 @@ func NewCommand(ctx context.Context, name string, s *providers.Store, c Opts) *c
 backend implementation allowing users to create kubernetes nodes without running the kubelet.
 This allows users to schedule kubernetes workloads on nodes that aren't running Kubernetes.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runRootCommand(ctx, s, c)
+			return runRootCommand(ctx, s, o)
 		},
 	}
 
-	installFlags(cmd.Flags(), &c)
+	installFlags(cmd.Flags(), o)
 	return cmd
 }
 
-func runRootCommand(ctx context.Context, s *providers.Store, c Opts) error {
+func runRootCommand(ctx context.Context, s *provider.Store, c *opts.Opts) error {
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
-	if ok := providers.ValidOperatingSystems[c.OperatingSystem]; !ok {
+	if ok := provider.ValidOperatingSystems[c.OperatingSystem]; !ok {
 		return errdefs.InvalidInputf("operating system %q is not supported", c.OperatingSystem)
 	}
 
@@ -115,17 +116,13 @@ func runRootCommand(ctx context.Context, s *providers.Store, c Opts) error {
 		return err
 	}
 
-	if err := setupTracing(ctx, c); err != nil {
-		return err
-	}
-
-	initConfig := providers.InitConfig{
-		ConfigPath:      c.ProviderConfigPath,
-		NodeName:        c.NodeName,
-		OperatingSystem: c.OperatingSystem,
-		ResourceManager: rm,
-		DaemonPort:      int32(c.ListenPort),
-		InternalIP:      os.Getenv("VKUBELET_POD_IP"),
+	initConfig := provider.InitConfig{
+		ConfigPath:        c.ProviderConfigPath,
+		NodeName:          c.NodeName,
+		OperatingSystem:   c.OperatingSystem,
+		ResourceManager:   rm,
+		DaemonPort:        int32(c.ListenPort),
+		InternalIP:        os.Getenv("VKUBELET_POD_IP"),
 		KubeClusterDomain: c.KubeClusterDomain,
 	}
 

@@ -1,4 +1,4 @@
-package providers
+package provider
 
 const (
 	// OperatingSystemLinux is the configuration value for defining Linux.
