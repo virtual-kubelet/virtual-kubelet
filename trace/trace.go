@@ -38,9 +38,25 @@ var (
 	T Tracer = nopTracer{}
 )
 
+type tracerKey struct{}
+
+// WithTracer sets the Tracer which will be used by `StartSpan` in the context.
+func WithTracer(ctx context.Context, t Tracer) context.Context {
+	return context.WithValue(ctx, tracerKey{}, t)
+}
+
 // StartSpan starts a span from the configured default tracer
 func StartSpan(ctx context.Context, name string) (context.Context, Span) {
-	ctx, span := T.StartSpan(ctx, name)
+	t := ctx.Value(tracerKey{})
+
+	var tracer Tracer
+	if t != nil {
+		tracer = t.(Tracer)
+	} else {
+		tracer = T
+	}
+
+	ctx, span := tracer.StartSpan(ctx, name)
 	ctx = log.WithLogger(ctx, span.Logger())
 	return ctx, span
 }
