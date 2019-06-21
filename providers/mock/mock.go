@@ -12,9 +12,11 @@ import (
 
 	"github.com/virtual-kubelet/virtual-kubelet/errdefs"
 	"github.com/virtual-kubelet/virtual-kubelet/log"
+	"github.com/virtual-kubelet/virtual-kubelet/node"
 	"github.com/virtual-kubelet/virtual-kubelet/node/api"
+	"github.com/virtual-kubelet/virtual-kubelet/providers"
 	"github.com/virtual-kubelet/virtual-kubelet/trace"
-	v1 "k8s.io/api/core/v1"
+	"k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	stats "k8s.io/kubernetes/pkg/kubelet/apis/stats/v1alpha1"
@@ -32,14 +34,11 @@ const (
 	containerNameKey = "containerName"
 )
 
-// See: https://github.com/virtual-kubelet/virtual-kubelet/issues/632
-/*
 var (
 	_ providers.Provider           = (*MockV0Provider)(nil)
 	_ providers.PodMetricsProvider = (*MockV0Provider)(nil)
-	_ node.PodNotifier         = (*MockProvider)(nil)
+	_ node.PodNotifier             = (*MockProvider)(nil)
 )
-*/
 
 // MockV0Provider implements the virtual-kubelet provider interface and stores pods in memory.
 type MockV0Provider struct {
@@ -51,6 +50,7 @@ type MockV0Provider struct {
 	config             MockConfig
 	startTime          time.Time
 	notifier           func(*v1.Pod)
+	annotations        map[string]string
 }
 
 // MockProvider is like MockV0Provider, but implements the PodNotifier interface
@@ -60,9 +60,10 @@ type MockProvider struct {
 
 // MockConfig contains a mock virtual-kubelet's configurable parameters.
 type MockConfig struct {
-	CPU    string `json:"cpu,omitempty"`
-	Memory string `json:"memory,omitempty"`
-	Pods   string `json:"pods,omitempty"`
+	CPU         string            `json:"cpu,omitempty"`
+	Memory      string            `json:"memory,omitempty"`
+	Pods        string            `json:"pods,omitempty"`
+	Annotations map[string]string `json:"annotations,omitempty"`
 }
 
 // NewMockProviderMockConfig creates a new MockV0Provider. Mock legacy provider does not implement the new asynchronous podnotifier interface
@@ -92,16 +93,6 @@ func NewMockV0ProviderMockConfig(config MockConfig, nodeName, operatingSystem st
 	}
 
 	return &provider, nil
-}
-
-// NewMockV0Provider creates a new MockV0Provider
-func NewMockV0Provider(providerConfig, nodeName, operatingSystem string, internalIP string, daemonEndpointPort int32) (*MockV0Provider, error) {
-	config, err := loadConfig(providerConfig, nodeName)
-	if err != nil {
-		return nil, err
-	}
-
-	return NewMockV0ProviderMockConfig(config, nodeName, operatingSystem, internalIP, daemonEndpointPort)
 }
 
 // NewMockProviderMockConfig creates a new MockProvider with the given config
@@ -421,7 +412,11 @@ func (p *MockV0Provider) NodeConditions(ctx context.Context) []v1.NodeCondition 
 			Message:            "RouteController created a route",
 		},
 	}
+}
 
+// NodeAnnotations returns the Annotations for node metadata within Kubernetes.
+func (p *MockV0Provider) NodeAnnotations(context.Context) map[string]string {
+	return p.config.Annotations
 }
 
 // NodeAddresses returns a list of addresses for the node status

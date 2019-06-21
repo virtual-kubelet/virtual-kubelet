@@ -120,12 +120,12 @@ func runRootCommand(ctx context.Context, s *providers.Store, c Opts) error {
 	}
 
 	initConfig := providers.InitConfig{
-		ConfigPath:      c.ProviderConfigPath,
-		NodeName:        c.NodeName,
-		OperatingSystem: c.OperatingSystem,
-		ResourceManager: rm,
-		DaemonPort:      int32(c.ListenPort),
-		InternalIP:      os.Getenv("VKUBELET_POD_IP"),
+		ConfigPath:        c.ProviderConfigPath,
+		NodeName:          c.NodeName,
+		OperatingSystem:   c.OperatingSystem,
+		ResourceManager:   rm,
+		DaemonPort:        int32(c.ListenPort),
+		InternalIP:        os.Getenv("VKUBELET_POD_IP"),
 		KubeClusterDomain: c.KubeClusterDomain,
 	}
 

@@ -44,6 +44,7 @@ func NodeFromProvider(ctx context.Context, name string, taint *v1.Taint, p provi
 				"kubernetes.io/hostname": name,
 				"alpha.service-controller.kubernetes.io/exclude-balancer": "true",
 			},
+			Annotations: p.NodeAnnotations(ctx),
 		},
 		Spec: v1.NodeSpec{
 			Taints: taints,

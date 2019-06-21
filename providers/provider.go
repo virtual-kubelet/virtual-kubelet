@@ -40,6 +40,9 @@ type Provider interface {
 	// within Kubernetes.
 	NodeDaemonEndpoints(context.Context) *v1.NodeDaemonEndpoints
 
+	// NodeAnnotations returns the Annotations for node metadata within Kubernetes.
+	NodeAnnotations(context.Context) map[string]string
+
 	// OperatingSystem returns the operating system the provider is for.
 	OperatingSystem() string
 }
