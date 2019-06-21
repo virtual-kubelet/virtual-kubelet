@@ -18,9 +18,11 @@ import (
 	"context"
 	"os"
 	"os/signal"
+	"fmt"
 	"path/filepath"
 	"strings"
 	"syscall"
+	"flag"
 
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -85,6 +87,9 @@ func main() {
 			}
 			logrus.SetLevel(lvl)
 		}
+		flag.VisitAll(func(f *flag.Flag) {
+			fmt.Printf("FLAG: --%s=%q\n", f.Name, f.Value)
+		})
 		return nil
 	}
 
