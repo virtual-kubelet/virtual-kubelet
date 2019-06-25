@@ -25,7 +25,7 @@
 
         <ul>
           {{ range $providers }}
-          {{ $url := printf "https://github.com/virtual-kubelet/virtual-kubelet/tree/master/providers/%s" .tag }}
+          {{ $url := printf "https://github.com/virtual-kubelet/%s/blob/master/README.md#readme" .tag }}
           <li class="has-bottom-spacing">
             <a class="is-size-5 is-size-6-mobile has-text-grey-lighter has-text-weight-light" href="{{ $url }}" target="_blank">
               {{ .name | markdownify }}
