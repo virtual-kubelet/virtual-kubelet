@@ -312,12 +312,6 @@ func (p *MockV0Provider) GetContainerLogs(ctx context.Context, namespace, podNam
 	return ioutil.NopCloser(strings.NewReader("")), nil
 }
 
-// Get full pod name as defined in the provider context
-// TODO: Implementation
-func (p *MockV0Provider) GetPodFullName(namespace string, pod string) string {
-	return ""
-}
-
 // RunInContainer executes a command in a container in the pod, copying data
 // between in/out/err and the container's stdin/stdout/stderr.
 func (p *MockV0Provider) RunInContainer(ctx context.Context, namespace, name, container string, cmd []string, attach api.AttachIO) error {
@@ -360,11 +354,26 @@ func (p *MockV0Provider) GetPods(ctx context.Context) ([]*v1.Pod, error) {
 	return pods, nil
 }
 
-// Capacity returns a resource list containing the capacity limits.
-func (p *MockV0Provider) Capacity(ctx context.Context) v1.ResourceList {
-	ctx, span := trace.StartSpan(ctx, "Capacity")
+func (p *MockV0Provider) ConfigureNode(ctx context.Context, n *v1.Node) {
+	ctx, span := trace.StartSpan(ctx, "mock.ConfigureNode")
 	defer span.End()
 
+	n.Status.Capacity = p.capacity()
+	n.Status.Allocatable = p.capacity()
+	n.Status.Conditions = p.nodeConditions()
+	n.Status.Addresses = p.nodeAddresses()
+	n.Status.DaemonEndpoints = p.nodeDaemonEndpoints()
+	os := p.operatingSystem
+	if os == "" {
+		os = "Linux"
+	}
+	n.Status.NodeInfo.OperatingSystem = os
+	n.Status.NodeInfo.Architecture = "amd64"
+	n.ObjectMeta.Labels["alpha.service-controller.kubernetes.io/exclude-balancer"] = "true"
+}
+
+// Capacity returns a resource list containing the capacity limits.
+func (p *MockV0Provider) capacity() v1.ResourceList {
 	return v1.ResourceList{
 		"cpu":    resource.MustParse(p.config.CPU),
 		"memory": resource.MustParse(p.config.Memory),
@@ -374,10 +383,7 @@ func (p *MockV0Provider) Capacity(ctx context.Context) v1.ResourceList {
 
 // NodeConditions returns a list of conditions (Ready, OutOfDisk, etc), for updates to the node status
 // within Kubernetes.
-func (p *MockV0Provider) NodeConditions(ctx context.Context) []v1.NodeCondition {
-	ctx, span := trace.StartSpan(ctx, "NodeConditions")
-	defer span.End()
-
+func (p *MockV0Provider) nodeConditions() []v1.NodeCondition {
 	// TODO: Make this configurable
 	return []v1.NodeCondition{
 		{
@@ -426,10 +432,7 @@ func (p *MockV0Provider) NodeConditions(ctx context.Context) []v1.NodeCondition 
 
 // NodeAddresses returns a list of addresses for the node status
 // within Kubernetes.
-func (p *MockV0Provider) NodeAddresses(ctx context.Context) []v1.NodeAddress {
-	ctx, span := trace.StartSpan(ctx, "NodeAddresses")
-	defer span.End()
-
+func (p *MockV0Provider) nodeAddresses() []v1.NodeAddress {
 	return []v1.NodeAddress{
 		{
 			Type:    "InternalIP",
@@ -440,23 +443,12 @@ func (p *MockV0Provider) NodeAddresses(ctx context.Context) []v1.NodeAddress {
 
 // NodeDaemonEndpoints returns NodeDaemonEndpoints for the node status
 // within Kubernetes.
-func (p *MockV0Provider) NodeDaemonEndpoints(ctx context.Context) *v1.NodeDaemonEndpoints {
-	ctx, span := trace.StartSpan(ctx, "NodeDaemonEndpoints")
-	defer span.End()
-
-	return &v1.NodeDaemonEndpoints{
+func (p *MockV0Provider) nodeDaemonEndpoints() v1.NodeDaemonEndpoints {
+	return v1.NodeDaemonEndpoints{
 		KubeletEndpoint: v1.DaemonEndpoint{
 			Port: p.daemonEndpointPort,
 		},
 	}
-}
-
-// OperatingSystem returns the operating system for this provider.
-// This is a noop to default to Linux for now.
-
-func (p *MockV0Provider) OperatingSystem() string {
-	// This is harcoded due to: https://github.com/virtual-kubelet/virtual-kubelet/issues/632
-	return "Linux"
 }
 
 // GetStatsSummary returns dummy stats for all pods known by this provider.

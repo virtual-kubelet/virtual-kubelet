@@ -25,6 +25,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+const osLabel = "beta.kubernetes.io/os"
+
 // NodeFromProvider builds a kubernetes node object from a provider
 // This is a temporary solution until node stuff actually split off from the provider interface itself.
 func NodeFromProvider(ctx context.Context, name string, taint *v1.Taint, p providers.Provider, version string) *v1.Node {
@@ -40,9 +42,7 @@ func NodeFromProvider(ctx context.Context, name string, taint *v1.Taint, p provi
 			Labels: map[string]string{
 				"type":                   "virtual-kubelet",
 				"kubernetes.io/role":     "agent",
-				"beta.kubernetes.io/os":  strings.ToLower(p.OperatingSystem()),
 				"kubernetes.io/hostname": name,
-				"alpha.service-controller.kubernetes.io/exclude-balancer": "true",
 			},
 		},
 		Spec: v1.NodeSpec{
@@ -50,16 +50,15 @@ func NodeFromProvider(ctx context.Context, name string, taint *v1.Taint, p provi
 		},
 		Status: v1.NodeStatus{
 			NodeInfo: v1.NodeSystemInfo{
-				OperatingSystem: p.OperatingSystem(),
-				Architecture:    "amd64",
-				KubeletVersion:  version,
+				Architecture:   "amd64",
+				KubeletVersion: version,
 			},
-			Capacity:        p.Capacity(ctx),
-			Allocatable:     p.Capacity(ctx),
-			Conditions:      p.NodeConditions(ctx),
-			Addresses:       p.NodeAddresses(ctx),
-			DaemonEndpoints: *p.NodeDaemonEndpoints(ctx),
 		},
+	}
+
+	p.ConfigureNode(ctx, node)
+	if _, ok := node.ObjectMeta.Labels[osLabel]; !ok {
+		node.ObjectMeta.Labels[osLabel] = strings.ToLower(node.Status.NodeInfo.OperatingSystem)
 	}
 	return node
 }

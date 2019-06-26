@@ -25,23 +25,9 @@ type Provider interface {
 	// between in/out/err and the container's stdin/stdout/stderr.
 	RunInContainer(ctx context.Context, namespace, podName, containerName string, cmd []string, attach api.AttachIO) error
 
-	// Capacity returns a resource list with the capacity constraints of the provider.
-	Capacity(context.Context) v1.ResourceList
-
-	// NodeConditions returns a list of conditions (Ready, OutOfDisk, etc), which is
-	// polled periodically to update the node status within Kubernetes.
-	NodeConditions(context.Context) []v1.NodeCondition
-
-	// NodeAddresses returns a list of addresses for the node status
-	// within Kubernetes.
-	NodeAddresses(context.Context) []v1.NodeAddress
-
-	// NodeDaemonEndpoints returns NodeDaemonEndpoints for the node status
-	// within Kubernetes.
-	NodeDaemonEndpoints(context.Context) *v1.NodeDaemonEndpoints
-
-	// OperatingSystem returns the operating system the provider is for.
-	OperatingSystem() string
+	// ConfigureNode enables a provider to configure the node object that
+	// will be used for Kubernetes.
+	ConfigureNode(context.Context, *v1.Node)
 }
 
 // PodMetricsProvider is an optional interface that providers can implement to expose pod stats
