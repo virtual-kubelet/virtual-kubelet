@@ -3,7 +3,7 @@
 Virtual Kubelet is an open source [Kubernetes kubelet](https://kubernetes.io/docs/reference/generated/kubelet/)
 implementation that masquerades as a kubelet for the purposes of connecting Kubernetes to other APIs.
 This allows the nodes to be backed by other services like ACI, AWS Fargate, [IoT Edge](https://github.com/Azure/iot-edge-virtual-kubelet-provider) etc. The primary scenario for VK is enabling the extension of the Kubernetes API into serverless container platforms like ACI and Fargate, though we are open to others. However, it should be noted that VK is explicitly not intended to be an alternative to Kubernetes federation.
- 
+
 Virtual Kubelet features a pluggable architecture and direct use of Kubernetes primitives, making it much easier to build on.
 
 We invite the Kubernetes ecosystem to join us in empowering developers to build
@@ -21,7 +21,7 @@ The best description is "Kubernetes API on top, programmable back."
 * [Providers](#providers)
     + [Alibaba Cloud ECI Provider](#alibaba-cloud-eci-provider)
     + [Azure Container Instances Provider](#azure-container-instances-provider)
-	+ [Azure Batch GPU Provider](./providers/azurebatch/README.md)
+	+ [Azure Batch GPU Provider](https://github.com/virtual-kubelet/azure-batch/blob/master/README.md)
     + [AWS Fargate Provider](#aws-fargate-provider)
 	+ [HashiCorp Nomad](#hashicorp-nomad-provider)
     + [OpenStack Zun](#openstack-zun-provider)
@@ -29,7 +29,6 @@ The best description is "Kubernetes API on top, programmable back."
 * [Testing](#testing)
     + [Unit tests](#unit-tests)
     + [End-to-end tests](#end-to-end-tests)
-    + [Testing the Azure Provider Client](#testing-the-azure-provider-client)
 * [Known quirks and workarounds](#known-quirks-and-workarounds)
 * [Contributing](#contributing)
 
@@ -82,12 +81,12 @@ This will build and deploy the Virtual Kubelet, and return.
 ## Current Features
 
 - create, delete and update pods
-- container logs, exec, and metrics 
+- container logs, exec, and metrics
 - get pod, pods and pod status
-- capacity 
+- capacity
 - node addresses, node capacity, node daemon endpoints
 - operating system
-- bring your own virtual network 
+- bring your own virtual network
 
 
 ## Command-Line Usage
@@ -139,13 +138,13 @@ Providers must provide the following functionality to be considered a supported 
 
 Alibaba Cloud ECI(Elastic Container Instance) is a service that allow you run containers without having to manage servers or clusters.
 
-You can find more details in the [Alibaba Cloud ECI provider documentation](./providers/alibabacloud/README.md).
+You can find more details in the [Alibaba Cloud ECI provider documentation](https://github.com/virtual-kubelet/alibabacloud-eci/blob/master/README.md).
 
 #### Configuration File
 
 The alibaba ECI provider will read configuration file specified by the `--provider-config` flag.
 
-The example configure file is `providers/alibabacloud/eci.toml`.
+The example configure file is in the [ECI provider repository](https://github.com/virtual-kubelet/alibabacloud-eci/blob/master/eci.toml).
 
 ### Azure Container Instances Provider
 
@@ -153,7 +152,7 @@ The Azure Container Instances Provider allows you to utilize both
 typical pods on VMs and Azure Container instances simultaneously in the
 same Kubernetes cluster.
 
-You can find detailed instructions on how to set it up and how to test it in the [Azure Container Instances Provider documentation](./providers/azure/README.md).
+You can find detailed instructions on how to set it up and how to test it in the [Azure Container Instances Provider documentation](https://github.com/virtual-kubelet/azure-aci/blob/master/README.md).
 
 #### Configuration File
 
@@ -162,7 +161,7 @@ The config file is in TOML format, and an example lives in `providers/azure/exam
 
 #### More Details
 
-See the [ACI Readme](providers/azure/README.md)
+See the [ACI Readme](https://github.com/virtual-kubelet/alibabacloud-eci/blob/master/eci.toml)
 
 ### AWS Fargate Provider
 
@@ -175,7 +174,7 @@ IP addresses to connect to the internet, private IP addresses to connect to your
 security groups, IAM roles, CloudWatch Logs and many other AWS services. Pods on Fargate can
 co-exist with pods on regular worker nodes in the same Kubernetes cluster.
 
-Easy instructions and a sample configuration file is available in the [AWS Fargate provider documentation](providers/aws/README.md).
+Easy instructions and a sample configuration file is available in the [AWS Fargate provider documentation](https://github.com/virtual-kubelet/aws-fargate/blob/master/README.md).
 
 ### HashiCorp Nomad Provider
 
@@ -189,7 +188,7 @@ would on a Kubernetes node.
 ./bin/virtual-kubelet --provider="nomad"
 ```
 
-For detailed instructions, follow the guide [here](providers/nomad/README.md).
+For detailed instructions, follow the guide [here](https://github.com/virtual-kubelet/nomad/blob/master/README.md).
 
 ### OpenStack Zun Provider
 
@@ -204,7 +203,7 @@ and bind-mount Cinder volumes into a path inside a pod's container.
 ./bin/virtual-kubelet --provider="openstack"
 ```
 
-For detailed instructions, follow the guide [here](providers/openstack/README.md).
+For detailed instructions, follow the guide [here](https://github.com/virtual-kubelet/openstack-zun/blob/master/README.md).
 
 ### Adding a New Provider via the Provider Interface
 
@@ -317,15 +316,6 @@ In order to do so, you should run:
 $ kubectl delete node vkubelet-mock-0
 ```
 
-### Testing the Azure Provider Client
-
-The unit tests for the [`azure`](providers/azure/) provider require a `credentials.json`
-file exist in the root of this directory or that you have `AZURE_AUTH_LOCATION`
-set to a credentials file.
-
-You can generate this file by following the instructions listed in the
-[README](providers/azure/client/README.md) for that package.
-
 ## Known quirks and workarounds
 
 ### Missing Load Balancer IP addresses for services
@@ -343,7 +333,7 @@ Enable the ServiceNodeExclusion flag, by modifying the Controller Manager manife
 ## Contributing
 
 Virtual Kubelet follows the [CNCF Code of Conduct](https://github.com/cncf/foundation/blob/master/code-of-conduct.md).
-Sign the [CNCF CLA](https://github.com/kubernetes/community/blob/master/CLA.md) to be able to make Pull Requests to this repo. 
+Sign the [CNCF CLA](https://github.com/kubernetes/community/blob/master/CLA.md) to be able to make Pull Requests to this repo.
 
 Bi-weekly Virtual Kubelet Architecture meetings are held at 11am PST in this [zoom meeting room](https://zoom.us/j/245165908).  Check out the calendar [here](https://calendar.google.com/calendar?cid=bjRtbGMxYWNtNXR0NXQ1a2hqZmRkNTRncGNAZ3JvdXAuY2FsZW5kYXIuZ29vZ2xlLmNvbQ).
 
