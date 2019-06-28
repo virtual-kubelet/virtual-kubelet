@@ -51,8 +51,8 @@ type PodLifecycleHandler interface {
 	// UpdatePod takes a Kubernetes Pod and updates it within the provider.
 	UpdatePod(ctx context.Context, pod *corev1.Pod) error
 
-	// DeletePod takes a Kubernetes Pod and deletes it from the provider.
-	DeletePod(ctx context.Context, pod *corev1.Pod) error
+	// TerminatePod takes a Kubernetes Pod and terminates it within the provider.
+	TerminatePod(ctx context.Context, pod *corev1.Pod) error
 
 	// GetPod retrieves a pod by name from the provider (can be cached).
 	GetPod(ctx context.Context, namespace, name string) (*corev1.Pod, error)
@@ -212,7 +212,7 @@ func (pc *PodController) Run(ctx context.Context, podSyncWorkers int) error {
 	// Perform a reconciliation step that deletes any dangling pods from the provider.
 	// This happens only when the virtual-kubelet is starting, and operates on a "best-effort" basis.
 	// If by any reason the provider fails to delete a dangling pod, it will stay in the provider and deletion won't be retried.
-	pc.deleteDanglingPods(ctx, podSyncWorkers)
+	pc.terminateDanglingPods(ctx, podSyncWorkers)
 
 	log.G(ctx).Info("starting workers")
 	for id := 0; id < podSyncWorkers; id++ {
@@ -284,7 +284,7 @@ func (pc *PodController) syncHandler(ctx context.Context, key string) error {
 		}
 		// At this point we know the Pod resource doesn't exist, which most probably means it was deleted.
 		// Hence, we must delete it from the provider if it still exists there.
-		if err := pc.deletePod(ctx, namespace, name); err != nil {
+		if err := pc.terminatePod(ctx, namespace, name); err != nil {
 			err := pkgerrors.Wrapf(err, "failed to delete pod %q in the provider", loggablePodNameFromCoordinates(namespace, name))
 			span.SetStatus(err)
 			return err
@@ -306,7 +306,7 @@ func (pc *PodController) syncPodInProvider(ctx context.Context, pod *corev1.Pod)
 	// Check whether the pod has been marked for deletion.
 	// If it does, guarantee it is deleted in the provider and Kubernetes.
 	if pod.DeletionTimestamp != nil {
-		if err := pc.deletePod(ctx, pod.Namespace, pod.Name); err != nil {
+		if err := pc.terminatePod(ctx, pod.Namespace, pod.Name); err != nil {
 			err := pkgerrors.Wrapf(err, "failed to delete pod %q in the provider", loggablePodName(pod))
 			span.SetStatus(err)
 			return err
@@ -329,9 +329,9 @@ func (pc *PodController) syncPodInProvider(ctx context.Context, pod *corev1.Pod)
 	return nil
 }
 
-// deleteDanglingPods checks whether the provider knows about any pods which Kubernetes doesn't know about, and deletes them.
-func (pc *PodController) deleteDanglingPods(ctx context.Context, threadiness int) {
-	ctx, span := trace.StartSpan(ctx, "deleteDanglingPods")
+// terminateDanglingPods checks whether the provider knows about any pods which Kubernetes doesn't know about, and terminates them.
+func (pc *PodController) terminateDanglingPods(ctx context.Context, threadiness int) {
+	ctx, span := trace.StartSpan(ctx, "terminateDanglingPods")
 	defer span.End()
 
 	// Grab the list of pods known to the provider.
@@ -384,7 +384,7 @@ func (pc *PodController) deleteDanglingPods(ctx context.Context, threadiness int
 			// Add the pod's attributes to the current span.
 			ctx = addPodAttributes(ctx, span, pod)
 			// Actually delete the pod.
-			if err := pc.deletePod(ctx, pod.Namespace, pod.Name); err != nil {
+			if err := pc.terminatePod(ctx, pod.Namespace, pod.Name); err != nil {
 				span.SetStatus(err)
 				log.G(ctx).Errorf("failed to delete pod %q in provider", loggablePodName(pod))
 			} else {

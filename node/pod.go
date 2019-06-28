@@ -130,33 +130,27 @@ func (pc *PodController) handleProviderError(ctx context.Context, span trace.Spa
 	span.SetStatus(origErr)
 }
 
-func (pc *PodController) deletePod(ctx context.Context, namespace, name string) error {
+func (pc *PodController) terminatePod(ctx context.Context, namespace, name string) error {
 	// Grab the pod as known by the provider.
 	// NOTE: Some providers return a non-nil error in their GetPod implementation when the pod is not found while some other don't.
 	// Hence, we ignore the error and just act upon the pod if it is non-nil (meaning that the provider still knows about the pod).
 	pod, _ := pc.provider.GetPod(ctx, namespace, name)
 	if pod == nil {
-		// The provider is not aware of the pod, but we must still delete the Kubernetes API resource.
-		return pc.forceDeletePodResource(ctx, namespace, name)
+		log.G(ctx).Warn("No pod to terminate.")
+		return nil
 	}
 
-	ctx, span := trace.StartSpan(ctx, "deletePod")
+	ctx, span := trace.StartSpan(ctx, "terminatePod")
 	defer span.End()
 	ctx = addPodAttributes(ctx, span, pod)
 
 	var delErr error
-	if delErr = pc.provider.DeletePod(ctx, pod); delErr != nil && !errdefs.IsNotFound(delErr) {
+	if delErr = pc.provider.TerminatePod(ctx, pod); delErr != nil && !errors.IsNotFound(delErr) {
 		span.SetStatus(delErr)
 		return delErr
 	}
 
-	log.G(ctx).Debug("Deleted pod from provider")
-
-	if err := pc.forceDeletePodResource(ctx, namespace, name); err != nil {
-		span.SetStatus(err)
-		return err
-	}
-	log.G(ctx).Info("Deleted pod from Kubernetes")
+	log.G(ctx).Debug("Terminated pod with provider")
 
 	return nil
 }

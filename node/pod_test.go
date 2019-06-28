@@ -68,10 +68,7 @@ func (m *mockProvider) GetPodStatus(ctx context.Context, namespace, name string)
 	return &p.Status, nil
 }
 
-func (m *mockProvider) DeletePod(ctx context.Context, p *corev1.Pod) error {
-	if m.errorOnDelete != nil {
-		return m.errorOnDelete
-	}
+func (m *mockProvider) TerminatePod(ctx context.Context, p *corev1.Pod) error {
 	delete(m.pods, path.Join(p.GetNamespace(), p.GetName()))
 	m.deletes++
 	return nil

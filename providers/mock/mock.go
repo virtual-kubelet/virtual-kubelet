@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/virtual-kubelet/virtual-kubelet/node"
+	"github.com/virtual-kubelet/virtual-kubelet/providers"
 	"io"
 	"io/ioutil"
 	"math/rand"
@@ -32,14 +34,11 @@ const (
 	containerNameKey = "containerName"
 )
 
-// See: https://github.com/virtual-kubelet/virtual-kubelet/issues/632
-/*
 var (
 	_ providers.Provider           = (*MockV0Provider)(nil)
 	_ providers.PodMetricsProvider = (*MockV0Provider)(nil)
 	_ node.PodNotifier         = (*MockProvider)(nil)
 )
-*/
 
 // MockV0Provider implements the virtual-kubelet provider interface and stores pods in memory.
 type MockV0Provider struct {
@@ -92,16 +91,6 @@ func NewMockV0ProviderMockConfig(config MockConfig, nodeName, operatingSystem st
 	}
 
 	return &provider, nil
-}
-
-// NewMockV0Provider creates a new MockV0Provider
-func NewMockV0Provider(providerConfig, nodeName, operatingSystem string, internalIP string, daemonEndpointPort int32) (*MockV0Provider, error) {
-	config, err := loadConfig(providerConfig, nodeName)
-	if err != nil {
-		return nil, err
-	}
-
-	return NewMockV0ProviderMockConfig(config, nodeName, operatingSystem, internalIP, daemonEndpointPort)
 }
 
 // NewMockProviderMockConfig creates a new MockProvider with the given config
@@ -235,15 +224,15 @@ func (p *MockV0Provider) UpdatePod(ctx context.Context, pod *v1.Pod) error {
 	return nil
 }
 
-// DeletePod deletes the specified pod out of memory.
-func (p *MockV0Provider) DeletePod(ctx context.Context, pod *v1.Pod) (err error) {
-	ctx, span := trace.StartSpan(ctx, "DeletePod")
+// TerminatePod deletes the specified pod out of memory.
+func (p *MockV0Provider) TerminatePod(ctx context.Context, pod *v1.Pod) (err error) {
+	ctx, span := trace.StartSpan(ctx, "TerminatePod")
 	defer span.End()
 
 	// Add the pod's coordinates to the current span.
 	ctx = addAttributes(ctx, span, namespaceKey, pod.Namespace, nameKey, pod.Name)
 
-	log.G(ctx).Infof("receive DeletePod %q", pod.Name)
+	log.G(ctx).Infof("receive TerminatePod %q", pod.Name)
 
 	key, err := buildKey(pod)
 	if err != nil {
