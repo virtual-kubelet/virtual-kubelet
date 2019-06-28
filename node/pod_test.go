@@ -35,6 +35,7 @@ type mockProvider struct {
 
 	creates int
 	updates int
+	terminates int
 	deletes int
 
 	errorOnDelete error
@@ -69,9 +70,21 @@ func (m *mockProvider) GetPodStatus(ctx context.Context, namespace, name string)
 }
 
 func (m *mockProvider) TerminatePod(ctx context.Context, p *corev1.Pod) error {
+	pod := m.pods[path.Join(p.Namespace, p.Name)]
+	if pod == nil {
+		return errdefs.NotFound("not found")
+	}
+	m.terminates++
+	return nil
+}
+
+func (m *mockProvider) DeletePod(ctx context.Context, p *corev1.Pod) (bool, error) {
+	if m.errorOnDelete != nil {
+		return true, m.errorOnDelete
+	}
 	delete(m.pods, path.Join(p.GetNamespace(), p.GetName()))
 	m.deletes++
-	return nil
+	return true, nil
 }
 
 func (m *mockProvider) GetPods(_ context.Context) ([]*corev1.Pod, error) {

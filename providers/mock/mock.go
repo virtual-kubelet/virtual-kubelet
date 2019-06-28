@@ -265,6 +265,14 @@ func (p *MockV0Provider) TerminatePod(ctx context.Context, pod *v1.Pod) (err err
 	return nil
 }
 
+func (p *MockV0Provider) DeletePod(ctx context.Context, pod *v1.Pod) (bool, error) {
+	ctx, span := trace.StartSpan(ctx, "DeletePod")
+	defer span.End()
+
+	return true, nil
+}
+
+
 // GetPod returns a pod by name that is stored in memory.
 func (p *MockV0Provider) GetPod(ctx context.Context, namespace, name string) (pod *v1.Pod, err error) {
 	ctx, span := trace.StartSpan(ctx, "GetPod")

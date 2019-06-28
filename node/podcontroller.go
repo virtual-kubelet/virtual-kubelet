@@ -54,6 +54,10 @@ type PodLifecycleHandler interface {
 	// TerminatePod takes a Kubernetes Pod and terminates it within the provider.
 	TerminatePod(ctx context.Context, pod *corev1.Pod) error
 
+	// DeletePod takes a Kubernetes Pod and deletes it within the provider.
+	// The bool returned indicates whether the deletion should also occur in Kubernetes.
+	DeletePod(ctx context.Context, pod *corev1.Pod) (bool, error)
+
 	// GetPod retrieves a pod by name from the provider (can be cached).
 	GetPod(ctx context.Context, namespace, name string) (*corev1.Pod, error)
 
@@ -282,13 +286,21 @@ func (pc *PodController) syncHandler(ctx context.Context, key string) error {
 			span.SetStatus(err)
 			return err
 		}
+
 		// At this point we know the Pod resource doesn't exist, which most probably means it was deleted.
-		// Hence, we must delete it from the provider if it still exists there.
+		// Hence, we should terminate and delete it with the provider.
 		if err := pc.terminatePod(ctx, namespace, name); err != nil {
-			err := pkgerrors.Wrapf(err, "failed to delete pod %q in the provider", loggablePodNameFromCoordinates(namespace, name))
+			err := pkgerrors.Wrapf(err, "failed to terminate pod %q in the provider", loggablePodNameFromCoordinates(namespace, name))
 			span.SetStatus(err)
 			return err
 		}
+
+		if err := pc.deletePod(ctx, namespace, name); err != nil {
+			err := pkgerrors.Wrapf(err, "failed to delete pod %q in kubernetes", loggablePodNameFromCoordinates(namespace, name))
+			span.SetStatus(err)
+			return err
+		}
+
 		return nil
 	}
 	// At this point we know the Pod resource has either been created or updated (which includes being marked for deletion).
@@ -304,13 +316,23 @@ func (pc *PodController) syncPodInProvider(ctx context.Context, pod *corev1.Pod)
 	ctx = addPodAttributes(ctx, span, pod)
 
 	// Check whether the pod has been marked for deletion.
-	// If it does, guarantee it is deleted in the provider and Kubernetes.
+	// If it does, guarantee it is terminated in the provider.
 	if pod.DeletionTimestamp != nil {
 		if err := pc.terminatePod(ctx, pod.Namespace, pod.Name); err != nil {
 			err := pkgerrors.Wrapf(err, "failed to delete pod %q in the provider", loggablePodName(pod))
 			span.SetStatus(err)
 			return err
 		}
+
+		// Check whether the graceperiod has expired and the pod should be deleted.
+		if gracePeriodExpired(pod) {
+			if err := pc.deletePod(ctx, pod.Namespace, pod.Name); err != nil {
+				err := pkgerrors.Wrapf(err, "failed to delete pod %q in the provider", loggablePodName(pod))
+				span.SetStatus(err)
+				return err
+			}
+		}
+
 		return nil
 	}
 
@@ -327,6 +349,19 @@ func (pc *PodController) syncPodInProvider(ctx context.Context, pod *corev1.Pod)
 		return err
 	}
 	return nil
+}
+
+func gracePeriodExpired(pod *corev1.Pod) bool {
+	if pod.DeletionTimestamp == nil {
+		return false
+	}
+
+	realDeletionTimestamp := pod.DeletionTimestamp.Add(time.Duration(*pod.DeletionGracePeriodSeconds))
+	if realDeletionTimestamp.Before(time.Now()) {
+		return true
+	}
+
+	return false
 }
 
 // terminateDanglingPods checks whether the provider knows about any pods which Kubernetes doesn't know about, and terminates them.
@@ -368,12 +403,12 @@ func (pc *PodController) terminateDanglingPods(ctx context.Context, threadiness 
 	var wg sync.WaitGroup
 	wg.Add(len(ptd))
 
-	// Iterate over the slice of pods to be deleted and delete them in the provider.
+	// Iterate over the slice of pods to be terminated and terminate them in the provider.
 	for _, pod := range ptd {
 		go func(ctx context.Context, pod *corev1.Pod) {
 			defer wg.Done()
 
-			ctx, span := trace.StartSpan(ctx, "deleteDanglingPod")
+			ctx, span := trace.StartSpan(ctx, "terminateDanglingPod")
 			defer span.End()
 
 			semaphore <- struct{}{}
@@ -383,13 +418,21 @@ func (pc *PodController) terminateDanglingPods(ctx context.Context, threadiness 
 
 			// Add the pod's attributes to the current span.
 			ctx = addPodAttributes(ctx, span, pod)
-			// Actually delete the pod.
+			// Actually terminate the pod.
 			if err := pc.terminatePod(ctx, pod.Namespace, pod.Name); err != nil {
 				span.SetStatus(err)
-				log.G(ctx).Errorf("failed to delete pod %q in provider", loggablePodName(pod))
-			} else {
-				log.G(ctx).Infof("deleted leaked pod %q in provider", loggablePodName(pod))
+				log.G(ctx).Errorf("failed to terminate pod %q in provider", loggablePodName(pod))
+				return
 			}
+
+			if err := pc.deletePod(ctx, pod.Namespace, pod.Name); err != nil {
+				span.SetStatus(err)
+				log.G(ctx).Errorf("failed to delete pod %q in provider", loggablePodName(pod))
+				return
+			}
+
+			log.G(ctx).Infof("terminated leaked pod %q in provider", loggablePodName(pod))
+			return
 		}(ctx, pod)
 	}
 
