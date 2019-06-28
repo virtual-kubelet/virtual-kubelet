@@ -83,11 +83,9 @@ else
 endif
 
 test:
-	@echo "Testing..."
-	$Q go test -mod=vendor $(if $V,-v) $(allpackages) # install -race libs to speed up next run
 ifndef CI
-	@echo "Testing Outside CI..."
-	$Q GODEBUG=cgocheck=2 go test -mod=vendor $(allpackages)
+	@echo "Testing..."
+	$Q go test -mod=vendor $(if $V,-v) $(allpackages)
 else
 	@echo "Testing in CI..."
 	$Q mkdir -p test
