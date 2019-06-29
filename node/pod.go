@@ -145,20 +145,18 @@ func (pc *PodController) deletePod(ctx context.Context, namespace, name string) 
 	ctx = addPodAttributes(ctx, span, pod)
 
 	var delErr error
-	if delErr = pc.provider.DeletePod(ctx, pod); delErr != nil && errors.IsNotFound(delErr) {
+	if delErr = pc.provider.DeletePod(ctx, pod); delErr != nil && !errdefs.IsNotFound(delErr) {
 		span.SetStatus(delErr)
 		return delErr
 	}
 
 	log.G(ctx).Debug("Deleted pod from provider")
 
-	if !errors.IsNotFound(delErr) {
-		if err := pc.forceDeletePodResource(ctx, namespace, name); err != nil {
-			span.SetStatus(err)
-			return err
-		}
-		log.G(ctx).Info("Deleted pod from Kubernetes")
+	if err := pc.forceDeletePodResource(ctx, namespace, name); err != nil {
+		span.SetStatus(err)
+		return err
 	}
+	log.G(ctx).Info("Deleted pod from Kubernetes")
 
 	return nil
 }
