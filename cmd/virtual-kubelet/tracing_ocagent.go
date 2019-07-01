@@ -14,12 +14,13 @@
 
 // +build !no_ocagent_exporter
 
-package root
+package main
 
 import (
 	"os"
 
 	"contrib.go.opencensus.io/exporter/ocagent"
+	"github.com/virtual-kubelet/node-cli/opencensus"
 	"github.com/virtual-kubelet/virtual-kubelet/errdefs"
 	"go.opencensus.io/trace"
 )
@@ -29,7 +30,7 @@ func init() {
 }
 
 // NewOCAgentExporter creates a new opencensus tracing exporter using the opencensus agent forwarder.
-func NewOCAgentExporter(opts TracingExporterOptions) (trace.Exporter, error) {
+func NewOCAgentExporter(opts *opencensus.Config) (trace.Exporter, error) {
 	agentOpts := append([]ocagent.ExporterOption{}, ocagent.WithServiceName(opts.ServiceName))
 
 	if endpoint := os.Getenv("OCAGENT_ENDPOINT"); endpoint != "" {

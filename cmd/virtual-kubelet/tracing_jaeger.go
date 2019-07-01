@@ -14,13 +14,14 @@
 
 // +build !no_jaeger_exporter
 
-package root
+package main
 
 import (
 	"errors"
 	"os"
 
-	"go.opencensus.io/exporter/jaeger"
+	"contrib.go.opencensus.io/exporter/jaeger"
+	"github.com/virtual-kubelet/node-cli/opencensus"
 	"go.opencensus.io/trace"
 )
 
@@ -29,7 +30,7 @@ func init() {
 }
 
 // NewJaegerExporter creates a new opencensus tracing exporter.
-func NewJaegerExporter(opts TracingExporterOptions) (trace.Exporter, error) {
+func NewJaegerExporter(opts *opencensus.Config) (trace.Exporter, error) {
 	jOpts := jaeger.Options{
 		Endpoint:      os.Getenv("JAEGER_ENDPOINT"),
 		AgentEndpoint: os.Getenv("JAEGER_AGENT_ENDPOINT"),

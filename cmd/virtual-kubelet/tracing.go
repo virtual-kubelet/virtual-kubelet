@@ -12,22 +12,27 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package version
+package main
 
 import (
-	"fmt"
-
-	"github.com/spf13/cobra"
+	"github.com/virtual-kubelet/node-cli/opencensus"
 )
 
-// NewCommand creates a new version subcommand command
-func NewCommand(version, buildTime string) *cobra.Command {
-	return &cobra.Command{
-		Use:   "version",
-		Short: "Show the version of the program",
-		Long:  `Show the version of the program`,
-		Run: func(cmd *cobra.Command, args []string) {
-			fmt.Printf("Version: %s, Built: %s\n", version, buildTime)
-		},
+var (
+	tracingExporters = make(map[string]opencensus.ExporterInitFunc)
+)
+
+// RegisterTracingExporter registers a tracing exporter.
+// For a user to select an exporter, it must be registered here.
+func RegisterTracingExporter(name string, f opencensus.ExporterInitFunc) {
+	tracingExporters[name] = f
+}
+
+// AvailableTraceExporters gets the list of registered exporters
+func AvailableTraceExporters() []string {
+	out := make([]string, 0, len(tracingExporters))
+	for k := range tracingExporters {
+		out = append(out, k)
 	}
+	return out
 }
