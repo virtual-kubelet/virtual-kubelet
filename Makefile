@@ -38,7 +38,7 @@ build: build_tags := netgo osusergo
 build: OUTPUT_DIR ?= bin
 build: authors
 	@echo "Building..."
-	$Q CGO_ENABLED=0 go build -mod=vendor -ldflags '-extldflags "-static"' -o $(OUTPUT_DIR)/$(binary) $(if $V,-v) $(VERSION_FLAGS) ./cmd/$(binary)
+	$Q CGO_ENABLED=0 go build -ldflags '-extldflags "-static"' -o $(OUTPUT_DIR)/$(binary) $(if $V,-v) $(VERSION_FLAGS) ./cmd/$(binary)
 
 .PHONY: tags
 tags:
@@ -51,13 +51,7 @@ release: build goreleaser
 
 ##### =====> Utility targets <===== #####
 
-.PHONY: clean test list cover format docker vendor
-
-vendor:
-	@echo "Ensuring Dependencies..."
-	$Q go env
-	$Q go mod vendor
-
+.PHONY: clean test list cover format docker
 mod:
 	@echo "Prune Dependencies..."
 	$Q go mod tidy
@@ -85,11 +79,11 @@ endif
 test:
 ifndef CI
 	@echo "Testing..."
-	$Q go test -mod=vendor $(if $V,-v) $(allpackages)
+	$Q go test  $(if $V,-v) $(allpackages)
 else
 	@echo "Testing in CI..."
 	$Q mkdir -p test
-	$Q ( GODEBUG=cgocheck=2 go test -mod=vendor -v $(allpackages); echo $$? ) | \
+	$Q ( GODEBUG=cgocheck=2 go test -v $(allpackages); echo $$? ) | \
        tee test/output.txt | sed '$$ d'; exit $$(tail -1 test/output.txt)
 endif
 
@@ -103,7 +97,7 @@ cover: gocovmerge
 	$Q rm -f .GOPATH/cover/*.out cover/all.merged
 	$(if $V,@echo "-- go test -coverpkg=./... -coverprofile=cover/... ./...")
 	@for MOD in $(allpackages); do \
-        go test -mod=vendor -coverpkg=`echo $(allpackages)|tr " " ","` \
+        go test -coverpkg=`echo $(allpackages)|tr " " ","` \
             -coverprofile=cover/unit-`echo $$MOD|tr "/" "_"`.out \
             $$MOD 2>&1 | grep -v "no packages being tested depend on"; \
     done

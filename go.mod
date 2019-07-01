@@ -45,21 +45,17 @@ require (
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v2 v2.2.2 // indirect
 	gotest.tools v0.0.0-20181223230014-1083505acf35
-	k8s.io/api v0.0.0-20181213150558-05914d821849
-	k8s.io/apimachinery v0.0.0-20181127025237-2b1284ed4c93
+	k8s.io/api v0.0.0-20190222213804-5cb15d344471
+	k8s.io/apimachinery v0.0.0-20190221213512-86fb29eff628
 	k8s.io/apiserver v0.0.0-20181213151703-3ccfe8365421 // indirect
-	k8s.io/client-go v0.0.0-20181213151034-8d9ed539ba31
+	k8s.io/client-go v10.0.0+incompatible
 	k8s.io/klog v0.1.0
 	k8s.io/kube-openapi v0.0.0-20190510232812-a01b7d5d6c22 // indirect
-	k8s.io/kubernetes v1.13.4
+	k8s.io/kubernetes v1.13.7
 	k8s.io/utils v0.0.0-20180801164400-045dc31ee5c4 // indirect
 	sigs.k8s.io/yaml v1.1.0 // indirect
 )
 
-replace k8s.io/client-go => k8s.io/client-go v0.0.0-20190521190702-177766529176
-
 replace k8s.io/api => k8s.io/api v0.0.0-20190222213804-5cb15d344471
 
 replace k8s.io/apimachinery => k8s.io/apimachinery v0.0.0-20190221213512-86fb29eff628
-
-replace k8s.io/kubernetes => k8s.io/kubernetes v1.13.7
