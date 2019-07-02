@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"math/rand"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/virtual-kubelet/virtual-kubelet/errdefs"
@@ -47,10 +48,13 @@ type MockV0Provider struct {
 	operatingSystem    string
 	internalIP         string
 	daemonEndpointPort int32
-	pods               map[string]*v1.Pod
-	config             MockConfig
-	startTime          time.Time
-	notifier           func(*v1.Pod)
+
+	mu   sync.Mutex
+	pods map[string]*v1.Pod
+
+	config    MockConfig
+	startTime time.Time
+	notifier  func(*v1.Pod)
 }
 
 // MockProvider is like MockV0Provider, but implements the PodNotifier interface
@@ -208,9 +212,10 @@ func (p *MockV0Provider) CreatePod(ctx context.Context, pod *v1.Pod) error {
 		})
 	}
 
+	p.mu.Lock()
 	p.pods[key] = pod
 	p.notifier(pod)
-
+	p.mu.Unlock()
 	return nil
 }
 
@@ -229,10 +234,58 @@ func (p *MockV0Provider) UpdatePod(ctx context.Context, pod *v1.Pod) error {
 		return err
 	}
 
+	p.mu.Lock()
+
 	p.pods[key] = pod
 	p.notifier(pod)
 
+	p.mu.Unlock()
+
 	return nil
+}
+
+func (p *MockV0Provider) TerminatePod(ctx context.Context, pod *v1.Pod) (err error) {
+	ctx, span := trace.StartSpan(ctx, "TerminatePod")
+	defer span.End()
+
+	// Add the pod's coordinates to the current span.
+	ctx = addAttributes(ctx, span, namespaceKey, pod.Namespace, nameKey, pod.Name)
+
+	key, err := buildKey(pod)
+	if err != nil {
+		return err
+	}
+
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
+	pod, ok := p.pods[key]
+	if !ok {
+		return errdefs.NotFound("pod not found")
+	}
+
+	p.terminatePod(ctx, pod)
+	p.pods[key] = pod
+	p.notifier(pod)
+	return nil
+}
+
+func (p *MockV0Provider) terminatePod(ctx context.Context, pod *v1.Pod) {
+	now := metav1.Now()
+	pod.Status.Phase = v1.PodSucceeded
+	pod.Status.Reason = "MockProviderPodTermianted"
+	for idx, s := range pod.Status.ContainerStatuses {
+		pod.Status.ContainerStatuses[idx].Ready = false
+		pod.Status.ContainerStatuses[idx].State.Terminated = &v1.ContainerStateTerminated{
+			Message:    "Mock provider terminated container upon request",
+			FinishedAt: now,
+			Reason:     "MockProviderPodContainerTerminated",
+		}
+		if s.State.Running != nil {
+			pod.Status.ContainerStatuses[idx].State.Terminated.StartedAt = s.State.Running.StartedAt
+		}
+	}
+
 }
 
 // DeletePod deletes the specified pod out of memory.
@@ -250,28 +303,18 @@ func (p *MockV0Provider) DeletePod(ctx context.Context, pod *v1.Pod) (err error)
 		return err
 	}
 
-	if _, exists := p.pods[key]; !exists {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
+	pod, exists := p.pods[key]
+	if !exists {
 		return errdefs.NotFound("pod not found")
 	}
 
-	now := metav1.Now()
-	delete(p.pods, key)
-	pod.Status.Phase = v1.PodSucceeded
-	pod.Status.Reason = "MockProviderPodDeleted"
-
-	for idx := range pod.Status.ContainerStatuses {
-		pod.Status.ContainerStatuses[idx].Ready = false
-		pod.Status.ContainerStatuses[idx].State = v1.ContainerState{
-			Terminated: &v1.ContainerStateTerminated{
-				Message:    "Mock provider terminated container upon deletion",
-				FinishedAt: now,
-				Reason:     "MockProviderPodContainerDeleted",
-				StartedAt:  pod.Status.ContainerStatuses[idx].State.Running.StartedAt,
-			},
-		}
+	if pod.Status.Phase == v1.PodRunning {
+		p.terminatePod(ctx, pod)
 	}
-
-	p.notifier(pod)
+	delete(p.pods, key)
 
 	return nil
 }
@@ -293,6 +336,9 @@ func (p *MockV0Provider) GetPod(ctx context.Context, namespace, name string) (po
 	if err != nil {
 		return nil, err
 	}
+
+	p.mu.Lock()
+	defer p.mu.Unlock()
 
 	if pod, ok := p.pods[key]; ok {
 		return pod, nil
@@ -347,8 +393,13 @@ func (p *MockV0Provider) GetPods(ctx context.Context) ([]*v1.Pod, error) {
 
 	var pods []*v1.Pod
 
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
 	for _, pod := range p.pods {
-		pods = append(pods, pod)
+		if pod.Status.Phase == v1.PodRunning {
+			pods = append(pods, pod)
+		}
 	}
 
 	return pods, nil

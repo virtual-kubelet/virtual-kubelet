@@ -33,9 +33,10 @@ import (
 type mockProvider struct {
 	pods map[string]*corev1.Pod
 
-	creates int
-	updates int
-	deletes int
+	creates    int
+	updates    int
+	terminates int
+	deletes    int
 
 	errorOnDelete error
 }
@@ -66,6 +67,16 @@ func (m *mockProvider) GetPodStatus(ctx context.Context, namespace, name string)
 		return nil, errdefs.NotFound("not found")
 	}
 	return &p.Status, nil
+}
+
+func (m *mockProvider) TerminatePod(ctx context.Context, p *corev1.Pod) error {
+	p = m.pods[path.Join(p.Namespace, p.Name)]
+	if p == nil {
+		return errdefs.NotFound("not found")
+	}
+	p.Status.Phase = corev1.PodSucceeded
+	m.terminates++
+	return nil
 }
 
 func (m *mockProvider) DeletePod(ctx context.Context, p *corev1.Pod) error {

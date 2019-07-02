@@ -51,6 +51,9 @@ type PodLifecycleHandler interface {
 	// UpdatePod takes a Kubernetes Pod and updates it within the provider.
 	UpdatePod(ctx context.Context, pod *corev1.Pod) error
 
+	// Terminate pod instructs the provider to stop execution of the pod
+	TerminatePod(ctx context.Context, pod *corev1.Pod) error
+
 	// DeletePod takes a Kubernetes Pod and deletes it from the provider.
 	DeletePod(ctx context.Context, pod *corev1.Pod) error
 
@@ -306,6 +309,18 @@ func (pc *PodController) syncPodInProvider(ctx context.Context, pod *corev1.Pod)
 	// Check whether the pod has been marked for deletion.
 	// If it does, guarantee it is deleted in the provider and Kubernetes.
 	if pod.DeletionTimestamp != nil {
+		p, err := pc.provider.GetPodStatus(ctx, pod.Namespace, pod.Name)
+		if err != nil && errdefs.IsNotFound(err) {
+			return err
+		}
+		if p != nil {
+			if p.Phase == corev1.PodRunning {
+				err := pc.terminatePod(ctx, pod)
+				span.SetStatus(err)
+				return err
+			}
+		}
+
 		if err := pc.deletePod(ctx, pod.Namespace, pod.Name); err != nil {
 			err := pkgerrors.Wrapf(err, "failed to delete pod %q in the provider", loggablePodName(pod))
 			span.SetStatus(err)

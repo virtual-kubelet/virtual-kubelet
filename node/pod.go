@@ -130,6 +130,22 @@ func (pc *PodController) handleProviderError(ctx context.Context, span trace.Spa
 	span.SetStatus(origErr)
 }
 
+func (pc *PodController) terminatePod(ctx context.Context, pod *corev1.Pod) error {
+	log.G(ctx).Debug("terminatePod")
+	pod, err := pc.provider.GetPod(ctx, pod.Namespace, pod.Name)
+	if err != nil {
+		return pkgerrors.Wrap(err, "error terminating pod")
+	}
+
+	err = pc.provider.TerminatePod(ctx, pod)
+	if errdefs.IsNotFound(err) {
+		if err := pc.updatePodStatus(ctx, pod); err != nil {
+			return err
+		}
+	}
+	return err
+}
+
 func (pc *PodController) deletePod(ctx context.Context, namespace, name string) error {
 	// Grab the pod as known by the provider.
 	// NOTE: Some providers return a non-nil error in their GetPod implementation when the pod is not found while some other don't.
@@ -222,6 +238,11 @@ func (pc *PodController) updatePodStatus(ctx context.Context, pod *corev1.Pod) e
 	if err != nil && !errdefs.IsNotFound(err) {
 		span.SetStatus(err)
 		return pkgerrors.Wrap(err, "error retreiving pod status")
+	}
+
+	pod, err = pc.podsLister.Pods(pod.Namespace).Get(pod.Name)
+	if err != nil {
+		return pkgerrors.Wrap(err, "error fetching pod")
 	}
 
 	// Update the pod's status
