@@ -190,7 +190,8 @@ type ErrorHandler func(context.Context, error) error
 // NodeController deals with creating and managing a node object in Kubernetes.
 // It can register a node with Kubernetes and periodically update its status.
 // NodeController manages a single node entity.
-type NodeController struct { // nolint: golint
+type NodeController struct {
+	// nolint: golint
 	p NodeProvider
 	n *corev1.Node
 
@@ -217,7 +218,7 @@ const (
 // Run registers the node in kubernetes and starts loops for updating the node
 // status in Kubernetes.
 //
-// The node status must be updated periodically in Kubertnetes to keep the node
+// The node status must be updated periodically in Kubernetes to keep the node
 // active. Newer versions of Kubernetes support node leases, which are
 // essentially light weight pings. Older versions of Kubernetes require updating
 // the node status periodically.

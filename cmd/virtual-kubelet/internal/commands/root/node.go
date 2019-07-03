@@ -21,7 +21,7 @@ import (
 	"github.com/virtual-kubelet/virtual-kubelet/cmd/virtual-kubelet/internal/provider"
 	"github.com/virtual-kubelet/virtual-kubelet/errdefs"
 	nodehelper "github.com/virtual-kubelet/virtual-kubelet/node"
-	
+
 	corev1 "k8s.io/api/core/v1"
 )
 
