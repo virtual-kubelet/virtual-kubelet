@@ -57,7 +57,7 @@ jobs:
       CHANGE_MINIKUBE_NONE_USER: true
       GOPATH: /home/circleci/go
       KUBECONFIG: /home/circleci/.kube/config
-      KUBERNETES_VERSION: v1.12.3
+      KUBERNETES_VERSION: v1.13.7
       MINIKUBE_HOME: /home/circleci
       MINIKUBE_VERSION: v0.30.0
       MINIKUBE_WANTUPDATENOTIFICATION: false
