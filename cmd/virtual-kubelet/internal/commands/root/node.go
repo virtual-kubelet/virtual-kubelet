@@ -20,46 +20,21 @@ import (
 
 	"github.com/virtual-kubelet/virtual-kubelet/cmd/virtual-kubelet/internal/provider"
 	"github.com/virtual-kubelet/virtual-kubelet/errdefs"
+	nodehelper "github.com/virtual-kubelet/virtual-kubelet/node"
+	
 	corev1 "k8s.io/api/core/v1"
-	v1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
-
-const osLabel = "beta.kubernetes.io/os"
 
 // NodeFromProvider builds a kubernetes node object from a provider
 // This is a temporary solution until node stuff actually split off from the provider interface itself.
-func NodeFromProvider(ctx context.Context, name string, taint *v1.Taint, p provider.Provider, version string) *v1.Node {
-	taints := make([]v1.Taint, 0)
-
-	if taint != nil {
-		taints = append(taints, *taint)
-	}
-
-	node := &v1.Node{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: name,
-			Labels: map[string]string{
-				"type":                   "virtual-kubelet",
-				"kubernetes.io/role":     "agent",
-				"kubernetes.io/hostname": name,
-			},
-		},
-		Spec: v1.NodeSpec{
-			Taints: taints,
-		},
-		Status: v1.NodeStatus{
-			NodeInfo: v1.NodeSystemInfo{
-				Architecture:   "amd64",
-				KubeletVersion: version,
-			},
-		},
-	}
+func NodeFromProvider(ctx context.Context, name string, taint *corev1.Taint, p provider.Provider, version string) *corev1.Node {
+	node := nodehelper.NewNodeSpec(name, taint, version)
 
 	p.ConfigureNode(ctx, node)
-	if _, ok := node.ObjectMeta.Labels[osLabel]; !ok {
-		node.ObjectMeta.Labels[osLabel] = strings.ToLower(node.Status.NodeInfo.OperatingSystem)
+	if _, ok := node.ObjectMeta.Labels[nodehelper.OSLabelKey]; !ok {
+		node.ObjectMeta.Labels[nodehelper.OSLabelKey] = strings.ToLower(node.Status.NodeInfo.OperatingSystem)
 	}
+
 	return node
 }
 

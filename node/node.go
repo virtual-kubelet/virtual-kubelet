@@ -33,6 +33,53 @@ import (
 	v1 "k8s.io/client-go/kubernetes/typed/core/v1"
 )
 
+const (
+	// InstanceTypeLabelKey is part of the built-in Node labels.
+	// See https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#interlude-built-in-node-labels
+	InstanceTypeLabelKey = "beta.kubernetes.io/instance-type"
+
+	// InstanceTypeLabelValue will clearly brand the VK node for proper parsing
+	// such as required by cloud-providers.
+	// As an example, see https://github.com/virtual-kubelet/virtual-kubelet/issues/692
+	InstanceTypeLabelValue = "virtual-kubelet"
+
+	// OSLabelKey is part of the built-in Node labels.
+	// See https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#interlude-built-in-node-labels
+	OSLabelKey = "beta.kubernetes.io/os"
+)
+
+// NewNodeSpec builds a Kubernetes Node resource.
+func NewNodeSpec(name string, taint *corev1.Taint, version string) *corev1.Node {
+	taints := make([]corev1.Taint, 0)
+
+	if taint != nil {
+		taints = append(taints, *taint)
+	}
+
+	node := &corev1.Node{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: name,
+			Labels: map[string]string{
+				"type":                   "virtual-kubelet",
+				"kubernetes.io/role":     "agent",
+				"kubernetes.io/hostname": name,
+				InstanceTypeLabelKey:     InstanceTypeLabelValue,
+			},
+		},
+		Spec: corev1.NodeSpec{
+			Taints: taints,
+		},
+		Status: corev1.NodeStatus{
+			NodeInfo: corev1.NodeSystemInfo{
+				Architecture:   "amd64",
+				KubeletVersion: version,
+			},
+		},
+	}
+
+	return node
+}
+
 // NodeProvider is the interface used for registering a node and updating its
 // status in Kubernetes.
 //
@@ -64,6 +111,8 @@ type NodeProvider interface {
 // underlying options, the last NodeControllerOpt will win.
 func NewNodeController(p NodeProvider, node *corev1.Node, nodes v1.NodeInterface, opts ...NodeControllerOpt) (*NodeController, error) {
 	n := &NodeController{p: p, n: node, nodes: nodes, chReady: make(chan struct{})}
+
+	// Apply all NodeControllerOpts, if any.
 	for _, o := range opts {
 		if err := o(n); err != nil {
 			return nil, pkgerrors.Wrap(err, "error applying node option")

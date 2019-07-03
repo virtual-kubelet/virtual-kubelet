@@ -16,7 +16,6 @@ package node
 
 import (
 	"context"
-	"strings"
 	"testing"
 	"time"
 
@@ -116,6 +115,14 @@ func testNodeRun(t *testing.T, enableLease bool) {
 
 	lw.Stop()
 	nw.Stop()
+
+	// ensure node labels
+	registeredNodeName := testNode(t).Name
+	registeredNode, err := nodes.Get(registeredNodeName, metav1.GetOptions{})
+	assert.NilError(t, err, "there was an error while retrieving the node %q from Kubernetes", registeredNodeName)
+	labelValue, exists := registeredNode.Labels[InstanceTypeLabelKey]
+	assert.Check(t, exists == true, "couldn't find label %q in node %q", InstanceTypeLabelKey, registeredNodeName)
+	assert.Equal(t, labelValue, InstanceTypeLabelValue, "mismatch label %q value in node %q. should be %q, was %q", InstanceTypeLabelKey, registeredNodeName, InstanceTypeLabelValue, labelValue)
 
 	assert.Check(t, atLeast(nodeUpdates, expectAtLeast))
 	if enableLease {
@@ -297,9 +304,7 @@ func TestUpdateNodeLease(t *testing.T) {
 }
 
 func testNode(t *testing.T) *corev1.Node {
-	n := &corev1.Node{}
-	n.Name = strings.ToLower(t.Name())
-	return n
+	return NewNodeSpec(t.Name(), nil, "test-version")
 }
 
 type testNodeProvider struct {
