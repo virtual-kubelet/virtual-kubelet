@@ -131,17 +131,24 @@ func (pc *PodController) handleProviderError(ctx context.Context, span trace.Spa
 }
 
 func (pc *PodController) deletePod(ctx context.Context, namespace, name string) error {
-	// Grab the pod as known by the provider.
+	ctx, span := trace.StartSpan(ctx, "deletePod")
+	defer span.End()
+
+	pod, err := pc.provider.GetPod(ctx, namespace, name)
+	if err != nil {
+		if errdefs.IsNotFound(err) {
+			// The provider is not aware of the pod, but we must still delete the Kubernetes API resource.
+			return pc.forceDeletePodResource(ctx, namespace, name)
+		}
+		return err
+	}
+
 	// NOTE: Some providers return a non-nil error in their GetPod implementation when the pod is not found while some other don't.
-	// Hence, we ignore the error and just act upon the pod if it is non-nil (meaning that the provider still knows about the pod).
-	pod, _ := pc.provider.GetPod(ctx, namespace, name)
 	if pod == nil {
 		// The provider is not aware of the pod, but we must still delete the Kubernetes API resource.
 		return pc.forceDeletePodResource(ctx, namespace, name)
 	}
 
-	ctx, span := trace.StartSpan(ctx, "deletePod")
-	defer span.End()
 	ctx = addPodAttributes(ctx, span, pod)
 
 	var delErr error
