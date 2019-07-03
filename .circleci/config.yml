@@ -110,7 +110,7 @@ jobs:
           command: |
             mkdir $HOME/.go
             export PATH=$HOME/.go/bin:${PATH}
-            curl -fsSL -o "/tmp/go.tar.gz" "https://dl.google.com/go/go1.12.5.linux-amd64.tar.gz"
+            curl -fsSL -o "/tmp/go.tar.gz" "https://dl.google.com/go/go1.12.6.linux-amd64.tar.gz"
             tar -C $HOME/.go --strip-components=1 -xzf "/tmp/go.tar.gz"
             go version
             make e2e
