@@ -22,8 +22,8 @@ import (
 	corev1listers "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/tools/cache"
 
+	"github.com/virtual-kubelet/virtual-kubelet/internal/manager"
 	testutil "github.com/virtual-kubelet/virtual-kubelet/internal/test/util"
-	"github.com/virtual-kubelet/virtual-kubelet/manager"
 )
 
 // TestGetPods verifies that the resource manager acts as a passthrough to a pod lister.
