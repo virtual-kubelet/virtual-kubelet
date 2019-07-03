@@ -34,20 +34,8 @@ jobs:
           name: Build
           command: V=1 make build
       - run:
-          name: Install Nomad
-          command: |
-            curl \
-              --silent \
-              --location \
-              --output nomad.zip \
-              https://releases.hashicorp.com/nomad/0.8.6/nomad_0.8.6_linux_amd64.zip && \
-            unzip nomad.zip && \
-            chmod +x nomad && \
-            mv nomad /go/bin/nomad && \
-            rm nomad.zip
-      - run:
           name: Tests
-          command: V=1 CI=1 SKIP_AWS_E2E=1 make test
+          command: V=1 CI=1 make test
 
   e2e:
     machine:
