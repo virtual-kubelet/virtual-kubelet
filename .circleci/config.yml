@@ -34,20 +34,8 @@ jobs:
           name: Build
           command: V=1 make build
       - run:
-          name: Install Nomad
-          command: |
-            curl \
-              --silent \
-              --location \
-              --output nomad.zip \
-              https://releases.hashicorp.com/nomad/0.8.6/nomad_0.8.6_linux_amd64.zip && \
-            unzip nomad.zip && \
-            chmod +x nomad && \
-            mv nomad /go/bin/nomad && \
-            rm nomad.zip
-      - run:
           name: Tests
-          command: V=1 CI=1 SKIP_AWS_E2E=1 make test
+          command: V=1 CI=1 make test
 
   e2e:
     machine:
@@ -57,12 +45,12 @@ jobs:
       CHANGE_MINIKUBE_NONE_USER: true
       GOPATH: /home/circleci/go
       KUBECONFIG: /home/circleci/.kube/config
-      KUBERNETES_VERSION: v1.12.3
+      KUBERNETES_VERSION: v1.13.7
       MINIKUBE_HOME: /home/circleci
-      MINIKUBE_VERSION: v0.30.0
+      MINIKUBE_VERSION: v1.2.0
       MINIKUBE_WANTUPDATENOTIFICATION: false
       MINIKUBE_WANTREPORTERRORPROMPT: false
-      SKAFFOLD_VERSION: v0.18.0
+      SKAFFOLD_VERSION: v0.33.0
       GO111MODULE: "on"
     steps:
       - checkout
@@ -77,13 +65,13 @@ jobs:
       - run:
           name: Install Skaffold
           command: |
-            curl -Lo skaffold https://github.com/GoogleContainerTools/skaffold/releases/download/${SKAFFOLD_VERSION}/skaffold-linux-amd64
+            curl -Lo skaffold https://storage.googleapis.com/skaffold/releases/${SKAFFOLD_VERSION}/skaffold-linux-amd64
             chmod +x skaffold
             sudo mv skaffold /usr/local/bin/
       - run:
           name: Install Minikube
           command: |
-            curl -Lo minikube https://github.com/kubernetes/minikube/releases/download/${MINIKUBE_VERSION}/minikube-linux-amd64
+            curl -Lo minikube https://storage.googleapis.com/minikube/releases/${MINIKUBE_VERSION}/minikube-linux-amd64
             chmod +x minikube
             sudo mv minikube /usr/local/bin/
       - run:
@@ -110,7 +98,7 @@ jobs:
           command: |
             mkdir $HOME/.go
             export PATH=$HOME/.go/bin:${PATH}
-            curl -fsSL -o "/tmp/go.tar.gz" "https://dl.google.com/go/go1.12.5.linux-amd64.tar.gz"
+            curl -fsSL -o "/tmp/go.tar.gz" "https://dl.google.com/go/go1.12.6.linux-amd64.tar.gz"
             tar -C $HOME/.go --strip-components=1 -xzf "/tmp/go.tar.gz"
             go version
             make e2e

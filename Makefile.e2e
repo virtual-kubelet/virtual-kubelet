@@ -1,7 +1,7 @@
 .PHONY: skaffold.validate
 skaffold.validate: kubectl_context := $(shell kubectl config current-context)
 skaffold.validate:
-	if [[ ! "minikube,docker-for-desktop,docker-desktop" =~ .*"$(kubectl_context)".* ]]; then \
+	@if [[ ! "minikube,docker-for-desktop,docker-desktop" =~ .*"$(kubectl_context)".* ]]; then \
 		echo current-context is [$(kubectl_context)]. Must be one of [minikube,docker-for-desktop,docker-desktop]; \
 		false; \
 	fi
