@@ -1,10 +1,10 @@
-package providers
+package provider
 
 import (
 	"sync"
 
 	"github.com/virtual-kubelet/virtual-kubelet/errdefs"
-	"github.com/virtual-kubelet/virtual-kubelet/manager"
+	"github.com/virtual-kubelet/virtual-kubelet/internal/manager"
 )
 
 // Store is used for registering/fetching providers

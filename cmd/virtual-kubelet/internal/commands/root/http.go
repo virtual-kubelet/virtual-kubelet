@@ -24,9 +24,9 @@ import (
 	"os"
 
 	"github.com/pkg/errors"
+	"github.com/virtual-kubelet/virtual-kubelet/cmd/virtual-kubelet/internal/provider"
 	"github.com/virtual-kubelet/virtual-kubelet/log"
 	"github.com/virtual-kubelet/virtual-kubelet/node/api"
-	"github.com/virtual-kubelet/virtual-kubelet/providers"
 )
 
 // AcceptedCiphers is the list of accepted TLS ciphers, with known weak ciphers elided
@@ -57,7 +57,7 @@ func loadTLSConfig(certPath, keyPath string) (*tls.Config, error) {
 	}, nil
 }
 
-func setupHTTPServer(ctx context.Context, p providers.Provider, cfg *apiServerConfig) (_ func(), retErr error) {
+func setupHTTPServer(ctx context.Context, p provider.Provider, cfg *apiServerConfig) (_ func(), retErr error) {
 	var closers []io.Closer
 	cancel := func() {
 		for _, c := range closers {
@@ -113,7 +113,7 @@ func setupHTTPServer(ctx context.Context, p providers.Provider, cfg *apiServerCo
 		mux := http.NewServeMux()
 
 		var summaryHandlerFunc api.PodStatsSummaryHandlerFunc
-		if mp, ok := p.(providers.PodMetricsProvider); ok {
+		if mp, ok := p.(provider.PodMetricsProvider); ok {
 			summaryHandlerFunc = mp.GetStatsSummary
 		}
 		podMetricsRoutes := api.PodMetricsConfig{
