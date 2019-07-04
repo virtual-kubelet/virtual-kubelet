@@ -9,9 +9,6 @@ Virtual Kubelet features a pluggable architecture and direct use of Kubernetes p
 We invite the Kubernetes ecosystem to join us in empowering developers to build
 upon our base. Join our slack channel named, virtual-kubelet, within the [Kubernetes slack group](https://kubernetes.slack.com/).
 
-Please note this software is experimental and should not be used for anything
-resembling a production workload.
-
 The best description is "Kubernetes API on top, programmable back."
 
 #### Table of Contents
@@ -40,43 +37,14 @@ The diagram below illustrates how Virtual-Kubelet works.
 
 ## Usage
 
-Deploy a Kubernetes cluster and make sure it's reachable.
+Virtual Kubelet is focused on providing a library that you can consume in your
+project to build a custom Kubernetes node agent.
 
-### Outside the Kubernetes cluster
+See godoc for up to date instructions on consuming this project:
+https://godoc.org/github.com/virtual-kubelet/virtual-kubelet
 
-Run the binary with your chosen provider:
-
-```bash
-./bin/virtual-kubelet --provider <your provider>
-```
-
-Now that the virtual-kubelet is deployed run `kubectl get nodes` and you should see
-a `virtual-kubelet` node.
-
-### Inside the Kubernetes cluster (Minikube or Docker for Desktop)
-
-It is possible to run the Virtual Kubelet as a Kubernetes pod inside a Minikube or Docker for Desktop cluster.
-As of this writing, automation of this deployment is supported only for the mock provider, and is primarily intended at testing.
-In order to deploy the Virtual Kubelet, you need to [install `skaffold`](https://github.com/GoogleContainerTools/skaffold#installation).
-You also need to make sure that your current context is either `minikube` or `docker-for-desktop`.
-
-In order to deploy the Virtual Kubelet, run the following command after the prerequisites have been met:
-
-```console
-$ make skaffold
-```
-
-By default, this will run `skaffold` in [_development_ mode](https://github.com/GoogleContainerTools/skaffold#skaffold-dev).
-This will make `skaffold` watch `hack/skaffold/virtual-kubelet/Dockerfile` and its dependencies for changes and re-deploy the Virtual Kubelet when said changes happen.
-It will also make `skaffold` stream logs from the Virtual Kubelet pod.
-
-As an alternative, and if you are not concerned about continuous deployment and log streaming, you can run the following command instead:
-
-```console
-$ make skaffold MODE=run
-```
-
-This will build and deploy the Virtual Kubelet, and return.
+There are implementations available for several provides (listed above), see
+those repos for details on how to deploy.
 
 ## Current Features
 
@@ -88,34 +56,6 @@ This will build and deploy the Virtual Kubelet, and return.
 - operating system
 - bring your own virtual network
 
-
-## Command-Line Usage
-
-```bash
-virtual-kubelet implements the Kubelet interface with a pluggable
-backend implementation allowing users to create kubernetes nodes without running the kubelet.
-This allows users to schedule kubernetes workloads on nodes that aren't running Kubernetes.
-
-Usage:
-  virtual-kubelet [flags]
-  virtual-kubelet [command]
-
-Available Commands:
-  help        Help about any command
-  version     Show the version of the program
-
-Flags:
-  -h, --help                     help for virtual-kubelet
-      --kubeconfig string        config file (default is $HOME/.kube/config)
-      --namespace string         kubernetes namespace (default is 'all')
-      --nodename string          kubernetes node name (default "virtual-kubelet")
-      --os string                Operating System (Linux/Windows) (default "Linux")
-      --provider string          cloud provider
-      --provider-config string   cloud provider configuration file
-      --taint string             apply taint to node, making scheduling explicit
-
-Use "virtual-kubelet [command] --help" for more information about a command.
-```
 
 ## Providers
 
@@ -184,10 +124,6 @@ using the provider, pods that are scheduled on the virtual Nomad node
 registered on Kubernetes will run as jobs on Nomad clients as they
 would on a Kubernetes node.
 
-```bash
-./bin/virtual-kubelet --provider="nomad"
-```
-
 For detailed instructions, follow the guide [here](https://github.com/virtual-kubelet/nomad/blob/master/README.md).
 
 ### OpenStack Zun Provider
@@ -207,68 +143,113 @@ For detailed instructions, follow the guide [here](https://github.com/virtual-ku
 
 ### Adding a New Provider via the Provider Interface
 
-The structure we chose allows you to have all the power of the Kubernetes API
-on top with a pluggable interface.
+Providers consume this project as a library which implements the core logic of
+a Kubernetes node agent (Kubelet), and wire up their implementation for
+performing the neccessary actions.
 
-Create a new directory for your provider under `providers` and implement the
-following interface. Then add register your provider in
-`providers/register/<provider_name>_provider.go`. Make sure to add a build tag so that
-your provider can be excluded from being built. The format for this build tag
-should be `no_<provider_name>_provider`. Also make sure your provider has all
-necessary platform build tags, e.g. "linux" if your provider only compiles on Linux.
+There are 3 main interfaces:
+
+#### PodLifecylceHandler
+
+When pods are created, updated, or deleted from Kubernetes, these methods are
+called to handle those actions.
+
+[godoc#PodLifecylceHandler](https://godoc.org/github.com/virtual-kubelet/virtual-kubelet/node#PodLifecycleHandler)
 
 ```go
-// Provider contains the methods required to implement a virtual-kubelet provider.
-type Provider interface {
-	// CreatePod takes a Kubernetes Pod and deploys it within the provider.
-	CreatePod(ctx context.Context, pod *v1.Pod) error
+type PodLifecycleHandler interface {
+    // CreatePod takes a Kubernetes Pod and deploys it within the provider.
+    CreatePod(ctx context.Context, pod *corev1.Pod) error
 
-	// UpdatePod takes a Kubernetes Pod and updates it within the provider.
-	UpdatePod(ctx context.Context, pod *v1.Pod) error
+    // UpdatePod takes a Kubernetes Pod and updates it within the provider.
+    UpdatePod(ctx context.Context, pod *corev1.Pod) error
 
-	// DeletePod takes a Kubernetes Pod and deletes it from the provider.
-	DeletePod(ctx context.Context, pod *v1.Pod) error
+    // DeletePod takes a Kubernetes Pod and deletes it from the provider.
+    DeletePod(ctx context.Context, pod *corev1.Pod) error
 
-	// GetPod retrieves a pod by name from the provider (can be cached).
-	GetPod(ctx context.Context, namespace, name string) (*v1.Pod, error)
+    // GetPod retrieves a pod by name from the provider (can be cached).
+    GetPod(ctx context.Context, namespace, name string) (*corev1.Pod, error)
 
-	// GetContainerLogs retrieves the logs of a container by name from the provider.
-	GetContainerLogs(ctx context.Context, namespace, podName, containerName string, tail int) (string, error)
+    // GetPodStatus retrieves the status of a pod by name from the provider.
+    GetPodStatus(ctx context.Context, namespace, name string) (*corev1.PodStatus, error)
 
-	// ExecInContainer executes a command in a container in the pod, copying data
-	// between in/out/err and the container's stdin/stdout/stderr.
-	ExecInContainer(name string, uid types.UID, container string, cmd []string, in io.Reader, out, err io.WriteCloser, tty bool, resize <-chan remotecommand.TerminalSize, timeout time.Duration) error
-
-	// GetPodStatus retrieves the status of a pod by name from the provider.
-	GetPodStatus(ctx context.Context, namespace, name string) (*v1.PodStatus, error)
-
-	// GetPods retrieves a list of all pods running on the provider (can be cached).
-	GetPods(context.Context) ([]*v1.Pod, error)
-
-	// Capacity returns a resource list with the capacity constraints of the provider.
-	Capacity(context.Context) v1.ResourceList
-
-	// NodeConditions returns a list of conditions (Ready, OutOfDisk, etc), which is
-	// polled periodically to update the node status within Kubernetes.
-	NodeConditions(context.Context) []v1.NodeCondition
-
-	// NodeAddresses returns a list of addresses for the node status
-	// within Kubernetes.
-	NodeAddresses(context.Context) []v1.NodeAddress
-
-	// NodeDaemonEndpoints returns NodeDaemonEndpoints for the node status
-	// within Kubernetes.
-	NodeDaemonEndpoints(context.Context) *v1.NodeDaemonEndpoints
-
-	// OperatingSystem returns the operating system the provider is for.
-	OperatingSystem() string
-}
-
-// PodMetricsProvider is an optional interface that providers can implement to expose pod stats
-type PodMetricsProvider interface {
-	GetStatsSummary(context.Context) (*stats.Summary, error)
+    // GetPods retrieves a list of all pods running on the provider (can be cached).
+    GetPods(context.Context) ([]*corev1.Pod, error)
 }
 ```
+
+There is also an optional interface `PodNotifier` which enables the provider to
+asyncronously notify the virtual-kubelet about pod status changes. If this
+interface is not implemented, virtual-kubelet will periodically check the status
+of all pods.
+
+It is highly recommended to implement `PodNotifier`, especially if you plan
+to run a large number of pods.
+
+[godoc#PodNotifier](https://godoc.org/github.com/virtual-kubelet/virtual-kubelet/node#PodNotifier)
+
+```go
+type PodNotifier interface {
+    // NotifyPods instructs the notifier to call the passed in function when
+    // the pod status changes.
+    //
+    // NotifyPods should not block callers.
+    NotifyPods(context.Context, func(*corev1.Pod))
+}
+```
+
+`PodLifecycleHandler` is consumed by the `PodController` which is the core
+logic for managing pods assigned to the node.
+
+```go
+	pc, _ := node.NewPodController(podControllerConfig) // <-- instatiates the pod controller
+	pc.Run(ctx) // <-- starts watching for pods to be scheduled on the node
+```
+
+#### NodeProvider
+
+NodeProvider is responsible for notifying the virtual-kubelet about node status
+updates. Virtual-Kubelet will periodically check the status of the node and
+update Kubernetes accordingly.
+
+[godoc#NodeProvider](https://godoc.org/github.com/virtual-kubelet/virtual-kubelet/node#NodeProvider)
+
+```go
+type NodeProvider interface {
+    // Ping checks if the node is still active.
+    // This is intended to be lightweight as it will be called periodically as a
+    // heartbeat to keep the node marked as ready in Kubernetes.
+    Ping(context.Context) error
+
+    // NotifyNodeStatus is used to asynchronously monitor the node.
+    // The passed in callback should be called any time there is a change to the
+    // node's status.
+    // This will generally trigger a call to the Kubernetes API server to update
+    // the status.
+    //
+    // NotifyNodeStatus should not block callers.
+    NotifyNodeStatus(ctx context.Context, cb func(*corev1.Node))
+}
+```
+
+Virtual Kubelet provides a `NaiveNodeProvider` that you can use if you do not
+plan to have custom node behavior.
+
+[godoc#NaiveNodeProvider](https://godoc.org/github.com/virtual-kubelet/virtual-kubelet/node#NaiveNodeProvider)
+
+`NodeProvider` gets consumed by the `NodeController`, which is core logic for
+managing the node object in Kubernetes.
+
+```go
+	nc, _ := node.NewNodeController(nodeProvider, nodeSpec) // <-- instantiate a node controller from a node provider and a kubernetes node spec
+	nc.Run(ctx) // <-- creates the node in kubernetes and starts up he controller
+```
+
+#### API endpoints
+
+One of the roles of a Kubelet is to accept requests from the API server for
+things like `kubectl logs` and  `kubectl exec`. Helpers for setting this up are
+provided [here](https://godoc.org/github.com/virtual-kubelet/virtual-kubelet/node/api)
 
 ## Testing
 
@@ -314,6 +295,12 @@ In order to do so, you should run:
 
 ```console
 $ kubectl delete node vkubelet-mock-0
+```
+
+To clean up all resources you can run:
+
+```console
+$ make e2e.clean
 ```
 
 ## Known quirks and workarounds
