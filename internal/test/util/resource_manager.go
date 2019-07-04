@@ -9,7 +9,7 @@ import (
 	"k8s.io/client-go/kubernetes/fake"
 	"k8s.io/client-go/tools/cache"
 
-	"github.com/virtual-kubelet/virtual-kubelet/manager"
+	"github.com/virtual-kubelet/virtual-kubelet/internal/manager"
 )
 
 // FakeResourceManager returns an instance of the resource manager that will return the specified objects when its "GetX" methods are called.

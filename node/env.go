@@ -32,8 +32,8 @@ import (
 	"k8s.io/kubernetes/pkg/kubelet/envvars"
 	"k8s.io/kubernetes/third_party/forked/golang/expansion"
 
+	"github.com/virtual-kubelet/virtual-kubelet/internal/manager"
 	"github.com/virtual-kubelet/virtual-kubelet/log"
-	"github.com/virtual-kubelet/virtual-kubelet/manager"
 )
 
 const (

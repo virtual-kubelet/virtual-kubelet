@@ -1,12 +1,12 @@
 package main
 
 import (
-	"github.com/virtual-kubelet/virtual-kubelet/providers"
-	"github.com/virtual-kubelet/virtual-kubelet/providers/mock"
+	"github.com/virtual-kubelet/virtual-kubelet/cmd/virtual-kubelet/internal/provider"
+	"github.com/virtual-kubelet/virtual-kubelet/cmd/virtual-kubelet/internal/provider/mock"
 )
 
-func registerMock(s *providers.Store) {
-	s.Register("mock", func(cfg providers.InitConfig) (providers.Provider, error) {
+func registerMock(s *provider.Store) {
+	s.Register("mock", func(cfg provider.InitConfig) (provider.Provider, error) {
 		return mock.NewMockProvider(
 			cfg.ConfigPath,
 			cfg.NodeName,
@@ -16,7 +16,7 @@ func registerMock(s *providers.Store) {
 		)
 	})
 
-	s.Register("mockV0", func(cfg providers.InitConfig) (providers.Provider, error) {
+	s.Register("mockV0", func(cfg provider.InitConfig) (provider.Provider, error) {
 		return mock.NewMockProvider(
 			cfg.ConfigPath,
 			cfg.NodeName,

@@ -19,12 +19,12 @@ import (
 	"os"
 
 	"github.com/spf13/cobra"
-	"github.com/virtual-kubelet/virtual-kubelet/providers"
+	"github.com/virtual-kubelet/virtual-kubelet/cmd/virtual-kubelet/internal/provider"
 )
 
 // NewCommand creates a new providers subcommand
 // This subcommand is used to determine which providers are registered.
-func NewCommand(s *providers.Store) *cobra.Command {
+func NewCommand(s *provider.Store) *cobra.Command {
 	return &cobra.Command{
 		Use:   "providers",
 		Short: "Show the list of supported providers",
