@@ -312,7 +312,7 @@ func (n *NodeController) handlePing(ctx context.Context) (retErr error) {
 }
 
 func (n *NodeController) updateLease(ctx context.Context) error {
-	l, err := UpdateNodeLease(ctx, n.leases, newLease(n.lease))
+	l, err := updateNodeLease(ctx, n.leases, newLease(n.lease))
 	if err != nil {
 		return err
 	}
@@ -324,7 +324,7 @@ func (n *NodeController) updateLease(ctx context.Context) error {
 func (n *NodeController) updateStatus(ctx context.Context, skipErrorCb bool) error {
 	updateNodeStatusHeartbeat(n.n)
 
-	node, err := UpdateNodeStatus(ctx, n.nodes, n.n)
+	node, err := updateNodeStatus(ctx, n.nodes, n.n)
 	if err != nil {
 		if skipErrorCb || n.nodeStatusUpdateErrorHandler == nil {
 			return err
@@ -333,7 +333,7 @@ func (n *NodeController) updateStatus(ctx context.Context, skipErrorCb bool) err
 			return err
 		}
 
-		node, err = UpdateNodeStatus(ctx, n.nodes, n.n)
+		node, err = updateNodeStatus(ctx, n.nodes, n.n)
 		if err != nil {
 			return err
 		}
@@ -362,14 +362,12 @@ func ensureLease(ctx context.Context, leases v1beta1.LeaseInterface, lease *coor
 	return l, err
 }
 
-// UpdateNodeLease updates the node lease.
+// updateNodeLease updates the node lease.
 //
 // If this function returns an errors.IsNotFound(err) error, this likely means
-// that node leases are not supported, if this is the case, call UpdateNodeStatus
+// that node leases are not supported, if this is the case, call updateNodeStatus
 // instead.
-//
-// If you use this function, it is up to you to syncronize this with other operations.
-func UpdateNodeLease(ctx context.Context, leases v1beta1.LeaseInterface, lease *coord.Lease) (*coord.Lease, error) {
+func updateNodeLease(ctx context.Context, leases v1beta1.LeaseInterface, lease *coord.Lease) (*coord.Lease, error) {
 	ctx, span := trace.StartSpan(ctx, "node.UpdateNodeLease")
 	defer span.End()
 
@@ -403,9 +401,9 @@ func UpdateNodeLease(ctx context.Context, leases v1beta1.LeaseInterface, lease *
 // just so we don't have to allocate this on every get request
 var emptyGetOptions = metav1.GetOptions{}
 
-// PatchNodeStatus patches node status.
+// patchNodeStatus patches node status.
 // Copied from github.com/kubernetes/kubernetes/pkg/util/node
-func PatchNodeStatus(nodes v1.NodeInterface, nodeName types.NodeName, oldNode *corev1.Node, newNode *corev1.Node) (*corev1.Node, []byte, error) {
+func patchNodeStatus(nodes v1.NodeInterface, nodeName types.NodeName, oldNode *corev1.Node, newNode *corev1.Node) (*corev1.Node, []byte, error) {
 	patchBytes, err := preparePatchBytesforNodeStatus(nodeName, oldNode, newNode)
 	if err != nil {
 		return nil, nil, err
@@ -441,13 +439,13 @@ func preparePatchBytesforNodeStatus(nodeName types.NodeName, oldNode *corev1.Nod
 	return patchBytes, nil
 }
 
-// UpdateNodeStatus triggers an update to the node status in Kubernetes.
+// updateNodeStatus triggers an update to the node status in Kubernetes.
 // It first fetches the current node details and then sets the status according
 // to the passed in node object.
 //
 // If you use this function, it is up to you to syncronize this with other operations.
 // This reduces the time to second-level precision.
-func UpdateNodeStatus(ctx context.Context, nodes v1.NodeInterface, n *corev1.Node) (_ *corev1.Node, retErr error) {
+func updateNodeStatus(ctx context.Context, nodes v1.NodeInterface, n *corev1.Node) (_ *corev1.Node, retErr error) {
 	ctx, span := trace.StartSpan(ctx, "UpdateNodeStatus")
 	defer func() {
 		span.End()
@@ -469,7 +467,7 @@ func UpdateNodeStatus(ctx context.Context, nodes v1.NodeInterface, n *corev1.Nod
 	ctx = addNodeAttributes(ctx, span, node)
 
 	// Patch the node status to merge other changes on the node.
-	updated, _, err := PatchNodeStatus(nodes, types.NodeName(n.Name), oldNode, node)
+	updated, _, err := patchNodeStatus(nodes, types.NodeName(n.Name), oldNode, node)
 	if err != nil {
 		return nil, err
 	}
