@@ -42,7 +42,8 @@ e2e: e2e.clean bin/e2e/virtual-kubelet skaffold/run
 	cd $(PWD)/internal/test/e2e && go test -v -timeout 5m -tags e2e ./... \
 		-kubeconfig=$(KUBECONFIG) \
 		-namespace=$(NAMESPACE) \
-		-node-name=$(NODE_NAME) \
+		-node-name=$(NODE_NAME)
+	@$(MAKE) e2e.clean
 
 .PHONY: e2e.clean
 e2e.clean: NODE_NAME ?= vkubelet-mock-0
