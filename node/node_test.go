@@ -242,20 +242,20 @@ func TestUpdateNodeStatus(t *testing.T) {
 	nodes := testclient.NewSimpleClientset().CoreV1().Nodes()
 
 	ctx := context.Background()
-	updated, err := UpdateNodeStatus(ctx, nodes, n.DeepCopy())
+	updated, err := updateNodeStatus(ctx, nodes, n.DeepCopy())
 	assert.Equal(t, errors.IsNotFound(err), true, err)
 
 	_, err = nodes.Create(n)
 	assert.NilError(t, err)
 
-	updated, err = UpdateNodeStatus(ctx, nodes, n.DeepCopy())
+	updated, err = updateNodeStatus(ctx, nodes, n.DeepCopy())
 	assert.NilError(t, err)
 
 	assert.NilError(t, err)
 	assert.Check(t, cmp.DeepEqual(n.Status, updated.Status))
 
 	n.Status.Phase = corev1.NodeRunning
-	updated, err = UpdateNodeStatus(ctx, nodes, n.DeepCopy())
+	updated, err = updateNodeStatus(ctx, nodes, n.DeepCopy())
 	assert.NilError(t, err)
 	assert.Check(t, cmp.DeepEqual(n.Status, updated.Status))
 
@@ -265,7 +265,7 @@ func TestUpdateNodeStatus(t *testing.T) {
 	_, err = nodes.Get(n.Name, metav1.GetOptions{})
 	assert.Equal(t, errors.IsNotFound(err), true, err)
 
-	_, err = UpdateNodeStatus(ctx, nodes, updated.DeepCopy())
+	_, err = updateNodeStatus(ctx, nodes, updated.DeepCopy())
 	assert.Equal(t, errors.IsNotFound(err), true, err)
 }
 
@@ -276,7 +276,7 @@ func TestUpdateNodeLease(t *testing.T) {
 	setLeaseAttrs(lease, n, 0)
 
 	ctx := context.Background()
-	l, err := UpdateNodeLease(ctx, leases, lease)
+	l, err := updateNodeLease(ctx, leases, lease)
 	assert.NilError(t, err)
 	assert.Equal(t, l.Name, lease.Name)
 	assert.Assert(t, cmp.DeepEqual(l.Spec.HolderIdentity, lease.Spec.HolderIdentity))
@@ -289,7 +289,7 @@ func TestUpdateNodeLease(t *testing.T) {
 
 	l.Spec.RenewTime.Time = time.Now().Add(10 * time.Second)
 
-	compare, err = UpdateNodeLease(ctx, leases, l.DeepCopy())
+	compare, err = updateNodeLease(ctx, leases, l.DeepCopy())
 	assert.NilError(t, err)
 	assert.Equal(t, compare.Spec.RenewTime.Time.Unix(), l.Spec.RenewTime.Time.Unix())
 	assert.Equal(t, compare.Name, lease.Name)
