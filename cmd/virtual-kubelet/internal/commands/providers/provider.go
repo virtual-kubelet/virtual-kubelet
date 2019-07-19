@@ -41,7 +41,7 @@ func NewCommand(s *provider.Store) *cobra.Command {
 					fmt.Fprintln(cmd.OutOrStderr(), "no such provider", args[0])
 
 					// TODO(@cpuuy83): would be nice to not short-circuit the exit here
-					// But at the momemt this seems to be the only way to exit non-zero and
+					// But at the moment this seems to be the only way to exit non-zero and
 					// handle our own error output
 					os.Exit(1)
 				}

@@ -66,7 +66,7 @@ type PodLifecycleHandler interface {
 
 // PodNotifier notifies callers of pod changes.
 // Providers should implement this interface to enable callers to be notified
-// of pod status updates asyncronously.
+// of pod status updates asynchronously.
 type PodNotifier interface {
 	// NotifyPods instructs the notifier to call the passed in function when
 	// the pod status changes.
@@ -112,7 +112,7 @@ type PodControllerConfig struct {
 
 	// Informers used for filling details for things like downward API in pod spec.
 	//
-	// We are using informers here instead of listers because we'll need the
+	// We are using informers here instead of listeners because we'll need the
 	// informer for certain features (like notifications for updated ConfigMaps)
 	ConfigMapInformer corev1informers.ConfigMapInformer
 	SecretInformer    corev1informers.SecretInformer
@@ -233,7 +233,7 @@ func (pc *PodController) Run(ctx context.Context, podSyncWorkers int) error {
 
 // Ready returns a channel which gets closed once the PodController is ready to handle scheduled pods.
 // This channel will never close if there is an error on startup.
-// The status of this channel after sthudown is indeterminate.
+// The status of this channel after shutdown is indeterminate.
 func (pc *PodController) Ready() <-chan struct{} {
 	return pc.ready
 }
