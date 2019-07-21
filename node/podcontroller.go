@@ -138,6 +138,9 @@ func NewPodController(cfg PodControllerConfig) (*PodController, error) {
 	if cfg.ServiceInformer == nil {
 		return nil, errdefs.InvalidInput("missing service informer")
 	}
+	if cfg.Provider == nil {
+		return nil, errdefs.InvalidInput("missing provider")
+	}
 
 	rm, err := manager.NewResourceManager(cfg.PodInformer.Lister(), cfg.SecretInformer.Lister(), cfg.ConfigMapInformer.Lister(), cfg.ServiceInformer.Lister())
 	if err != nil {
