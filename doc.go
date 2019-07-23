@@ -14,7 +14,7 @@ code wrapping what is provided in the node package is what consumers of this
 project would implement. In the interest of not duplicating examples, please
 see that package on how to get started using virtual kubelet.
 
-Virtual Kubelet supports propgagation of logging and traces through a context.
+Virtual Kubelet supports propagation of logging and traces through a context.
 See the "log" and "trace" packages for how to use this.
 
 Errors produced by and consumed from the node package are expected to conform to

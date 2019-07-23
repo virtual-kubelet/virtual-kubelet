@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package trace abstracts virtual-kubelet's tracing capabilties into a set of
+// Package trace abstracts virtual-kubelet's tracing capabilities into a set of
 // interfaces.
 // While this does allow consumers to use whatever tracing library they want,
 // the primary goal is to share logging data between the configured logger and
@@ -27,7 +27,7 @@ import (
 
 // Tracer is the interface used for creating a tracing span
 type Tracer interface {
-	// StartSpan starts a new span. The span details are emebedded into the returned
+	// StartSpan starts a new span. The span details are embedded into the returned
 	// context
 	StartSpan(context.Context, string) (context.Context, Span)
 }

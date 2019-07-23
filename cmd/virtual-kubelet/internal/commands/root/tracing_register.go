@@ -39,7 +39,7 @@ func RegisterTracingExporter(name string, f TracingExporterInitFunc) {
 }
 
 // GetTracingExporter gets the specified tracing exporter passing in the options to the exporter init function.
-// For an exporter to be availbale here it must be registered with `RegisterTracingExporter`.
+// For an exporter to be available here it must be registered with `RegisterTracingExporter`.
 func GetTracingExporter(name string, opts TracingExporterOptions) (trace.Exporter, error) {
 	f, ok := tracingExporters[name]
 	if !ok {
