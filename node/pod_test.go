@@ -16,7 +16,6 @@ package node
 
 import (
 	"context"
-	"path"
 	"testing"
 
 	pkgerrors "github.com/pkg/errors"
@@ -30,69 +29,10 @@ import (
 	"k8s.io/client-go/kubernetes/fake"
 )
 
-type mockProvider struct {
-	pods map[string]*corev1.Pod
-
-	creates int
-	updates int
-	deletes int
-
-	errorOnDelete error
-}
-
-func (m *mockProvider) CreatePod(ctx context.Context, pod *corev1.Pod) error {
-	m.pods[path.Join(pod.GetNamespace(), pod.GetName())] = pod
-	m.creates++
-	return nil
-}
-
-func (m *mockProvider) UpdatePod(ctx context.Context, pod *corev1.Pod) error {
-	m.pods[path.Join(pod.GetNamespace(), pod.GetName())] = pod
-	m.updates++
-	return nil
-}
-
-func (m *mockProvider) GetPod(ctx context.Context, namespace, name string) (*corev1.Pod, error) {
-	p := m.pods[path.Join(namespace, name)]
-	if p == nil {
-		return nil, errdefs.NotFound("not found")
-	}
-	return p, nil
-}
-
-func (m *mockProvider) GetPodStatus(ctx context.Context, namespace, name string) (*corev1.PodStatus, error) {
-	p := m.pods[path.Join(namespace, name)]
-	if p == nil {
-		return nil, errdefs.NotFound("not found")
-	}
-	return &p.Status, nil
-}
-
-func (m *mockProvider) DeletePod(ctx context.Context, p *corev1.Pod) error {
-	if m.errorOnDelete != nil {
-		return m.errorOnDelete
-	}
-	delete(m.pods, path.Join(p.GetNamespace(), p.GetName()))
-	m.deletes++
-	return nil
-}
-
-func (m *mockProvider) GetPods(_ context.Context) ([]*corev1.Pod, error) {
-	ls := make([]*corev1.Pod, 0, len(m.pods))
-	for _, p := range ls {
-		ls = append(ls, p)
-	}
-	return ls, nil
-}
-
 type TestController struct {
 	*PodController
 	mock   *mockProvider
 	client *fake.Clientset
-}
-
-func newMockProvider() *mockProvider {
-	return &mockProvider{pods: make(map[string]*corev1.Pod)}
 }
 
 func newTestController() *TestController {
