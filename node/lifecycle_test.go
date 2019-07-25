@@ -93,7 +93,7 @@ func TestPodLifecycle(t *testing.T) {
 		testPodLifecycle(t2, ctx, mockProvider)
 	})
 	t.Run("mockV0Provider", func(t2 *testing.T) {
-		testPodLifecycle(t2, ctx, mockV0Provider)
+		testPodLifecycle(t2, ctx, WrapLegacyPodLifecycleHandler(ctx, mockV0Provider, time.Second*1))
 	})
 }
 
