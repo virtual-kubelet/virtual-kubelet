@@ -69,9 +69,13 @@ type PodLifecycleHandler interface {
 // of pod status updates asynchronously.
 type PodNotifier interface {
 	// NotifyPods instructs the notifier to call the passed in function when
-	// the pod status changes.
+	// the pod status changes. It should be called when a pod's status changes.
 	//
-	// NotifyPods should not block callers.
+	// The provided pointer to a Pod is guaranteed to be used in a read-only
+	// fashion. The provided pod's PodStatus should be up to date when
+	// this function is called.
+	//
+	// NotifyPods will not block callers.
 	NotifyPods(context.Context, func(*corev1.Pod))
 }
 
