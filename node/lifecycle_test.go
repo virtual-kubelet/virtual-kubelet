@@ -75,16 +75,34 @@ func (r *fakeDiscardingRecorder) AnnotatedEventf(object runtime.Object, annotati
 		"message":     fmt.Sprintf(messageFmt, args...),
 	}).Infof("Received annotated event")
 }
-
 func TestPodLifecycle(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	// We don't do the defer cancel() thing here because t.Run is non-blocking, so the parent context may be cancelled
+	// before the children are finished and there is no way to do a "join" and wait for them without using a waitgroup,
+	// at which point, it doesn't seem much better.
+	ctx := context.Background()
 
 	newLogger := logruslogger.FromLogrus(logrus.NewEntry(logrus.StandardLogger()))
 	logrus.SetLevel(logrus.DebugLevel)
+	ctx = log.WithLogger(ctx, newLogger)
+
+	mockProvider, err := mock.NewMockProviderMockConfig(mock.MockConfig{}, testNodeName, "linux", "1.2.3.4", 0)
+	assert.NilError(t, err)
+	mockV0Provider, err := mock.NewMockV0ProviderMockConfig(mock.MockConfig{}, testNodeName, "linux", "1.2.3.4", 0)
+
+	t.Run("mockProvider", func(t2 *testing.T) {
+		testPodLifecycle(t2, ctx, mockProvider)
+	})
+	t.Run("mockV0Provider", func(t2 *testing.T) {
+		testPodLifecycle(t2, ctx, mockV0Provider)
+	})
+}
+
+func testPodLifecycle(t *testing.T, ctx context.Context, provider PodLifecycleHandler) {
+	t.Parallel()
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
 
 	// Right now, new loggers that are created from spans are broken since log.L isn't set.
-	ctx = log.WithLogger(ctx, newLogger)
 
 	// Create the fake client.
 	client := fake.NewSimpleClientset()
@@ -110,13 +128,11 @@ func TestPodLifecycle(t *testing.T) {
 	configMapInformer := scmInformerFactory.Core().V1().ConfigMaps()
 	serviceInformer := scmInformerFactory.Core().V1().Services()
 
-	mockProvider, err := mock.NewMockProviderMockConfig(mock.MockConfig{}, testNodeName, "linux", "1.2.3.4", 0)
-	assert.NilError(t, err)
 	config := PodControllerConfig{
 		PodClient:         client.CoreV1(),
 		PodInformer:       podInformer,
 		EventRecorder:     fakeRecorder,
-		Provider:          mockProvider,
+		Provider:          provider,
 		ConfigMapInformer: configMapInformer,
 		SecretInformer:    secretInformer,
 		ServiceInformer:   serviceInformer,
