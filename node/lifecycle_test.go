@@ -92,13 +92,75 @@ func TestPodLifecycle(t *testing.T) {
 		t.Run("mockProvider", func(t *testing.T) {
 
 			assert.NilError(t, wireUpSystem(ctx, newMockProvider(), func(ctx context.Context, s *system) {
-				testPodLifecycle(ctx, t, s)
+				testCreateStartDeleteScenario(ctx, t, s)
 			}))
 		})
 
+		if testing.Short() {
+			return
+		}
 		t.Run("mockV0Provider", func(t *testing.T) {
 			assert.NilError(t, wireUpSystem(ctx, newMockV0Provider(), func(ctx context.Context, s *system) {
-				testPodLifecycle(ctx, t, s)
+				testCreateStartDeleteScenario(ctx, t, s)
+			}))
+		})
+	})
+
+	t.Run("danglingPodScenario", func(t *testing.T) {
+		t.Parallel()
+		t.Run("mockProvider", func(t *testing.T) {
+			mp := newMockProvider()
+			assert.NilError(t, wireUpSystem(ctx, mp, func(ctx context.Context, s *system) {
+				testDanglingPodScenario(ctx, t, s, mp.mockV0Provider)
+			}))
+		})
+
+		if testing.Short() {
+			return
+		}
+
+		t.Run("mockV0Provider", func(t *testing.T) {
+			mp := newMockV0Provider()
+			assert.NilError(t, wireUpSystem(ctx, mp, func(ctx context.Context, s *system) {
+				testDanglingPodScenario(ctx, t, s, mp)
+			}))
+		})
+	})
+
+	t.Run("failedPodScenario", func(t *testing.T) {
+		t.Parallel()
+		t.Run("mockProvider", func(t *testing.T) {
+			mp := newMockProvider()
+			assert.NilError(t, wireUpSystem(ctx, mp, func(ctx context.Context, s *system) {
+				testFailedPodScenario(ctx, t, s)
+			}))
+		})
+
+		if testing.Short() {
+			return
+		}
+
+		t.Run("mockV0Provider", func(t *testing.T) {
+			assert.NilError(t, wireUpSystem(ctx, newMockV0Provider(), func(ctx context.Context, s *system) {
+				testFailedPodScenario(ctx, t, s)
+			}))
+		})
+	})
+
+	t.Run("succeededPodScenario", func(t *testing.T) {
+		t.Parallel()
+		t.Run("mockProvider", func(t *testing.T) {
+			mp := newMockProvider()
+			assert.NilError(t, wireUpSystem(ctx, mp, func(ctx context.Context, s *system) {
+				testSucceededPodScenario(ctx, t, s)
+			}))
+		})
+		if testing.Short() {
+			return
+		}
+		t.Run("mockV0Provider", func(t *testing.T) {
+			assert.NilError(t, wireUpSystem(ctx, newMockV0Provider(), func(ctx context.Context, s *system) {
+				testSucceededPodScenario(ctx, t, s)
 			}))
 		})
 	})
@@ -192,29 +254,55 @@ func wireUpSystem(ctx context.Context, provider PodLifecycleHandler, f testFunct
 	return <-sys.retChan
 }
 
-func testPodLifecycle(ctx context.Context, t *testing.T, s *system) {
+func testFailedPodScenario(ctx context.Context, t *testing.T, s *system) {
+	testTerminalStatePodScenario(ctx, t, s, corev1.PodFailed)
+}
+
+func testSucceededPodScenario(ctx context.Context, t *testing.T, s *system) {
+	testTerminalStatePodScenario(ctx, t, s, corev1.PodSucceeded)
+}
+func testTerminalStatePodScenario(ctx context.Context, t *testing.T, s *system, state corev1.PodPhase) {
+
+	t.Parallel()
+
+	p1 := newPod()
+	p1.Status.Phase = state
+	// Create the Pod
+	_, e := s.client.CoreV1().Pods(testNamespace).Create(p1)
+	assert.NilError(t, e)
+
+	// Start the pod controller
+	s.start(ctx)
+
+	for s.pc.k8sQ.Len() > 0 {
+	}
+
+	p2, err := s.client.CoreV1().Pods(testNamespace).Get(p1.Name, metav1.GetOptions{})
+	assert.NilError(t, err)
+
+	// Make sure the pods have not changed
+	assert.DeepEqual(t, p1, p2)
+}
+
+func testDanglingPodScenario(ctx context.Context, t *testing.T, s *system, m *mockV0Provider) {
+	t.Parallel()
+
+	pod := newPod()
+	assert.NilError(t, m.CreatePod(ctx, pod))
+
+	// Start the pod controller
+	s.start(ctx)
+
+	assert.Assert(t, m.deletes == 1)
+
+}
+
+func testCreateStartDeleteScenario(ctx context.Context, t *testing.T, s *system) {
 	t.Parallel()
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
-	p := corev1.Pod{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "Pod",
-			APIVersion: "v1",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:            "my-pod",
-			Namespace:       testNamespace,
-			UID:             "4f20ff31-7775-11e9-893d-000c29a24b34",
-			ResourceVersion: "100",
-		},
-		Spec: corev1.PodSpec{
-			NodeName: testNodeName,
-		},
-		Status: corev1.PodStatus{
-			Phase: corev1.PodPending,
-		},
-	}
+	p := newPod()
 
 	listOptions := metav1.ListOptions{
 		FieldSelector: fields.OneTermEqualSelector("metadata.name", p.ObjectMeta.Name).String(),
@@ -240,7 +328,7 @@ func testPodLifecycle(ctx context.Context, t *testing.T, s *system) {
 	}()
 
 	// Create the Pod
-	_, e := s.client.CoreV1().Pods(testNamespace).Create(&p)
+	_, e := s.client.CoreV1().Pods(testNamespace).Create(p)
 	assert.NilError(t, e)
 
 	// This will return once
@@ -323,5 +411,26 @@ func testPodLifecycle(ctx context.Context, t *testing.T, s *system) {
 	case err = <-watchErrCh:
 		assert.NilError(t, err)
 
+	}
+}
+
+func newPod() *corev1.Pod {
+	return &corev1.Pod{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "Pod",
+			APIVersion: "v1",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:            "my-pod",
+			Namespace:       testNamespace,
+			UID:             "4f20ff31-7775-11e9-893d-000c29a24b34",
+			ResourceVersion: "100",
+		},
+		Spec: corev1.PodSpec{
+			NodeName: testNodeName,
+		},
+		Status: corev1.PodStatus{
+			Phase: corev1.PodPending,
+		},
 	}
 }
