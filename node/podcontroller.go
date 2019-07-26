@@ -119,6 +119,8 @@ type PodController struct {
 	client corev1client.PodsGetter
 
 	resourceManager *manager.ResourceManager
+
+	k8sQ workqueue.RateLimitingInterface
 }
 
 // PodControllerConfig is used to configure a new PodController.
@@ -172,7 +174,7 @@ func NewPodController(cfg PodControllerConfig) (*PodController, error) {
 		return nil, pkgerrors.Wrap(err, "could not create resource manager")
 	}
 
-	return &PodController{
+	pc := &PodController{
 		client:          cfg.PodClient,
 		podsInformer:    cfg.PodInformer,
 		podsLister:      cfg.PodInformer.Lister(),
@@ -180,19 +182,8 @@ func NewPodController(cfg PodControllerConfig) (*PodController, error) {
 		resourceManager: rm,
 		ready:           make(chan struct{}),
 		recorder:        cfg.EventRecorder,
-	}, nil
-}
-
-// Run will set up the event handlers for types we are interested in, as well as syncing informer caches and starting workers.
-// It will block until the context is cancelled, at which point it will shutdown the work queue and wait for workers to finish processing their current work items.
-func (pc *PodController) Run(ctx context.Context, podSyncWorkers int) error {
-	k8sQ := workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "syncPodsFromKubernetes")
-	defer k8sQ.ShutDown()
-
-	podStatusQueue := workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "syncPodStatusFromProvider")
-	pc.runSyncFromProvider(ctx, podStatusQueue)
-	pc.runProviderSyncWorkers(ctx, podStatusQueue, podSyncWorkers)
-	defer podStatusQueue.ShutDown()
+		k8sQ:            workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "syncPodsFromKubernetes"),
+	}
 
 	// Set up event handlers for when Pod resources change.
 	pc.podsInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
@@ -200,7 +191,7 @@ func (pc *PodController) Run(ctx context.Context, podSyncWorkers int) error {
 			if key, err := cache.MetaNamespaceKeyFunc(pod); err != nil {
 				log.L.Error(err)
 			} else {
-				k8sQ.AddRateLimited(key)
+				pc.k8sQ.AddRateLimited(key)
 			}
 		},
 		UpdateFunc: func(oldObj, newObj interface{}) {
@@ -219,17 +210,30 @@ func (pc *PodController) Run(ctx context.Context, podSyncWorkers int) error {
 			if key, err := cache.MetaNamespaceKeyFunc(newPod); err != nil {
 				log.L.Error(err)
 			} else {
-				k8sQ.AddRateLimited(key)
+				pc.k8sQ.AddRateLimited(key)
 			}
 		},
 		DeleteFunc: func(pod interface{}) {
 			if key, err := cache.DeletionHandlingMetaNamespaceKeyFunc(pod); err != nil {
 				log.L.Error(err)
 			} else {
-				k8sQ.AddRateLimited(key)
+				pc.k8sQ.AddRateLimited(key)
 			}
 		},
 	})
+
+	return pc, nil
+}
+
+// Run will set up the event handlers for types we are interested in, as well as syncing informer caches and starting workers.
+// It will block until the context is cancelled, at which point it will shutdown the work queue and wait for workers to finish processing their current work items.
+func (pc *PodController) Run(ctx context.Context, podSyncWorkers int) error {
+	defer pc.k8sQ.ShutDown()
+
+	podStatusQueue := workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "syncPodStatusFromProvider")
+	pc.runSyncFromProvider(ctx, podStatusQueue)
+	pc.runProviderSyncWorkers(ctx, podStatusQueue, podSyncWorkers)
+	defer podStatusQueue.ShutDown()
 
 	// Wait for the caches to be synced *before* starting workers.
 	if ok := cache.WaitForCacheSync(ctx.Done(), pc.podsInformer.Informer().HasSynced); !ok {
@@ -246,7 +250,7 @@ func (pc *PodController) Run(ctx context.Context, podSyncWorkers int) error {
 	for id := 0; id < podSyncWorkers; id++ {
 		go wait.Until(func() {
 			// Use the worker's "index" as its ID so we can use it for tracing.
-			pc.runWorker(ctx, strconv.Itoa(id), k8sQ)
+			pc.runWorker(ctx, strconv.Itoa(id), pc.k8sQ)
 		}, time.Second, ctx.Done())
 	}
 
