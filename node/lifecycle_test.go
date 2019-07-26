@@ -7,8 +7,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/sirupsen/logrus"
 	"github.com/virtual-kubelet/virtual-kubelet/examples/providers/mock"
+
+	"github.com/sirupsen/logrus"
 	"github.com/virtual-kubelet/virtual-kubelet/log"
 	logruslogger "github.com/virtual-kubelet/virtual-kubelet/log/logrus"
 	"gotest.tools/assert"
@@ -39,6 +40,11 @@ const (
 
 func init() {
 	klog.InitFlags(nil)
+	// We neet to set log.L because new spans derive their loggers from log.L
+	sl := logrus.StandardLogger()
+	sl.SetLevel(logrus.DebugLevel)
+	newLogger := logruslogger.FromLogrus(logrus.NewEntry(sl))
+	log.L = newLogger
 }
 
 // fakeDiscardingRecorder discards all events. Silently.
@@ -75,34 +81,69 @@ func (r *fakeDiscardingRecorder) AnnotatedEventf(object runtime.Object, annotati
 		"message":     fmt.Sprintf(messageFmt, args...),
 	}).Infof("Received annotated event")
 }
+
 func TestPodLifecycle(t *testing.T) {
 	// We don't do the defer cancel() thing here because t.Run is non-blocking, so the parent context may be cancelled
 	// before the children are finished and there is no way to do a "join" and wait for them without using a waitgroup,
 	// at which point, it doesn't seem much better.
 	ctx := context.Background()
 
-	newLogger := logruslogger.FromLogrus(logrus.NewEntry(logrus.StandardLogger()))
-	logrus.SetLevel(logrus.DebugLevel)
-	ctx = log.WithLogger(ctx, newLogger)
+	ctx = log.WithLogger(ctx, log.L)
 
-	mockProvider, err := mock.NewMockProviderMockConfig(mock.MockConfig{}, testNodeName, "linux", "1.2.3.4", 0)
-	assert.NilError(t, err)
-	mockV0Provider, err := mock.NewMockV0ProviderMockConfig(mock.MockConfig{}, testNodeName, "linux", "1.2.3.4", 0)
+	t.Run("createStartDeleteScenario", func(t *testing.T) {
+		t.Run("mockProvider", func(t *testing.T) {
+			mockProvider, err := mock.NewMockProviderMockConfig(mock.MockConfig{}, testNodeName, "linux", "1.2.3.4", 0)
+			assert.NilError(t, err)
+			assert.NilError(t, wireUpSystem(ctx, mockProvider, func(ctx context.Context, s *system) {
+				testPodLifecycle(ctx, t, s)
+			}))
+		})
 
-	t.Run("mockProvider", func(t2 *testing.T) {
-		testPodLifecycle(t2, ctx, mockProvider)
-	})
-	t.Run("mockV0Provider", func(t2 *testing.T) {
-		testPodLifecycle(t2, ctx, WrapLegacyPodLifecycleHandler(ctx, mockV0Provider, time.Second*1))
+		t.Run("mockV0Provider", func(t *testing.T) {
+			mockV0Provider, err := mock.NewMockV0ProviderMockConfig(mock.MockConfig{}, testNodeName, "linux", "1.2.3.4", 0)
+			assert.NilError(t, err)
+			podLifecycleHandler := WrapLegacyPodLifecycleHandler(ctx, mockV0Provider, time.Second*1)
+			assert.NilError(t, wireUpSystem(ctx, podLifecycleHandler, func(ctx context.Context, s *system) {
+				testPodLifecycle(ctx, t, s)
+			}))
+		})
 	})
 }
 
-func testPodLifecycle(t *testing.T, ctx context.Context, provider PodLifecycleHandler) {
-	t.Parallel()
+type testFunction func(ctx context.Context, s *system)
+type system struct {
+	retChan             chan error
+	pc                  *PodController
+	client              *fake.Clientset
+	podControllerConfig PodControllerConfig
+}
+
+func (s *system) start(ctx context.Context) chan error {
+	podControllerErrChan := make(chan error)
+	go func() {
+		podControllerErrChan <- s.pc.Run(ctx, podSyncWorkers)
+	}()
+
+	// We need to wait for the pod controller to start. If there is an error before the pod controller starts, or
+	// the context is cancelled. If the context is cancelled, the startup will be aborted, and the pod controller
+	// will return an error, so we don't need to wait on ctx.Done()
+	select {
+	case <-s.pc.Ready():
+		// This listens for errors, or exits in the future.
+		go func() {
+			podControllerErr := <-podControllerErrChan
+			s.retChan <- podControllerErr
+		}()
+	// If there is an error before things are ready, we need to forward it immediately
+	case podControllerErr := <-podControllerErrChan:
+		s.retChan <- podControllerErr
+	}
+	return s.retChan
+}
+
+func wireUpSystem(ctx context.Context, provider PodLifecycleHandler, f testFunction) error {
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
-
-	// Right now, new loggers that are created from spans are broken since log.L isn't set.
 
 	// Create the fake client.
 	client := fake.NewSimpleClientset()
@@ -127,19 +168,40 @@ func testPodLifecycle(t *testing.T, ctx context.Context, provider PodLifecycleHa
 	secretInformer := scmInformerFactory.Core().V1().Secrets()
 	configMapInformer := scmInformerFactory.Core().V1().ConfigMaps()
 	serviceInformer := scmInformerFactory.Core().V1().Services()
-
-	config := PodControllerConfig{
-		PodClient:         client.CoreV1(),
-		PodInformer:       podInformer,
-		EventRecorder:     fakeRecorder,
-		Provider:          provider,
-		ConfigMapInformer: configMapInformer,
-		SecretInformer:    secretInformer,
-		ServiceInformer:   serviceInformer,
+	sys := &system{
+		client:  client,
+		retChan: make(chan error, 1),
+		podControllerConfig: PodControllerConfig{
+			PodClient:         client.CoreV1(),
+			PodInformer:       podInformer,
+			EventRecorder:     fakeRecorder,
+			Provider:          provider,
+			ConfigMapInformer: configMapInformer,
+			SecretInformer:    secretInformer,
+			ServiceInformer:   serviceInformer,
+		},
 	}
 
-	pc, err := NewPodController(config)
-	assert.NilError(t, err)
+	var err error
+	sys.pc, err = NewPodController(sys.podControllerConfig)
+	if err != nil {
+		return err
+	}
+
+	go scmInformerFactory.Start(ctx.Done())
+	go podInformerFactory.Start(ctx.Done())
+
+	f(ctx, sys)
+
+	// Shutdown the pod controller, and wait for it to exit
+	cancel()
+	return <-sys.retChan
+}
+
+func testPodLifecycle(ctx context.Context, t *testing.T, s *system) {
+	t.Parallel()
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
 
 	p := corev1.Pod{
 		TypeMeta: metav1.TypeMeta{
@@ -167,7 +229,7 @@ func testPodLifecycle(t *testing.T, ctx context.Context, provider PodLifecycleHa
 	watchErrCh := make(chan error)
 
 	// Setup a watch (prior to pod creation, and pod controller startup)
-	watcher, err := client.CoreV1().Pods(testNamespace).Watch(listOptions)
+	watcher, err := s.client.CoreV1().Pods(testNamespace).Watch(listOptions)
 	assert.NilError(t, err)
 
 	// This ensures that the pod is created.
@@ -183,11 +245,8 @@ func testPodLifecycle(t *testing.T, ctx context.Context, provider PodLifecycleHa
 		watchErrCh <- watchErr
 	}()
 
-	go podInformerFactory.Start(ctx.Done())
-	go scmInformerFactory.Start(ctx.Done())
-
 	// Create the Pod
-	_, e := client.CoreV1().Pods(testNamespace).Create(&p)
+	_, e := s.client.CoreV1().Pods(testNamespace).Create(&p)
 	assert.NilError(t, e)
 
 	// This will return once
@@ -200,7 +259,7 @@ func testPodLifecycle(t *testing.T, ctx context.Context, provider PodLifecycleHa
 	}
 
 	// Setup a watch to check if the pod is in running
-	watcher, err = client.CoreV1().Pods(testNamespace).Watch(listOptions)
+	watcher, err = s.client.CoreV1().Pods(testNamespace).Watch(listOptions)
 	assert.NilError(t, err)
 	go func() {
 		_, watchErr := watchutils.UntilWithoutRetry(ctx, watcher,
@@ -214,10 +273,7 @@ func testPodLifecycle(t *testing.T, ctx context.Context, provider PodLifecycleHa
 	}()
 
 	// Start the pod controller
-	podControllerErrCh := make(chan error, 1)
-	go func() {
-		podControllerErrCh <- pc.Run(ctx, podSyncWorkers)
-	}()
+	podControllerErrCh := s.start(ctx)
 
 	// Wait for pod to be in running
 	select {
@@ -232,7 +288,7 @@ func testPodLifecycle(t *testing.T, ctx context.Context, provider PodLifecycleHa
 	}
 
 	// Setup a watch prior to pod deletion
-	watcher, err = client.CoreV1().Pods(testNamespace).Watch(listOptions)
+	watcher, err = s.client.CoreV1().Pods(testNamespace).Watch(listOptions)
 	assert.NilError(t, err)
 	go func() {
 		_, watchErr := watchutils.UntilWithoutRetry(ctx, watcher,
@@ -250,7 +306,7 @@ func testPodLifecycle(t *testing.T, ctx context.Context, provider PodLifecycleHa
 	// Delete the pod
 
 	// 1. Get the pod
-	currentPod, err := client.CoreV1().Pods(testNamespace).Get(p.Name, metav1.GetOptions{})
+	currentPod, err := s.client.CoreV1().Pods(testNamespace).Get(p.Name, metav1.GetOptions{})
 	assert.NilError(t, err)
 	// 2. Set the pod's deletion timestamp, version, and so on
 	curVersion, err := strconv.Atoi(currentPod.ResourceVersion)
@@ -261,7 +317,7 @@ func testPodLifecycle(t *testing.T, ctx context.Context, provider PodLifecycleHa
 	deletionTimestamp := metav1.NewTime(time.Now().Add(time.Second * time.Duration(deletionGracePeriod)))
 	currentPod.DeletionTimestamp = &deletionTimestamp
 	// 3. Update (overwrite) the pod
-	_, err = client.CoreV1().Pods(testNamespace).Update(currentPod)
+	_, err = s.client.CoreV1().Pods(testNamespace).Update(currentPod)
 	assert.NilError(t, err)
 
 	select {
@@ -274,7 +330,4 @@ func testPodLifecycle(t *testing.T, ctx context.Context, provider PodLifecycleHa
 		assert.NilError(t, err)
 
 	}
-
-	cancel()
-	assert.NilError(t, <-podControllerErrCh)
 }
