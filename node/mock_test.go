@@ -3,6 +3,7 @@ package node
 import (
 	"context"
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/virtual-kubelet/virtual-kubelet/errdefs"
@@ -23,7 +24,7 @@ type mockV0Provider struct {
 
 	errorOnDelete error
 
-	pods      map[string]*v1.Pod
+	pods      sync.Map
 	startTime time.Time
 	notifier  func(*v1.Pod)
 }
@@ -35,7 +36,6 @@ type mockProvider struct {
 // NewMockProviderMockConfig creates a new mockV0Provider. Mock legacy provider does not implement the new asynchronous podnotifier interface
 func newMockV0Provider() *mockV0Provider {
 	provider := mockV0Provider{
-		pods:      make(map[string]*v1.Pod),
 		startTime: time.Now(),
 		// By default notifier is set to a function which is a no-op. In the event we've implemented the PodNotifier interface,
 		// it will be set, and then we'll call a real underlying implementation.
@@ -98,7 +98,7 @@ func (p *mockV0Provider) CreatePod(ctx context.Context, pod *v1.Pod) error {
 		})
 	}
 
-	p.pods[key] = pod
+	p.pods.Store(key, pod)
 	p.notifier(pod)
 
 	return nil
@@ -114,7 +114,7 @@ func (p *mockV0Provider) UpdatePod(ctx context.Context, pod *v1.Pod) error {
 		return err
 	}
 
-	p.pods[key] = pod
+	p.pods.Store(key, pod)
 	p.notifier(pod)
 
 	return nil
@@ -134,12 +134,12 @@ func (p *mockV0Provider) DeletePod(ctx context.Context, pod *v1.Pod) (err error)
 		return err
 	}
 
-	if _, exists := p.pods[key]; !exists {
+	if _, exists := p.pods.Load(key); !exists {
 		return errdefs.NotFound("pod not found")
 	}
 
 	now := metav1.Now()
-	delete(p.pods, key)
+	p.pods.Delete(key)
 	pod.Status.Phase = v1.PodSucceeded
 	pod.Status.Reason = "MockProviderPodDeleted"
 
@@ -169,8 +169,8 @@ func (p *mockV0Provider) GetPod(ctx context.Context, namespace, name string) (po
 		return nil, err
 	}
 
-	if pod, ok := p.pods[key]; ok {
-		return pod, nil
+	if pod, ok := p.pods.Load(key); ok {
+		return pod.(*v1.Pod), nil
 	}
 	return nil, errdefs.NotFoundf("pod \"%s/%s\" is not known to the provider", namespace, name)
 }
@@ -194,9 +194,10 @@ func (p *mockV0Provider) GetPods(ctx context.Context) ([]*v1.Pod, error) {
 
 	var pods []*v1.Pod
 
-	for _, pod := range p.pods {
-		pods = append(pods, pod)
-	}
+	p.pods.Range(func(key, pod interface{}) bool {
+		pods = append(pods, pod.(*v1.Pod))
+		return true
+	})
 
 	return pods, nil
 }

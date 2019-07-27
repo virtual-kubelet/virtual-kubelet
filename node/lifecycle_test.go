@@ -15,6 +15,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/util/uuid"
 	"k8s.io/apimachinery/pkg/watch"
 	kubeinformers "k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes/fake"
@@ -414,8 +415,51 @@ func testCreateStartDeleteScenario(ctx context.Context, t *testing.T, s *system)
 	}
 }
 
-func newPod() *corev1.Pod {
-	return &corev1.Pod{
+func BenchmarkCreatePods(b *testing.B) {
+	sl := logrus.StandardLogger()
+	sl.SetLevel(logrus.ErrorLevel)
+	newLogger := logruslogger.FromLogrus(logrus.NewEntry(sl))
+
+	ctx := context.Background()
+	ctx = log.WithLogger(ctx, newLogger)
+
+	assert.NilError(b, wireUpSystem(ctx, newMockProvider(), func(ctx context.Context, s *system) {
+		benchmarkCreatePods(ctx, b, s)
+	}))
+}
+
+func benchmarkCreatePods(ctx context.Context, b *testing.B, s *system) {
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
+	errCh := s.start(ctx)
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		pod := newPod(randomizeUID, randomizeName)
+		_, err := s.client.CoreV1().Pods(pod.Namespace).Create(pod)
+		assert.NilError(b, err)
+		select {
+		case err = <-errCh:
+			b.Fatalf("Benchmark terminated with error: %+v", err)
+		default:
+		}
+	}
+}
+
+type podModifier func(*corev1.Pod)
+
+func randomizeUID(pod *corev1.Pod) {
+	pod.ObjectMeta.UID = uuid.NewUUID()
+}
+
+func randomizeName(pod *corev1.Pod) {
+	name := fmt.Sprintf("pod-%s", uuid.NewUUID())
+	pod.Name = name
+}
+
+func newPod(podmodifiers ...podModifier) *corev1.Pod {
+	pod := &corev1.Pod{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "Pod",
 			APIVersion: "v1",
@@ -433,4 +477,8 @@ func newPod() *corev1.Pod {
 			Phase: corev1.PodPending,
 		},
 	}
+	for _, modifier := range podmodifiers {
+		modifier(pod)
+	}
+	return pod
 }
