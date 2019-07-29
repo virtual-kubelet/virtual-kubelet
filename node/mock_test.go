@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/virtual-kubelet/virtual-kubelet/errdefs"
@@ -18,9 +19,9 @@ var (
 )
 
 type mockV0Provider struct {
-	creates int
-	updates int
-	deletes int
+	creates uint64
+	updates uint64
+	deletes uint64
 
 	errorOnDelete error
 
@@ -56,7 +57,7 @@ func newMockProvider() *mockProvider {
 func (p *mockV0Provider) CreatePod(ctx context.Context, pod *v1.Pod) error {
 	log.G(ctx).Infof("receive CreatePod %q", pod.Name)
 
-	p.creates++
+	atomic.AddUint64(&p.creates, 1)
 	key, err := buildKey(pod)
 	if err != nil {
 		return err
@@ -108,7 +109,7 @@ func (p *mockV0Provider) CreatePod(ctx context.Context, pod *v1.Pod) error {
 func (p *mockV0Provider) UpdatePod(ctx context.Context, pod *v1.Pod) error {
 	log.G(ctx).Infof("receive UpdatePod %q", pod.Name)
 
-	p.updates++
+	atomic.AddUint64(&p.updates, 1)
 	key, err := buildKey(pod)
 	if err != nil {
 		return err
@@ -128,7 +129,7 @@ func (p *mockV0Provider) DeletePod(ctx context.Context, pod *v1.Pod) (err error)
 		return p.errorOnDelete
 	}
 
-	p.deletes++
+	atomic.AddUint64(&p.deletes, 1)
 	key, err := buildKey(pod)
 	if err != nil {
 		return err

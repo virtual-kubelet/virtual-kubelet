@@ -16,6 +16,7 @@ package node
 
 import (
 	"context"
+	"sync/atomic"
 	"testing"
 
 	pkgerrors "github.com/pkg/errors"
@@ -152,8 +153,8 @@ func TestPodCreateNewPod(t *testing.T) {
 
 	assert.Check(t, is.Nil(err))
 	// createOrUpdate called CreatePod but did not call UpdatePod because the pod did not exist
-	assert.Check(t, is.Equal(svr.mock.creates, 1))
-	assert.Check(t, is.Equal(svr.mock.updates, 0))
+	assert.Check(t, is.Equal(atomic.LoadUint64(&svr.mock.creates), uint64(1)))
+	assert.Check(t, is.Equal(atomic.LoadUint64(&svr.mock.updates), uint64(0)))
 }
 
 func TestPodUpdateExisting(t *testing.T) {
@@ -179,8 +180,8 @@ func TestPodUpdateExisting(t *testing.T) {
 
 	err := svr.provider.CreatePod(context.Background(), pod)
 	assert.Check(t, is.Nil(err))
-	assert.Check(t, is.Equal(svr.mock.creates, 1))
-	assert.Check(t, is.Equal(svr.mock.updates, 0))
+	assert.Check(t, is.Equal(atomic.LoadUint64(&svr.mock.creates), uint64(1)))
+	assert.Check(t, is.Equal(atomic.LoadUint64(&svr.mock.updates), uint64(0)))
 
 	pod2 := &corev1.Pod{}
 	pod2.ObjectMeta.Namespace = "default"
@@ -204,8 +205,8 @@ func TestPodUpdateExisting(t *testing.T) {
 	assert.Check(t, is.Nil(err))
 
 	// createOrUpdate didn't call CreatePod but did call UpdatePod because the spec changed
-	assert.Check(t, is.Equal(svr.mock.creates, 1))
-	assert.Check(t, is.Equal(svr.mock.updates, 1))
+	assert.Check(t, is.Equal(atomic.LoadUint64(&svr.mock.creates), uint64(1)))
+	assert.Check(t, is.Equal(atomic.LoadUint64(&svr.mock.updates), uint64(1)))
 }
 
 func TestPodNoSpecChange(t *testing.T) {
@@ -231,15 +232,15 @@ func TestPodNoSpecChange(t *testing.T) {
 
 	err := svr.mock.CreatePod(context.Background(), pod)
 	assert.Check(t, is.Nil(err))
-	assert.Check(t, is.Equal(svr.mock.creates, 1))
-	assert.Check(t, is.Equal(svr.mock.updates, 0))
+	assert.Check(t, is.Equal(atomic.LoadUint64(&svr.mock.creates), uint64(1)))
+	assert.Check(t, is.Equal(atomic.LoadUint64(&svr.mock.updates), uint64(0)))
 
 	err = svr.createOrUpdatePod(context.Background(), pod)
 	assert.Check(t, is.Nil(err))
 
 	// createOrUpdate didn't call CreatePod or UpdatePod, spec didn't change
-	assert.Check(t, is.Equal(svr.mock.creates, 1))
-	assert.Check(t, is.Equal(svr.mock.updates, 0))
+	assert.Check(t, is.Equal(atomic.LoadUint64(&svr.mock.creates), uint64(1)))
+	assert.Check(t, is.Equal(atomic.LoadUint64(&svr.mock.updates), uint64(0)))
 }
 
 func TestPodDelete(t *testing.T) {
@@ -279,7 +280,7 @@ func TestPodDelete(t *testing.T) {
 			ctx := context.Background()
 			err = c.createOrUpdatePod(ctx, p) // make sure it's actually created
 			assert.NilError(t, err)
-			assert.Check(t, is.Equal(c.mock.creates, 1))
+			assert.Check(t, is.Equal(atomic.LoadUint64(&c.mock.creates), uint64(1)))
 
 			err = c.deletePod(ctx, pod.Namespace, pod.Name)
 			assert.Equal(t, pkgerrors.Cause(err), err)
@@ -288,7 +289,7 @@ func TestPodDelete(t *testing.T) {
 			if tc.delErr == nil {
 				expectDeletes = 1
 			}
-			assert.Check(t, is.Equal(c.mock.deletes, expectDeletes))
+			assert.Check(t, is.Equal(atomic.LoadUint64(&c.mock.deletes), uint64(expectDeletes)))
 
 			expectDeleted := tc.delErr == nil || errdefs.IsNotFound(tc.delErr)
 

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strconv"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -162,6 +163,16 @@ func TestPodLifecycle(t *testing.T) {
 		t.Run("mockV0Provider", func(t *testing.T) {
 			assert.NilError(t, wireUpSystem(ctx, newMockV0Provider(), func(ctx context.Context, s *system) {
 				testSucceededPodScenario(ctx, t, s)
+			}))
+		})
+	})
+
+	t.Run("updatePodWhileRunningScenario", func(t *testing.T) {
+		t.Parallel()
+		t.Run("mockProvider", func(t *testing.T) {
+			mp := newMockProvider()
+			assert.NilError(t, wireUpSystem(ctx, mp, func(ctx context.Context, s *system) {
+				testUpdatePodWhileRunningScenario(ctx, t, s, mp)
 			}))
 		})
 	})
@@ -415,6 +426,62 @@ func testCreateStartDeleteScenario(ctx context.Context, t *testing.T, s *system)
 	}
 }
 
+func testUpdatePodWhileRunningScenario(ctx context.Context, t *testing.T, s *system, m *mockProvider) {
+	t.Parallel()
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
+	p := newPod()
+
+	listOptions := metav1.ListOptions{
+		FieldSelector: fields.OneTermEqualSelector("metadata.name", p.ObjectMeta.Name).String(),
+	}
+
+	watchErrCh := make(chan error)
+
+	// Create a Pod
+	_, e := s.client.CoreV1().Pods(testNamespace).Create(p)
+	assert.NilError(t, e)
+
+	// Setup a watch to check if the pod is in running
+	watcher, err := s.client.CoreV1().Pods(testNamespace).Watch(listOptions)
+	assert.NilError(t, err)
+	go func() {
+		_, watchErr := watchutils.UntilWithoutRetry(ctx, watcher,
+			// Wait for the pod to be started
+			func(ev watch.Event) (bool, error) {
+				pod := ev.Object.(*corev1.Pod)
+				return pod.Status.Phase == corev1.PodRunning, nil
+			})
+
+		watchErrCh <- watchErr
+	}()
+
+	// Start the pod controller
+	podControllerErrCh := s.start(ctx)
+
+	// Wait for pod to be in running
+	select {
+	case <-ctx.Done():
+		t.Fatalf("Context ended early: %s", ctx.Err().Error())
+	case err = <-podControllerErrCh:
+		assert.NilError(t, err)
+		t.Fatal("Pod controller exited prematurely without error")
+	case err = <-watchErrCh:
+		assert.NilError(t, err)
+
+	}
+
+	// Update the pod
+
+	bumpResourceVersion(p)
+	p.Spec.SchedulerName = "joe"
+	_, err = s.client.CoreV1().Pods(p.Namespace).Update(p)
+	assert.NilError(t, err)
+	for atomic.LoadUint64(&m.updates) == 0 {
+	}
+}
+
 func BenchmarkCreatePods(b *testing.B) {
 	sl := logrus.StandardLogger()
 	sl.SetLevel(logrus.ErrorLevel)
@@ -456,6 +523,15 @@ func randomizeUID(pod *corev1.Pod) {
 func randomizeName(pod *corev1.Pod) {
 	name := fmt.Sprintf("pod-%s", uuid.NewUUID())
 	pod.Name = name
+}
+
+func bumpResourceVersion(pod *corev1.Pod) {
+	version, err := strconv.Atoi(pod.ResourceVersion)
+	if err != nil {
+		panic(err)
+	}
+
+	pod.ResourceVersion = strconv.Itoa(version + 1)
 }
 
 func newPod(podmodifiers ...podModifier) *corev1.Pod {
