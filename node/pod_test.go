@@ -16,7 +16,7 @@ package node
 
 import (
 	"context"
-	"path"
+	"sync/atomic"
 	"testing"
 
 	pkgerrors "github.com/pkg/errors"
@@ -30,69 +30,10 @@ import (
 	"k8s.io/client-go/kubernetes/fake"
 )
 
-type mockProvider struct {
-	pods map[string]*corev1.Pod
-
-	creates int
-	updates int
-	deletes int
-
-	errorOnDelete error
-}
-
-func (m *mockProvider) CreatePod(ctx context.Context, pod *corev1.Pod) error {
-	m.pods[path.Join(pod.GetNamespace(), pod.GetName())] = pod
-	m.creates++
-	return nil
-}
-
-func (m *mockProvider) UpdatePod(ctx context.Context, pod *corev1.Pod) error {
-	m.pods[path.Join(pod.GetNamespace(), pod.GetName())] = pod
-	m.updates++
-	return nil
-}
-
-func (m *mockProvider) GetPod(ctx context.Context, namespace, name string) (*corev1.Pod, error) {
-	p := m.pods[path.Join(namespace, name)]
-	if p == nil {
-		return nil, errdefs.NotFound("not found")
-	}
-	return p, nil
-}
-
-func (m *mockProvider) GetPodStatus(ctx context.Context, namespace, name string) (*corev1.PodStatus, error) {
-	p := m.pods[path.Join(namespace, name)]
-	if p == nil {
-		return nil, errdefs.NotFound("not found")
-	}
-	return &p.Status, nil
-}
-
-func (m *mockProvider) DeletePod(ctx context.Context, p *corev1.Pod) error {
-	if m.errorOnDelete != nil {
-		return m.errorOnDelete
-	}
-	delete(m.pods, path.Join(p.GetNamespace(), p.GetName()))
-	m.deletes++
-	return nil
-}
-
-func (m *mockProvider) GetPods(_ context.Context) ([]*corev1.Pod, error) {
-	ls := make([]*corev1.Pod, 0, len(m.pods))
-	for _, p := range ls {
-		ls = append(ls, p)
-	}
-	return ls, nil
-}
-
 type TestController struct {
 	*PodController
 	mock   *mockProvider
 	client *fake.Clientset
-}
-
-func newMockProvider() *mockProvider {
-	return &mockProvider{pods: make(map[string]*corev1.Pod)}
 }
 
 func newTestController() *TestController {
@@ -212,8 +153,8 @@ func TestPodCreateNewPod(t *testing.T) {
 
 	assert.Check(t, is.Nil(err))
 	// createOrUpdate called CreatePod but did not call UpdatePod because the pod did not exist
-	assert.Check(t, is.Equal(svr.mock.creates, 1))
-	assert.Check(t, is.Equal(svr.mock.updates, 0))
+	assert.Check(t, is.Equal(atomic.LoadUint64(&svr.mock.creates), uint64(1)))
+	assert.Check(t, is.Equal(atomic.LoadUint64(&svr.mock.updates), uint64(0)))
 }
 
 func TestPodUpdateExisting(t *testing.T) {
@@ -239,8 +180,8 @@ func TestPodUpdateExisting(t *testing.T) {
 
 	err := svr.provider.CreatePod(context.Background(), pod)
 	assert.Check(t, is.Nil(err))
-	assert.Check(t, is.Equal(svr.mock.creates, 1))
-	assert.Check(t, is.Equal(svr.mock.updates, 0))
+	assert.Check(t, is.Equal(atomic.LoadUint64(&svr.mock.creates), uint64(1)))
+	assert.Check(t, is.Equal(atomic.LoadUint64(&svr.mock.updates), uint64(0)))
 
 	pod2 := &corev1.Pod{}
 	pod2.ObjectMeta.Namespace = "default"
@@ -264,8 +205,8 @@ func TestPodUpdateExisting(t *testing.T) {
 	assert.Check(t, is.Nil(err))
 
 	// createOrUpdate didn't call CreatePod but did call UpdatePod because the spec changed
-	assert.Check(t, is.Equal(svr.mock.creates, 1))
-	assert.Check(t, is.Equal(svr.mock.updates, 1))
+	assert.Check(t, is.Equal(atomic.LoadUint64(&svr.mock.creates), uint64(1)))
+	assert.Check(t, is.Equal(atomic.LoadUint64(&svr.mock.updates), uint64(1)))
 }
 
 func TestPodNoSpecChange(t *testing.T) {
@@ -291,15 +232,15 @@ func TestPodNoSpecChange(t *testing.T) {
 
 	err := svr.mock.CreatePod(context.Background(), pod)
 	assert.Check(t, is.Nil(err))
-	assert.Check(t, is.Equal(svr.mock.creates, 1))
-	assert.Check(t, is.Equal(svr.mock.updates, 0))
+	assert.Check(t, is.Equal(atomic.LoadUint64(&svr.mock.creates), uint64(1)))
+	assert.Check(t, is.Equal(atomic.LoadUint64(&svr.mock.updates), uint64(0)))
 
 	err = svr.createOrUpdatePod(context.Background(), pod)
 	assert.Check(t, is.Nil(err))
 
 	// createOrUpdate didn't call CreatePod or UpdatePod, spec didn't change
-	assert.Check(t, is.Equal(svr.mock.creates, 1))
-	assert.Check(t, is.Equal(svr.mock.updates, 0))
+	assert.Check(t, is.Equal(atomic.LoadUint64(&svr.mock.creates), uint64(1)))
+	assert.Check(t, is.Equal(atomic.LoadUint64(&svr.mock.updates), uint64(0)))
 }
 
 func TestPodDelete(t *testing.T) {
@@ -339,7 +280,7 @@ func TestPodDelete(t *testing.T) {
 			ctx := context.Background()
 			err = c.createOrUpdatePod(ctx, p) // make sure it's actually created
 			assert.NilError(t, err)
-			assert.Check(t, is.Equal(c.mock.creates, 1))
+			assert.Check(t, is.Equal(atomic.LoadUint64(&c.mock.creates), uint64(1)))
 
 			err = c.deletePod(ctx, pod.Namespace, pod.Name)
 			assert.Equal(t, pkgerrors.Cause(err), err)
@@ -348,7 +289,7 @@ func TestPodDelete(t *testing.T) {
 			if tc.delErr == nil {
 				expectDeletes = 1
 			}
-			assert.Check(t, is.Equal(c.mock.deletes, expectDeletes))
+			assert.Check(t, is.Equal(atomic.LoadUint64(&c.mock.deletes), uint64(expectDeletes)))
 
 			expectDeleted := tc.delErr == nil || errdefs.IsNotFound(tc.delErr)
 
