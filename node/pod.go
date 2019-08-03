@@ -27,7 +27,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/workqueue"
 )
@@ -186,28 +185,6 @@ func (pc *PodController) forceDeletePodResource(ctx context.Context, namespace, 
 		return pkgerrors.Wrap(err, "Failed to delete Kubernetes pod")
 	}
 	return nil
-}
-
-// updatePodStatuses syncs the providers pod status with the kubernetes pod status.
-func (pc *PodController) updatePodStatuses(ctx context.Context, q workqueue.RateLimitingInterface) {
-	ctx, span := trace.StartSpan(ctx, "updatePodStatuses")
-	defer span.End()
-
-	// Update all the pods with the provider status.
-	pods, err := pc.podsLister.List(labels.Everything())
-	if err != nil {
-		err = pkgerrors.Wrap(err, "error getting pod list")
-		span.SetStatus(err)
-		log.G(ctx).WithError(err).Error("Error updating pod statuses")
-		return
-	}
-	ctx = span.WithField(ctx, "nPods", int64(len(pods)))
-
-	for _, pod := range pods {
-		if !shouldSkipPodStatusUpdate(pod) {
-			enqueuePodStatusUpdate(ctx, q, pod)
-		}
-	}
 }
 
 func shouldSkipPodStatusUpdate(pod *corev1.Pod) bool {
