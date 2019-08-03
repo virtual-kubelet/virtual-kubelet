@@ -209,9 +209,17 @@ func (s *system) start(ctx context.Context) chan error {
 	return s.retChan
 }
 
-func wireUpSystem(ctx context.Context, provider PodLifecycleHandler, f testFunction) error {
+func wireUpSystem(ctx context.Context, provider PodLifecycleHandlerV0, f testFunction) error {
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
+
+	// Create the v1 provider, potentially from the provider, or use the wrapper
+	var v1provider PodLifecycleHandler
+	if podLifecycleHandler, ok := provider.(PodLifecycleHandler); ok {
+		v1provider = podLifecycleHandler
+	} else {
+		v1provider = WrapLegacyPodLifecycleHandler(ctx, provider, 100*time.Millisecond)
+	}
 
 	// Create the fake client.
 	client := fake.NewSimpleClientset()
@@ -243,7 +251,7 @@ func wireUpSystem(ctx context.Context, provider PodLifecycleHandler, f testFunct
 			PodClient:         client.CoreV1(),
 			PodInformer:       podInformer,
 			EventRecorder:     fakeRecorder,
-			Provider:          provider,
+			Provider:          v1provider,
 			ConfigMapInformer: configMapInformer,
 			SecretInformer:    secretInformer,
 			ServiceInformer:   serviceInformer,

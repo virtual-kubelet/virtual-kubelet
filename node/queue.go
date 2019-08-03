@@ -17,7 +17,6 @@ package node
 import (
 	"context"
 	"strconv"
-	"time"
 
 	pkgerrors "github.com/pkg/errors"
 	"github.com/virtual-kubelet/virtual-kubelet/log"
@@ -116,39 +115,8 @@ func (pc *PodController) processPodStatusUpdate(ctx context.Context, workerID st
 	return handleQueueItem(ctx, q, pc.podStatusHandler)
 }
 
-// providerSyncLoop syncronizes pod states from the provider back to kubernetes
-// Deprecated: This is only used when the provider does not support async updates
-// Providers should implement async update support, even if it just means copying
-// something like this in.
-func (pc *PodController) providerSyncLoop(ctx context.Context, q workqueue.RateLimitingInterface) {
-	const sleepTime = 5 * time.Second
-
-	t := time.NewTimer(sleepTime)
-	defer t.Stop()
-
-	for {
-		select {
-		case <-ctx.Done():
-			return
-		case <-t.C:
-			t.Stop()
-
-			ctx, span := trace.StartSpan(ctx, "syncActualState")
-			pc.updatePodStatuses(ctx, q)
-			span.End()
-
-			// restart the timer
-			t.Reset(sleepTime)
-		}
-	}
-}
-
 func (pc *PodController) runSyncFromProvider(ctx context.Context, q workqueue.RateLimitingInterface) {
-	if pn, ok := pc.provider.(PodNotifier); ok {
-		pn.NotifyPods(ctx, func(pod *corev1.Pod) {
-			enqueuePodStatusUpdate(ctx, q, pod)
-		})
-	} else {
-		go pc.providerSyncLoop(ctx, q)
-	}
+	pc.provider.NotifyPods(ctx, func(pod *corev1.Pod) {
+		enqueuePodStatusUpdate(ctx, q, pod)
+	})
 }

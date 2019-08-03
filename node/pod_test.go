@@ -18,6 +18,7 @@ import (
 	"context"
 	"sync/atomic"
 	"testing"
+	"time"
 
 	pkgerrors "github.com/pkg/errors"
 	"github.com/virtual-kubelet/virtual-kubelet/errdefs"
@@ -36,7 +37,7 @@ type TestController struct {
 	client *fake.Clientset
 }
 
-func newTestController() *TestController {
+func newTestController(ctx context.Context) *TestController {
 	fk8s := fake.NewSimpleClientset()
 
 	rm := testutil.FakeResourceManager()
@@ -45,7 +46,7 @@ func newTestController() *TestController {
 	return &TestController{
 		PodController: &PodController{
 			client:          fk8s.CoreV1(),
-			provider:        p,
+			provider:        WrapLegacyPodLifecycleHandler(context.TODO(), p, 5*time.Second),
 			resourceManager: rm,
 			recorder:        testutil.FakeEventRecorder(5),
 		},
@@ -129,7 +130,9 @@ func TestPodHashingDifferent(t *testing.T) {
 }
 
 func TestPodCreateNewPod(t *testing.T) {
-	svr := newTestController()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	svr := newTestController(ctx)
 
 	pod := &corev1.Pod{}
 	pod.ObjectMeta.Namespace = "default"
@@ -158,7 +161,9 @@ func TestPodCreateNewPod(t *testing.T) {
 }
 
 func TestPodUpdateExisting(t *testing.T) {
-	svr := newTestController()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	svr := newTestController(ctx)
 
 	pod := &corev1.Pod{}
 	pod.ObjectMeta.Namespace = "default"
@@ -210,7 +215,9 @@ func TestPodUpdateExisting(t *testing.T) {
 }
 
 func TestPodNoSpecChange(t *testing.T) {
-	svr := newTestController()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	svr := newTestController(ctx)
 
 	pod := &corev1.Pod{}
 	pod.ObjectMeta.Namespace = "default"
@@ -257,7 +264,9 @@ func TestPodDelete(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.desc, func(t *testing.T) {
-			c := newTestController()
+			ctx, cancel := context.WithCancel(context.Background())
+			defer cancel()
+			c := newTestController(ctx)
 			c.mock.errorOnDelete = tc.delErr
 
 			pod := &corev1.Pod{}
@@ -277,7 +286,6 @@ func TestPodDelete(t *testing.T) {
 			p, err := pc.Create(pod)
 			assert.NilError(t, err)
 
-			ctx := context.Background()
 			err = c.createOrUpdatePod(ctx, p) // make sure it's actually created
 			assert.NilError(t, err)
 			assert.Check(t, is.Equal(atomic.LoadUint64(&c.mock.creates), uint64(1)))

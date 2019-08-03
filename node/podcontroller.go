@@ -38,13 +38,17 @@ import (
 	"k8s.io/client-go/util/workqueue"
 )
 
-// PodLifecycleHandler defines the interface used by the PodController to react
-// to new and changed pods scheduled to the node that is being managed.
+const (
+	DefaultWrapLegacyPodLifecycleHandlerLoopTime = 5 * time.Second
+)
+
+// PodLifecycleHandlerV0 defines the interface used by the PodController
+// to react to new and changed pods scheduled to the node that is being managed.
 //
 // Errors produced by these methods should implement an interface from
 // github.com/virtual-kubelet/virtual-kubelet/errdefs package in order for the
 // core logic to be able to understand the type of failure.
-type PodLifecycleHandler interface {
+type PodLifecycleHandlerV0 interface {
 	// CreatePod takes a Kubernetes Pod and deploys it within the provider.
 	CreatePod(ctx context.Context, pod *corev1.Pod) error
 
@@ -54,22 +58,28 @@ type PodLifecycleHandler interface {
 	// DeletePod takes a Kubernetes Pod and deletes it from the provider.
 	DeletePod(ctx context.Context, pod *corev1.Pod) error
 
-	// GetPod retrieves a pod by name from the provider (can be cached).
+	// GetPod retrieves a pod by name from the provider
 	GetPod(ctx context.Context, namespace, name string) (*corev1.Pod, error)
 
 	// GetPodStatus retrieves the status of a pod by name from the provider.
 	GetPodStatus(ctx context.Context, namespace, name string) (*corev1.PodStatus, error)
 
-	// GetPods retrieves a list of all pods running on the provider (can be cached).
+	// GetPods retrieves a list of all pods running on the provider
 	GetPods(context.Context) ([]*corev1.Pod, error)
 }
 
-// PodNotifier notifies callers of pod changes.
-// Providers should implement this interface to enable callers to be notified
-// of pod status updates asynchronously.
-type PodNotifier interface {
+// PodLifecycleHandler defines the interface used by the PodController
+// to react to new and changed pods scheduled to the node that is being managed.
+//
+// Errors produced by these methods should implement an interface from
+// github.com/virtual-kubelet/virtual-kubelet/errdefs package in order for the
+// core logic to be able to understand the type of failure.
+type PodLifecycleHandler interface {
+	PodLifecycleHandlerV0
+
 	// NotifyPods instructs the notifier to call the passed in function when
-	// the pod status changes.
+	// the pod status changes. It will be called prior to any imperative calls. It
+	// is only called once, at startup time of the PodController
 	//
 	// NotifyPods should not block callers.
 	NotifyPods(context.Context, func(*corev1.Pod))
@@ -77,7 +87,8 @@ type PodNotifier interface {
 
 // PodController is the controller implementation for Pod resources.
 type PodController struct {
-	provider PodLifecycleHandler
+	provider   PodLifecycleHandler
+	providerV0 PodLifecycleHandlerV0
 
 	// podsInformer is an informer for Pod resources.
 	podsInformer corev1informers.PodInformer
@@ -110,7 +121,10 @@ type PodControllerConfig struct {
 
 	EventRecorder record.EventRecorder
 
-	Provider PodLifecycleHandler
+	// It is strongly preferred to specify a PodController here. If you specify a PodControllerV0
+	// here, it will be wrapped using WrapLegacyPodLifecycleHandler, with a wrap time specified
+	// by DefaultWrapLegacyPodLifecycleHandlerLoopTime
+	Provider PodLifecycleHandlerV0
 
 	// Informers used for filling details for things like downward API in pod spec.
 	//
@@ -153,11 +167,16 @@ func NewPodController(cfg PodControllerConfig) (*PodController, error) {
 		client:          cfg.PodClient,
 		podsInformer:    cfg.PodInformer,
 		podsLister:      cfg.PodInformer.Lister(),
-		provider:        cfg.Provider,
 		resourceManager: rm,
 		ready:           make(chan struct{}),
 		recorder:        cfg.EventRecorder,
 		k8sQ:            workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "syncPodsFromKubernetes"),
+	}
+
+	if podLifecycleHandler, ok := cfg.Provider.(PodLifecycleHandler); ok {
+		pc.provider = podLifecycleHandler
+	} else {
+		pc.providerV0 = podLifecycleHandler
 	}
 
 	// Set up event handlers for when Pod resources change.
@@ -204,6 +223,10 @@ func NewPodController(cfg PodControllerConfig) (*PodController, error) {
 // It will block until the context is cancelled, at which point it will shutdown the work queue and wait for workers to finish processing their current work items.
 func (pc *PodController) Run(ctx context.Context, podSyncWorkers int) error {
 	defer pc.k8sQ.ShutDown()
+
+	if pc.providerV0 != nil {
+		pc.provider = WrapLegacyPodLifecycleHandler(ctx, pc.providerV0, DefaultWrapLegacyPodLifecycleHandlerLoopTime)
+	}
 
 	podStatusQueue := workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "syncPodStatusFromProvider")
 	pc.runSyncFromProvider(ctx, podStatusQueue)
