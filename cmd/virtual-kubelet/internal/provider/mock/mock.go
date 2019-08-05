@@ -308,7 +308,7 @@ func (p *MockV0Provider) GetContainerLogs(ctx context.Context, namespace, podNam
 	// Add pod and container attributes to the current span.
 	ctx = addAttributes(ctx, span, namespaceKey, namespace, nameKey, podName, containerNameKey, containerName)
 
-	log.G(ctx).Info("receive GetContainerLogs %q", podName)
+	log.G(ctx).Infof("receive GetContainerLogs %q", podName)
 	return ioutil.NopCloser(strings.NewReader("")), nil
 }
 
