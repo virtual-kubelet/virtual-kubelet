@@ -51,18 +51,18 @@ const (
 	// ReasonFailedToReadOptionalSecret is the reason used in events emitted when an optional secret could not be read.
 	ReasonFailedToReadOptionalSecret = "FailedToReadOptionalSecret"
 
-	// ReasonMandatoryConfigMapNotFound is the reason used in events emitted when an mandatory configmap is not found.
+	// ReasonMandatoryConfigMapNotFound is the reason used in events emitted when a mandatory configmap is not found.
 	ReasonMandatoryConfigMapNotFound = "MandatoryConfigMapNotFound"
-	// ReasonMandatoryConfigMapKeyNotFound is the reason used in events emitted when an mandatory configmap key is not found.
+	// ReasonMandatoryConfigMapKeyNotFound is the reason used in events emitted when a mandatory configmap key is not found.
 	ReasonMandatoryConfigMapKeyNotFound = "MandatoryConfigMapKeyNotFound"
-	// ReasonFailedToReadMandatoryConfigMap is the reason used in events emitted when an mandatory configmap could not be read.
+	// ReasonFailedToReadMandatoryConfigMap is the reason used in events emitted when a mandatory configmap could not be read.
 	ReasonFailedToReadMandatoryConfigMap = "FailedToReadMandatoryConfigMap"
 
-	// ReasonMandatorySecretNotFound is the reason used in events emitted when an mandatory secret is not found.
+	// ReasonMandatorySecretNotFound is the reason used in events emitted when a mandatory secret is not found.
 	ReasonMandatorySecretNotFound = "MandatorySecretNotFound"
-	// ReasonMandatorySecretKeyNotFound is the reason used in events emitted when an mandatory secret key is not found.
+	// ReasonMandatorySecretKeyNotFound is the reason used in events emitted when a mandatory secret key is not found.
 	ReasonMandatorySecretKeyNotFound = "MandatorySecretKeyNotFound"
-	// ReasonFailedToReadMandatorySecret is the reason used in events emitted when an mandatory secret could not be read.
+	// ReasonFailedToReadMandatorySecret is the reason used in events emitted when a mandatory secret could not be read.
 	ReasonFailedToReadMandatorySecret = "FailedToReadMandatorySecret"
 
 	// ReasonInvalidEnvironmentVariableNames is the reason used in events emitted when a configmap/secret referenced in a ".spec.containers[*].envFrom" field contains invalid environment variable names.
