@@ -17,7 +17,10 @@ package node
 import (
 	"context"
 	"hash/fnv"
+	"strconv"
 	"time"
+
+	"k8s.io/client-go/util/workqueue"
 
 	"github.com/davecgh/go-spew/spew"
 	pkgerrors "github.com/pkg/errors"
@@ -28,7 +31,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/tools/cache"
-	"k8s.io/client-go/util/workqueue"
 )
 
 const (
@@ -167,6 +169,7 @@ func (pc *PodController) deletePod(ctx context.Context, namespace, name string) 
 	return nil
 }
 
+// The following functions are responsible for all pod-related work triggered by the provider
 func (pc *PodController) forceDeletePodResource(ctx context.Context, namespace, name string) error {
 	ctx, span := trace.StartSpan(ctx, "forceDeletePodResource")
 	defer span.End()
@@ -240,11 +243,11 @@ func (pc *PodController) updatePodStatus(ctx context.Context, pod *corev1.Pod) e
 	return nil
 }
 
-func enqueuePodStatusUpdate(ctx context.Context, q workqueue.RateLimitingInterface, pod *corev1.Pod) {
+func (pc *PodController) enqueuePodStatusUpdate(ctx context.Context, pod *corev1.Pod) {
 	if key, err := cache.MetaNamespaceKeyFunc(pod); err != nil {
 		log.G(ctx).WithError(err).WithField("method", "enqueuePodStatusUpdate").Error("Error getting pod meta namespace key")
 	} else {
-		q.AddRateLimited(key)
+		pc.podStatusQueue.AddRateLimited(key)
 	}
 }
 
@@ -276,4 +279,35 @@ func (pc *PodController) podStatusHandler(ctx context.Context, key string) (retE
 	}
 
 	return pc.updatePodStatus(ctx, pod)
+}
+
+func (pc *PodController) runProviderSyncWorkers(ctx context.Context, numWorkers int) {
+	for i := 0; i < numWorkers; i++ {
+		go func(index int) {
+			workerID := strconv.Itoa(index)
+			pc.runProviderSyncWorker(ctx, workerID)
+		}(i)
+	}
+}
+
+func (pc *PodController) runProviderSyncWorker(ctx context.Context, workerID string) {
+	for pc.processPodStatusUpdateFromProvider(ctx, workerID, pc.podStatusQueue) {
+	}
+}
+
+// processPodStatusUpdateFromProvider processes events from the provider
+func (pc *PodController) processPodStatusUpdateFromProvider(ctx context.Context, workerID string, q workqueue.RateLimitingInterface) bool {
+	ctx, span := trace.StartSpan(ctx, "processPodStatusUpdate")
+	defer span.End()
+
+	// Add the ID of the current worker as an attribute to the current span.
+	ctx = span.WithField(ctx, "workerID", workerID)
+
+	return handleQueueItem(ctx, q, pc.podStatusHandler)
+}
+
+func (pc *PodController) runSyncFromProvider(ctx context.Context) {
+	pc.provider.NotifyPods(ctx, func(pod *corev1.Pod) {
+		pc.enqueuePodStatusUpdate(ctx, pod)
+	})
 }

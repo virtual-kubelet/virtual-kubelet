@@ -16,12 +16,10 @@ package node
 
 import (
 	"context"
-	"strconv"
 
 	pkgerrors "github.com/pkg/errors"
 	"github.com/virtual-kubelet/virtual-kubelet/log"
 	"github.com/virtual-kubelet/virtual-kubelet/trace"
-	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/util/workqueue"
 )
 
@@ -89,34 +87,4 @@ func handleQueueItem(ctx context.Context, q workqueue.RateLimitingInterface, han
 	}
 
 	return true
-}
-
-func (pc *PodController) runProviderSyncWorkers(ctx context.Context, q workqueue.RateLimitingInterface, numWorkers int) {
-	for i := 0; i < numWorkers; i++ {
-		go func(index int) {
-			workerID := strconv.Itoa(index)
-			pc.runProviderSyncWorker(ctx, workerID, q)
-		}(i)
-	}
-}
-
-func (pc *PodController) runProviderSyncWorker(ctx context.Context, workerID string, q workqueue.RateLimitingInterface) {
-	for pc.processPodStatusUpdate(ctx, workerID, q) {
-	}
-}
-
-func (pc *PodController) processPodStatusUpdate(ctx context.Context, workerID string, q workqueue.RateLimitingInterface) bool {
-	ctx, span := trace.StartSpan(ctx, "processPodStatusUpdate")
-	defer span.End()
-
-	// Add the ID of the current worker as an attribute to the current span.
-	ctx = span.WithField(ctx, "workerID", workerID)
-
-	return handleQueueItem(ctx, q, pc.podStatusHandler)
-}
-
-func (pc *PodController) runSyncFromProvider(ctx context.Context, q workqueue.RateLimitingInterface) {
-	pc.provider.NotifyPods(ctx, func(pod *corev1.Pod) {
-		enqueuePodStatusUpdate(ctx, q, pod)
-	})
 }

@@ -106,7 +106,11 @@ type PodController struct {
 
 	resourceManager *manager.ResourceManager
 
+	// k8sQ is events that come from API Server / the informer
 	k8sQ workqueue.RateLimitingInterface
+
+	// podStatusQueue is the queue that's responsible for processing events from the provider
+	podStatusQueue workqueue.RateLimitingInterface
 }
 
 // PodControllerConfig is used to configure a new PodController.
@@ -171,6 +175,7 @@ func NewPodController(cfg PodControllerConfig) (*PodController, error) {
 		ready:           make(chan struct{}),
 		recorder:        cfg.EventRecorder,
 		k8sQ:            workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "syncPodsFromKubernetes"),
+		podStatusQueue:  workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "syncPodStatusFromProvider"),
 	}
 
 	if podLifecycleHandler, ok := cfg.Provider.(PodLifecycleHandler); ok {
@@ -223,15 +228,14 @@ func NewPodController(cfg PodControllerConfig) (*PodController, error) {
 // It will block until the context is cancelled, at which point it will shutdown the work queue and wait for workers to finish processing their current work items.
 func (pc *PodController) Run(ctx context.Context, podSyncWorkers int) error {
 	defer pc.k8sQ.ShutDown()
+	defer pc.podStatusQueue.ShutDown()
 
 	if pc.providerV0 != nil {
 		pc.provider = WrapLegacyPodLifecycleHandler(ctx, pc.providerV0, DefaultWrapLegacyPodLifecycleHandlerLoopTime)
 	}
 
-	podStatusQueue := workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "syncPodStatusFromProvider")
-	pc.runSyncFromProvider(ctx, podStatusQueue)
-	pc.runProviderSyncWorkers(ctx, podStatusQueue, podSyncWorkers)
-	defer podStatusQueue.ShutDown()
+	pc.runSyncFromProvider(ctx)
+	pc.runProviderSyncWorkers(ctx, podSyncWorkers)
 
 	// Wait for the caches to be synced *before* starting workers.
 	if ok := cache.WaitForCacheSync(ctx.Done(), pc.podsInformer.Informer().HasSynced); !ok {
@@ -248,7 +252,7 @@ func (pc *PodController) Run(ctx context.Context, podSyncWorkers int) error {
 	for id := 0; id < podSyncWorkers; id++ {
 		go wait.Until(func() {
 			// Use the worker's "index" as its ID so we can use it for tracing.
-			pc.runWorker(ctx, strconv.Itoa(id), pc.k8sQ)
+			pc.runWorker(ctx, strconv.Itoa(id))
 		}, time.Second, ctx.Done())
 	}
 
@@ -268,14 +272,15 @@ func (pc *PodController) Ready() <-chan struct{} {
 	return pc.ready
 }
 
-// runWorker is a long-running function that will continually call the processNextWorkItem function in order to read and process an item on the work queue.
-func (pc *PodController) runWorker(ctx context.Context, workerId string, q workqueue.RateLimitingInterface) {
-	for pc.processNextWorkItem(ctx, workerId, q) {
+// runWorker is a long-running function that will continually call the processNextWorkItem function in order to read and
+// process an item on the work queue. It is responsible for reading events that come from K8s podinformer
+func (pc *PodController) runWorker(ctx context.Context, workerId string) {
+	for pc.processNextWorkItemFromInformer(ctx, workerId) {
 	}
 }
 
-// processNextWorkItem will read a single work item off the work queue and attempt to process it,by calling the syncHandler.
-func (pc *PodController) processNextWorkItem(ctx context.Context, workerId string, q workqueue.RateLimitingInterface) bool {
+// processNextWorkItemFromInformer will read a single work item off the work queue and attempt to process it,by calling the syncHandler.
+func (pc *PodController) processNextWorkItemFromInformer(ctx context.Context, workerId string) bool {
 
 	// We create a span only after popping from the queue so that we can get an adequate picture of how long it took to process the item.
 	ctx, span := trace.StartSpan(ctx, "processNextWorkItem")
@@ -283,7 +288,7 @@ func (pc *PodController) processNextWorkItem(ctx context.Context, workerId strin
 
 	// Add the ID of the current worker as an attribute to the current span.
 	ctx = span.WithField(ctx, "workerId", workerId)
-	return handleQueueItem(ctx, q, pc.syncHandler)
+	return handleQueueItem(ctx, pc.k8sQ, pc.syncHandler)
 }
 
 // syncHandler compares the actual state with the desired, and attempts to converge the two.
