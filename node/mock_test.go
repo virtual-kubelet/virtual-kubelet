@@ -25,32 +25,38 @@ type mockV0Provider struct {
 
 	errorOnDelete error
 
-	pods      sync.Map
-	startTime time.Time
-	notifier  func(*v1.Pod)
+	pods         sync.Map
+	startTime    time.Time
+	realNotifier func(*v1.Pod)
 }
 
 type mockProvider struct {
 	*mockV0Provider
 }
 
+func fakeNotifier(*v1.Pod) {}
+
 // NewMockProviderMockConfig creates a new mockV0Provider. Mock legacy provider does not implement the new asynchronous podnotifier interface
 func newMockV0Provider() *mockV0Provider {
 	provider := mockV0Provider{
 		startTime: time.Now(),
-		// By default notifier is set to a function which is a no-op. In the event we've implemented the PodNotifier interface,
-		// it will be set, and then we'll call a real underlying implementation.
-		// This makes it easier in the sense we don't need to wrap each method.
-		notifier: func(*v1.Pod) {},
 	}
+	// By default notifier is set to a function which is a no-op. In the event we've implemented the PodNotifier interface,
+	// it will be set, and then we'll call a real underlying implementation.
+	// This makes it easier in the sense we don't need to wrap each method.
 
 	return &provider
 }
 
 // NewMockProviderMockConfig creates a new MockProvider with the given config
 func newMockProvider() *mockProvider {
-
 	return &mockProvider{mockV0Provider: newMockV0Provider()}
+}
+
+func (p *mockV0Provider) notifier(pod *v1.Pod) {
+	if p.realNotifier != nil {
+		p.realNotifier(pod)
+	}
 }
 
 // CreatePod accepts a Pod definition and stores it in memory.
@@ -140,7 +146,7 @@ func (p *mockV0Provider) DeletePod(ctx context.Context, pod *v1.Pod) (err error)
 	}
 
 	now := metav1.Now()
-	p.pods.Delete(key)
+
 	pod.Status.Phase = v1.PodSucceeded
 	pod.Status.Reason = "MockProviderPodDeleted"
 
@@ -157,7 +163,15 @@ func (p *mockV0Provider) DeletePod(ctx context.Context, pod *v1.Pod) (err error)
 	}
 
 	p.notifier(pod)
-
+	if p.realNotifier == nil {
+		// The pods reconcilation (GetPodStatus) should be called on the order of every 30 seconds with the legacy
+		// wrapper
+		time.AfterFunc(time.Minute, func() {
+			p.pods.Delete(key)
+		})
+	} else {
+		p.pods.Delete(key)
+	}
 	return nil
 }
 
@@ -206,7 +220,7 @@ func (p *mockV0Provider) GetPods(ctx context.Context) ([]*v1.Pod, error) {
 // NotifyPods is called to set a pod notifier callback function. This should be called before any operations are done
 // within the provider.
 func (p *mockProvider) NotifyPods(ctx context.Context, notifier func(*v1.Pod)) {
-	p.notifier = notifier
+	p.realNotifier = notifier
 }
 
 func buildKeyFromNames(namespace string, name string) (string, error) {
