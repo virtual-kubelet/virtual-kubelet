@@ -170,7 +170,6 @@ func TestPodLifecycle(t *testing.T) {
 	})
 
 	t.Run("updatePodWhileRunningScenario", func(t *testing.T) {
-		t.Skip("The informer is being jank")
 		t.Run("mockProvider", func(t *testing.T) {
 			mp := newMockProvider()
 			assert.NilError(t, wireUpSystem(ctx, mp, func(ctx context.Context, s *system) {
@@ -304,7 +303,6 @@ func testTerminalStatePodScenario(ctx context.Context, t *testing.T, s *system, 
 }
 
 func testDanglingPodScenario(ctx context.Context, t *testing.T, s *system, m *mockV0Provider) {
-	
 
 	pod := newPod()
 	assert.NilError(t, m.CreatePod(ctx, pod))
@@ -317,7 +315,7 @@ func testDanglingPodScenario(ctx context.Context, t *testing.T, s *system, m *mo
 }
 
 func testCreateStartDeleteScenario(ctx context.Context, t *testing.T, s *system) {
-	
+
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
@@ -438,7 +436,7 @@ func testUpdatePodWhileRunningScenario(ctx context.Context, t *testing.T, s *sys
 	watchErrCh := make(chan error)
 
 	// Create a Pod
-	_, e := s.client.CoreV1().Pods(testNamespace).Create(p.DeepCopy())
+	_, e := s.client.CoreV1().Pods(testNamespace).Create(p)
 	assert.NilError(t, e)
 
 	// Setup a watch to check if the pod is in running
@@ -478,8 +476,10 @@ func testUpdatePodWhileRunningScenario(ctx context.Context, t *testing.T, s *sys
 	}
 
 	p.ResourceVersion = strconv.Itoa(version + 1)
-	p.Spec.SchedulerName = "joe"
+	var activeDeadlineSeconds int64 = 300
+	p.Spec.ActiveDeadlineSeconds = &activeDeadlineSeconds
 
+	log.G(ctx).WithField("pod", p).Info("Updating pod")
 	_, err = s.client.CoreV1().Pods(p.Namespace).Update(p)
 	assert.NilError(t, err)
 	for atomic.LoadUint64(&m.updates) == 0 {
@@ -528,7 +528,6 @@ func randomizeName(pod *corev1.Pod) {
 	name := fmt.Sprintf("pod-%s", uuid.NewUUID())
 	pod.Name = name
 }
-
 
 func newPod(podmodifiers ...podModifier) *corev1.Pod {
 	pod := &corev1.Pod{

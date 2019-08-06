@@ -25,10 +25,10 @@ func (wrapper *legacyPodLifecycleHandlerWrapper) NotifyPods(ctx context.Context,
 	close(wrapper.notifyPodsSet)
 }
 
-func shouldSkipPodStatusUpdate(pod *corev1.Pod) bool {
-	return pod.Status.Phase == corev1.PodSucceeded ||
-		pod.Status.Phase == corev1.PodFailed ||
-		pod.Status.Reason == podStatusReasonProviderFailed
+func shouldSkipPodStatusUpdate(status *corev1.PodStatus) bool {
+	return status.Phase == corev1.PodSucceeded ||
+		status.Phase == corev1.PodFailed ||
+		status.Reason == podStatusReasonProviderFailed
 }
 
 // updatePodStatuses syncs the providers pod status with the kubernetes pod status.
@@ -45,7 +45,7 @@ func (wrapper *legacyPodLifecycleHandlerWrapper) updatePodStatuses(ctx context.C
 	}
 
 	for _, pod := range pods {
-		if !shouldSkipPodStatusUpdate(pod) {
+		if !shouldSkipPodStatusUpdate(&pod.Status) {
 			// Notifier is idempotent.
 			wrapper.notifier(pod)
 		}

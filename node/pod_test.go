@@ -55,80 +55,6 @@ func newTestController(ctx context.Context) *TestController {
 	}
 }
 
-func TestPodHashingEqual(t *testing.T) {
-	p1 := corev1.PodSpec{
-		Containers: []corev1.Container{
-			corev1.Container{
-				Name:  "nginx",
-				Image: "nginx:1.15.12-perl",
-				Ports: []corev1.ContainerPort{
-					corev1.ContainerPort{
-						ContainerPort: 443,
-						Protocol:      "tcp",
-					},
-				},
-			},
-		},
-	}
-
-	h1 := hashPodSpec(p1)
-
-	p2 := corev1.PodSpec{
-		Containers: []corev1.Container{
-			corev1.Container{
-				Name:  "nginx",
-				Image: "nginx:1.15.12-perl",
-				Ports: []corev1.ContainerPort{
-					corev1.ContainerPort{
-						ContainerPort: 443,
-						Protocol:      "tcp",
-					},
-				},
-			},
-		},
-	}
-
-	h2 := hashPodSpec(p2)
-	assert.Check(t, is.Equal(h1, h2))
-}
-
-func TestPodHashingDifferent(t *testing.T) {
-	p1 := corev1.PodSpec{
-		Containers: []corev1.Container{
-			corev1.Container{
-				Name:  "nginx",
-				Image: "nginx:1.15.12",
-				Ports: []corev1.ContainerPort{
-					corev1.ContainerPort{
-						ContainerPort: 443,
-						Protocol:      "tcp",
-					},
-				},
-			},
-		},
-	}
-
-	h1 := hashPodSpec(p1)
-
-	p2 := corev1.PodSpec{
-		Containers: []corev1.Container{
-			corev1.Container{
-				Name:  "nginx",
-				Image: "nginx:1.15.12-perl",
-				Ports: []corev1.ContainerPort{
-					corev1.ContainerPort{
-						ContainerPort: 443,
-						Protocol:      "tcp",
-					},
-				},
-			},
-		},
-	}
-
-	h2 := hashPodSpec(p2)
-	assert.Check(t, h1 != h2)
-}
-
 func TestPodCreateNewPod(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -152,7 +78,7 @@ func TestPodCreateNewPod(t *testing.T) {
 		},
 	}
 
-	err := svr.createOrUpdatePod(context.Background(), pod)
+	err := svr.createOrUpdatePod(context.Background(), "default/nginx", pod)
 
 	assert.Check(t, is.Nil(err))
 	// createOrUpdate called CreatePod but did not call UpdatePod because the pod did not exist
@@ -183,7 +109,7 @@ func TestPodUpdateExisting(t *testing.T) {
 		},
 	}
 
-	err := svr.provider.CreatePod(context.Background(), pod)
+	err := svr.createOrUpdatePod(context.Background(), "default/nginx", pod)
 	assert.Check(t, is.Nil(err))
 	assert.Check(t, is.Equal(atomic.LoadUint64(&svr.mock.creates), uint64(1)))
 	assert.Check(t, is.Equal(atomic.LoadUint64(&svr.mock.updates), uint64(0)))
@@ -206,7 +132,7 @@ func TestPodUpdateExisting(t *testing.T) {
 		},
 	}
 
-	err = svr.createOrUpdatePod(context.Background(), pod2)
+	err = svr.createOrUpdatePod(context.Background(), "default/nginx", pod2)
 	assert.Check(t, is.Nil(err))
 
 	// createOrUpdate didn't call CreatePod but did call UpdatePod because the spec changed
@@ -237,12 +163,12 @@ func TestPodNoSpecChange(t *testing.T) {
 		},
 	}
 
-	err := svr.mock.CreatePod(context.Background(), pod)
+	err := svr.createOrUpdatePod(context.Background(), "default/nginx", pod)
 	assert.Check(t, is.Nil(err))
 	assert.Check(t, is.Equal(atomic.LoadUint64(&svr.mock.creates), uint64(1)))
 	assert.Check(t, is.Equal(atomic.LoadUint64(&svr.mock.updates), uint64(0)))
 
-	err = svr.createOrUpdatePod(context.Background(), pod)
+	err = svr.createOrUpdatePod(context.Background(), "default/nginx", pod)
 	assert.Check(t, is.Nil(err))
 
 	// createOrUpdate didn't call CreatePod or UpdatePod, spec didn't change
@@ -286,7 +212,7 @@ func TestPodDelete(t *testing.T) {
 			p, err := pc.Create(pod)
 			assert.NilError(t, err)
 
-			err = c.createOrUpdatePod(ctx, p) // make sure it's actually created
+			err = c.createOrUpdatePod(ctx, "default/nginx", p) // make sure it's actually created
 			assert.NilError(t, err)
 			assert.Check(t, is.Equal(atomic.LoadUint64(&c.mock.creates), uint64(1)))
 

@@ -17,21 +17,19 @@ package node
 import (
 	"context"
 	"fmt"
-	"k8s.io/apimachinery/pkg/labels"
-	"reflect"
 	"strconv"
 	"sync"
 	"time"
-
-	"golang.org/x/sync/errgroup"
 
 	pkgerrors "github.com/pkg/errors"
 	"github.com/virtual-kubelet/virtual-kubelet/errdefs"
 	"github.com/virtual-kubelet/virtual-kubelet/internal/manager"
 	"github.com/virtual-kubelet/virtual-kubelet/log"
 	"github.com/virtual-kubelet/virtual-kubelet/trace"
+	"golang.org/x/sync/errgroup"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/labels"
 	corev1informers "k8s.io/client-go/informers/core/v1"
 	corev1client "k8s.io/client-go/kubernetes/typed/core/v1"
 	corev1listers "k8s.io/client-go/listers/core/v1"
@@ -116,6 +114,8 @@ type PodController struct {
 
 	podStatusMap     map[string]*corev1.PodStatus
 	podStatusMapLock sync.Mutex
+
+	lastPodInfoUsedForCreateOrUpdate sync.Map
 }
 
 // PodControllerConfig is used to configure a new PodController.
@@ -216,30 +216,11 @@ func (pc *PodController) Run(ctx context.Context, podSyncWorkers int) error {
 			}
 		},
 		UpdateFunc: func(oldObj, newObj interface{}) {
-			// Create a copy of the old and new pod objects so we don't mutate the cache.
-			oldPod := oldObj.(*corev1.Pod).DeepCopy()
-			newPod := oldObj.(*corev1.Pod).DeepCopy()
-
-			log.G(ctx).WithFields(map[string]interface{}{
-				"oldPodObjectResourceVersion": oldPod.ObjectMeta.ResourceVersion,
-				"newObjObjectResourceVersion": newPod.ObjectMeta.ResourceVersion,
-				"oldPodObjectScheduler": oldPod.Spec.SchedulerName,
-				"newPodObjectScheduler": newPod.Spec.SchedulerName,
-			}).Info("Received update event")
-			// We want to check if the two objects differ in anything other than their resource versions.
-			// Hence, we make them equal so that this change isn't picked up by reflect.DeepEqual.
-			newPod.ResourceVersion = oldPod.ResourceVersion
-			// Skip adding this pod's key to the work queue if its .metadata (except .metadata.resourceVersion) and .spec fields haven't changed.
-			// This guarantees that we don't attempt to sync the pod every time its .status field is updated.
-			if reflect.DeepEqual(oldPod.ObjectMeta, newPod.ObjectMeta) && reflect.DeepEqual(oldPod.Spec, newPod.Spec) {
-				log.G(ctx).Info("Ignored update event")
-				return
-			}
 			// At this point we know that something in .metadata or .spec has changed, so we must proceed to sync the pod.
-			if key, err := cache.MetaNamespaceKeyFunc(newPod); err != nil {
+			log.G(ctx).WithField("pod", newObj).Info("Received update event")
+			if key, err := cache.MetaNamespaceKeyFunc(newObj); err != nil {
 				log.G(ctx).WithError(err).Error()
 			} else {
-				log.G(ctx).Info("Added update event to queue")
 				pc.k8sQ.AddRateLimited(key)
 			}
 		},
@@ -370,11 +351,11 @@ func (pc *PodController) syncHandler(ctx context.Context, key string, willRetry 
 		return nil
 	}
 	// At this point we know the Pod resource has either been created or updated (which includes being marked for deletion).
-	return pc.syncPodInProvider(ctx, pod)
+	return pc.syncPodInProvider(ctx, key, pod)
 }
 
 // syncPodInProvider tries and reconciles the state of a pod by comparing its Kubernetes representation and the provider's representation.
-func (pc *PodController) syncPodInProvider(ctx context.Context, pod *corev1.Pod) error {
+func (pc *PodController) syncPodInProvider(ctx context.Context, key string, pod *corev1.Pod) error {
 	ctx, span := trace.StartSpan(ctx, "syncPodInProvider")
 	defer span.End()
 
@@ -399,7 +380,7 @@ func (pc *PodController) syncPodInProvider(ctx context.Context, pod *corev1.Pod)
 	}
 
 	// Create or update the pod in the provider.
-	if err := pc.createOrUpdatePod(ctx, pod); err != nil {
+	if err := pc.createOrUpdatePod(ctx, key, pod); err != nil {
 		err := pkgerrors.Wrapf(err, "failed to sync pod %q in the provider", loggablePodName(pod))
 		span.SetStatus(err)
 		return err

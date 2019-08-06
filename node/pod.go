@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 	"hash/fnv"
+	"reflect"
 
 	"github.com/davecgh/go-spew/spew"
 	pkgerrors "github.com/pkg/errors"
@@ -35,6 +36,14 @@ const (
 	podStatusReasonProviderFailed = "ProviderFailed"
 )
 
+type podAction int
+
+const (
+	none podAction = iota
+	create
+	update
+)
+
 func addPodAttributes(ctx context.Context, span trace.Span, pod *corev1.Pod) context.Context {
 	return span.WithFields(ctx, log.Fields{
 		"uid":       string(pod.GetUID()),
@@ -45,8 +54,12 @@ func addPodAttributes(ctx context.Context, span trace.Span, pod *corev1.Pod) con
 	})
 }
 
-func (pc *PodController) createOrUpdatePod(ctx context.Context, pod *corev1.Pod) error {
+type podInfo struct {
+	podSpec    *corev1.PodSpec
+	objectMeta *metav1.ObjectMeta
+}
 
+func (pc *PodController) createOrUpdatePod(ctx context.Context, key string, pod *corev1.Pod) error {
 	ctx, span := trace.StartSpan(ctx, "createOrUpdatePod")
 	defer span.End()
 	addPodAttributes(ctx, span, pod)
@@ -56,37 +69,54 @@ func (pc *PodController) createOrUpdatePod(ctx context.Context, pod *corev1.Pod)
 		"namespace": pod.GetNamespace(),
 	})
 
+	// We deepcopy the pod because it was extracted from the informer cache. The provider has free will to modify
+	// the pod object we pass it, and therefore we want to operate on a copy
+	pod = pod.DeepCopy()
 	if err := populateEnvironmentVariables(ctx, pod, pc.resourceManager, pc.recorder); err != nil {
 		span.SetStatus(err)
 		return err
 	}
 
-	// Check if the pod is already known by the provider.
-	// NOTE: Some providers return a non-nil error in their GetPod implementation when the pod is not found while some other don't.
-	// Hence, we ignore the error and just act upon the pod if it is non-nil (meaning that the provider still knows about the pod).
-	if pp, _ := pc.provider.GetPod(ctx, pod.Namespace, pod.Name); pp != nil {
+	lastPodInfoUsedForCreateOrUpdate, ok := pc.lastPodInfoUsedForCreateOrUpdate.Load(key)
+	if !ok {
+		podCopyForProvider := pod.DeepCopy()
+		if origErr := pc.provider.CreatePod(ctx, podCopyForProvider); origErr != nil {
+			log.G(ctx).WithError(origErr).Info("Failed to create pod in provider")
+			pc.handleProviderError(ctx, span, origErr, podCopyForProvider)
+			return origErr
+		}
+		log.G(ctx).Info("Created pod in provider")
+	} else if oldPodInfo := lastPodInfoUsedForCreateOrUpdate.(*podInfo); !reflect.DeepEqual(oldPodInfo.podSpec.Containers, pod.Spec.Containers) ||
+		!reflect.DeepEqual(oldPodInfo.podSpec.InitContainers, pod.Spec.InitContainers) ||
+		!reflect.DeepEqual(oldPodInfo.podSpec.ActiveDeadlineSeconds, pod.Spec.ActiveDeadlineSeconds) ||
+		!reflect.DeepEqual(oldPodInfo.podSpec.Tolerations, pod.Spec.Tolerations) ||
+		!reflect.DeepEqual(oldPodInfo.objectMeta.Labels, pod.Labels) ||
+		!reflect.DeepEqual(oldPodInfo.objectMeta.Annotations, pod.Annotations) {
 		// Pod Update Only Permits update of:
 		// - `spec.containers[*].image`
 		// - `spec.initContainers[*].image`
 		// - `spec.activeDeadlineSeconds`
 		// - `spec.tolerations` (only additions to existing tolerations)
-		// compare the hashes of the pod specs to see if the specs actually changed
-		expected := hashPodSpec(pp.Spec)
-		if actual := hashPodSpec(pod.Spec); actual != expected {
-			log.G(ctx).Debugf("Pod %s exists, updating pod in provider", pp.Name)
-			if origErr := pc.provider.UpdatePod(ctx, pod); origErr != nil {
-				pc.handleProviderError(ctx, span, origErr, pod)
-				return origErr
-			}
-			log.G(ctx).Info("Updated pod in provider")
-		}
-	} else {
-		if origErr := pc.provider.CreatePod(ctx, pod); origErr != nil {
-			pc.handleProviderError(ctx, span, origErr, pod)
+		// - `objectmeta.labels`
+		// - `objectmeta.annotations`
+		// compare these fields
+		podCopyForProvider := pod.DeepCopy()
+		log.G(ctx).Debugf("Pod %s exists in our pod storage, updating pod in provider", pod.Name)
+		if origErr := pc.provider.UpdatePod(ctx, podCopyForProvider); origErr != nil {
+			log.G(ctx).WithError(origErr).Error("Failed to update pod in provider")
+			pc.handleProviderError(ctx, span, origErr, podCopyForProvider)
 			return origErr
 		}
-		log.G(ctx).Info("Created pod in provider")
+		log.G(ctx).Info("Updated pod in provider")
+	} else {
+		return nil
 	}
+
+	pc.lastPodInfoUsedForCreateOrUpdate.Store(key, &podInfo{
+		podSpec:    pod.Spec.DeepCopy(),
+		objectMeta: pod.ObjectMeta.DeepCopy(),
+	})
+
 	return nil
 }
 
@@ -189,10 +219,15 @@ func (pc *PodController) forceDeletePodResource(ctx context.Context, namespace, 
 }
 
 func (pc *PodController) updatePodStatus(ctx context.Context, pod *corev1.Pod, status *corev1.PodStatus) error {
-	if shouldSkipPodStatusUpdate(pod) {
+	if shouldSkipPodStatusUpdate(status) {
 		return nil
 	}
 
+	// We have to do this because UpdateStatus works on the pod level, even though we have an existing pod that we
+	// got from a podinformer. We don't use the provider's pod (and store that) because it would be more costly
+	// than waiting until here to do the copy
+	pod = pod.DeepCopy()
+	pod.Status = *status
 	ctx, span := trace.StartSpan(ctx, "updatePodStatus")
 	defer span.End()
 	ctx = addPodAttributes(ctx, span, pod)
@@ -203,8 +238,8 @@ func (pc *PodController) updatePodStatus(ctx context.Context, pod *corev1.Pod, s
 	}
 
 	log.G(ctx).WithFields(log.Fields{
-		"new phase":  string(pod.Status.Phase),
-		"new reason": pod.Status.Reason,
+		"new phase":  string(status.Phase),
+		"new reason": status.Reason,
 	}).Debug("Updated pod status in kubernetes")
 
 	return nil
@@ -215,7 +250,7 @@ func (pc *PodController) enqueuePodStatusUpdate(ctx context.Context, pod *corev1
 		log.G(ctx).WithError(err).WithField("method", "enqueuePodStatusUpdate").Error("Error getting pod meta namespace key")
 	} else {
 		podStatus := pod.Status.DeepCopy()
-		log.G(ctx).WithField("pod",  pod).WithField("podStatus", podStatus).Info("Enqueueing status update")
+		log.G(ctx).WithField("pod", pod).WithField("podStatus", podStatus).Info("Enqueueing status update")
 		pc.podStatusMapLock.Lock()
 		defer pc.podStatusMapLock.Unlock()
 		pc.podStatusMap[key] = podStatus
