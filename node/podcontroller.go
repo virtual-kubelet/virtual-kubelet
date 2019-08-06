@@ -17,10 +17,13 @@ package node
 import (
 	"context"
 	"fmt"
+	"k8s.io/apimachinery/pkg/labels"
 	"reflect"
 	"strconv"
 	"sync"
 	"time"
+
+	"golang.org/x/sync/errgroup"
 
 	pkgerrors "github.com/pkg/errors"
 	"github.com/virtual-kubelet/virtual-kubelet/errdefs"
@@ -29,7 +32,6 @@ import (
 	"github.com/virtual-kubelet/virtual-kubelet/trace"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/util/wait"
 	corev1informers "k8s.io/client-go/informers/core/v1"
 	corev1client "k8s.io/client-go/kubernetes/typed/core/v1"
 	corev1listers "k8s.io/client-go/listers/core/v1"
@@ -111,6 +113,9 @@ type PodController struct {
 
 	// podStatusQueue is the queue that's responsible for processing events from the provider
 	podStatusQueue workqueue.RateLimitingInterface
+
+	podStatusMap     map[string]*corev1.PodStatus
+	podStatusMapLock sync.Mutex
 }
 
 // PodControllerConfig is used to configure a new PodController.
@@ -176,6 +181,7 @@ func NewPodController(cfg PodControllerConfig) (*PodController, error) {
 		recorder:        cfg.EventRecorder,
 		k8sQ:            workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "syncPodsFromKubernetes"),
 		podStatusQueue:  workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "syncPodStatusFromProvider"),
+		podStatusMap:    make(map[string]*corev1.PodStatus),
 	}
 
 	if podLifecycleHandler, ok := cfg.Provider.(PodLifecycleHandler); ok {
@@ -184,11 +190,27 @@ func NewPodController(cfg PodControllerConfig) (*PodController, error) {
 		pc.providerV0 = podLifecycleHandler
 	}
 
+	return pc, nil
+}
+
+// Run will set up the event handlers for types we are interested in, as well as syncing informer caches and starting workers.
+// It will block until the context is cancelled, at which point it will shutdown the work queue and wait for workers to finish processing their current work items.
+func (pc *PodController) Run(ctx context.Context, podSyncWorkers int) error {
+	if pc.providerV0 != nil {
+		pc.provider = WrapLegacyPodLifecycleHandler(ctx, pc.providerV0, DefaultWrapLegacyPodLifecycleHandlerLoopTime)
+	}
+
+	informer := pc.podsInformer.Informer()
+	if ok := cache.WaitForCacheSync(ctx.Done(), informer.HasSynced); !ok {
+		return pkgerrors.New("failed to wait for caches to sync")
+	}
+
 	// Set up event handlers for when Pod resources change.
-	pc.podsInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
+	informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(pod interface{}) {
+			log.G(ctx).WithField("pod", pod).Info("Received add event")
 			if key, err := cache.MetaNamespaceKeyFunc(pod); err != nil {
-				log.L.Error(err)
+				log.G(ctx).WithError(err).Error()
 			} else {
 				pc.k8sQ.AddRateLimited(key)
 			}
@@ -196,65 +218,85 @@ func NewPodController(cfg PodControllerConfig) (*PodController, error) {
 		UpdateFunc: func(oldObj, newObj interface{}) {
 			// Create a copy of the old and new pod objects so we don't mutate the cache.
 			oldPod := oldObj.(*corev1.Pod).DeepCopy()
-			newPod := newObj.(*corev1.Pod).DeepCopy()
+			newPod := oldObj.(*corev1.Pod).DeepCopy()
+
+			log.G(ctx).WithFields(map[string]interface{}{
+				"oldPodObjectResourceVersion": oldPod.ObjectMeta.ResourceVersion,
+				"newObjObjectResourceVersion": newPod.ObjectMeta.ResourceVersion,
+				"oldPodObjectScheduler": oldPod.Spec.SchedulerName,
+				"newPodObjectScheduler": newPod.Spec.SchedulerName,
+			}).Info("Received update event")
 			// We want to check if the two objects differ in anything other than their resource versions.
 			// Hence, we make them equal so that this change isn't picked up by reflect.DeepEqual.
 			newPod.ResourceVersion = oldPod.ResourceVersion
 			// Skip adding this pod's key to the work queue if its .metadata (except .metadata.resourceVersion) and .spec fields haven't changed.
 			// This guarantees that we don't attempt to sync the pod every time its .status field is updated.
 			if reflect.DeepEqual(oldPod.ObjectMeta, newPod.ObjectMeta) && reflect.DeepEqual(oldPod.Spec, newPod.Spec) {
+				log.G(ctx).Info("Ignored update event")
 				return
 			}
 			// At this point we know that something in .metadata or .spec has changed, so we must proceed to sync the pod.
 			if key, err := cache.MetaNamespaceKeyFunc(newPod); err != nil {
-				log.L.Error(err)
+				log.G(ctx).WithError(err).Error()
 			} else {
+				log.G(ctx).Info("Added update event to queue")
 				pc.k8sQ.AddRateLimited(key)
 			}
 		},
 		DeleteFunc: func(pod interface{}) {
+			log.G(ctx).WithField("pod", pod).Info("Received delete event")
 			if key, err := cache.DeletionHandlingMetaNamespaceKeyFunc(pod); err != nil {
-				log.L.Error(err)
+				log.G(ctx).WithError(err).Error()
 			} else {
 				pc.k8sQ.AddRateLimited(key)
 			}
 		},
 	})
 
-	return pc, nil
-}
-
-// Run will set up the event handlers for types we are interested in, as well as syncing informer caches and starting workers.
-// It will block until the context is cancelled, at which point it will shutdown the work queue and wait for workers to finish processing their current work items.
-func (pc *PodController) Run(ctx context.Context, podSyncWorkers int) error {
-	defer pc.k8sQ.ShutDown()
-	defer pc.podStatusQueue.ShutDown()
-
-	if pc.providerV0 != nil {
-		pc.provider = WrapLegacyPodLifecycleHandler(ctx, pc.providerV0, DefaultWrapLegacyPodLifecycleHandlerLoopTime)
-	}
-
+	group, groupctx := errgroup.WithContext(ctx)
 	pc.runSyncFromProvider(ctx)
-	pc.runProviderSyncWorkers(ctx, podSyncWorkers)
 
-	// Wait for the caches to be synced *before* starting workers.
-	if ok := cache.WaitForCacheSync(ctx.Done(), pc.podsInformer.Informer().HasSynced); !ok {
-		return pkgerrors.New("failed to wait for caches to sync")
+	ret, err := pc.podsInformer.Lister().List(labels.Everything())
+	if err != nil {
+		panic(err)
 	}
-	log.G(ctx).Info("Pod cache in-sync")
+	log.G(ctx).WithField("pods", ret).Info("Pod cache in-sync")
 
 	// Perform a reconciliation step that deletes any dangling pods from the provider.
 	// This happens only when the virtual-kubelet is starting, and operates on a "best-effort" basis.
 	// If by any reason the provider fails to delete a dangling pod, it will stay in the provider and deletion won't be retried.
 	pc.deleteDanglingPods(ctx, podSyncWorkers)
 
+	// This runs the workers that are responsible for synching the state of the provider to the api server
+	for i := 0; i < podSyncWorkers; i++ {
+		workerID := strconv.Itoa(i)
+		group.Go(func() error {
+			pc.runProviderSyncWorker(groupctx, workerID)
+			return nil
+		})
+	}
+	go func() {
+		<-groupctx.Done()
+		pc.podStatusQueue.ShutDown()
+	}()
+
+	if wrappedPodLifecycleHandler, ok := pc.provider.(WrappedPodLifecycleHandler); ok {
+		go wrappedPodLifecycleHandler.run(ctx)
+	}
+
 	log.G(ctx).Info("starting workers")
 	for id := 0; id < podSyncWorkers; id++ {
-		go wait.Until(func() {
-			// Use the worker's "index" as its ID so we can use it for tracing.
-			pc.runWorker(ctx, strconv.Itoa(id))
-		}, time.Second, ctx.Done())
+		workerID := strconv.Itoa(id)
+		group.Go(func() error {
+			pc.runInformerSyncWorker(ctx, workerID)
+			return nil
+		})
+
 	}
+	go func() {
+		<-groupctx.Done()
+		pc.k8sQ.ShutDown()
+	}()
 
 	close(pc.ready)
 
@@ -262,7 +304,7 @@ func (pc *PodController) Run(ctx context.Context, podSyncWorkers int) error {
 	<-ctx.Done()
 	log.G(ctx).Info("shutting down workers")
 
-	return nil
+	return group.Wait()
 }
 
 // Ready returns a channel which gets closed once the PodController is ready to handle scheduled pods.
@@ -274,14 +316,15 @@ func (pc *PodController) Ready() <-chan struct{} {
 
 // runWorker is a long-running function that will continually call the processNextWorkItem function in order to read and
 // process an item on the work queue. It is responsible for reading events that come from K8s podinformer
-func (pc *PodController) runWorker(ctx context.Context, workerId string) {
+func (pc *PodController) runInformerSyncWorker(ctx context.Context, workerId string) {
+	log.G(ctx).WithField("workerId", workerId).Info("informer sync worker starting")
 	for pc.processNextWorkItemFromInformer(ctx, workerId) {
 	}
+	log.G(ctx).WithField("workerId", workerId).Info("informer sync worker bailing")
 }
 
 // processNextWorkItemFromInformer will read a single work item off the work queue and attempt to process it,by calling the syncHandler.
 func (pc *PodController) processNextWorkItemFromInformer(ctx context.Context, workerId string) bool {
-
 	// We create a span only after popping from the queue so that we can get an adequate picture of how long it took to process the item.
 	ctx, span := trace.StartSpan(ctx, "processNextWorkItem")
 	defer span.End()
@@ -292,7 +335,7 @@ func (pc *PodController) processNextWorkItemFromInformer(ctx context.Context, wo
 }
 
 // syncHandler compares the actual state with the desired, and attempts to converge the two.
-func (pc *PodController) syncHandler(ctx context.Context, key string) error {
+func (pc *PodController) syncHandler(ctx context.Context, key string, willRetry bool) error {
 	ctx, span := trace.StartSpan(ctx, "syncHandler")
 	defer span.End()
 

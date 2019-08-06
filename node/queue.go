@@ -28,7 +28,7 @@ const (
 	maxRetries = 20
 )
 
-type queueHandler func(ctx context.Context, key string) error
+type queueHandler func(ctx context.Context, key string, willRetry bool) error
 
 func handleQueueItem(ctx context.Context, q workqueue.RateLimitingInterface, handler queueHandler) bool {
 	ctx, span := trace.StartSpan(ctx, "handleQueueItem")
@@ -63,8 +63,9 @@ func handleQueueItem(ctx context.Context, q workqueue.RateLimitingInterface, han
 		// Add the current key as an attribute to the current span.
 		ctx = span.WithField(ctx, "key", key)
 		// Run the syncHandler, passing it the namespace/name string of the Pod resource to be synced.
-		if err := handler(ctx, key); err != nil {
-			if q.NumRequeues(key) < maxRetries {
+		willRetry := q.NumRequeues(key) < maxRetries
+		if err := handler(ctx, key, willRetry); err != nil {
+			if willRetry {
 				// Put the item back on the work queue to handle any transient errors.
 				log.G(ctx).WithError(err).Warnf("requeuing %q due to failed sync", key)
 				q.AddRateLimited(key)

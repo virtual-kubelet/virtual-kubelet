@@ -16,6 +16,7 @@ type legacyPodLifecycleHandlerWrapper struct {
 	// This channel will be closed when the notifier is set
 	notifyPodsSet chan struct{}
 	notifier      func(*v1.Pod)
+	reconcileTime time.Duration
 }
 
 func (wrapper *legacyPodLifecycleHandlerWrapper) NotifyPods(ctx context.Context, notifier func(*v1.Pod)) {
@@ -51,7 +52,7 @@ func (wrapper *legacyPodLifecycleHandlerWrapper) updatePodStatuses(ctx context.C
 	}
 }
 
-func (wrapper *legacyPodLifecycleHandlerWrapper) run(ctx context.Context, sleepDuration time.Duration) {
+func (wrapper *legacyPodLifecycleHandlerWrapper) run(ctx context.Context) {
 	// Wait for notifyPods to be set
 	select {
 	case <-ctx.Done():
@@ -60,7 +61,7 @@ func (wrapper *legacyPodLifecycleHandlerWrapper) run(ctx context.Context, sleepD
 	}
 
 	for {
-		t := time.NewTimer(sleepDuration)
+		t := time.NewTimer(wrapper.reconcileTime)
 		defer t.Stop()
 
 		for {
@@ -75,19 +76,24 @@ func (wrapper *legacyPodLifecycleHandlerWrapper) run(ctx context.Context, sleepD
 				span.End()
 
 				// restart the timer
-				t.Reset(sleepDuration)
+				t.Reset(wrapper.reconcileTime)
 			}
 		}
 	}
 }
 
+type WrappedPodLifecycleHandler interface {
+	PodLifecycleHandler
+	run(ctx context.Context)
+}
+
 // WrapLegacyPodLifecycleHandler allows you to use a LegacyPodLifecycleHandler. It runs a background loop, based on
 // reconcileTime. Every period it will call GetPods.
-func WrapLegacyPodLifecycleHandler(ctx context.Context, handler PodLifecycleHandlerV0, reconcileTime time.Duration) PodLifecycleHandler {
+func WrapLegacyPodLifecycleHandler(ctx context.Context, handler PodLifecycleHandlerV0, reconcileTime time.Duration) WrappedPodLifecycleHandler {
 	wrapper := &legacyPodLifecycleHandlerWrapper{
 		PodLifecycleHandlerV0: handler,
 		notifyPodsSet:         make(chan struct{}),
+		reconcileTime:         reconcileTime,
 	}
-	go wrapper.run(ctx, reconcileTime)
 	return wrapper
 }

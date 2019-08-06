@@ -16,11 +16,8 @@ package node
 
 import (
 	"context"
+	"fmt"
 	"hash/fnv"
-	"strconv"
-	"time"
-
-	"k8s.io/client-go/util/workqueue"
 
 	"github.com/davecgh/go-spew/spew"
 	pkgerrors "github.com/pkg/errors"
@@ -31,6 +28,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/tools/cache"
+	"k8s.io/client-go/util/workqueue"
 )
 
 const (
@@ -190,7 +188,7 @@ func (pc *PodController) forceDeletePodResource(ctx context.Context, namespace, 
 	return nil
 }
 
-func (pc *PodController) updatePodStatus(ctx context.Context, pod *corev1.Pod) error {
+func (pc *PodController) updatePodStatus(ctx context.Context, pod *corev1.Pod, status *corev1.PodStatus) error {
 	if shouldSkipPodStatusUpdate(pod) {
 		return nil
 	}
@@ -198,37 +196,6 @@ func (pc *PodController) updatePodStatus(ctx context.Context, pod *corev1.Pod) e
 	ctx, span := trace.StartSpan(ctx, "updatePodStatus")
 	defer span.End()
 	ctx = addPodAttributes(ctx, span, pod)
-
-	status, err := pc.provider.GetPodStatus(ctx, pod.Namespace, pod.Name)
-	if err != nil && !errdefs.IsNotFound(err) {
-		span.SetStatus(err)
-		return pkgerrors.Wrap(err, "error retreiving pod status")
-	}
-
-	// Update the pod's status
-	if status != nil {
-		pod.Status = *status
-	} else {
-		// Only change the status when the pod was already up
-		// Only doing so when the pod was successfully running makes sure we don't run into race conditions during pod creation.
-		if pod.Status.Phase == corev1.PodRunning || pod.ObjectMeta.CreationTimestamp.Add(time.Minute).Before(time.Now()) {
-			// Set the pod to failed, this makes sure if the underlying container implementation is gone that a new pod will be created.
-			pod.Status.Phase = corev1.PodFailed
-			pod.Status.Reason = "NotFound"
-			pod.Status.Message = "The pod status was not found and may have been deleted from the provider"
-			for i, c := range pod.Status.ContainerStatuses {
-				pod.Status.ContainerStatuses[i].State.Terminated = &corev1.ContainerStateTerminated{
-					ExitCode:    -137,
-					Reason:      "NotFound",
-					Message:     "Container was not found and was likely deleted",
-					FinishedAt:  metav1.NewTime(time.Now()),
-					StartedAt:   c.State.Running.StartedAt,
-					ContainerID: c.ContainerID,
-				}
-				pod.Status.ContainerStatuses[i].State.Running = nil
-			}
-		}
-	}
 
 	if _, err := pc.client.Pods(pod.Namespace).UpdateStatus(pod); err != nil {
 		span.SetStatus(err)
@@ -247,11 +214,16 @@ func (pc *PodController) enqueuePodStatusUpdate(ctx context.Context, pod *corev1
 	if key, err := cache.MetaNamespaceKeyFunc(pod); err != nil {
 		log.G(ctx).WithError(err).WithField("method", "enqueuePodStatusUpdate").Error("Error getting pod meta namespace key")
 	} else {
+		podStatus := pod.Status.DeepCopy()
+		log.G(ctx).WithField("pod",  pod).WithField("podStatus", podStatus).Info("Enqueueing status update")
+		pc.podStatusMapLock.Lock()
+		defer pc.podStatusMapLock.Unlock()
+		pc.podStatusMap[key] = podStatus
 		pc.podStatusQueue.AddRateLimited(key)
 	}
 }
 
-func (pc *PodController) podStatusHandler(ctx context.Context, key string) (retErr error) {
+func (pc *PodController) podStatusHandler(ctx context.Context, key string, willRetry bool) (retErr error) {
 	ctx, span := trace.StartSpan(ctx, "podStatusHandler")
 	defer span.End()
 
@@ -269,6 +241,14 @@ func (pc *PodController) podStatusHandler(ctx context.Context, key string) (retE
 		return pkgerrors.Wrap(err, "error spliting cache key")
 	}
 
+	pc.podStatusMapLock.Lock()
+	podStatus, ok := pc.podStatusMap[key]
+	delete(pc.podStatusMap, key)
+	pc.podStatusMapLock.Unlock()
+	if !ok {
+		return fmt.Errorf("Could not find pod %q in pod status map", key)
+	}
+
 	pod, err := pc.podsLister.Pods(namespace).Get(name)
 	if err != nil {
 		if errors.IsNotFound(err) {
@@ -278,21 +258,26 @@ func (pc *PodController) podStatusHandler(ctx context.Context, key string) (retE
 		return pkgerrors.Wrap(err, "error looking up pod")
 	}
 
-	return pc.updatePodStatus(ctx, pod)
-}
-
-func (pc *PodController) runProviderSyncWorkers(ctx context.Context, numWorkers int) {
-	for i := 0; i < numWorkers; i++ {
-		go func(index int) {
-			workerID := strconv.Itoa(index)
-			pc.runProviderSyncWorker(ctx, workerID)
-		}(i)
+	err = pc.updatePodStatus(ctx, pod, podStatus)
+	if err != nil && willRetry {
+		// Restore the pod status, but do not overwrite it if it's been updated in the mean time while we've been working
+		pc.podStatusMapLock.Lock()
+		_, ok = pc.podStatusMap[key]
+		if !ok {
+			pc.podStatusMap[key] = podStatus
+		}
+		pc.podStatusMapLock.Unlock()
 	}
+
+	return err
 }
 
 func (pc *PodController) runProviderSyncWorker(ctx context.Context, workerID string) {
+	log.G(ctx).WithField("workerId", workerID).Info("provider sync worker starting")
 	for pc.processPodStatusUpdateFromProvider(ctx, workerID, pc.podStatusQueue) {
 	}
+
+	log.G(ctx).WithField("workerId", workerID).Info("provider sync worker bailing")
 }
 
 // processPodStatusUpdateFromProvider processes events from the provider
