@@ -83,7 +83,7 @@ ifndef CI
 else
 	@echo "Testing in CI..."
 	$Q mkdir -p test
-	$Q ( GODEBUG=cgocheck=2 go test -timeout=9m -v $(allpackages); echo $$? ) | \
+	$Q ( GODEBUG=cgocheck=2 go test -race -timeout=9m -v $(allpackages); echo $$? ) | \
        tee test/output.txt | sed '$$ d'; exit $$(tail -1 test/output.txt)
 endif
 
