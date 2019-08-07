@@ -54,80 +54,6 @@ func newTestController() *TestController {
 	}
 }
 
-func TestPodHashingEqual(t *testing.T) {
-	p1 := corev1.PodSpec{
-		Containers: []corev1.Container{
-			corev1.Container{
-				Name:  "nginx",
-				Image: "nginx:1.15.12-perl",
-				Ports: []corev1.ContainerPort{
-					corev1.ContainerPort{
-						ContainerPort: 443,
-						Protocol:      "tcp",
-					},
-				},
-			},
-		},
-	}
-
-	h1 := hashPodSpec(p1)
-
-	p2 := corev1.PodSpec{
-		Containers: []corev1.Container{
-			corev1.Container{
-				Name:  "nginx",
-				Image: "nginx:1.15.12-perl",
-				Ports: []corev1.ContainerPort{
-					corev1.ContainerPort{
-						ContainerPort: 443,
-						Protocol:      "tcp",
-					},
-				},
-			},
-		},
-	}
-
-	h2 := hashPodSpec(p2)
-	assert.Check(t, is.Equal(h1, h2))
-}
-
-func TestPodHashingDifferent(t *testing.T) {
-	p1 := corev1.PodSpec{
-		Containers: []corev1.Container{
-			corev1.Container{
-				Name:  "nginx",
-				Image: "nginx:1.15.12",
-				Ports: []corev1.ContainerPort{
-					corev1.ContainerPort{
-						ContainerPort: 443,
-						Protocol:      "tcp",
-					},
-				},
-			},
-		},
-	}
-
-	h1 := hashPodSpec(p1)
-
-	p2 := corev1.PodSpec{
-		Containers: []corev1.Container{
-			corev1.Container{
-				Name:  "nginx",
-				Image: "nginx:1.15.12-perl",
-				Ports: []corev1.ContainerPort{
-					corev1.ContainerPort{
-						ContainerPort: 443,
-						Protocol:      "tcp",
-					},
-				},
-			},
-		},
-	}
-
-	h2 := hashPodSpec(p2)
-	assert.Check(t, h1 != h2)
-}
-
 func TestPodCreateNewPod(t *testing.T) {
 	svr := newTestController()
 
@@ -230,7 +156,7 @@ func TestPodNoSpecChange(t *testing.T) {
 		},
 	}
 
-	err := svr.mock.CreatePod(context.Background(), pod)
+	err := svr.createOrUpdatePod(context.Background(), pod)
 	assert.Check(t, is.Nil(err))
 	assert.Check(t, is.Equal(atomic.LoadUint64(&svr.mock.creates), uint64(1)))
 	assert.Check(t, is.Equal(atomic.LoadUint64(&svr.mock.updates), uint64(0)))

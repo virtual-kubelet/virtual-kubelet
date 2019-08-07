@@ -16,10 +16,9 @@ package node
 
 import (
 	"context"
-	"hash/fnv"
+	"reflect"
 	"time"
 
-	"github.com/davecgh/go-spew/spew"
 	pkgerrors "github.com/pkg/errors"
 	"github.com/virtual-kubelet/virtual-kubelet/errdefs"
 	"github.com/virtual-kubelet/virtual-kubelet/log"
@@ -57,10 +56,15 @@ func (pc *PodController) createOrUpdatePod(ctx context.Context, pod *corev1.Pod)
 		"namespace": pod.GetNamespace(),
 	})
 
+	pod = pod.DeepCopy()
 	if err := populateEnvironmentVariables(ctx, pod, pc.resourceManager, pc.recorder); err != nil {
 		span.SetStatus(err)
 		return err
 	}
+
+	// We have to use a  different pod that we pass to the provider than the one that gets used in handleProviderError
+	// because the provider may have manipulated the pod in a separate goroutine while we were doing work
+	providerPod := pod.DeepCopy()
 
 	// Check if the pod is already known by the provider.
 	// NOTE: Some providers return a non-nil error in their GetPod implementation when the pod is not found while some other don't.
@@ -71,38 +75,30 @@ func (pc *PodController) createOrUpdatePod(ctx context.Context, pod *corev1.Pod)
 		// - `spec.initContainers[*].image`
 		// - `spec.activeDeadlineSeconds`
 		// - `spec.tolerations` (only additions to existing tolerations)
-		// compare the hashes of the pod specs to see if the specs actually changed
-		expected := hashPodSpec(pp.Spec)
-		if actual := hashPodSpec(pod.Spec); actual != expected {
+		// - `objectmeta.labels`
+		// - `objectmeta.annotations`
+		// compare these subset of the pods to see if something has changed
+		if !reflect.DeepEqual(pp.Spec.Containers, providerPod.Spec.Containers) ||
+			!reflect.DeepEqual(pp.Spec.InitContainers, providerPod.Spec.InitContainers) ||
+			!reflect.DeepEqual(pp.Spec.ActiveDeadlineSeconds, providerPod.Spec.ActiveDeadlineSeconds) ||
+			!reflect.DeepEqual(pp.Spec.Tolerations, providerPod.Spec.Tolerations) ||
+			!reflect.DeepEqual(pp.ObjectMeta.Labels, providerPod.Labels) ||
+			!reflect.DeepEqual(pp.ObjectMeta.Annotations, providerPod.Annotations) {
 			log.G(ctx).Debugf("Pod %s exists, updating pod in provider", pp.Name)
-			if origErr := pc.provider.UpdatePod(ctx, pod); origErr != nil {
+			if origErr := pc.provider.UpdatePod(ctx, providerPod); origErr != nil {
 				pc.handleProviderError(ctx, span, origErr, pod)
 				return origErr
 			}
 			log.G(ctx).Info("Updated pod in provider")
 		}
 	} else {
-		if origErr := pc.provider.CreatePod(ctx, pod); origErr != nil {
+		if origErr := pc.provider.CreatePod(ctx, providerPod); origErr != nil {
 			pc.handleProviderError(ctx, span, origErr, pod)
 			return origErr
 		}
 		log.G(ctx).Info("Created pod in provider")
 	}
 	return nil
-}
-
-// This is basically the kube runtime's hash container functionality.
-// VK only operates at the Pod level so this is adapted for that
-func hashPodSpec(spec corev1.PodSpec) uint64 {
-	hash := fnv.New32a()
-	printer := spew.ConfigState{
-		Indent:         " ",
-		SortKeys:       true,
-		DisableMethods: true,
-		SpewKeys:       true,
-	}
-	printer.Fprintf(hash, "%#v", spec)
-	return uint64(hash.Sum32())
 }
 
 func (pc *PodController) handleProviderError(ctx context.Context, span trace.Span, origErr error, pod *corev1.Pod) {
@@ -152,7 +148,7 @@ func (pc *PodController) deletePod(ctx context.Context, namespace, name string) 
 	ctx = addPodAttributes(ctx, span, pod)
 
 	var delErr error
-	if delErr = pc.provider.DeletePod(ctx, pod); delErr != nil && !errdefs.IsNotFound(delErr) {
+	if delErr = pc.provider.DeletePod(ctx, pod.DeepCopy()); delErr != nil && !errdefs.IsNotFound(delErr) {
 		span.SetStatus(delErr)
 		return delErr
 	}
@@ -231,13 +227,20 @@ func (pc *PodController) updatePodStatus(ctx context.Context, pod *corev1.Pod) e
 		return pkgerrors.Wrap(err, "error retreiving pod status")
 	}
 
+	// Copy the status, so we do not reference it, in case the provider changes it
+	status = status.DeepCopy()
+
 	// Update the pod's status
 	if status != nil {
+		// Do not modify the pod in place
+		pod = pod.DeepCopy()
 		pod.Status = *status
 	} else {
 		// Only change the status when the pod was already up
 		// Only doing so when the pod was successfully running makes sure we don't run into race conditions during pod creation.
 		if pod.Status.Phase == corev1.PodRunning || pod.ObjectMeta.CreationTimestamp.Add(time.Minute).Before(time.Now()) {
+			// Do not modify the pod in place
+			pod = pod.DeepCopy()
 			// Set the pod to failed, this makes sure if the underlying container implementation is gone that a new pod will be created.
 			pod.Status.Phase = corev1.PodFailed
 			pod.Status.Reason = "NotFound"
