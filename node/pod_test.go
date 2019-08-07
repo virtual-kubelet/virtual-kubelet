@@ -104,7 +104,7 @@ func TestPodUpdateExisting(t *testing.T) {
 		},
 	}
 
-	err := svr.provider.CreatePod(context.Background(), pod)
+	err := svr.provider.CreatePod(context.Background(), pod.DeepCopy())
 	assert.Check(t, is.Nil(err))
 	assert.Check(t, is.Equal(atomic.LoadUint64(&svr.mock.creates), uint64(1)))
 	assert.Check(t, is.Equal(atomic.LoadUint64(&svr.mock.updates), uint64(0)))
