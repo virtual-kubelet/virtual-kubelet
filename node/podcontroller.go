@@ -343,7 +343,7 @@ func (pc *PodController) syncHandler(ctx context.Context, key string, willRetry 
 		}
 		// At this point we know the Pod resource doesn't exist, which most probably means it was deleted.
 		// Hence, we must delete it from the provider if it still exists there.
-		if err := pc.deletePod(ctx, namespace, name); err != nil {
+		if err := pc.deletePod(ctx, namespace, name); err != nil && !errdefs.IsNotFound(err) {
 			err := pkgerrors.Wrapf(err, "failed to delete pod %q in the provider", loggablePodNameFromCoordinates(namespace, name))
 			span.SetStatus(err)
 			return err
@@ -362,10 +362,27 @@ func (pc *PodController) syncPodInProvider(ctx context.Context, key string, pod 
 	// Add the pod's attributes to the current span.
 	ctx = addPodAttributes(ctx, span, pod)
 
+	// Ignore the pod if it is in the "Failed" or "Succeeded" state.
+	if pod.Status.Phase == corev1.PodFailed || pod.Status.Phase == corev1.PodSucceeded || pod.Status.Phase == corev1.PodUnknown {
+		log.G(ctx).Warnf("skipping sync of pod %q in %q phase", loggablePodName(pod), pod.Status.Phase)
+		return nil
+	}
+
 	// Check whether the pod has been marked for deletion.
 	// If it does, guarantee it is deleted in the provider and Kubernetes.
 	if pod.DeletionTimestamp != nil {
-		if err := pc.deletePod(ctx, pod.Namespace, pod.Name); err != nil {
+		if err := pc.deletePod(ctx, pod.Namespace, pod.Name); errdefs.IsNotFound(err) {
+			// The pod was not found in the provider, and deletion timestamp is not set. We don't know if
+			// the pod succeeded or failed, so we set it to unknown
+			pod = pod.DeepCopy()
+			pod.Status.Phase = corev1.PodUnknown
+			if _, updateStatusErr := pc.client.Pods(pod.Namespace).UpdateStatus(pod); updateStatusErr != nil {
+				err := pkgerrors.Wrapf(err, "failed to update API Server status to known for pod %q", loggablePodName(pod))
+				span.SetStatus(err)
+				return err
+			}
+			return nil
+		} else if err != nil {
 			err := pkgerrors.Wrapf(err, "failed to delete pod %q in the provider", loggablePodName(pod))
 			span.SetStatus(err)
 			return err
@@ -373,14 +390,8 @@ func (pc *PodController) syncPodInProvider(ctx context.Context, key string, pod 
 		return nil
 	}
 
-	// Ignore the pod if it is in the "Failed" or "Succeeded" state.
-	if pod.Status.Phase == corev1.PodFailed || pod.Status.Phase == corev1.PodSucceeded {
-		log.G(ctx).Warnf("skipping sync of pod %q in %q phase", loggablePodName(pod), pod.Status.Phase)
-		return nil
-	}
-
 	// Create or update the pod in the provider.
-	if err := pc.createOrUpdatePod(ctx, key, pod); err != nil {
+	if err := pc.createOrUpdatePod(ctx, pod); err != nil {
 		err := pkgerrors.Wrapf(err, "failed to sync pod %q in the provider", loggablePodName(pod))
 		span.SetStatus(err)
 		return err
@@ -443,7 +454,7 @@ func (pc *PodController) deleteDanglingPods(ctx context.Context, threadiness int
 			// Add the pod's attributes to the current span.
 			ctx = addPodAttributes(ctx, span, pod)
 			// Actually delete the pod.
-			if err := pc.deletePod(ctx, pod.Namespace, pod.Name); err != nil {
+			if err := pc.provider.DeletePod(ctx, pod); err != nil {
 				span.SetStatus(err)
 				log.G(ctx).Errorf("failed to delete pod %q in provider", loggablePodName(pod))
 			} else {

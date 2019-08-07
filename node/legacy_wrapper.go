@@ -2,12 +2,12 @@ package node
 
 import (
 	"context"
+	"sync"
 	"time"
 
 	pkgerrors "github.com/pkg/errors"
 	"github.com/virtual-kubelet/virtual-kubelet/log"
 	"github.com/virtual-kubelet/virtual-kubelet/trace"
-	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/core/v1"
 )
 
@@ -17,18 +17,14 @@ type legacyPodLifecycleHandlerWrapper struct {
 	notifyPodsSet chan struct{}
 	notifier      func(*v1.Pod)
 	reconcileTime time.Duration
+
+	syncFinished *sync.Cond
 }
 
 func (wrapper *legacyPodLifecycleHandlerWrapper) NotifyPods(ctx context.Context, notifier func(*v1.Pod)) {
 	wrapper.notifier = notifier
 	// This should be called only once, but we shouldn't crash if it gets called twice
 	close(wrapper.notifyPodsSet)
-}
-
-func shouldSkipPodStatusUpdate(status *corev1.PodStatus) bool {
-	return status.Phase == corev1.PodSucceeded ||
-		status.Phase == corev1.PodFailed ||
-		status.Reason == podStatusReasonProviderFailed
 }
 
 // updatePodStatuses syncs the providers pod status with the kubernetes pod status.
@@ -45,10 +41,8 @@ func (wrapper *legacyPodLifecycleHandlerWrapper) updatePodStatuses(ctx context.C
 	}
 
 	for _, pod := range pods {
-		if !shouldSkipPodStatusUpdate(&pod.Status) {
-			// Notifier is idempotent.
-			wrapper.notifier(pod)
-		}
+		// Notifier is idempotent.
+		wrapper.notifier(pod)
 	}
 }
 
@@ -73,6 +67,7 @@ func (wrapper *legacyPodLifecycleHandlerWrapper) run(ctx context.Context) {
 
 				ctx, span := trace.StartSpan(ctx, "syncActualState")
 				wrapper.updatePodStatuses(ctx)
+				wrapper.syncFinished.Broadcast()
 				span.End()
 
 				// restart the timer
@@ -94,6 +89,8 @@ func WrapLegacyPodLifecycleHandler(ctx context.Context, handler PodLifecycleHand
 		PodLifecycleHandlerV0: handler,
 		notifyPodsSet:         make(chan struct{}),
 		reconcileTime:         reconcileTime,
+		syncFinished:          sync.NewCond(&sync.Mutex{}),
 	}
+
 	return wrapper
 }

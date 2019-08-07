@@ -22,6 +22,7 @@ type mockV0Provider struct {
 	creates uint64
 	updates uint64
 	deletes uint64
+	attemptedDeletes uint64
 
 	errorOnDelete error
 
@@ -131,6 +132,7 @@ func (p *mockV0Provider) UpdatePod(ctx context.Context, pod *v1.Pod) error {
 func (p *mockV0Provider) DeletePod(ctx context.Context, pod *v1.Pod) (err error) {
 	log.G(ctx).Infof("receive DeletePod %q", pod.Name)
 
+	atomic.AddUint64(&p.attemptedDeletes, 1)
 	if p.errorOnDelete != nil {
 		return p.errorOnDelete
 	}

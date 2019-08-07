@@ -3,11 +3,13 @@ package node
 import (
 	"context"
 	"fmt"
+	"github.com/pkg/errors"
 	"strconv"
 	"sync/atomic"
 	"testing"
 	"time"
 
+	"github.com/virtual-kubelet/virtual-kubelet/errdefs"
 	"github.com/sirupsen/logrus"
 	"github.com/virtual-kubelet/virtual-kubelet/log"
 	logruslogger "github.com/virtual-kubelet/virtual-kubelet/log/logrus"
@@ -92,10 +94,19 @@ func TestPodLifecycle(t *testing.T) {
 	ctx = log.WithLogger(ctx, log.L)
 
 	t.Run("createStartDeleteScenario", func(t *testing.T) {
+		// Wait for the pod to be started
+		deletionFunc := func(ev watch.Event) (bool, error) {
+			log.G(ctx).WithField("event", ev).Info("got event")
+			// TODO(Sargun): The pod should have transitioned into some status around failed / succeeded
+			// prior to being deleted.
+			// In addition, we should check if the deletion timestamp gets set
+			pod := ev.Object.(*corev1.Pod)
+			return pod.Status.Phase == corev1.PodSucceeded, nil
+		}
 		t.Run("mockProvider", func(t *testing.T) {
-
+			//
 			assert.NilError(t, wireUpSystem(ctx, newMockProvider(), func(ctx context.Context, s *system) {
-				testCreateStartDeleteScenario(ctx, t, s)
+				testCreateStartDeleteScenario(ctx, t, s, deletionFunc)
 			}))
 		})
 
@@ -105,9 +116,36 @@ func TestPodLifecycle(t *testing.T) {
 		t.Run("mockV0Provider", func(t *testing.T) {
 			t.Skip()
 			assert.NilError(t, wireUpSystem(ctx, newMockV0Provider(), func(ctx context.Context, s *system) {
-				testCreateStartDeleteScenario(ctx, t, s)
+				testCreateStartDeleteScenario(ctx, t, s, deletionFunc)
 			}))
 		})
+	})
+
+	t.Run("createStartDeleteScenarioWithDeletionErrorNotFound", func(t *testing.T) {
+		// Wait for the pod to be started
+		deletionFunc := func(ev watch.Event) (bool, error) {
+			log.G(ctx).WithField("event", ev).Info("got event")
+			pod := ev.Object.(*corev1.Pod)
+			return pod.Status.Phase == corev1.PodUnknown, nil
+		}
+		mp := newMockProvider()
+		mp.errorOnDelete = errdefs.NotFound("not found")
+		assert.NilError(t, wireUpSystem(ctx, mp, func(ctx context.Context, s *system) {
+			testCreateStartDeleteScenario(ctx, t, s, deletionFunc)
+		}))
+	})
+
+	t.Run("createStartDeleteScenarioWithDeletionRandomError", func(t *testing.T) {
+		mp := newMockProvider()
+		// Wait for the pod to be started
+		deletionFunc := func(ev watch.Event) (bool, error) {
+			for atomic.LoadUint64(&mp.attemptedDeletes) < 2 {}
+			return true, nil
+		}
+		mp.errorOnDelete = errors.New("random error")
+		assert.NilError(t, wireUpSystem(ctx, mp, func(ctx context.Context, s *system) {
+			testCreateStartDeleteScenario(ctx, t, s, deletionFunc)
+		}))
 	})
 
 	t.Run("danglingPodScenario", func(t *testing.T) {
@@ -314,7 +352,7 @@ func testDanglingPodScenario(ctx context.Context, t *testing.T, s *system, m *mo
 
 }
 
-func testCreateStartDeleteScenario(ctx context.Context, t *testing.T, s *system) {
+func testCreateStartDeleteScenario(ctx context.Context, t *testing.T, s *system, deletionFunction watchutils.ConditionFunc) {
 
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
@@ -377,28 +415,32 @@ func testCreateStartDeleteScenario(ctx context.Context, t *testing.T, s *system)
 	// Start the pod controller
 	podControllerErrCh := s.start(ctx)
 
+	// Wait for the pod to go into running
+	select {
+	case <-ctx.Done():
+		t.Fatalf("Context ended early: %s", ctx.Err().Error())
+	case err = <-watchErrCh:
+		assert.NilError(t, err)
+	case err = <-podControllerErrCh:
+		assert.NilError(t, err)
+		t.Fatal("Pod controller terminated early")
+	}
+
 	// Setup a watch prior to pod deletion
 	watcher, err = s.client.CoreV1().Pods(testNamespace).Watch(listOptions)
 	assert.NilError(t, err)
 	defer watcher.Stop()
 	go func() {
-		_, watchErr := watchutils.UntilWithoutRetry(ctx, watcher,
-			// Wait for the pod to be started
-			func(ev watch.Event) (bool, error) {
-				log.G(ctx).WithField("event", ev).Info("got event")
-				// TODO(Sargun): The pod should have transitioned into some status around failed / succeeded
-				// prior to being deleted.
-				// In addition, we should check if the deletion timestamp gets set
-				return ev.Type == watch.Deleted, nil
-			})
+		_, watchErr := watchutils.UntilWithoutRetry(ctx, watcher, deletionFunction)
 		watchErrCh <- watchErr
 	}()
 
-	// Delete the pod
+	// Delete the pod via deletiontimestamp
 
 	// 1. Get the pod
 	currentPod, err := s.client.CoreV1().Pods(testNamespace).Get(p.Name, metav1.GetOptions{})
 	assert.NilError(t, err)
+	currentPod = currentPod.DeepCopy()
 	// 2. Set the pod's deletion timestamp, version, and so on
 	curVersion, err := strconv.Atoi(currentPod.ResourceVersion)
 	assert.NilError(t, err)

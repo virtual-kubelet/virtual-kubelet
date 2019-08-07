@@ -54,12 +54,17 @@ func addPodAttributes(ctx context.Context, span trace.Span, pod *corev1.Pod) con
 	})
 }
 
+type podInfoKey struct {
+	namespace string
+	name      string
+}
+
 type podInfo struct {
 	podSpec    *corev1.PodSpec
 	objectMeta *metav1.ObjectMeta
 }
 
-func (pc *PodController) createOrUpdatePod(ctx context.Context, key string, pod *corev1.Pod) error {
+func (pc *PodController) createOrUpdatePod(ctx context.Context, pod *corev1.Pod) error {
 	ctx, span := trace.StartSpan(ctx, "createOrUpdatePod")
 	defer span.End()
 	addPodAttributes(ctx, span, pod)
@@ -77,6 +82,7 @@ func (pc *PodController) createOrUpdatePod(ctx context.Context, key string, pod 
 		return err
 	}
 
+	key := podInfoKey{namespace: pod.Namespace, name: pod.Name}
 	lastPodInfoUsedForCreateOrUpdate, ok := pc.lastPodInfoUsedForCreateOrUpdate.Load(key)
 	if !ok {
 		podCopyForProvider := pod.DeepCopy()
@@ -163,11 +169,18 @@ func (pc *PodController) deletePod(ctx context.Context, namespace, name string) 
 	ctx, span := trace.StartSpan(ctx, "deletePod")
 	defer span.End()
 
+	key := podInfoKey{name: name, namespace: namespace}
+	_, ok := pc.lastPodInfoUsedForCreateOrUpdate.Load(key)
+	if !ok {
+		return errdefs.NotFound("Pod does not exist in local storage, nothing to delete.")
+	}
+
 	pod, err := pc.provider.GetPod(ctx, namespace, name)
 	if err != nil {
 		if errdefs.IsNotFound(err) {
 			// The provider is not aware of the pod, but we must still delete the Kubernetes API resource.
-			return pc.forceDeletePodResource(ctx, namespace, name)
+			pc.lastPodInfoUsedForCreateOrUpdate.Delete(key)
+			return err
 		}
 		return err
 	}
@@ -175,25 +188,43 @@ func (pc *PodController) deletePod(ctx context.Context, namespace, name string) 
 	// NOTE: Some providers return a non-nil error in their GetPod implementation when the pod is not found while some other don't.
 	if pod == nil {
 		// The provider is not aware of the pod, but we must still delete the Kubernetes API resource.
-		return pc.forceDeletePodResource(ctx, namespace, name)
+		pc.lastPodInfoUsedForCreateOrUpdate.Delete(key)
+		return nil
 	}
 
 	ctx = addPodAttributes(ctx, span, pod)
 
 	var delErr error
-	if delErr = pc.provider.DeletePod(ctx, pod); delErr != nil && !errdefs.IsNotFound(delErr) {
+	if delErr = pc.provider.DeletePod(ctx, pod.DeepCopy()); errdefs.IsNotFound(delErr) {
+		return delErr
+	} else if delErr != nil {
 		span.SetStatus(delErr)
 		return delErr
 	}
 
 	log.G(ctx).Debug("Deleted pod from provider")
 
-	if err := pc.forceDeletePodResource(ctx, namespace, name); err != nil {
-		span.SetStatus(err)
-		return err
-	}
-	log.G(ctx).Info("Deleted pod from Kubernetes")
+	pc.lastPodInfoUsedForCreateOrUpdate.Delete(key)
+	return nil
+}
 
+/*
+func (pc *PodController) gracefullyDeletePodResource(ctx context.Context, namespace, name string) error {
+	ctx, span := trace.StartSpan(ctx, "gracefullyDeletePodResource")
+	defer span.End()
+	ctx = span.WithFields(ctx, log.Fields{
+		"namespace": namespace,
+		"name":      name,
+	})
+
+	if err := pc.client.Pods(namespace).Delete(name, &metav1.DeleteOptions{}); err != nil {
+		if errors.IsNotFound(err) {
+			log.G(ctx).Debug("Pod does not exist in Kubernetes, nothing to delete")
+			return nil
+		}
+		span.SetStatus(err)
+		return pkgerrors.Wrap(err, "Failed to delete Kubernetes pod")
+	}
 	return nil
 }
 
@@ -217,12 +248,9 @@ func (pc *PodController) forceDeletePodResource(ctx context.Context, namespace, 
 	}
 	return nil
 }
+*/
 
 func (pc *PodController) updatePodStatus(ctx context.Context, pod *corev1.Pod, status *corev1.PodStatus) error {
-	if shouldSkipPodStatusUpdate(status) {
-		return nil
-	}
-
 	// We have to do this because UpdateStatus works on the pod level, even though we have an existing pod that we
 	// got from a podinformer. We don't use the provider's pod (and store that) because it would be more costly
 	// than waiting until here to do the copy
@@ -232,7 +260,7 @@ func (pc *PodController) updatePodStatus(ctx context.Context, pod *corev1.Pod, s
 	defer span.End()
 	ctx = addPodAttributes(ctx, span, pod)
 
-	if _, err := pc.client.Pods(pod.Namespace).UpdateStatus(pod); err != nil {
+	if _, err := pc.client.Pods(pod.Namespace).UpdateStatus(pod); err != nil && !errors.IsNotFound(err) {
 		span.SetStatus(err)
 		return pkgerrors.Wrap(err, "error while updating pod status in kubernetes")
 	}
