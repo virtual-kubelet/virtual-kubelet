@@ -223,9 +223,10 @@ func (pc *PodController) Run(ctx context.Context, podSyncWorkers int) error {
 
 	log.G(ctx).Info("starting workers")
 	for id := 0; id < podSyncWorkers; id++ {
+		workerID := strconv.Itoa(id)
 		go wait.Until(func() {
 			// Use the worker's "index" as its ID so we can use it for tracing.
-			pc.runWorker(ctx, strconv.Itoa(id), pc.k8sQ)
+			pc.runWorker(ctx, workerID, pc.k8sQ)
 		}, time.Second, ctx.Done())
 	}
 
