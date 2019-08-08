@@ -1,6 +1,7 @@
 version: 2
 jobs:
   validate:
+    resource_class: xlarge
     docker:
       - image: circleci/golang:1.12
         environment:
@@ -23,6 +24,7 @@ jobs:
           command: scripts/validate/gomod.sh
 
   test:
+    resource_class: xlarge
     docker:
       - image: circleci/golang:1.12
         environment:
