@@ -149,7 +149,7 @@ func TestPodCreateNewPod(t *testing.T) {
 		},
 	}
 
-	err := svr.createOrUpdatePod(context.Background(), pod)
+	err := svr.createOrUpdatePod(context.Background(), pod.DeepCopy())
 
 	assert.Check(t, is.Nil(err))
 	// createOrUpdate called CreatePod but did not call UpdatePod because the pod did not exist
@@ -178,7 +178,7 @@ func TestPodUpdateExisting(t *testing.T) {
 		},
 	}
 
-	err := svr.provider.CreatePod(context.Background(), pod)
+	err := svr.createOrUpdatePod(context.Background(), pod.DeepCopy())
 	assert.Check(t, is.Nil(err))
 	assert.Check(t, is.Equal(atomic.LoadUint64(&svr.mock.creates), uint64(1)))
 	assert.Check(t, is.Equal(atomic.LoadUint64(&svr.mock.updates), uint64(0)))
@@ -201,7 +201,7 @@ func TestPodUpdateExisting(t *testing.T) {
 		},
 	}
 
-	err = svr.createOrUpdatePod(context.Background(), pod2)
+	err = svr.createOrUpdatePod(context.Background(), pod2.DeepCopy())
 	assert.Check(t, is.Nil(err))
 
 	// createOrUpdate didn't call CreatePod but did call UpdatePod because the spec changed
@@ -230,12 +230,12 @@ func TestPodNoSpecChange(t *testing.T) {
 		},
 	}
 
-	err := svr.mock.CreatePod(context.Background(), pod)
+	err := svr.createOrUpdatePod(context.Background(), pod.DeepCopy())
 	assert.Check(t, is.Nil(err))
 	assert.Check(t, is.Equal(atomic.LoadUint64(&svr.mock.creates), uint64(1)))
 	assert.Check(t, is.Equal(atomic.LoadUint64(&svr.mock.updates), uint64(0)))
 
-	err = svr.createOrUpdatePod(context.Background(), pod)
+	err = svr.createOrUpdatePod(context.Background(), pod.DeepCopy())
 	assert.Check(t, is.Nil(err))
 
 	// createOrUpdate didn't call CreatePod or UpdatePod, spec didn't change
@@ -278,7 +278,7 @@ func TestPodDelete(t *testing.T) {
 			assert.NilError(t, err)
 
 			ctx := context.Background()
-			err = c.createOrUpdatePod(ctx, p) // make sure it's actually created
+			err = c.createOrUpdatePod(ctx, p.DeepCopy()) // make sure it's actually created
 			assert.NilError(t, err)
 			assert.Check(t, is.Equal(atomic.LoadUint64(&c.mock.creates), uint64(1)))
 

@@ -17,6 +17,7 @@ package node
 import (
 	"context"
 	"hash/fnv"
+	"reflect"
 	"time"
 
 	"github.com/davecgh/go-spew/spew"
@@ -57,32 +58,44 @@ func (pc *PodController) createOrUpdatePod(ctx context.Context, pod *corev1.Pod)
 		"namespace": pod.GetNamespace(),
 	})
 
+	// We do this so we don't mutate the pod from the informer cache
+	pod = pod.DeepCopy()
 	if err := populateEnvironmentVariables(ctx, pod, pc.resourceManager, pc.recorder); err != nil {
 		span.SetStatus(err)
 		return err
 	}
 
+	// We have to use a  different pod that we pass to the provider than the one that gets used in handleProviderError
+	// because the provider  may manipulate the pod in a separate goroutine while we were doing work
+	podForProvider := pod.DeepCopy()
+
 	// Check if the pod is already known by the provider.
 	// NOTE: Some providers return a non-nil error in their GetPod implementation when the pod is not found while some other don't.
 	// Hence, we ignore the error and just act upon the pod if it is non-nil (meaning that the provider still knows about the pod).
-	if pp, _ := pc.provider.GetPod(ctx, pod.Namespace, pod.Name); pp != nil {
+	if podFromProvider, _ := pc.provider.GetPod(ctx, pod.Namespace, pod.Name); podFromProvider != nil {
 		// Pod Update Only Permits update of:
 		// - `spec.containers[*].image`
 		// - `spec.initContainers[*].image`
 		// - `spec.activeDeadlineSeconds`
 		// - `spec.tolerations` (only additions to existing tolerations)
+		// - `objectmeta.labels`
+		// - `objectmeta.annotations`
 		// compare the hashes of the pod specs to see if the specs actually changed
-		expected := hashPodSpec(pp.Spec)
-		if actual := hashPodSpec(pod.Spec); actual != expected {
-			log.G(ctx).Debugf("Pod %s exists, updating pod in provider", pp.Name)
-			if origErr := pc.provider.UpdatePod(ctx, pod); origErr != nil {
+		if !reflect.DeepEqual(podFromProvider.Spec.Containers, podForProvider.Spec.Containers) ||
+			!reflect.DeepEqual(podFromProvider.Spec.InitContainers, podForProvider.Spec.InitContainers) ||
+			!reflect.DeepEqual(podFromProvider.Spec.ActiveDeadlineSeconds, podForProvider.Spec.ActiveDeadlineSeconds) ||
+			!reflect.DeepEqual(podFromProvider.Spec.Tolerations, podForProvider.Spec.Tolerations) ||
+			!reflect.DeepEqual(podFromProvider.ObjectMeta.Labels, podForProvider.Labels) ||
+			!reflect.DeepEqual(podFromProvider.ObjectMeta.Annotations, podForProvider.Annotations) {
+			log.G(ctx).Debugf("Pod %s exists, updating pod in provider", podFromProvider.Name)
+			if origErr := pc.provider.UpdatePod(ctx, podForProvider); origErr != nil {
 				pc.handleProviderError(ctx, span, origErr, pod)
 				return origErr
 			}
 			log.G(ctx).Info("Updated pod in provider")
 		}
 	} else {
-		if origErr := pc.provider.CreatePod(ctx, pod); origErr != nil {
+		if origErr := pc.provider.CreatePod(ctx, podForProvider); origErr != nil {
 			pc.handleProviderError(ctx, span, origErr, pod)
 			return origErr
 		}
@@ -152,7 +165,7 @@ func (pc *PodController) deletePod(ctx context.Context, namespace, name string) 
 	ctx = addPodAttributes(ctx, span, pod)
 
 	var delErr error
-	if delErr = pc.provider.DeletePod(ctx, pod); delErr != nil && !errdefs.IsNotFound(delErr) {
+	if delErr = pc.provider.DeletePod(ctx, pod.DeepCopy()); delErr != nil && !errdefs.IsNotFound(delErr) {
 		span.SetStatus(delErr)
 		return delErr
 	}
@@ -233,11 +246,15 @@ func (pc *PodController) updatePodStatus(ctx context.Context, pod *corev1.Pod) e
 
 	// Update the pod's status
 	if status != nil {
+		// Do not modify the pod that we got from the cache
+		pod = pod.DeepCopy()
 		pod.Status = *status
 	} else {
 		// Only change the status when the pod was already up
 		// Only doing so when the pod was successfully running makes sure we don't run into race conditions during pod creation.
 		if pod.Status.Phase == corev1.PodRunning || pod.ObjectMeta.CreationTimestamp.Add(time.Minute).Before(time.Now()) {
+			// Do not modify the pod that we got from the cache
+			pod = pod.DeepCopy()
 			// Set the pod to failed, this makes sure if the underlying container implementation is gone that a new pod will be created.
 			pod.Status.Phase = corev1.PodFailed
 			pod.Status.Reason = "NotFound"
