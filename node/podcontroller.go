@@ -100,10 +100,6 @@ type PodController struct {
 	// recorder is an event recorder for recording Event resources to the Kubernetes API.
 	recorder record.EventRecorder
 
-	// ready is a channel which will be closed once the pod controller is fully up and running.
-	// this channel will never be closed if there is an error on startup.
-	ready chan struct{}
-
 	client corev1client.PodsGetter
 
 	resourceManager *manager.ResourceManager
@@ -113,6 +109,22 @@ type PodController struct {
 	// From the time of creation, to termination the knownPods map will contain the pods key
 	// (derived from Kubernetes' cache library) -> a *knownPod struct.
 	knownPods sync.Map
+
+	// ready is a channel which will be closed once the pod controller is fully up and running.
+	// this channel will never be closed if there is an error on startup.
+	ready chan struct{}
+	// done is closed when Run returns
+	// Once done is closed `err` may be set to a non-nil value
+	done chan struct{}
+
+	mu sync.Mutex
+	// err is set if there is an error while while running the pod controller.
+	// Typically this would be errors that occur during startup.
+	// Once err is set, `Run` should return.
+	//
+	// This is used since `pc.Run()` is typically called in a goroutine and managing
+	// this can be non-trivial for callers.
+	err error
 }
 
 type knownPod struct {
@@ -180,6 +192,7 @@ func NewPodController(cfg PodControllerConfig) (*PodController, error) {
 		provider:        cfg.Provider,
 		resourceManager: rm,
 		ready:           make(chan struct{}),
+		done:            make(chan struct{}),
 		recorder:        cfg.EventRecorder,
 		k8sQ:            workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "syncPodsFromKubernetes"),
 	}
@@ -187,10 +200,21 @@ func NewPodController(cfg PodControllerConfig) (*PodController, error) {
 	return pc, nil
 }
 
-// Run will set up the event handlers for types we are interested in, as well as syncing informer caches and starting workers.
-// It will block until the context is cancelled, at which point it will shutdown the work queue and wait for workers to finish processing their current work items.
-func (pc *PodController) Run(ctx context.Context, podSyncWorkers int) error {
-	defer pc.k8sQ.ShutDown()
+// Run will set up the event handlers for types we are interested in, as well
+// as syncing informer caches and starting workers.  It will block until the
+// context is cancelled, at which point it will shutdown the work queue and
+// wait for workers to finish processing their current work items.
+//
+// Once this returns, you should not re-use the controller.
+func (pc *PodController) Run(ctx context.Context, podSyncWorkers int) (retErr error) {
+	defer func() {
+		pc.k8sQ.ShutDown()
+
+		pc.mu.Lock()
+		pc.err = retErr
+		close(pc.done)
+		pc.mu.Unlock()
+	}()
 
 	podStatusQueue := workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "syncPodStatusFromProvider")
 	pc.runSyncFromProvider(ctx, podStatusQueue)
@@ -272,6 +296,19 @@ func (pc *PodController) Run(ctx context.Context, podSyncWorkers int) error {
 // The status of this channel after shutdown is indeterminate.
 func (pc *PodController) Ready() <-chan struct{} {
 	return pc.ready
+}
+
+// Done returns a channel receiver which is closed when the pod controller has exited.
+// Once the pod controller has exited you can call `pc.Err()` to see if any error occurred.
+func (pc *PodController) Done() <-chan struct{} {
+	return pc.done
+}
+
+// Err returns any error that has occurred and caused the pod controller to exit.
+func (pc *PodController) Err() error {
+	pc.mu.Lock()
+	defer pc.mu.Unlock()
+	return pc.err
 }
 
 // runWorker is a long-running function that will continually call the processNextWorkItem function in order to read and process an item on the work queue.

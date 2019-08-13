@@ -27,9 +27,10 @@ There are two primary controllers, the node runner and the pod runner.
 
 	select {
 	case <-podRunner.Ready():
-		go nodeRunner.Run(ctx)
-	case <-ctx.Done()
-		return ctx.Err()
+	case <-podRunner.Done():
+	}
+	if podRunner.Err() != nil {
+		// handle error
 	}
 
 After calling start, cancelling the passed in context will shutdown the

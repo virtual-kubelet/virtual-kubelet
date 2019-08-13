@@ -237,33 +237,20 @@ func TestPodLifecycle(t *testing.T) {
 
 type testFunction func(ctx context.Context, s *system)
 type system struct {
-	retChan             chan error
 	pc                  *PodController
 	client              *fake.Clientset
 	podControllerConfig PodControllerConfig
 }
 
-func (s *system) start(ctx context.Context) chan error {
-	podControllerErrChan := make(chan error)
-	go func() {
-		podControllerErrChan <- s.pc.Run(ctx, podSyncWorkers)
-	}()
-
-	// We need to wait for the pod controller to start. If there is an error before the pod controller starts, or
-	// the context is cancelled. If the context is cancelled, the startup will be aborted, and the pod controller
-	// will return an error, so we don't need to wait on ctx.Done()
+func (s *system) start(ctx context.Context) error {
+	go s.pc.Run(ctx, podSyncWorkers) // nolint:errcheck
 	select {
 	case <-s.pc.Ready():
-		// This listens for errors, or exits in the future.
-		go func() {
-			podControllerErr := <-podControllerErrChan
-			s.retChan <- podControllerErr
-		}()
-	// If there is an error before things are ready, we need to forward it immediately
-	case podControllerErr := <-podControllerErrChan:
-		s.retChan <- podControllerErr
+	case <-s.pc.Done():
+	case <-ctx.Done():
+		return ctx.Err()
 	}
-	return s.retChan
+	return s.pc.Err()
 }
 
 func wireUpSystem(ctx context.Context, provider PodLifecycleHandler, f testFunction) error {
@@ -305,8 +292,7 @@ func wireUpSystem(ctx context.Context, provider PodLifecycleHandler, f testFunct
 	configMapInformer := sharedInformerFactory.Core().V1().ConfigMaps()
 	serviceInformer := sharedInformerFactory.Core().V1().Services()
 	sys := &system{
-		client:  client,
-		retChan: make(chan error, 1),
+		client: client,
 		podControllerConfig: PodControllerConfig{
 			PodClient:         client.CoreV1(),
 			PodInformer:       podInformer,
@@ -338,7 +324,7 @@ func wireUpSystem(ctx context.Context, provider PodLifecycleHandler, f testFunct
 
 	// Shutdown the pod controller, and wait for it to exit
 	cancel()
-	return <-sys.retChan
+	return nil
 }
 
 func testFailedPodScenario(ctx context.Context, t *testing.T, s *system) {
@@ -359,7 +345,7 @@ func testTerminalStatePodScenario(ctx context.Context, t *testing.T, s *system, 
 	assert.NilError(t, e)
 
 	// Start the pod controller
-	s.start(ctx)
+	assert.NilError(t, s.start(ctx))
 
 	for s.pc.k8sQ.Len() > 0 {
 		time.Sleep(10 * time.Millisecond)
@@ -379,7 +365,7 @@ func testDanglingPodScenario(ctx context.Context, t *testing.T, s *system, m *mo
 	assert.NilError(t, m.CreatePod(ctx, pod))
 
 	// Start the pod controller
-	s.start(ctx)
+	assert.NilError(t, s.start(ctx))
 
 	assert.Assert(t, is.Equal(m.deletes.read(), 1))
 
@@ -444,8 +430,7 @@ func testCreateStartDeleteScenario(ctx context.Context, t *testing.T, s *system,
 		watchErrCh <- watchErr
 	}()
 
-	// Start the pod controller
-	podControllerErrCh := s.start(ctx)
+	assert.NilError(t, s.start(ctx))
 
 	// Wait for the pod to go into running
 	select {
@@ -453,9 +438,6 @@ func testCreateStartDeleteScenario(ctx context.Context, t *testing.T, s *system,
 		t.Fatalf("Context ended early: %s", ctx.Err().Error())
 	case err = <-watchErrCh:
 		assert.NilError(t, err)
-	case err = <-podControllerErrCh:
-		assert.NilError(t, err)
-		t.Fatal("Pod controller terminated early")
 	}
 
 	// Setup a watch prior to pod deletion
@@ -483,12 +465,8 @@ func testCreateStartDeleteScenario(ctx context.Context, t *testing.T, s *system,
 	select {
 	case <-ctx.Done():
 		t.Fatalf("Context ended early: %s", ctx.Err().Error())
-	case err = <-podControllerErrCh:
-		assert.NilError(t, err)
-		t.Fatal("Pod controller exited prematurely without error")
 	case err = <-watchErrCh:
 		assert.NilError(t, err)
-
 	}
 }
 
@@ -526,18 +504,14 @@ func testUpdatePodWhileRunningScenario(ctx context.Context, t *testing.T, s *sys
 	}()
 
 	// Start the pod controller
-	podControllerErrCh := s.start(ctx)
+	assert.NilError(t, s.start(ctx))
 
 	// Wait for pod to be in running
 	select {
 	case <-ctx.Done():
 		t.Fatalf("Context ended early: %s", ctx.Err().Error())
-	case err = <-podControllerErrCh:
-		assert.NilError(t, err)
-		t.Fatal("Pod controller exited prematurely without error")
 	case err = <-watchErrCh:
 		assert.NilError(t, err)
-
 	}
 
 	// Update the pod
@@ -592,14 +566,14 @@ func testPodStatusMissingWhileRunningScenario(ctx context.Context, t *testing.T,
 	}()
 
 	// Start the pod controller
-	podControllerErrCh := s.start(ctx)
+	assert.NilError(t, s.start(ctx))
 
 	// Wait for pod to be in running
 	select {
 	case <-ctx.Done():
 		t.Fatalf("Context ended early: %s", ctx.Err().Error())
-	case err = <-podControllerErrCh:
-		assert.NilError(t, err)
+	case <-s.pc.Done():
+		assert.NilError(t, s.pc.Err())
 		t.Fatal("Pod controller exited prematurely without error")
 	case err = <-watchErrCh:
 		assert.NilError(t, err)
@@ -627,8 +601,8 @@ func testPodStatusMissingWhileRunningScenario(ctx context.Context, t *testing.T,
 	select {
 	case <-ctx.Done():
 		t.Fatalf("Context ended early: %s", ctx.Err().Error())
-	case err = <-podControllerErrCh:
-		assert.NilError(t, err)
+	case <-s.pc.Done():
+		assert.NilError(t, s.pc.Err())
 		t.Fatal("Pod controller exited prematurely without error")
 	case err = <-watchErrCh:
 		assert.NilError(t, err)
@@ -654,18 +628,14 @@ func benchmarkCreatePods(ctx context.Context, b *testing.B, s *system) {
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
-	errCh := s.start(ctx)
+	assert.NilError(b, s.start(ctx))
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		pod := newPod(randomizeUID, randomizeName)
 		_, err := s.client.CoreV1().Pods(pod.Namespace).Create(pod)
 		assert.NilError(b, err)
-		select {
-		case err = <-errCh:
-			b.Fatalf("Benchmark terminated with error: %+v", err)
-		default:
-		}
+		assert.NilError(b, ctx.Err())
 	}
 }
 
