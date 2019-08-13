@@ -26,6 +26,7 @@ import (
 	"k8s.io/client-go/tools/record"
 	watchutils "k8s.io/client-go/tools/watch"
 	"k8s.io/klog"
+	ktesting "k8s.io/client-go/testing"
 )
 
 var (
@@ -262,6 +263,20 @@ func wireUpSystem(ctx context.Context, provider PodLifecycleHandler, f testFunct
 	// Create the fake client.
 	client := fake.NewSimpleClientset()
 
+	client.PrependReactor("update", "pods", func(action ktesting.Action) (handled bool, ret runtime.Object, err error) {
+		var pod *corev1.Pod
+
+		updateAction := action.(ktesting.UpdateAction)
+		pod = updateAction.GetObject().(*corev1.Pod)
+
+		resourceVersion, err := strconv.Atoi(pod.ResourceVersion)
+		if err != nil {
+			panic(errors.Wrap(err, "Could not parse resource version of pod"))
+		}
+		pod.ResourceVersion = strconv.Itoa(resourceVersion + 1)
+		return false, nil, nil
+	})
+
 	// This is largely copy and pasted code from the root command
 	podInformerFactory := kubeinformers.NewSharedInformerFactoryWithOptions(
 		client,
@@ -442,9 +457,6 @@ func testCreateStartDeleteScenario(ctx context.Context, t *testing.T, s *system,
 	currentPod, err := s.client.CoreV1().Pods(testNamespace).Get(p.Name, metav1.GetOptions{})
 	assert.NilError(t, err)
 	// 2. Set the pod's deletion timestamp, version, and so on
-	curVersion, err := strconv.Atoi(currentPod.ResourceVersion)
-	assert.NilError(t, err)
-	currentPod.ResourceVersion = strconv.Itoa(curVersion + 1)
 	var deletionGracePeriod int64 = 30
 	currentPod.DeletionGracePeriodSeconds = &deletionGracePeriod
 	deletionTimestamp := metav1.NewTime(time.Now().Add(time.Second * time.Duration(deletionGracePeriod)))
