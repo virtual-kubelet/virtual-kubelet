@@ -44,7 +44,7 @@ func testNodeRun(t *testing.T, enableLease bool) {
 	testP := &testNodeProvider{NodeProvider: &NaiveNodeProvider{}}
 
 	nodes := c.CoreV1().Nodes()
-	leases := c.Coordination().Leases(corev1.NamespaceNodeLease)
+	leases := c.CoordinationV1beta1().Leases(corev1.NamespaceNodeLease)
 
 	interval := 1 * time.Millisecond
 	opts := []NodeControllerOpt{
@@ -222,7 +222,7 @@ func TestNodeCustomUpdateStatusErrorHandler(t *testing.T) {
 }
 
 func TestEnsureLease(t *testing.T) {
-	c := testclient.NewSimpleClientset().Coordination().Leases(corev1.NamespaceNodeLease)
+	c := testclient.NewSimpleClientset().CoordinationV1beta1().Leases(corev1.NamespaceNodeLease)
 	n := testNode(t)
 	ctx := context.Background()
 
@@ -276,7 +276,7 @@ func TestUpdateNodeStatus(t *testing.T) {
 }
 
 func TestUpdateNodeLease(t *testing.T) {
-	leases := testclient.NewSimpleClientset().Coordination().Leases(corev1.NamespaceNodeLease)
+	leases := testclient.NewSimpleClientset().CoordinationV1beta1().Leases(corev1.NamespaceNodeLease)
 	lease := newLease(nil)
 	n := testNode(t)
 	setLeaseAttrs(lease, n, 0)
