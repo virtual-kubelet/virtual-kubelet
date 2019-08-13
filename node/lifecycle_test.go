@@ -333,6 +333,7 @@ func testTerminalStatePodScenario(ctx context.Context, t *testing.T, s *system, 
 	s.start(ctx)
 
 	for s.pc.k8sQ.Len() > 0 {
+		time.Sleep(10 * time.Millisecond)
 	}
 
 	p2, err := s.client.CoreV1().Pods(testNamespace).Get(p1.Name, metav1.GetOptions{})
