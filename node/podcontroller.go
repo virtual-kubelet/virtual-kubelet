@@ -55,12 +55,21 @@ type PodLifecycleHandler interface {
 	DeletePod(ctx context.Context, pod *corev1.Pod) error
 
 	// GetPod retrieves a pod by name from the provider (can be cached).
+	// The Pod returned is expected to be immutable, and may be accessed
+	// concurrently outside of the calling goroutine. Therefore it is recommended
+	// to return a version after DeepCopy.
 	GetPod(ctx context.Context, namespace, name string) (*corev1.Pod, error)
 
 	// GetPodStatus retrieves the status of a pod by name from the provider.
+	// The PodStatus returned is expected to be immutable, and may be accessed
+	// concurrently outside of the calling goroutine. Therefore it is recommended
+	// to return a version after DeepCopy.
 	GetPodStatus(ctx context.Context, namespace, name string) (*corev1.PodStatus, error)
 
 	// GetPods retrieves a list of all pods running on the provider (can be cached).
+	// The Pods returned are expected to be immutable, and may be accessed
+	// concurrently outside of the calling goroutine. Therefore it is recommended
+	// to return a version after DeepCopy.
 	GetPods(context.Context) ([]*corev1.Pod, error)
 }
 
