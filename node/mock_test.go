@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"sync"
-	"sync/atomic"
 	"time"
 
 	"github.com/virtual-kubelet/virtual-kubelet/errdefs"
@@ -18,11 +17,56 @@ var (
 	_ PodNotifier         = (*mockProvider)(nil)
 )
 
+type waitableInt struct {
+	cond *sync.Cond
+	val  int
+}
+
+func newWaitableInt() *waitableInt {
+	return &waitableInt{
+		cond: sync.NewCond(&sync.Mutex{}),
+	}
+}
+
+func (w *waitableInt) read() int {
+	defer w.cond.L.Unlock()
+	w.cond.L.Lock()
+	return w.val
+}
+
+func (w *waitableInt) until(ctx context.Context, f func(int) bool) error {
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
+	go func() {
+		<-ctx.Done()
+		w.cond.Broadcast()
+	}()
+
+	w.cond.L.Lock()
+	defer w.cond.L.Unlock()
+
+	for !f(w.val) {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+		w.cond.Wait()
+	}
+	return nil
+}
+
+func (w *waitableInt) increment() {
+	w.cond.L.Lock()
+	defer w.cond.L.Unlock()
+	w.val += 1
+	w.cond.Broadcast()
+}
+
 type mockV0Provider struct {
-	creates          uint64
-	updates          uint64
-	deletes          uint64
-	attemptedDeletes chan struct{}
+	creates          *waitableInt
+	updates          *waitableInt
+	deletes          *waitableInt
+	attemptedDeletes *waitableInt
 
 	errorOnDelete error
 
@@ -39,7 +83,10 @@ type mockProvider struct {
 func newMockV0Provider() *mockV0Provider {
 	provider := mockV0Provider{
 		startTime:        time.Now(),
-		attemptedDeletes: make(chan struct{}, maxRetries+1),
+		creates:          newWaitableInt(),
+		updates:          newWaitableInt(),
+		deletes:          newWaitableInt(),
+		attemptedDeletes: newWaitableInt(),
 	}
 	// By default notifier is set to a function which is a no-op. In the event we've implemented the PodNotifier interface,
 	// it will be set, and then we'll call a real underlying implementation.
@@ -64,7 +111,7 @@ func (p *mockV0Provider) notifier(pod *v1.Pod) {
 func (p *mockV0Provider) CreatePod(ctx context.Context, pod *v1.Pod) error {
 	log.G(ctx).Infof("receive CreatePod %q", pod.Name)
 
-	atomic.AddUint64(&p.creates, 1)
+	p.creates.increment()
 	key, err := buildKey(pod)
 	if err != nil {
 		return err
@@ -116,7 +163,7 @@ func (p *mockV0Provider) CreatePod(ctx context.Context, pod *v1.Pod) error {
 func (p *mockV0Provider) UpdatePod(ctx context.Context, pod *v1.Pod) error {
 	log.G(ctx).Infof("receive UpdatePod %q", pod.Name)
 
-	atomic.AddUint64(&p.updates, 1)
+	p.updates.increment()
 	key, err := buildKey(pod)
 	if err != nil {
 		return err
@@ -132,12 +179,12 @@ func (p *mockV0Provider) UpdatePod(ctx context.Context, pod *v1.Pod) error {
 func (p *mockV0Provider) DeletePod(ctx context.Context, pod *v1.Pod) (err error) {
 	log.G(ctx).Infof("receive DeletePod %q", pod.Name)
 
-	p.attemptedDeletes <- struct{}{}
+	p.attemptedDeletes.increment()
 	if p.errorOnDelete != nil {
 		return p.errorOnDelete
 	}
 
-	atomic.AddUint64(&p.deletes, 1)
+	p.deletes.increment()
 	key, err := buildKey(pod)
 	if err != nil {
 		return err

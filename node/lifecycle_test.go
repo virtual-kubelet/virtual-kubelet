@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"strconv"
-	"sync/atomic"
 	"testing"
 	"time"
 
@@ -141,17 +140,7 @@ func TestPodLifecycle(t *testing.T) {
 	t.Run("createStartDeleteScenarioWithDeletionRandomError", func(t *testing.T) {
 		mp := newMockProvider()
 		deletionFunc := func(ctx context.Context, watcher watch.Interface) error {
-			select {
-			case <-mp.attemptedDeletes:
-			case <-ctx.Done():
-				return ctx.Err()
-			}
-			select {
-			case <-mp.attemptedDeletes:
-			case <-ctx.Done():
-				return ctx.Err()
-			}
-			return nil
+			return mp.attemptedDeletes.until(ctx, func(v int) bool { return v >= 2 })
 		}
 		mp.errorOnDelete = errors.New("random error")
 		assert.NilError(t, wireUpSystem(ctx, mp, func(ctx context.Context, s *system) {
@@ -362,7 +351,7 @@ func testDanglingPodScenario(ctx context.Context, t *testing.T, s *system, m *mo
 	// Start the pod controller
 	s.start(ctx)
 
-	assert.Assert(t, m.deletes == 1)
+	assert.Assert(t, is.Equal(m.deletes.read(), 1))
 
 }
 
@@ -536,8 +525,7 @@ func testUpdatePodWhileRunningScenario(ctx context.Context, t *testing.T, s *sys
 	log.G(ctx).WithField("pod", p).Info("Updating pod")
 	_, err = s.client.CoreV1().Pods(p.Namespace).Update(p)
 	assert.NilError(t, err)
-	for atomic.LoadUint64(&m.updates) == 0 {
-	}
+	assert.NilError(t, m.updates.until(ctx, func(v int) bool { return v > 0 }))
 }
 
 func BenchmarkCreatePods(b *testing.B) {
