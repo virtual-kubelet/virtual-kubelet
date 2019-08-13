@@ -20,6 +20,7 @@ import (
 	"time"
 
 	"github.com/davecgh/go-spew/spew"
+	"github.com/google/go-cmp/cmp"
 	pkgerrors "github.com/pkg/errors"
 	"github.com/virtual-kubelet/virtual-kubelet/errdefs"
 	"github.com/virtual-kubelet/virtual-kubelet/log"
@@ -57,38 +58,58 @@ func (pc *PodController) createOrUpdatePod(ctx context.Context, pod *corev1.Pod)
 		"namespace": pod.GetNamespace(),
 	})
 
+	// We do this so we don't mutate the pod from the informer cache
+	pod = pod.DeepCopy()
 	if err := populateEnvironmentVariables(ctx, pod, pc.resourceManager, pc.recorder); err != nil {
 		span.SetStatus(err)
 		return err
 	}
 
+	// We have to use a  different pod that we pass to the provider than the one that gets used in handleProviderError
+	// because the provider  may manipulate the pod in a separate goroutine while we were doing work
+	podForProvider := pod.DeepCopy()
+
 	// Check if the pod is already known by the provider.
 	// NOTE: Some providers return a non-nil error in their GetPod implementation when the pod is not found while some other don't.
 	// Hence, we ignore the error and just act upon the pod if it is non-nil (meaning that the provider still knows about the pod).
-	if pp, _ := pc.provider.GetPod(ctx, pod.Namespace, pod.Name); pp != nil {
-		// Pod Update Only Permits update of:
-		// - `spec.containers[*].image`
-		// - `spec.initContainers[*].image`
-		// - `spec.activeDeadlineSeconds`
-		// - `spec.tolerations` (only additions to existing tolerations)
-		// compare the hashes of the pod specs to see if the specs actually changed
-		expected := hashPodSpec(pp.Spec)
-		if actual := hashPodSpec(pod.Spec); actual != expected {
-			log.G(ctx).Debugf("Pod %s exists, updating pod in provider", pp.Name)
-			if origErr := pc.provider.UpdatePod(ctx, pod); origErr != nil {
+	if podFromProvider, _ := pc.provider.GetPod(ctx, pod.Namespace, pod.Name); podFromProvider != nil {
+		if !podsEqual(podFromProvider, podForProvider) {
+			log.G(ctx).Debugf("Pod %s exists, updating pod in provider", podFromProvider.Name)
+			if origErr := pc.provider.UpdatePod(ctx, podForProvider); origErr != nil {
 				pc.handleProviderError(ctx, span, origErr, pod)
 				return origErr
 			}
 			log.G(ctx).Info("Updated pod in provider")
 		}
 	} else {
-		if origErr := pc.provider.CreatePod(ctx, pod); origErr != nil {
+		if origErr := pc.provider.CreatePod(ctx, podForProvider); origErr != nil {
 			pc.handleProviderError(ctx, span, origErr, pod)
 			return origErr
 		}
 		log.G(ctx).Info("Created pod in provider")
 	}
 	return nil
+}
+
+// podsEqual checks if two pods are equal according to the fields we know that are allowed
+// to be modified after startup time.
+func podsEqual(pod1, pod2 *corev1.Pod) bool {
+	// Pod Update Only Permits update of:
+	// - `spec.containers[*].image`
+	// - `spec.initContainers[*].image`
+	// - `spec.activeDeadlineSeconds`
+	// - `spec.tolerations` (only additions to existing tolerations)
+	// - `objectmeta.labels`
+	// - `objectmeta.annotations`
+	// compare the values of the pods to see if the values actually changed
+
+	return cmp.Equal(pod1.Spec.Containers, pod2.Spec.Containers) &&
+		cmp.Equal(pod1.Spec.InitContainers, pod2.Spec.InitContainers) &&
+		cmp.Equal(pod1.Spec.ActiveDeadlineSeconds, pod2.Spec.ActiveDeadlineSeconds) &&
+		cmp.Equal(pod1.Spec.Tolerations, pod2.Spec.Tolerations) &&
+		cmp.Equal(pod1.ObjectMeta.Labels, pod2.Labels) &&
+		cmp.Equal(pod1.ObjectMeta.Annotations, pod2.Annotations)
+
 }
 
 // This is basically the kube runtime's hash container functionality.
@@ -152,7 +173,7 @@ func (pc *PodController) deletePod(ctx context.Context, namespace, name string) 
 	ctx = addPodAttributes(ctx, span, pod)
 
 	var delErr error
-	if delErr = pc.provider.DeletePod(ctx, pod); delErr != nil && !errdefs.IsNotFound(delErr) {
+	if delErr = pc.provider.DeletePod(ctx, pod.DeepCopy()); delErr != nil && !errdefs.IsNotFound(delErr) {
 		span.SetStatus(delErr)
 		return delErr
 	}
@@ -230,6 +251,9 @@ func (pc *PodController) updatePodStatus(ctx context.Context, pod *corev1.Pod) e
 		span.SetStatus(err)
 		return pkgerrors.Wrap(err, "error retrieving pod status")
 	}
+
+	// Do not modify the pod that we got from the cache
+	pod = pod.DeepCopy()
 
 	// Update the pod's status
 	if status != nil {
