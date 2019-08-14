@@ -227,7 +227,7 @@ func (p *mockV0Provider) GetPod(ctx context.Context, namespace, name string) (po
 	}
 
 	if pod, ok := p.pods.Load(key); ok {
-		return pod.(*v1.Pod), nil
+		return pod.(*v1.Pod).DeepCopy(), nil
 	}
 	return nil, errdefs.NotFoundf("pod \"%s/%s\" is not known to the provider", namespace, name)
 }
@@ -242,7 +242,7 @@ func (p *mockV0Provider) GetPodStatus(ctx context.Context, namespace, name strin
 		return nil, err
 	}
 
-	return &pod.Status, nil
+	return pod.Status.DeepCopy(), nil
 }
 
 // GetPods returns a list of all pods known to be "running".
@@ -252,7 +252,7 @@ func (p *mockV0Provider) GetPods(ctx context.Context) ([]*v1.Pod, error) {
 	var pods []*v1.Pod
 
 	p.pods.Range(func(key, pod interface{}) bool {
-		pods = append(pods, pod.(*v1.Pod))
+		pods = append(pods, pod.(*v1.Pod).DeepCopy())
 		return true
 	})
 
