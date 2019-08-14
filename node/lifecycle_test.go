@@ -23,6 +23,7 @@ import (
 	kubeinformers "k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes/fake"
 	corev1client "k8s.io/client-go/kubernetes/typed/core/v1"
+	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
 	watchutils "k8s.io/client-go/tools/watch"
 	"k8s.io/klog"
@@ -263,14 +264,11 @@ func wireUpSystem(ctx context.Context, provider PodLifecycleHandler, f testFunct
 	client := fake.NewSimpleClientset()
 
 	// This is largely copy and pasted code from the root command
-	podInformerFactory := kubeinformers.NewSharedInformerFactoryWithOptions(
+	sharedInformerFactory := kubeinformers.NewSharedInformerFactoryWithOptions(
 		client,
 		informerResyncPeriod,
-		kubeinformers.WithNamespace(testNamespace),
 	)
-	podInformer := podInformerFactory.Core().V1().Pods()
-
-	scmInformerFactory := kubeinformers.NewSharedInformerFactory(client, informerResyncPeriod)
+	podInformer := sharedInformerFactory.Core().V1().Pods()
 
 	eb := record.NewBroadcaster()
 	eb.StartLogging(log.G(ctx).Infof)
@@ -279,9 +277,9 @@ func wireUpSystem(ctx context.Context, provider PodLifecycleHandler, f testFunct
 		logger: log.G(ctx),
 	}
 
-	secretInformer := scmInformerFactory.Core().V1().Secrets()
-	configMapInformer := scmInformerFactory.Core().V1().ConfigMaps()
-	serviceInformer := scmInformerFactory.Core().V1().Services()
+	secretInformer := sharedInformerFactory.Core().V1().Secrets()
+	configMapInformer := sharedInformerFactory.Core().V1().ConfigMaps()
+	serviceInformer := sharedInformerFactory.Core().V1().Services()
 	sys := &system{
 		client:  client,
 		retChan: make(chan error, 1),
@@ -302,8 +300,15 @@ func wireUpSystem(ctx context.Context, provider PodLifecycleHandler, f testFunct
 		return err
 	}
 
-	go scmInformerFactory.Start(ctx.Done())
-	go podInformerFactory.Start(ctx.Done())
+	go sharedInformerFactory.Start(ctx.Done())
+	sharedInformerFactory.WaitForCacheSync(ctx.Done())
+	if ok := cache.WaitForCacheSync(ctx.Done(), podInformer.Informer().HasSynced); !ok {
+		return errors.New("podinformer failed to sync")
+	}
+
+	if err := ctx.Err(); err != nil {
+		return err
+	}
 
 	f(ctx, sys)
 
@@ -389,6 +394,7 @@ func testCreateStartDeleteScenario(ctx context.Context, t *testing.T, s *system,
 	// Create the Pod
 	_, e := s.client.CoreV1().Pods(testNamespace).Create(p)
 	assert.NilError(t, e)
+	log.G(ctx).Debug("Created pod")
 
 	// This will return once
 	select {
