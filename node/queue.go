@@ -16,7 +16,6 @@ package node
 
 import (
 	"context"
-	"strconv"
 	"time"
 
 	pkgerrors "github.com/pkg/errors"
@@ -92,16 +91,7 @@ func handleQueueItem(ctx context.Context, q workqueue.RateLimitingInterface, han
 	return true
 }
 
-func (pc *PodController) runProviderSyncWorkers(ctx context.Context, q workqueue.RateLimitingInterface, numWorkers int) {
-	for i := 0; i < numWorkers; i++ {
-		go func(index int) {
-			workerID := strconv.Itoa(index)
-			pc.runProviderSyncWorker(ctx, workerID, q)
-		}(i)
-	}
-}
-
-func (pc *PodController) runProviderSyncWorker(ctx context.Context, workerID string, q workqueue.RateLimitingInterface) {
+func (pc *PodController) runSyncPodStatusFromProviderWorker(ctx context.Context, workerID string, q workqueue.RateLimitingInterface) {
 	for pc.processPodStatusUpdate(ctx, workerID, q) {
 	}
 }

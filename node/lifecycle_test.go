@@ -23,11 +23,11 @@ import (
 	kubeinformers "k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes/fake"
 	corev1client "k8s.io/client-go/kubernetes/typed/core/v1"
+	ktesting "k8s.io/client-go/testing"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
 	watchutils "k8s.io/client-go/tools/watch"
 	"k8s.io/klog"
-	ktesting "k8s.io/client-go/testing"
 )
 
 var (
