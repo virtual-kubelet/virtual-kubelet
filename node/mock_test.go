@@ -175,7 +175,8 @@ func (p *mockV0Provider) UpdatePod(ctx context.Context, pod *v1.Pod) error {
 	return nil
 }
 
-// DeletePod deletes the specified pod out of memory.
+// DeletePod deletes the specified pod out of memory. The PodController deepcopies the pod object
+// for us, so we don't have to worry about mutation.
 func (p *mockV0Provider) DeletePod(ctx context.Context, pod *v1.Pod) (err error) {
 	log.G(ctx).Infof("receive DeletePod %q", pod.Name)
 
@@ -212,8 +213,16 @@ func (p *mockV0Provider) DeletePod(ctx context.Context, pod *v1.Pod) (err error)
 	}
 
 	p.notifier(pod)
-	// TODO (Sargun): Eventually delete the pod from the map. We cannot right now, because GetPodStatus can / will
-	// be called momentarily later.
+	p.pods.Store(key, pod)
+	if pod.DeletionGracePeriodSeconds == nil || *pod.DeletionGracePeriodSeconds == 0 {
+		p.pods.Delete(key)
+	} else {
+		time.AfterFunc(time.Duration(*pod.DeletionGracePeriodSeconds)*time.Second, func() {
+			p.pods.Delete(key)
+		})
+
+	}
+
 	return nil
 }
 
