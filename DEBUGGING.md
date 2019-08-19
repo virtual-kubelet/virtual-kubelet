@@ -7,7 +7,7 @@ Not implemented.
 
 ## Tracing
 
-virtual-kubelet uses [OpenCensus](https://www.opencensus.io) to record traces. These traces include requests on the HTTP API as well as the reconciliation loop which reconciles virtual-kubelet pods with what's in the Kubernetes API server.
+virtual-kubelet uses [OpenCensus](https://www.opencensus.io) to record traces. These traces include requests on the HTTP API as well as the reconciliation looped which reconciles virtual-kubelet pods with what's in the Kubernetes API server.
 
 The granularity of traces may depend on the service provider (e.g. `azure`, `aws`, etc) being used.
 
