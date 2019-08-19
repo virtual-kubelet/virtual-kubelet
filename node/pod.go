@@ -76,7 +76,6 @@ func (pc *PodController) createOrUpdatePod(ctx context.Context, pod *corev1.Pod)
 		if !podsEqual(podFromProvider, podForProvider) {
 			log.G(ctx).Debugf("Pod %s exists, updating pod in provider", podFromProvider.Name)
 			if origErr := pc.provider.UpdatePod(ctx, podForProvider); origErr != nil {
-				pc.handleProviderError(ctx, span, origErr, pod)
 				return origErr
 			}
 			log.G(ctx).Info("Updated pod in provider")

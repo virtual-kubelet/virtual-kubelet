@@ -268,6 +268,32 @@ func TestPodNoSpecChange(t *testing.T) {
 	assert.Check(t, is.Equal(svr.mock.updates.read(), 0))
 }
 
+func TestPodCreateFailed(t *testing.T) {
+	svr := newTestController()
+	svr.mock.errorOnCreate = pkgerrors.New("Random Error")
+	pod := &corev1.Pod{}
+	pod.ObjectMeta.Namespace = "default"
+	pod.ObjectMeta.Name = "nginx"
+	pod.Spec = corev1.PodSpec{
+		Containers: []corev1.Container{
+			corev1.Container{
+				Name:  "nginx",
+				Image: "nginx:1.15.12",
+				Ports: []corev1.ContainerPort{
+					corev1.ContainerPort{
+						ContainerPort: 443,
+						Protocol:      "tcp",
+					},
+				},
+			},
+		},
+	}
+
+	err := svr.createOrUpdatePod(context.Background(), pod.DeepCopy())
+	assert.Error(t, err, svr.mock.errorOnCreate.Error())
+	assert.Check(t, is.Equal(svr.mock.attemptedCreates.read(), 1))
+}
+
 func TestPodDelete(t *testing.T) {
 	type testCase struct {
 		desc   string

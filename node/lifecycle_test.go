@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strconv"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -23,11 +24,11 @@ import (
 	kubeinformers "k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes/fake"
 	corev1client "k8s.io/client-go/kubernetes/typed/core/v1"
+	ktesting "k8s.io/client-go/testing"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
 	watchutils "k8s.io/client-go/tools/watch"
 	"k8s.io/klog"
-	ktesting "k8s.io/client-go/testing"
 )
 
 var (
@@ -224,6 +225,22 @@ func TestPodLifecycle(t *testing.T) {
 			}))
 		})
 	})
+	t.Run("updatePodFailedWhileRunningScenario", func(t *testing.T) {
+		t.Run("mockProvider", func(t *testing.T) {
+			mp := newMockProvider()
+			assert.NilError(t, wireUpSystem(ctx, mp, func(ctx context.Context, s *system) {
+				testUpdatePodFailedWhileRunningScenario(ctx, t, s, mp)
+			}))
+		})
+	})
+	t.Run("testCreateErrorScenario", func(t *testing.T) {
+		t.Run("mockProvider", func(t *testing.T) {
+			mp := newMockProvider()
+			assert.NilError(t, wireUpSystem(ctx, mp, func(ctx context.Context, s *system) {
+				testCreateErrorScenario(ctx, t, s, mp)
+			}))
+		})
+	})
 }
 
 type testFunction func(ctx context.Context, s *system)
@@ -264,17 +281,13 @@ func wireUpSystem(ctx context.Context, provider PodLifecycleHandler, f testFunct
 	// Create the fake client.
 	client := fake.NewSimpleClientset()
 
+	var i int32
 	client.PrependReactor("update", "pods", func(action ktesting.Action) (handled bool, ret runtime.Object, err error) {
-		var pod *corev1.Pod
-
 		updateAction := action.(ktesting.UpdateAction)
-		pod = updateAction.GetObject().(*corev1.Pod)
+		pod := updateAction.GetObject().(*corev1.Pod)
 
-		resourceVersion, err := strconv.Atoi(pod.ResourceVersion)
-		if err != nil {
-			panic(errors.Wrap(err, "Could not parse resource version of pod"))
-		}
-		pod.ResourceVersion = strconv.Itoa(resourceVersion + 1)
+		newVersion := atomic.AddInt32(&i, 1)
+		pod.ResourceVersion = strconv.Itoa(int(newVersion))
 		return false, nil, nil
 	})
 
@@ -374,6 +387,68 @@ func testDanglingPodScenario(ctx context.Context, t *testing.T, s *system, m *mo
 
 	assert.Assert(t, is.Equal(m.deletes.read(), 1))
 
+}
+
+func testCreateErrorScenario(ctx context.Context, t *testing.T, s *system, m *mockProvider) {
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
+	m.errorOnCreate = errors.New("Random Error")
+	p := newPod()
+	p.Spec.RestartPolicy = corev1.RestartPolicyNever
+
+	listOptions := metav1.ListOptions{
+		FieldSelector: fields.OneTermEqualSelector("metadata.name", p.ObjectMeta.Name).String(),
+	}
+
+	watchErrCh := make(chan error)
+
+	// Setup a watch (prior to pod creation, and pod controller startup)
+	watcher, err := s.client.CoreV1().Pods(testNamespace).Watch(listOptions)
+	assert.NilError(t, err)
+	defer watcher.Stop()
+	// This ensures that the pod is created.
+	go func() {
+		_, watchErr := watchutils.UntilWithoutRetry(ctx, watcher,
+			// Wait for the pod to be created
+			// TODO(Sargun): Make this "smarter" about the status the pod is in.
+			func(ev watch.Event) (bool, error) {
+				pod := ev.Object.(*corev1.Pod)
+				return pod.Status.Phase == corev1.PodFailed, nil
+			})
+
+		watchErrCh <- watchErr
+	}()
+
+	// Create the Pod
+	_, e := s.client.CoreV1().Pods(testNamespace).Create(p)
+	assert.NilError(t, e)
+	log.G(ctx).Debug("Created pod")
+
+	// Start the pod controller
+	podControllerErrCh := s.start(ctx)
+
+	go func() {
+		for {
+			time.Sleep(time.Second * 5)
+			pod, err := s.client.CoreV1().Pods(testNamespace).Get(p.Name, metav1.GetOptions{})
+			if err != nil {
+				log.G(ctx).WithError(err).Info("Could not fetch pods")
+			} else {
+				log.G(ctx).WithField("pod", pod).Info()
+			}
+		}
+	}()
+	// Wait for the pod to go into running
+	select {
+	case <-ctx.Done():
+		t.Fatalf("Context ended early: %s", ctx.Err().Error())
+	case err = <-watchErrCh:
+		assert.NilError(t, err)
+	case err = <-podControllerErrCh:
+		assert.NilError(t, err)
+		t.Fatal("Pod controller terminated early")
+	}
 }
 
 func testCreateStartDeleteScenario(ctx context.Context, t *testing.T, s *system, waitFunction func(ctx context.Context, watch watch.Interface) error) {
@@ -545,6 +620,77 @@ func testUpdatePodWhileRunningScenario(ctx context.Context, t *testing.T, s *sys
 	_, err = s.client.CoreV1().Pods(p.Namespace).Update(p)
 	assert.NilError(t, err)
 	assert.NilError(t, m.updates.until(ctx, func(v int) bool { return v > 0 }))
+}
+
+func testUpdatePodFailedWhileRunningScenario(ctx context.Context, t *testing.T, s *system, m *mockProvider) {
+	t.Parallel()
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
+	p := newPod()
+	p.Spec.RestartPolicy = corev1.RestartPolicyAlways
+	m.errorOnUpdate = errors.New("Random Error")
+	listOptions := metav1.ListOptions{
+		FieldSelector: fields.OneTermEqualSelector("metadata.name", p.ObjectMeta.Name).String(),
+	}
+	megawatcher, err := s.client.CoreV1().Pods(testNamespace).Watch(listOptions)
+	defer megawatcher.Stop()
+	assert.NilError(t, err)
+	go func() {
+		for result := range megawatcher.ResultChan() {
+			log.G(ctx).WithField("result", result.Object.(*corev1.Pod).Status).Info("Observed update")
+		}
+	}()
+
+	watchErrCh := make(chan error)
+
+	// Create a Pod
+	_, e := s.client.CoreV1().Pods(testNamespace).Create(p)
+	assert.NilError(t, e)
+
+	// Setup a watch to check if the pod is in running
+	watcher, err := s.client.CoreV1().Pods(testNamespace).Watch(listOptions)
+	assert.NilError(t, err)
+	defer watcher.Stop()
+	go func() {
+		newPod, watchErr := watchutils.UntilWithoutRetry(ctx, watcher,
+			// Wait for the pod to be started
+			func(ev watch.Event) (bool, error) {
+				pod := ev.Object.(*corev1.Pod)
+				return pod.Status.Phase == corev1.PodRunning, nil
+			})
+		// This deepcopy is required to please the race detector
+		p = newPod.Object.(*corev1.Pod).DeepCopy()
+		watchErrCh <- watchErr
+	}()
+
+	// Start the pod controller
+	podControllerErrCh := s.start(ctx)
+
+	// Wait for pod to be in running
+	select {
+	case <-ctx.Done():
+		t.Fatalf("Context ended early: %s", ctx.Err().Error())
+	case err = <-podControllerErrCh:
+		assert.NilError(t, err)
+		t.Fatal("Pod controller exited prematurely without error")
+	case err = <-watchErrCh:
+		assert.NilError(t, err)
+
+	}
+
+	var activeDeadlineSeconds int64 = 300
+	p.Spec.ActiveDeadlineSeconds = &activeDeadlineSeconds
+
+	log.G(ctx).WithField("pod", p).Info("Updating pod")
+	updatedPod1, err := s.client.CoreV1().Pods(p.Namespace).Update(p)
+	assert.NilError(t, err)
+	assert.NilError(t, m.attemptedUpdates.until(ctx, func(v int) bool { return v >= 2 }))
+	assert.Assert(t, is.Equal(m.updates.read(), 0))
+
+	updatedPod2, err := s.client.CoreV1().Pods(p.Namespace).Get(p.Name, metav1.GetOptions{})
+	assert.NilError(t, err)
+	assert.Assert(t, is.DeepEqual(updatedPod1.Status, updatedPod2.Status))
 }
 
 func BenchmarkCreatePods(b *testing.B) {

@@ -45,13 +45,17 @@ import (
 // github.com/virtual-kubelet/virtual-kubelet/errdefs package in order for the
 // core logic to be able to understand the type of failure.
 type PodLifecycleHandler interface {
-	// CreatePod takes a Kubernetes Pod and deploys it within the provider.
+	// CreatePod takes a Kubernetes Pod and deploys it within the provider. If the CreatePod fails (provider returns
+	// error), then the Pod status phase will be set to failed if the RestartPolicy is RestartPolicyNever, otherwise
+	// the pod status will be left pending
 	CreatePod(ctx context.Context, pod *corev1.Pod) error
 
-	// UpdatePod takes a Kubernetes Pod and updates it within the provider.
+	// UpdatePod takes a Kubernetes Pod and updates it within the provider. If the UpdatePod fails (provider returns
+	// error), then the Pod status phase will be set to failed.
 	UpdatePod(ctx context.Context, pod *corev1.Pod) error
 
-	// DeletePod takes a Kubernetes Pod and deletes it from the provider.
+	// DeletePod takes a Kubernetes Pod and deletes it from the provider. DeletePod will be retried multiple times,
+	//
 	DeletePod(ctx context.Context, pod *corev1.Pod) error
 
 	// GetPod retrieves a pod by name from the provider (can be cached).
