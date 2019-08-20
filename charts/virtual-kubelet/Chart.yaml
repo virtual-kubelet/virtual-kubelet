@@ -4,7 +4,7 @@ appVersion: 0.5
 description: A Helm chart to install virtual kubelet inside a Kubernetes cluster.
 icon: https://avatars2.githubusercontent.com/u/34250142
 sources:
-  - https://github.com/virtual-kubelet/virtual-kubelet
+  - https://github.com/chewong/virtual-kubelet
 maintainers:
   - name: Robbie Zhang
     email: junjiez@microsoft.com

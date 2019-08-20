@@ -1,5 +1,5 @@
 {{ $socialButtons := site.Params.social }}
-{{ $repoInfo      := getJSON "https://api.github.com/repos/virtual-kubelet/virtual-kubelet" }}
+{{ $repoInfo      := getJSON "https://api.github.com/repos/chewong/virtual-kubelet" }}
 {{ $numStars      := $repoInfo.stargazers_count }}
 {{ $numWatchers   := $repoInfo.subscribers_count }}
 <div class="buttons">

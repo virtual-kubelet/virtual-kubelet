@@ -2,7 +2,7 @@ SHELL := /bin/bash
 
 DOCKER_IMAGE := virtual-kubelet
 exec := $(DOCKER_IMAGE)
-github_repo := virtual-kubelet/virtual-kubelet
+github_repo := chewong/virtual-kubelet
 binary := virtual-kubelet
 
 export GO111MODULE ?= on

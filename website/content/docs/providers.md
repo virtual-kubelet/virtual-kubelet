@@ -91,7 +91,7 @@ For a Virtual Kubelet provider to be considered viable, it must support the foll
 
 No Virtual Kubelet provider is complete without solid documentation. We strongly recommend providing a README for your provider in its directory. The READMEs for the currently existing implementations can provide a blueprint.
 
-You'll also likely want your provider to appear in the [list of current providers](#current-providers). That list is generated from a [`provider.yaml`](https://github.com/virtual-kubelet/virtual-kubelet/blob/master/website/data/providers.yaml) file. Add a `name` field for the displayed name of the provider and the subdirectory as the `tag` field. The `name` field supports Markdown, so feel free to use bold text or a hyperlink.
+You'll also likely want your provider to appear in the [list of current providers](#current-providers). That list is generated from a [`provider.yaml`](https://github.com/chewong/virtual-kubelet/blob/master/website/data/providers.yaml) file. Add a `name` field for the displayed name of the provider and the subdirectory as the `tag` field. The `name` field supports Markdown, so feel free to use bold text or a hyperlink.
 
 ## Testing
 

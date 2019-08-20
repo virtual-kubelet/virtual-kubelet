@@ -18,7 +18,7 @@ import (
 	"testing"
 
 	"github.com/sirupsen/logrus"
-	"github.com/virtual-kubelet/virtual-kubelet/log"
+	"github.com/chewong/virtual-kubelet/log"
 )
 
 func TestImplementsLoggerInterface(t *testing.T) {
