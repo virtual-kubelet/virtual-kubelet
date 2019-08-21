@@ -1,6 +1,10 @@
 package e2e
 
-import "github.com/chewong/virtual-kubelet/test/e2e/framework"
+import (
+	"github.com/chewong/virtual-kubelet/test/e2e/framework"
+)
+
+var f *framework.Framework
 
 // TestingSuite is
 type TestingSuite struct {
@@ -8,8 +12,6 @@ type TestingSuite struct {
 	setupProvider func() error
 	// teardownProvider is a function
 	teardownProvider func() error
-	// framework is
-	framework *framework.Framework
 }
 
 // TestingSuiteConfig is
@@ -28,7 +30,6 @@ func (ts *TestingSuite) Setup() {
 		panic("Error in Setup()")
 	}
 
-	f := ts.framework
 	if _, err := f.WaitUntilPodReady(f.Namespace, f.NodeName); err != nil {
 		panic(err)
 	}
@@ -51,9 +52,11 @@ func NewTestingSuite(cfg TestingSuiteConfig, setupProvider, teardownProvider fun
 		panic("Empty nodeName")
 	}
 
+	// f is accessible across the e2e package
+	f = framework.NewTestingFramework(cfg.Kubeconfig, cfg.Namespace, cfg.NodeName)
+
 	return &TestingSuite{
 		setupProvider:    setupProvider,
 		teardownProvider: teardownProvider,
-		framework:        framework.NewTestingFramework(cfg.Kubeconfig, cfg.Namespace, cfg.NodeName),
 	}
 }

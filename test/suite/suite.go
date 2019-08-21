@@ -2,11 +2,12 @@ package suite
 
 import (
 	"reflect"
+	"runtime/debug"
 	"strings"
 	"testing"
 )
 
-// TestingSuite
+// Suite
 type Suite interface {
 	Setup()
 	Teardown()
@@ -14,6 +15,8 @@ type Suite interface {
 
 // Run is
 func Run(t *testing.T, s Suite) {
+	defer failOnPanic(t)
+
 	s.Setup()
 	defer s.Teardown()
 
@@ -29,7 +32,8 @@ func Run(t *testing.T, s Suite) {
 		test := testing.InternalTest{
 			Name: method.Name,
 			F: func(t *testing.T) {
-				method.Func.Call([]reflect.Value{reflect.ValueOf(s)})
+				defer failOnPanic(t)
+				method.Func.Call([]reflect.Value{reflect.ValueOf(s), reflect.ValueOf(t)})
 			},
 		}
 		tests = append(tests, test)
@@ -37,5 +41,14 @@ func Run(t *testing.T, s Suite) {
 
 	for _, test := range tests {
 		t.Run(test.Name, test.F)
+	}
+}
+
+// failOnPanic
+func failOnPanic(t *testing.T) {
+	r := recover()
+	if r != nil {
+		t.Errorf("test panicked: %v\n%s", r, debug.Stack())
+		t.FailNow()
 	}
 }
