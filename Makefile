@@ -79,11 +79,11 @@ endif
 test:
 ifndef CI
 	@echo "Testing..."
-	$Q go test  $(if $V,-v) $(allpackages)
+	$Q go test  $(if $V,-v) $(excludee2e)
 else
 	@echo "Testing in CI..."
 	$Q mkdir -p test
-	$Q ( GODEBUG=cgocheck=2 go test -timeout=9m -v $(allpackages); echo $$? ) | \
+	$Q ( GODEBUG=cgocheck=2 go test -timeout=9m -v $(excludee2e); echo $$? ) | \
        tee test/output.txt | sed '$$ d'; exit $$(tail -1 test/output.txt)
 endif
 
@@ -146,6 +146,7 @@ _allpackages = $(shell go list ./...)
 
 # memoize allpackages, so that it's executed only once and only if used
 allpackages = $(if $(__allpackages),,$(eval __allpackages := $$(_allpackages)))$(__allpackages)
+excludee2e = $(shell go list ./... | grep -v github.com/virtual-kubelet/virtual-kubelet/test/e2e)
 
 .PHONY: goimports
 goimports: $(gobin_tool)

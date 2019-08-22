@@ -22,7 +22,7 @@ const (
 
 // TestGetStatsSummary creates a pod having two containers and queries the /stats/summary endpoint of the virtual-kubelet.
 // It expects this endpoint to return stats for the current node, as well as for the aforementioned pod and each of its two containers.
-func (ts *TestingSuite) TestGetStatsSummary(t *testing.T) {
+func (ts *EndToEndTestSuite) TestGetStatsSummary(t *testing.T) {
 	// Create a pod with prefix "nginx-" having three containers.
 	pod, err := f.CreatePod(f.CreateDummyPodObjectWithPrefix(t.Name(), "nginx", "foo", "bar", "baz"))
 	if err != nil {
@@ -69,7 +69,7 @@ func (ts *TestingSuite) TestGetStatsSummary(t *testing.T) {
 // Then, it deletes the pods and verifies that the provider has been asked to delete it.
 // These verifications are made using the /stats/summary endpoint of the virtual-kubelet, by checking for the presence or absence of the pods.
 // Hence, the provider being tested must implement the PodMetricsProvider interface.
-func (ts *TestingSuite) TestPodLifecycleGracefulDelete(t *testing.T) {
+func (ts *EndToEndTestSuite) TestPodLifecycleGracefulDelete(t *testing.T) {
 	// Create a pod with prefix "nginx-" having a single container.
 	podSpec := f.CreateDummyPodObjectWithPrefix(t.Name(), "nginx", "foo")
 	podSpec.Spec.NodeName = f.NodeName
@@ -142,7 +142,7 @@ func (ts *TestingSuite) TestPodLifecycleGracefulDelete(t *testing.T) {
 // TestPodLifecycleNonGracefulDelete creates one podsand verifies that the provider has created them
 // and put them in the running lifecycle. It then does a force delete on the pod, and verifies the provider
 // has deleted it.
-func (ts *TestingSuite) TestPodLifecycleForceDelete(t *testing.T) {
+func (ts *EndToEndTestSuite) TestPodLifecycleForceDelete(t *testing.T) {
 	podSpec := f.CreateDummyPodObjectWithPrefix(t.Name(), "nginx", "foo")
 	// Create a pod with prefix having a single container.
 
@@ -218,7 +218,7 @@ func (ts *TestingSuite) TestPodLifecycleForceDelete(t *testing.T) {
 
 // TestCreatePodWithOptionalInexistentSecrets tries to create a pod referencing optional, inexistent secrets.
 // It then verifies that the pod is created successfully.
-func (ts *TestingSuite) TestCreatePodWithOptionalInexistentSecrets(t *testing.T) {
+func (ts *EndToEndTestSuite) TestCreatePodWithOptionalInexistentSecrets(t *testing.T) {
 	// Create a pod with a single container referencing optional, inexistent secrets.
 	pod, err := f.CreatePod(f.CreatePodObjectWithOptionalSecretKey(t.Name()))
 	if err != nil {
@@ -252,7 +252,7 @@ func (ts *TestingSuite) TestCreatePodWithOptionalInexistentSecrets(t *testing.T)
 
 // TestCreatePodWithMandatoryInexistentSecrets tries to create a pod referencing inexistent secrets.
 // It then verifies that the pod is not created.
-func (ts *TestingSuite) TestCreatePodWithMandatoryInexistentSecrets(t *testing.T) {
+func (ts *EndToEndTestSuite) TestCreatePodWithMandatoryInexistentSecrets(t *testing.T) {
 	// Create a pod with a single container referencing inexistent secrets.
 	pod, err := f.CreatePod(f.CreatePodObjectWithMandatorySecretKey(t.Name()))
 	if err != nil {
@@ -281,7 +281,7 @@ func (ts *TestingSuite) TestCreatePodWithMandatoryInexistentSecrets(t *testing.T
 
 // TestCreatePodWithOptionalInexistentConfigMap tries to create a pod referencing optional, inexistent config map.
 // It then verifies that the pod is created successfully.
-func (ts *TestingSuite) TestCreatePodWithOptionalInexistentConfigMap(t *testing.T) {
+func (ts *EndToEndTestSuite) TestCreatePodWithOptionalInexistentConfigMap(t *testing.T) {
 	// Create a pod with a single container referencing optional, inexistent config map.
 	pod, err := f.CreatePod(f.CreatePodObjectWithOptionalConfigMapKey(t.Name()))
 	if err != nil {
@@ -315,7 +315,7 @@ func (ts *TestingSuite) TestCreatePodWithOptionalInexistentConfigMap(t *testing.
 
 // TestCreatePodWithMandatoryInexistentConfigMap tries to create a pod referencing inexistent secrets.
 // It then verifies that the pod is not created.
-func (ts *TestingSuite) TestCreatePodWithMandatoryInexistentConfigMap(t *testing.T) {
+func (ts *EndToEndTestSuite) TestCreatePodWithMandatoryInexistentConfigMap(t *testing.T) {
 	// Create a pod with a single container referencing inexistent config map.
 	pod, err := f.CreatePod(f.CreatePodObjectWithMandatoryConfigMapKey(t.Name()))
 	if err != nil {

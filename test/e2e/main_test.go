@@ -39,16 +39,16 @@ func teardown() error {
 	return nil
 }
 
-// TestEndToEnd creates and runs the end-to-end testing suite for virtual kubelet
+// TestEndToEnd creates and runs the end-to-end test suite for virtual kubelet
 func TestEndToEnd(t *testing.T) {
 	setDefaults()
 
-	config := TestingSuiteConfig{
+	config := EndToEndTestSuiteConfig{
 		Kubeconfig: kubeconfig,
 		Namespace:  namespace,
 		NodeName:   nodeName,
 	}
-	ts := NewTestingSuite(config, setup, teardown)
+	ts := NewEndToEndTestSuite(config, setup, teardown)
 
 	suite.Run(t, ts)
 }

@@ -13,7 +13,7 @@ type Suite interface {
 	Teardown()
 }
 
-// Run runs tests registered in the testing suite
+// Run runs tests registered in the test suite
 func Run(t *testing.T, s Suite) {
 	defer failOnPanic(t)
 
