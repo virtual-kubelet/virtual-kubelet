@@ -4,7 +4,6 @@ package e2e
 
 import (
 	"fmt"
-	"strings"
 	"testing"
 	"time"
 
@@ -25,7 +24,7 @@ const (
 // It expects this endpoint to return stats for the current node, as well as for the aforementioned pod and each of its two containers.
 func (ts *TestingSuite) TestGetStatsSummary(t *testing.T) {
 	// Create a pod with prefix "nginx-" having three containers.
-	pod, err := f.CreatePod(f.CreateDummyPodObjectWithPrefix(stripParentTestName(t.Name()), "nginx-", "foo", "bar", "baz"))
+	pod, err := f.CreatePod(f.CreateDummyPodObjectWithPrefix(t.Name(), "nginx", "foo", "bar", "baz"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -59,7 +58,7 @@ func (ts *TestingSuite) TestGetStatsSummary(t *testing.T) {
 	}
 
 	// Make sure that we've got stats for all the containers in the "nginx-" pod.
-	desiredContainerStatsCount := len(pod.Spec.Containers)
+	desiredContainerStatsCount := len(pod.Spec.Containers) + 1
 	currentContainerStatsCount := len(stats.Pods[idx].Containers)
 	if currentContainerStatsCount != desiredContainerStatsCount {
 		t.Fatalf("expected stats for %d containers, got stats for %d containers", desiredContainerStatsCount, currentContainerStatsCount)
@@ -72,7 +71,7 @@ func (ts *TestingSuite) TestGetStatsSummary(t *testing.T) {
 // Hence, the provider being tested must implement the PodMetricsProvider interface.
 func (ts *TestingSuite) TestPodLifecycleGracefulDelete(t *testing.T) {
 	// Create a pod with prefix "nginx-" having a single container.
-	podSpec := f.CreateDummyPodObjectWithPrefix(stripParentTestName(t.Name()), "nginx-", "foo")
+	podSpec := f.CreateDummyPodObjectWithPrefix(t.Name(), "nginx", "foo")
 	podSpec.Spec.NodeName = f.NodeName
 
 	pod, err := f.CreatePod(podSpec)
@@ -144,8 +143,9 @@ func (ts *TestingSuite) TestPodLifecycleGracefulDelete(t *testing.T) {
 // and put them in the running lifecycle. It then does a force delete on the pod, and verifies the provider
 // has deleted it.
 func (ts *TestingSuite) TestPodLifecycleForceDelete(t *testing.T) {
-	podSpec := f.CreateDummyPodObjectWithPrefix(stripParentTestName(t.Name()), "nginx-", "foo")
+	podSpec := f.CreateDummyPodObjectWithPrefix(t.Name(), "nginx", "foo")
 	// Create a pod with prefix having a single container.
+
 	pod, err := f.CreatePod(podSpec)
 	if err != nil {
 		t.Fatal(err)
@@ -220,7 +220,7 @@ func (ts *TestingSuite) TestPodLifecycleForceDelete(t *testing.T) {
 // It then verifies that the pod is created successfully.
 func (ts *TestingSuite) TestCreatePodWithOptionalInexistentSecrets(t *testing.T) {
 	// Create a pod with a single container referencing optional, inexistent secrets.
-	pod, err := f.CreatePod(f.CreatePodObjectWithOptionalSecretKey(stripParentTestName(t.Name())))
+	pod, err := f.CreatePod(f.CreatePodObjectWithOptionalSecretKey(t.Name()))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -254,7 +254,7 @@ func (ts *TestingSuite) TestCreatePodWithOptionalInexistentSecrets(t *testing.T)
 // It then verifies that the pod is not created.
 func (ts *TestingSuite) TestCreatePodWithMandatoryInexistentSecrets(t *testing.T) {
 	// Create a pod with a single container referencing inexistent secrets.
-	pod, err := f.CreatePod(f.CreatePodObjectWithMandatorySecretKey(stripParentTestName(t.Name())))
+	pod, err := f.CreatePod(f.CreatePodObjectWithMandatorySecretKey(t.Name()))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -283,7 +283,7 @@ func (ts *TestingSuite) TestCreatePodWithMandatoryInexistentSecrets(t *testing.T
 // It then verifies that the pod is created successfully.
 func (ts *TestingSuite) TestCreatePodWithOptionalInexistentConfigMap(t *testing.T) {
 	// Create a pod with a single container referencing optional, inexistent config map.
-	pod, err := f.CreatePod(f.CreatePodObjectWithOptionalConfigMapKey(stripParentTestName(t.Name())))
+	pod, err := f.CreatePod(f.CreatePodObjectWithOptionalConfigMapKey(t.Name()))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -317,7 +317,7 @@ func (ts *TestingSuite) TestCreatePodWithOptionalInexistentConfigMap(t *testing.
 // It then verifies that the pod is not created.
 func (ts *TestingSuite) TestCreatePodWithMandatoryInexistentConfigMap(t *testing.T) {
 	// Create a pod with a single container referencing inexistent config map.
-	pod, err := f.CreatePod(f.CreatePodObjectWithMandatoryConfigMapKey(stripParentTestName(t.Name())))
+	pod, err := f.CreatePod(f.CreatePodObjectWithMandatoryConfigMapKey(t.Name()))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -362,16 +362,4 @@ func findPodInPods(pods *v1.PodList, pod *v1.Pod) error {
 		}
 	}
 	return fmt.Errorf("failed to find pod \"%s/%s\" in the slice of pod list", pod.Namespace, pod.Name)
-}
-
-// stripParentTestName strips out the parent's test name from the input, in the form of 'TestParent/TestChild'.
-// Some test cases use their name as the container name for testing purpose, and sometimes it might exceed 63
-// characters (Kubernetes's limit for container name). This function ensures that we strip out the parent's
-// test name to decrease the length of the container name
-func stripParentTestName(name string) string {
-	parts := strings.Split(name, "/")
-	if len(parts) == 1 {
-		return parts[0]
-	}
-	return parts[len(parts)-1]
 }

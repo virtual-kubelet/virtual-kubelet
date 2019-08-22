@@ -25,7 +25,7 @@ const defaultWatchTimeout = 2 * time.Minute
 func (f *Framework) CreateDummyPodObjectWithPrefix(testName string, prefix string, images ...string) *corev1.Pod {
 	// Safe the test name
 	if testName != "" {
-		testName = strings.Replace(testName, "/", "-", -1)
+		testName = strings.Replace(stripParentTestName(testName), "/", "-", -1)
 		testName = strings.ToLower(testName)
 		prefix = prefix + "-" + testName + "-"
 	}
@@ -183,4 +183,16 @@ func (f *Framework) GetRunningPods() (*corev1.PodList, error) {
 		Into(result)
 
 	return result, err
+}
+
+// stripParentTestName strips out the parent's test name from the input (in the form of 'TestParent/TestChild').
+// Some test cases use their name as the pod name for testing purpose, and sometimes it might exceed 63
+// characters (Kubernetes's limit for pod name). This function ensures that we strip out the parent's
+// test name to decrease the length of the pod name
+func stripParentTestName(name string) string {
+	parts := strings.Split(name, "/")
+	if len(parts) == 1 {
+		return parts[0]
+	}
+	return parts[len(parts)-1]
 }

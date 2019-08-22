@@ -75,7 +75,7 @@ func (f *Framework) CreatePodObjectWithOptionalSecretKey(testName string) *corev
 
 // CreatePodObjectWithEnv creates a pod object whose name starts with "env-test-" and that uses the specified environment configuration for its first container.
 func (f *Framework) CreatePodObjectWithEnv(testName string, env []corev1.EnvVar) *corev1.Pod {
-	pod := f.CreateDummyPodObjectWithPrefix(testName, "env-test-", "foo")
+	pod := f.CreateDummyPodObjectWithPrefix(testName, "env-test", "foo")
 	pod.Spec.Containers[0].Env = env
 	return pod
 }

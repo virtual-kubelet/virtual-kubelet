@@ -7,13 +7,13 @@ import (
 	"testing"
 )
 
-// Suite
+// Suite contains methods for setting up and tearing down a tesing suite
 type Suite interface {
 	Setup()
 	Teardown()
 }
 
-// Run is
+// Run runs tests registered in the testing suite
 func Run(t *testing.T, s Suite) {
 	defer failOnPanic(t)
 
@@ -27,9 +27,11 @@ func Run(t *testing.T, s Suite) {
 		method := testFinder.Method(i)
 
 		// Test function name must start with "Test"
+		// TODO: Allow providers to skip particular tests
 		if !strings.HasPrefix(method.Name, "Test") {
 			continue
 		}
+
 		test := testing.InternalTest{
 			Name: method.Name,
 			F: func(t *testing.T) {
@@ -45,10 +47,10 @@ func Run(t *testing.T, s Suite) {
 	}
 }
 
-// failOnPanic
+// failOnPanic recovers from test panicking and mark that test as failed
 func failOnPanic(t *testing.T) {
-	r := recover()
-	if r != nil {
+	// The implementation below is based on https://github.com/stretchr/testify
+	if r := recover(); r != nil {
 		t.Errorf("test panicked: %v\n%s", r, debug.Stack())
 		t.FailNow()
 	}
