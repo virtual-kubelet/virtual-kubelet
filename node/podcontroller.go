@@ -109,6 +109,28 @@ type PodController struct {
 	resourceManager *manager.ResourceManager
 
 	k8sQ workqueue.RateLimitingInterface
+
+	// From the time of creation, to termination the knownPods map will contain the pods key
+	// (derived from K8's cache library) -> a *knownPod struct.
+	//
+	// It's life is limited by the informer. It is updated every time there is a pod status update from
+	// the provider.
+	knownPods sync.Map
+
+	// podForDeletion is also a map of key -> deletablePod. It is used only by the syncHandler to supress
+	// duplicate deletions. It is deleted when the pod is non-gracefully deleted from K8s.
+	podForDeletion sync.Map
+}
+
+type knownPod struct {
+	// You cannot read (or modify) the fields in this struct without taking the lock. The individual fields
+	// should be immutable to avoid having to hold the lock the entire time you're working with them
+	sync.Mutex
+	lastPodStatusReceivedFromProvider *corev1.Pod
+}
+
+type deleteablePod struct {
+	pod *corev1.Pod
 }
 
 // PodControllerConfig is used to configure a new PodController.
@@ -179,6 +201,7 @@ func NewPodController(cfg PodControllerConfig) (*PodController, error) {
 			if key, err := cache.MetaNamespaceKeyFunc(pod); err != nil {
 				log.L.Error(err)
 			} else {
+				pc.knownPods.Store(key, &knownPod{})
 				pc.k8sQ.AddRateLimited(key)
 			}
 		},
@@ -205,6 +228,7 @@ func NewPodController(cfg PodControllerConfig) (*PodController, error) {
 			if key, err := cache.DeletionHandlingMetaNamespaceKeyFunc(pod); err != nil {
 				log.L.Error(err)
 			} else {
+				pc.knownPods.Delete(key)
 				pc.k8sQ.AddRateLimited(key)
 			}
 		},
@@ -303,21 +327,39 @@ func (pc *PodController) syncHandler(ctx context.Context, key string) error {
 			span.SetStatus(err)
 			return err
 		}
-		// At this point we know the Pod resource doesn't exist, which most probably means it was deleted.
-		// Hence, we must delete it from the provider if it still exists there.
-		if err := pc.deletePod(ctx, namespace, name); err != nil {
-			err := pkgerrors.Wrapf(err, "failed to delete pod %q in the provider", loggablePodNameFromCoordinates(namespace, name))
-			span.SetStatus(err)
+
+		_, ok := pc.podForDeletion.Load(key)
+		// We've never tried to delete this pod before. This is a non-graceful delete.
+		if !ok {
+			pod, err = pc.provider.GetPod(ctx, namespace, name)
+			if errdefs.IsNotFound(err) {
+				return nil
+			} else if err != nil {
+				err = pkgerrors.Wrapf(err, "failed to fetch pod with key %q from provider", key)
+				span.SetStatus(err)
+				return err
+			}
+
+			err = pc.provider.DeletePod(ctx, pod)
+			if errdefs.IsNotFound(err) {
+				return nil
+			}
+			if err != nil {
+				err = pkgerrors.Wrapf(err, "failed to delete pod %q in the provider", loggablePodNameFromCoordinates(namespace, name))
+				span.SetStatus(err)
+			}
 			return err
 		}
+		// We tried to delete the pod before. That means we can bail out here.
+		pc.podForDeletion.Delete(key)
 		return nil
 	}
 	// At this point we know the Pod resource has either been created or updated (which includes being marked for deletion).
-	return pc.syncPodInProvider(ctx, pod)
+	return pc.syncPodInProvider(ctx, pod, key)
 }
 
 // syncPodInProvider tries and reconciles the state of a pod by comparing its Kubernetes representation and the provider's representation.
-func (pc *PodController) syncPodInProvider(ctx context.Context, pod *corev1.Pod) error {
+func (pc *PodController) syncPodInProvider(ctx context.Context, pod *corev1.Pod, key string) error {
 	ctx, span := trace.StartSpan(ctx, "syncPodInProvider")
 	defer span.End()
 
@@ -327,11 +369,26 @@ func (pc *PodController) syncPodInProvider(ctx context.Context, pod *corev1.Pod)
 	// Check whether the pod has been marked for deletion.
 	// If it does, guarantee it is deleted in the provider and Kubernetes.
 	if pod.DeletionTimestamp != nil {
-		if err := pc.deletePod(ctx, pod.Namespace, pod.Name); err != nil {
+		obj, ok := pc.podForDeletion.Load(key)
+		if ok {
+			// We've tried to delete this pod before.
+			dPod := obj.(deleteablePod)
+			// If our grace period is equal to, or longer than the previous pod's deletion grace period, we do not
+			// need to retry the delete
+			if *dPod.pod.DeletionGracePeriodSeconds <= *pod.DeletionGracePeriodSeconds {
+				return nil
+			}
+		}
+
+		if err := pc.deletePod(ctx, pod); err != nil {
 			err := pkgerrors.Wrapf(err, "failed to delete pod %q in the provider", loggablePodName(pod))
 			span.SetStatus(err)
 			return err
 		}
+		pc.podForDeletion.Store(key, deleteablePod{
+			pod: pod,
+		})
+
 		return nil
 	}
 
@@ -405,7 +462,7 @@ func (pc *PodController) deleteDanglingPods(ctx context.Context, threadiness int
 			// Add the pod's attributes to the current span.
 			ctx = addPodAttributes(ctx, span, pod)
 			// Actually delete the pod.
-			if err := pc.deletePod(ctx, pod.Namespace, pod.Name); err != nil {
+			if err := pc.deletePod(ctx, pod); err != nil {
 				span.SetStatus(err)
 				log.G(ctx).Errorf("failed to delete pod %q in provider", loggablePodName(pod))
 			} else {
