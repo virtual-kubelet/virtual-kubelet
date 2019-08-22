@@ -307,7 +307,7 @@ func TestPodDelete(t *testing.T) {
 			assert.NilError(t, err)
 			assert.Check(t, is.Equal(c.mock.creates.read(), 1))
 
-			err = c.deletePod(ctx, pod.Namespace, pod.Name)
+			err = c.deletePod(ctx, pod)
 			assert.Equal(t, pkgerrors.Cause(err), err)
 
 			var expectDeletes int
@@ -316,7 +316,7 @@ func TestPodDelete(t *testing.T) {
 			}
 			assert.Check(t, is.Equal(c.mock.deletes.read(), expectDeletes))
 
-			expectDeleted := tc.delErr == nil || errdefs.IsNotFound(tc.delErr)
+			expectDeleted := errdefs.IsNotFound(tc.delErr)
 
 			_, err = pc.Get(pod.Name, metav1.GetOptions{})
 			if expectDeleted {

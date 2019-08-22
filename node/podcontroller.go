@@ -38,6 +38,10 @@ import (
 	"k8s.io/client-go/util/workqueue"
 )
 
+var (
+	errPodNotFoundInCache = pkgerrors.New("Pod not found in cache, nor stored in pod for deletion. Pod must have been deleted while processing, retrying")
+)
+
 // PodLifecycleHandler defines the interface used by the PodController to react
 // to new and changed pods scheduled to the node that is being managed.
 //
@@ -111,8 +115,12 @@ type PodController struct {
 	k8sQ workqueue.RateLimitingInterface
 
 	// From the time of creation, to termination the knownPods map will contain the pods key
-	// (derived from K8's cache library) -> a *knownPod struct.
+	// (derived from K8's cache library) -> a *knownPod struct. We prevent it from leaking by
+	// only allowing it to stay around during the course of the pod's lifetime in the informer.
 	knownPods sync.Map
+
+	informerPodUpdatesLock sync.Mutex
+	informerPodUpdates     map[string]*informerPodUpdate
 }
 
 type knownPod struct {
@@ -120,6 +128,11 @@ type knownPod struct {
 	// should be immutable to avoid having to hold the lock the entire time you're working with them
 	sync.Mutex
 	lastPodStatusReceivedFromProvider *corev1.Pod
+}
+
+type informerPodUpdate struct {
+	oldPod *corev1.Pod
+	newPod *corev1.Pod
 }
 
 // PodControllerConfig is used to configure a new PodController.
@@ -174,16 +187,16 @@ func NewPodController(cfg PodControllerConfig) (*PodController, error) {
 	}
 
 	pc := &PodController{
-		client:          cfg.PodClient,
-		podsInformer:    cfg.PodInformer,
-		podsLister:      cfg.PodInformer.Lister(),
-		provider:        cfg.Provider,
-		resourceManager: rm,
-		ready:           make(chan struct{}),
-		recorder:        cfg.EventRecorder,
-		k8sQ:            workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "syncPodsFromKubernetes"),
+		provider:           cfg.Provider,
+		podsInformer:       cfg.PodInformer,
+		podsLister:         cfg.PodInformer.Lister(),
+		recorder:           cfg.EventRecorder,
+		ready:              make(chan struct{}),
+		client:             cfg.PodClient,
+		resourceManager:    rm,
+		k8sQ:               workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "syncPodsFromKubernetes"),
+		informerPodUpdates: make(map[string]*informerPodUpdate),
 	}
-
 	// Set up event handlers for when Pod resources change.
 	pc.podsInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(pod interface{}) {
@@ -191,6 +204,11 @@ func NewPodController(cfg PodControllerConfig) (*PodController, error) {
 				log.L.Error(err)
 			} else {
 				pc.knownPods.Store(key, &knownPod{})
+				pc.informerPodUpdatesLock.Lock()
+				defer pc.informerPodUpdatesLock.Unlock()
+				pc.informerPodUpdates[key] = &informerPodUpdate{
+					newPod: pod.(*corev1.Pod),
+				}
 				pc.k8sQ.AddRateLimited(key)
 			}
 		},
@@ -210,6 +228,12 @@ func NewPodController(cfg PodControllerConfig) (*PodController, error) {
 			if key, err := cache.MetaNamespaceKeyFunc(newPod); err != nil {
 				log.L.Error(err)
 			} else {
+				pc.informerPodUpdatesLock.Lock()
+				defer pc.informerPodUpdatesLock.Unlock()
+				pc.informerPodUpdates[key] = &informerPodUpdate{
+					newPod: newPod,
+					oldPod: oldPod,
+				}
 				pc.k8sQ.AddRateLimited(key)
 			}
 		},
@@ -217,6 +241,11 @@ func NewPodController(cfg PodControllerConfig) (*PodController, error) {
 			if key, err := cache.DeletionHandlingMetaNamespaceKeyFunc(pod); err != nil {
 				log.L.Error(err)
 			} else {
+				pc.informerPodUpdatesLock.Lock()
+				defer pc.informerPodUpdatesLock.Unlock()
+				pc.informerPodUpdates[key] = &informerPodUpdate{
+					oldPod: pod.(*corev1.Pod),
+				}
 				pc.knownPods.Delete(key)
 				pc.k8sQ.AddRateLimited(key)
 			}
@@ -291,72 +320,129 @@ func (pc *PodController) processNextWorkItem(ctx context.Context, workerId strin
 }
 
 // syncHandler compares the actual state with the desired, and attempts to converge the two.
-func (pc *PodController) syncHandler(ctx context.Context, key string) error {
+func (pc *PodController) syncHandler(ctx context.Context, key string, willRetry bool) error {
 	ctx, span := trace.StartSpan(ctx, "syncHandler")
 	defer span.End()
 
 	// Add the current key as an attribute to the current span.
 	ctx = span.WithField(ctx, "key", key)
 
-	// Convert the namespace/name string into a distinct namespace and name.
-	namespace, name, err := cache.SplitMetaNamespaceKey(key)
-	if err != nil {
-		// Log the error as a warning, but do not requeue the key as it is invalid.
-		log.G(ctx).Warn(pkgerrors.Wrapf(err, "invalid resource key: %q", key))
+	pc.informerPodUpdatesLock.Lock()
+	podUpdate, ok := pc.informerPodUpdates[key]
+	delete(pc.informerPodUpdates, key)
+	pc.informerPodUpdatesLock.Unlock()
+
+	if !ok {
+		log.G(ctx).Warn("Pod update not found?")
 		return nil
 	}
 
-	// Get the Pod resource with this namespace/name.
-	pod, err := pc.podsLister.Pods(namespace).Get(name)
+	err := pc.syncInformerPodUpdateToProvider(ctx, key, podUpdate)
 	if err != nil {
-		if !errors.IsNotFound(err) {
-			// We've failed to fetch the pod from the lister, but the error is not a 404.
-			// Hence, we add the key back to the work queue so we can retry processing it later.
-			err := pkgerrors.Wrapf(err, "failed to fetch pod with key %q from lister", key)
-			span.SetStatus(err)
-			return err
+		span.SetStatus(err)
+		if willRetry {
+			pc.informerPodUpdatesLock.Lock()
+			defer pc.informerPodUpdatesLock.Unlock()
+			_, ok = pc.informerPodUpdates[key]
+			// If it's ok, then that means there was a new pod status update added by the informer reactor.
+			if !ok {
+				pc.informerPodUpdates[key] = podUpdate
+			}
 		}
-		// At this point we know the Pod resource doesn't exist, which most probably means it was deleted.
-		// Hence, we must delete it from the provider if it still exists there.
-		if err := pc.deletePod(ctx, namespace, name); err != nil {
-			err := pkgerrors.Wrapf(err, "failed to delete pod %q in the provider", loggablePodNameFromCoordinates(namespace, name))
-			span.SetStatus(err)
-			return err
-		}
-		return nil
 	}
-	// At this point we know the Pod resource has either been created or updated (which includes being marked for deletion).
-	return pc.syncPodInProvider(ctx, pod)
+	return err
 }
 
-// syncPodInProvider tries and reconciles the state of a pod by comparing its Kubernetes representation and the provider's representation.
-func (pc *PodController) syncPodInProvider(ctx context.Context, pod *corev1.Pod) error {
-	ctx, span := trace.StartSpan(ctx, "syncPodInProvider")
-	defer span.End()
-
-	// Add the pod's attributes to the current span.
-	ctx = addPodAttributes(ctx, span, pod)
-
-	// Check whether the pod has been marked for deletion.
-	// If it does, guarantee it is deleted in the provider and Kubernetes.
-	if pod.DeletionTimestamp != nil {
-		if err := pc.deletePod(ctx, pod.Namespace, pod.Name); err != nil {
-			err := pkgerrors.Wrapf(err, "failed to delete pod %q in the provider", loggablePodName(pod))
-			span.SetStatus(err)
-			return err
-		}
-		return nil
-	}
-
+func shouldIgnorePod(ctx context.Context, pod *corev1.Pod) bool {
 	// Ignore the pod if it is in the "Failed" or "Succeeded" state.
 	if pod.Status.Phase == corev1.PodFailed || pod.Status.Phase == corev1.PodSucceeded {
 		log.G(ctx).Warnf("skipping sync of pod %q in %q phase", loggablePodName(pod), pod.Status.Phase)
-		return nil
+		return true
+	}
+	return false
+}
+
+func (pc *PodController) syncInformerPodUpdateToProvider(ctx context.Context, key string, update *informerPodUpdate) error {
+	ctx, span := trace.StartSpan(ctx, "syncInformerPodUpdateToProvider")
+	defer span.End()
+
+	if update.newPod == nil {
+		ctx = addPodAttributes(ctx, span, update.oldPod)
+		// Pod is destroyed.
+
+		// if the old pod was deletable, we already tried to deleted it
+		// the one exception here is if we hit the retry limit last time we tried to delete it, and bailed out.
+		// in that case, the pod can leak.
+		//
+		// We avoid this by interrogating the provider, to see if it still has the pod. If it returns a notfound error,
+		// or a nil pod and no error, we consider it to be okay.
+		if shouldIgnorePod(ctx, update.oldPod) {
+			return nil
+		}
+
+		if deletable(update.oldPod) {
+			if podStatus, err := pc.provider.GetPodStatus(ctx, update.oldPod.Namespace, update.oldPod.Name); errdefs.IsNotFound(err) {
+				return nil
+			} else if err != nil {
+				err = pkgerrors.Wrapf(err, "Failed to retrieve details of %q in the provider", loggablePodNameFromCoordinates(update.oldPod.Namespace, update.oldPod.Name))
+				span.SetStatus(err)
+				return err
+			} else if podStatus == nil {
+				return nil
+			}
+		}
+		log.G(ctx).Debug("Deleting pod in provider, after deletes from kubernetes")
+		err := pc.provider.DeletePod(ctx, update.oldPod)
+		if err != nil && !errdefs.IsNotFound(err) {
+			err = pkgerrors.Wrapf(err, "failed to delete pod %q in the provider", loggablePodNameFromCoordinates(update.oldPod.Namespace, update.oldPod.Name))
+			span.SetStatus(err)
+		}
+		return err
 	}
 
+	if update.oldPod == nil {
+		// Pod is newly created
+		// Add the pod's attributes to the current span.
+		ctx = addPodAttributes(ctx, span, update.newPod)
+		if shouldIgnorePod(ctx, update.newPod) {
+			return nil
+		}
+		if update.newPod.DeletionGracePeriodSeconds != nil {
+			return nil
+		}
+		err := pc.createOrUpdatePod(ctx, update.newPod)
+		span.SetStatus(err)
+		return err
+	} else {
+		// Add the pod's attributes to the current span.
+		ctx = addPodAttributes(ctx, span, update.oldPod)
+	}
+
+	// pod experienced update
+	if deletable(update.newPod) {
+		if deletable(update.oldPod) {
+			if *update.oldPod.DeletionGracePeriodSeconds == *update.newPod.DeletionGracePeriodSeconds {
+				return nil
+			}
+		}
+		err := pc.provider.DeletePod(ctx, update.newPod)
+		log.G(ctx).WithError(err).Debug()
+		if errdefs.IsNotFound(err) {
+			log.G(ctx).WithError(err).Debug("Force deleting pod from kubernetes")
+			err = pc.forceDeletePodResource(ctx, update.newPod.Namespace, update.newPod.Name)
+			span.SetStatus(err)
+			return err
+		} else if err != nil {
+			err = pkgerrors.Wrapf(err, "failed to delete pod %q in the provider", loggablePodNameFromCoordinates(update.oldPod.Namespace, update.oldPod.Name))
+			span.SetStatus(err)
+			return err
+		}
+	}
+
+	// At this point we know the Pod resource has either been created or updated (which includes being marked for deletion).
 	// Create or update the pod in the provider.
-	if err := pc.createOrUpdatePod(ctx, pod); err != nil {
-		err := pkgerrors.Wrapf(err, "failed to sync pod %q in the provider", loggablePodName(pod))
+	if err := pc.createOrUpdatePod(ctx, update.newPod); err != nil {
+		err := pkgerrors.Wrapf(err, "failed to sync pod %q in the provider", loggablePodName(update.newPod))
 		span.SetStatus(err)
 		return err
 	}
@@ -418,7 +504,7 @@ func (pc *PodController) deleteDanglingPods(ctx context.Context, threadiness int
 			// Add the pod's attributes to the current span.
 			ctx = addPodAttributes(ctx, span, pod)
 			// Actually delete the pod.
-			if err := pc.deletePod(ctx, pod.Namespace, pod.Name); err != nil {
+			if err := pc.deletePod(ctx, pod); err != nil {
 				span.SetStatus(err)
 				log.G(ctx).Errorf("failed to delete pod %q in provider", loggablePodName(pod))
 			} else {

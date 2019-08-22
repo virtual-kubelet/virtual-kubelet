@@ -151,40 +151,25 @@ func (pc *PodController) handleProviderError(ctx context.Context, span trace.Spa
 	span.SetStatus(origErr)
 }
 
-func (pc *PodController) deletePod(ctx context.Context, namespace, name string) error {
+func (pc *PodController) deletePod(ctx context.Context, pod *corev1.Pod) error {
 	ctx, span := trace.StartSpan(ctx, "deletePod")
 	defer span.End()
 
-	pod, err := pc.provider.GetPod(ctx, namespace, name)
-	if err != nil {
-		if errdefs.IsNotFound(err) {
-			// The provider is not aware of the pod, but we must still delete the Kubernetes API resource.
-			return pc.forceDeletePodResource(ctx, namespace, name)
-		}
-		return err
-	}
-
-	// NOTE: Some providers return a non-nil error in their GetPod implementation when the pod is not found while some other don't.
-	if pod == nil {
-		// The provider is not aware of the pod, but we must still delete the Kubernetes API resource.
-		return pc.forceDeletePodResource(ctx, namespace, name)
-	}
-
 	ctx = addPodAttributes(ctx, span, pod)
 
-	var delErr error
-	if delErr = pc.provider.DeletePod(ctx, pod.DeepCopy()); delErr != nil && !errdefs.IsNotFound(delErr) {
-		span.SetStatus(delErr)
-		return delErr
-	}
-
-	log.G(ctx).Debug("Deleted pod from provider")
-
-	if err := pc.forceDeletePodResource(ctx, namespace, name); err != nil {
+	err := pc.provider.DeletePod(ctx, pod.DeepCopy())
+	if errdefs.IsNotFound(err) {
+		err = pc.forceDeletePodResource(ctx, pod.Namespace, pod.Name)
 		span.SetStatus(err)
 		return err
 	}
-	log.G(ctx).Info("Deleted pod from Kubernetes")
+
+	if err != nil {
+		span.SetStatus(err)
+		return err
+	}
+
+	log.G(ctx).Debug("Deleted pod from provider")
 
 	return nil
 }
@@ -325,7 +310,7 @@ func (pc *PodController) enqueuePodStatusUpdate(ctx context.Context, q workqueue
 	}
 }
 
-func (pc *PodController) podStatusHandler(ctx context.Context, key string) (retErr error) {
+func (pc *PodController) podStatusHandler(ctx context.Context, key string, willRetry bool) (retErr error) {
 	ctx, span := trace.StartSpan(ctx, "podStatusHandler")
 	defer span.End()
 

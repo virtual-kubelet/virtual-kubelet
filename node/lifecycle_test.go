@@ -94,8 +94,7 @@ func TestPodLifecycle(t *testing.T) {
 
 	ctx = log.WithLogger(ctx, log.L)
 
-	// isPodDeletedPermanentlyFunc is a condition func that waits until the pod is _deleted_, which is the VK's
-	// action when the pod is deleted from the provider
+	// isPodDeletedPermanentlyFunc is a condition func that waits until the pod is _deleted_
 	isPodDeletedPermanentlyFunc := func(ctx context.Context, watcher watch.Interface) error {
 		_, watchErr := watchutils.UntilWithoutRetry(ctx, watcher, func(ev watch.Event) (bool, error) {
 			log.G(ctx).WithField("event", ev).Info("got event")
@@ -107,13 +106,24 @@ func TestPodLifecycle(t *testing.T) {
 		return watchErr
 	}
 
+	isPodDeletedInTerminalStateFunc := func(ctx context.Context, watcher watch.Interface) error {
+		_, watchErr := watchutils.UntilWithoutRetry(ctx, watcher, func(ev watch.Event) (bool, error) {
+			log.G(ctx).WithField("event", ev).Info("got event")
+			// TODO(Sargun): The pod should have transitioned into some status around failed / succeeded
+			// prior to being deleted.
+			// In addition, we should check if the deletion timestamp gets set
+			pod := ev.Object.(*corev1.Pod)
+			return pod.Status.Phase == corev1.PodFailed || pod.Status.Phase == corev1.PodSucceeded, nil
+		})
+		return watchErr
+	}
 	// createStartDeleteScenario tests the basic flow of creating a pod, waiting for it to start, and deleting
 	// it gracefully
 	t.Run("createStartDeleteScenario", func(t *testing.T) {
 
 		t.Run("mockProvider", func(t *testing.T) {
 			assert.NilError(t, wireUpSystem(ctx, newMockProvider(), func(ctx context.Context, s *system) {
-				testCreateStartDeleteScenario(ctx, t, s, isPodDeletedPermanentlyFunc)
+				testCreateStartDeleteScenario(ctx, t, s, isPodDeletedInTerminalStateFunc)
 			}))
 		})
 
@@ -122,7 +132,7 @@ func TestPodLifecycle(t *testing.T) {
 		}
 		t.Run("mockV0Provider", func(t *testing.T) {
 			assert.NilError(t, wireUpSystem(ctx, newMockV0Provider(), func(ctx context.Context, s *system) {
-				testCreateStartDeleteScenario(ctx, t, s, isPodDeletedPermanentlyFunc)
+				testCreateStartDeleteScenario(ctx, t, s, isPodDeletedInTerminalStateFunc)
 			}))
 		})
 	})
