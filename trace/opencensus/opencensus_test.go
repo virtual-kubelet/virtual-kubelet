@@ -17,7 +17,7 @@ package opencensus
 import (
 	"testing"
 
-	"github.com/chewong/virtual-kubelet/trace"
+	"github.com/virtual-kubelet/virtual-kubelet/trace"
 )
 
 func TestTracerImplementsTracer(t *testing.T) {

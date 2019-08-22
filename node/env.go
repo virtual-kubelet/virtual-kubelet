@@ -32,8 +32,8 @@ import (
 	"k8s.io/kubernetes/pkg/kubelet/envvars"
 	"k8s.io/kubernetes/third_party/forked/golang/expansion"
 
-	"github.com/chewong/virtual-kubelet/internal/manager"
-	"github.com/chewong/virtual-kubelet/log"
+	"github.com/virtual-kubelet/virtual-kubelet/internal/manager"
+	"github.com/virtual-kubelet/virtual-kubelet/log"
 )
 
 const (
@@ -430,7 +430,7 @@ loop:
 			continue loop
 		// Handle population from a field (downward API).
 		case env.ValueFrom != nil && env.ValueFrom.FieldRef != nil:
-			// https://github.com/chewong/virtual-kubelet/issues/123
+			// https://github.com/virtual-kubelet/virtual-kubelet/issues/123
 			vf := env.ValueFrom.FieldRef
 
 			runtimeVal, err := podFieldSelectorRuntimeValue(vf, pod)

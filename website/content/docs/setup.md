@@ -9,7 +9,7 @@ You can install Virtual Kubelet by building it [from source](#source). First, ma
 ```bash
 mkdir -p ${GOPATH}/src/github.com/virtual-kubelet
 cd ${GOPATH}/src/github.com/virtual-kubelet
-git clone https://github.com/chewong/virtual-kubelet
+git clone https://github.com/virtual-kubelet/virtual-kubelet
 make build
 ```
 

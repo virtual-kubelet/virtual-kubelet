@@ -27,9 +27,14 @@ import (
 <<<<<<< HEAD
 =======
 
+<<<<<<< HEAD
 	"github.com/chewong/virtual-kubelet/internal/manager"
 	testutil "github.com/chewong/virtual-kubelet/test/util"
 >>>>>>> 9547e751... Rename VK to chewong for development purpose
+=======
+	"github.com/virtual-kubelet/virtual-kubelet/internal/manager"
+	testutil "github.com/virtual-kubelet/virtual-kubelet/test/util"
+>>>>>>> aeec4ac8... Rename chewong back to virtual-kubelet
 )
 
 // TestGetPods verifies that the resource manager acts as a passthrough to a pod lister.

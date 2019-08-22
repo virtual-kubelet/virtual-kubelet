@@ -26,11 +26,25 @@ Virtual Kubelet currently has a wide variety of providers:
 
 ## Adding new providers {#adding}
 
+<<<<<<< HEAD
 To add a new Virtual Kubelet provider, create a new directory for your provider.
 
 In that created directory, implement [`PodLifecycleHandler`](https://godoc.org/github.com/virtual-kubelet/virtual-kubelet/node#PodLifecycleHandler) interface in [Go](https://golang.org).
 
 > For an example implementation of the Virtual Kubelet `PodLifecycleHandler` interface, see the [Virtual Kubelet CRI Provider](https://github.com/virtual-kubelet/cri), especially [`cri.go`](https://github.com/virtual-kubelet/cri/blob/master/cri.go).
+=======
+To add a new Virtual Kubelet provider, create a new directory for your provider in the [`providers`](https://github.com/virtual-kubelet/virtual-kubelet/tree/master/providers) directory.
+
+```shell
+git clone https://github.com/virtual-kubelet/virtual-kubelet
+cd virtual-kubelet
+mkdir providers/my-provider
+```
+
+In that created directory, implement the [`Provider`](https://godoc.org/github.com/virtual-kubelet/virtual-kubelet/providers#Provider) interface in [Go](https://golang.org).
+
+> For an example implementation of the Virtual Kubelet `Provider` interface, see the [Virtual Kubelet CRI Provider](https://github.com/virtual-kubelet/virtual-kubelet/tree/master/providers/cri), especially [`cri.go`](https://github.com/virtual-kubelet/virtual-kubelet/blob/master/providers/cri/cri.go).
+>>>>>>> ab5ce1c3... Rename chewong back to virtual-kubelet
 
 Each Virtual Kubelet provider can be configured using its own configuration file and environment variables.
 
@@ -73,7 +87,11 @@ type PodLifecycleHandler interface {
 }
 ```
 
+<<<<<<< HEAD
 In addition to `PodLifecycleHandler`, there's an optional [`PodMetricsProvider`](https://godoc.org/github.com/virtual-kubelet/virtual-kubelet/cmd/virtual-kubelet/internal/provider#PodMetricsProvider) interface that providers can implement to expose Kubernetes Pod stats:
+=======
+In addition to `Provider`, there's an optional [`PodMetricsProvider`](https://godoc.org/github.com/virtual-kubelet/virtual-kubelet/providers#PodMetricsProvider) interface that providers can implement to expose Kubernetes Pod stats:
+>>>>>>> ab5ce1c3... Rename chewong back to virtual-kubelet
 
 ```go
 type PodMetricsProvider interface {
@@ -87,11 +105,16 @@ For a Virtual Kubelet provider to be considered viable, it must support the foll
 1. It must conform to the current API provided by Virtual Kubelet (see [above](#adding))
 1. It won't have access to the [Kubernetes API server](https://kubernetes.io/docs/concepts/overview/kubernetes-api/), so it must provide a well-defined callback mechanism for fetching data like [Secrets](https://kubernetes.io/docs/concepts/configuration/secret/) and [ConfigMaps](https://kubernetes.io/docs/tutorials/configuration/).
 
+<<<<<<< HEAD
+=======
+In addition to implementing the `Provider` interface in `providers/<your provider>`, you also need to add your provider to the [`providers/register`](https://github.com/virtual-kubelet/virtual-kubelet/tree/master/providers/register) directory, in `provider_<your provider>.go`. Current examples include [`provider_azure.go`](https://github.com/virtual-kubelet/virtual-kubelet/blob/master/providers/register/provider_azure.go) and [`provider_aws.go`](https://github.com/virtual-kubelet/virtual-kubelet/blob/master/providers/register/provider_aws.go), which you can use as templates.
+
+>>>>>>> ab5ce1c3... Rename chewong back to virtual-kubelet
 ## Documentation
 
 No Virtual Kubelet provider is complete without solid documentation. We strongly recommend providing a README for your provider in its directory. The READMEs for the currently existing implementations can provide a blueprint.
 
-You'll also likely want your provider to appear in the [list of current providers](#current-providers). That list is generated from a [`provider.yaml`](https://github.com/chewong/virtual-kubelet/blob/master/website/data/providers.yaml) file. Add a `name` field for the displayed name of the provider and the subdirectory as the `tag` field. The `name` field supports Markdown, so feel free to use bold text or a hyperlink.
+You'll also likely want your provider to appear in the [list of current providers](#current-providers). That list is generated from a [`provider.yaml`](https://github.com/virtual-kubelet/virtual-kubelet/blob/master/website/data/providers.yaml) file. Add a `name` field for the displayed name of the provider and the subdirectory as the `tag` field. The `name` field supports Markdown, so feel free to use bold text or a hyperlink.
 
 ## Testing
 

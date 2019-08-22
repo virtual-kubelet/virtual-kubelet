@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/chewong/virtual-kubelet/node"
+	"github.com/virtual-kubelet/virtual-kubelet/node"
 	"gotest.tools/assert"
 	v1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -58,7 +58,7 @@ func (ts *TestingSuite) TestGetStatsSummary(t *testing.T) {
 	}
 
 	// Make sure that we've got stats for all the containers in the "nginx-" pod.
-	desiredContainerStatsCount := len(pod.Spec.Containers) + 1
+	desiredContainerStatsCount := len(pod.Spec.Containers)
 	currentContainerStatsCount := len(stats.Pods[idx].Containers)
 	if currentContainerStatsCount != desiredContainerStatsCount {
 		t.Fatalf("expected stats for %d containers, got stats for %d containers", desiredContainerStatsCount, currentContainerStatsCount)

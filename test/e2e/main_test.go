@@ -4,7 +4,7 @@ import (
 	"flag"
 	"testing"
 
-	"github.com/chewong/virtual-kubelet/test/suite"
+	"github.com/virtual-kubelet/virtual-kubelet/test/suite"
 	v1 "k8s.io/api/core/v1"
 )
 

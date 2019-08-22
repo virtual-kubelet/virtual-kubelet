@@ -21,8 +21,8 @@ import (
 	"time"
 
 	pkgerrors "github.com/pkg/errors"
-	"github.com/chewong/virtual-kubelet/log"
-	"github.com/chewong/virtual-kubelet/trace"
+	"github.com/virtual-kubelet/virtual-kubelet/log"
+	"github.com/virtual-kubelet/virtual-kubelet/trace"
 	coord "k8s.io/api/coordination/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"

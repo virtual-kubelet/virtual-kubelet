@@ -41,7 +41,7 @@ Virtual Kubelet is focused on providing a library that you can consume in your
 project to build a custom Kubernetes node agent.
 
 See godoc for up to date instructions on consuming this project:
-https://godoc.org/github.com/chewong/virtual-kubelet
+https://godoc.org/github.com/virtual-kubelet/virtual-kubelet
 
 There are implementations available for several provides (listed above), see
 those repos for details on how to deploy.
@@ -154,7 +154,7 @@ There are 3 main interfaces:
 When pods are created, updated, or deleted from Kubernetes, these methods are
 called to handle those actions.
 
-[godoc#PodLifecylceHandler](https://godoc.org/github.com/chewong/virtual-kubelet/node#PodLifecycleHandler)
+[godoc#PodLifecylceHandler](https://godoc.org/github.com/virtual-kubelet/virtual-kubelet/node#PodLifecycleHandler)
 
 ```go
 type PodLifecycleHandler interface {
@@ -186,7 +186,7 @@ of all pods.
 It is highly recommended to implement `PodNotifier`, especially if you plan
 to run a large number of pods.
 
-[godoc#PodNotifier](https://godoc.org/github.com/chewong/virtual-kubelet/node#PodNotifier)
+[godoc#PodNotifier](https://godoc.org/github.com/virtual-kubelet/virtual-kubelet/node#PodNotifier)
 
 ```go
 type PodNotifier interface {
@@ -212,7 +212,7 @@ NodeProvider is responsible for notifying the virtual-kubelet about node status
 updates. Virtual-Kubelet will periodically check the status of the node and
 update Kubernetes accordingly.
 
-[godoc#NodeProvider](https://godoc.org/github.com/chewong/virtual-kubelet/node#NodeProvider)
+[godoc#NodeProvider](https://godoc.org/github.com/virtual-kubelet/virtual-kubelet/node#NodeProvider)
 
 ```go
 type NodeProvider interface {
@@ -235,7 +235,7 @@ type NodeProvider interface {
 Virtual Kubelet provides a `NaiveNodeProvider` that you can use if you do not
 plan to have custom node behavior.
 
-[godoc#NaiveNodeProvider](https://godoc.org/github.com/chewong/virtual-kubelet/node#NaiveNodeProvider)
+[godoc#NaiveNodeProvider](https://godoc.org/github.com/virtual-kubelet/virtual-kubelet/node#NaiveNodeProvider)
 
 `NodeProvider` gets consumed by the `NodeController`, which is core logic for
 managing the node object in Kubernetes.
@@ -249,7 +249,7 @@ managing the node object in Kubernetes.
 
 One of the roles of a Kubelet is to accept requests from the API server for
 things like `kubectl logs` and  `kubectl exec`. Helpers for setting this up are
-provided [here](https://godoc.org/github.com/chewong/virtual-kubelet/node/api)
+provided [here](https://godoc.org/github.com/virtual-kubelet/virtual-kubelet/node/api)
 
 ## Testing
 

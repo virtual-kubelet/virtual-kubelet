@@ -23,10 +23,10 @@ import (
 	"time"
 
 	pkgerrors "github.com/pkg/errors"
-	"github.com/chewong/virtual-kubelet/errdefs"
-	"github.com/chewong/virtual-kubelet/internal/manager"
-	"github.com/chewong/virtual-kubelet/log"
-	"github.com/chewong/virtual-kubelet/trace"
+	"github.com/virtual-kubelet/virtual-kubelet/errdefs"
+	"github.com/virtual-kubelet/virtual-kubelet/internal/manager"
+	"github.com/virtual-kubelet/virtual-kubelet/log"
+	"github.com/virtual-kubelet/virtual-kubelet/trace"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -42,7 +42,7 @@ import (
 // to new and changed pods scheduled to the node that is being managed.
 //
 // Errors produced by these methods should implement an interface from
-// github.com/chewong/virtual-kubelet/errdefs package in order for the
+// github.com/virtual-kubelet/virtual-kubelet/errdefs package in order for the
 // core logic to be able to understand the type of failure.
 type PodLifecycleHandler interface {
 	// CreatePod takes a Kubernetes Pod and deploys it within the provider.

@@ -1,7 +1,7 @@
 package e2e
 
 import (
-	"github.com/chewong/virtual-kubelet/test/e2e/framework"
+	"github.com/virtual-kubelet/virtual-kubelet/test/e2e/framework"
 )
 
 var f *framework.Framework

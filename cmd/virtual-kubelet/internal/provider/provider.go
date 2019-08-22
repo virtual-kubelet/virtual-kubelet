@@ -4,8 +4,8 @@ import (
 	"context"
 	"io"
 
-	"github.com/chewong/virtual-kubelet/node"
-	"github.com/chewong/virtual-kubelet/node/api"
+	"github.com/virtual-kubelet/virtual-kubelet/node"
+	"github.com/virtual-kubelet/virtual-kubelet/node/api"
 	v1 "k8s.io/api/core/v1"
 	stats "k8s.io/kubernetes/pkg/kubelet/apis/stats/v1alpha1"
 )
@@ -13,7 +13,7 @@ import (
 // Provider contains the methods required to implement a virtual-kubelet provider.
 //
 // Errors produced by these methods should implement an interface from
-// github.com/chewong/virtual-kubelet/errdefs package in order for the
+// github.com/virtual-kubelet/virtual-kubelet/errdefs package in order for the
 // core logic to be able to understand the type of failure.
 type Provider interface {
 	node.PodLifecycleHandler
