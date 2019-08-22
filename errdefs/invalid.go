@@ -5,7 +5,7 @@ import (
 	"fmt"
 )
 
-// InvalidInput is an error interface which denotes whether the opration failed due
+// InvalidInput is an error interface which denotes whether the operation failed due
 // to a the resource not being found.
 type ErrInvalidInput interface {
 	InvalidInput() bool

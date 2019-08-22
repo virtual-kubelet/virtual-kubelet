@@ -5,7 +5,7 @@ import (
 	"fmt"
 )
 
-// NotFound is an error interface which denotes whether the opration failed due
+// NotFound is an error interface which denotes whether the operation failed due
 // to a the resource not being found.
 type ErrNotFound interface {
 	NotFound() bool
