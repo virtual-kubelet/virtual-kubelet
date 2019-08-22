@@ -25,6 +25,7 @@ func Run(t *testing.T, s Suite) {
 	tests := []testing.InternalTest{}
 	for i := 0; i < testFinder.NumMethod(); i++ {
 		method := testFinder.Method(i)
+
 		// Test function name must start with "Test"
 		if !strings.HasPrefix(method.Name, "Test") {
 			continue
