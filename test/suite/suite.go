@@ -7,14 +7,15 @@ import (
 	"testing"
 )
 
-// Suite contains methods for setting up and tearing down a tesing suite
-type Suite interface {
+// TestSuite contains methods that defines the lifecycle of a test suite
+type TestSuite interface {
 	Setup()
 	Teardown()
+	ShouldSkipTest(string) bool
 }
 
 // Run runs tests registered in the test suite
-func Run(t *testing.T, s Suite) {
+func Run(t *testing.T, s TestSuite) {
 	defer failOnPanic(t)
 
 	s.Setup()
@@ -27,7 +28,6 @@ func Run(t *testing.T, s Suite) {
 		method := testFinder.Method(i)
 
 		// Test function name must start with "Test"
-		// TODO: Allow providers to skip particular tests
 		if !strings.HasPrefix(method.Name, "Test") {
 			continue
 		}
@@ -36,6 +36,9 @@ func Run(t *testing.T, s Suite) {
 			Name: method.Name,
 			F: func(t *testing.T) {
 				defer failOnPanic(t)
+				if s.ShouldSkipTest(method.Name) {
+					t.SkipNow()
+				}
 				method.Func.Call([]reflect.Value{reflect.ValueOf(s), reflect.ValueOf(t)})
 			},
 		}

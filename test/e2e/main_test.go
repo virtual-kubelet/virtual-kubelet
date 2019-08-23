@@ -1,3 +1,4 @@
+// +build e2e
 package e2e
 
 import (
@@ -29,14 +30,19 @@ func init() {
 	flag.Parse()
 }
 
+// Provider-specific setup function
 func setup() error {
-	// Implement provider-specific setup function
 	return nil
 }
 
+// Provider-specific teardown function
 func teardown() error {
-	// Implement provider-specific teardown function
 	return nil
+}
+
+//  Provider-specific shouldSkipTest function
+func shouldSkipTest(testName string) bool {
+	return false
 }
 
 // TestEndToEnd creates and runs the end-to-end test suite for virtual kubelet
@@ -44,11 +50,14 @@ func TestEndToEnd(t *testing.T) {
 	setDefaults()
 
 	config := EndToEndTestSuiteConfig{
-		Kubeconfig: kubeconfig,
-		Namespace:  namespace,
-		NodeName:   nodeName,
+		Kubeconfig:     kubeconfig,
+		Namespace:      namespace,
+		NodeName:       nodeName,
+		Setup:          setup,
+		Teardown:       teardown,
+		ShouldSkipTest: shouldSkipTest,
 	}
-	ts := NewEndToEndTestSuite(config, setup, teardown)
+	ts := NewEndToEndTestSuite(config)
 
 	suite.Run(t, ts)
 }
