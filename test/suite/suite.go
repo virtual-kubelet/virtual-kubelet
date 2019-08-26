@@ -62,9 +62,7 @@ func Run(t *testing.T, ts TestSuite) {
 	tests := []testCase{}
 	for i := 0; i < testFinder.NumMethod(); i++ {
 		method := testFinder.Method(i)
-
-		// Test function name must start with "Test"
-		if !strings.HasPrefix(method.Name, "Test") {
+		if !isValidTestFunc(method) {
 			continue
 		}
 
@@ -90,4 +88,13 @@ func defaultFailOnPanic(t *testing.T) {
 	if r := recover(); r != nil {
 		t.Fatalf("%v\n%s", r, debug.Stack())
 	}
+}
+
+// isValidTestFunc determines whether or not a given method is a valid test function
+func isValidTestFunc(method reflect.Method) bool {
+	// Test function name must start with "Test",
+	return strings.HasPrefix(method.Name, "Test") &&
+		method.Type.NumIn() == 2 && // the number of function input should be 2 (*TestSuite ts and t *testing.T),
+		method.Type.In(1) == reflect.TypeOf(&testing.T{}) &&
+		method.Type.NumOut() == 0 // and the numberof function output should be 0
 }

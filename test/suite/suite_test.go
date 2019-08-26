@@ -9,12 +9,15 @@ import (
 )
 
 type basicTestSuite struct {
-	setupCount    int
-	testFooCount  int
-	testBarCount  int
-	bazCount      int
-	teardownCount int
-	testsRan      []string
+	setupCount      int
+	testFooCount    int
+	testBarCount    int
+	bazCount        int
+	testFooBarCount int
+	testFooBazCount int
+	testBarBazCount int
+	teardownCount   int
+	testsRan        []string
 }
 
 func (bts *basicTestSuite) Setup() {
@@ -42,6 +45,28 @@ func (bts *basicTestSuite) Baz(t *testing.T) {
 	bts.testsRan = append(bts.testsRan, t.Name())
 }
 
+// TestFooBar should not be executed by the test suite
+// because the number of function input is not 2 (*basicTestSuite and *testing.T)
+func (bts *basicTestSuite) TestFooBar() {
+	bts.testFooBarCount++
+	bts.testsRan = append(bts.testsRan, "TestFooBar")
+}
+
+// TestFooBaz should not be executed by the test suite
+// because the number of function output is not 0
+func (bts *basicTestSuite) TestFooBaz(t *testing.T) error {
+	bts.testFooBazCount++
+	bts.testsRan = append(bts.testsRan, t.Name())
+	return nil
+}
+
+// TestBarBaz should not be executed by the test suite
+// because the type of the function input is not *testing.T
+func (bts *basicTestSuite) TestBarBaz(t string) {
+	bts.testBarBazCount++
+	bts.testsRan = append(bts.testsRan, "TestBarBaz")
+}
+
 func TestBasicTestSuite(t *testing.T) {
 	bts := new(basicTestSuite)
 	Run(t, bts)
@@ -49,10 +74,10 @@ func TestBasicTestSuite(t *testing.T) {
 	assert.Equal(t, bts.setupCount, 1)
 	assert.Equal(t, bts.testFooCount, 1)
 	assert.Equal(t, bts.testBarCount, 1)
-	assert.Equal(t, bts.bazCount, 0)
 	assert.Equal(t, bts.teardownCount, 1)
 	assert.Assert(t, is.Len(bts.testsRan, 2))
 	checkTestName(t, bts.testsRan)
+	checkMalformedTests(t, bts)
 }
 
 type skipTestSuite struct {
@@ -75,21 +100,11 @@ func TestSkipTest(t *testing.T) {
 	assert.Equal(t, sts.setupCount, 1)
 	assert.Equal(t, sts.testFooCount, 1)
 	assert.Equal(t, sts.testBarCount, 0)
-	assert.Equal(t, sts.bazCount, 0)
 	assert.Equal(t, sts.teardownCount, 1)
 	assert.Equal(t, sts.skippedTestCount, 1)
 	assert.Assert(t, is.Len(sts.testsRan, 1))
 	checkTestName(t, sts.testsRan)
-}
-
-func checkTestName(t *testing.T, testsRan []string) {
-	for _, testRan := range testsRan {
-		parts := strings.Split(testRan, "/")
-		// Make sure that the subtest has only one parent test
-		assert.Assert(t, is.Len(parts, 2))
-		// Check the parent test's name
-		assert.Equal(t, parts[0], t.Name())
-	}
+	checkMalformedTests(t, &sts.basicTestSuite)
 }
 
 type panickingTestSuite struct {
@@ -141,9 +156,9 @@ func TestPanickingTestSuiteDuringSetup(t *testing.T) {
 	assert.Equal(t, pts.setupCount, 1)
 	assert.Equal(t, pts.testFooCount, 0)
 	assert.Equal(t, pts.testBarCount, 0)
-	assert.Equal(t, pts.bazCount, 0)
 	assert.Equal(t, pts.teardownCount, 0)
 	assert.Assert(t, is.Len(pts.testsRan, 0))
+	checkMalformedTests(t, &pts.basicTestSuite)
 }
 
 // TestPanickingTestSuiteDuringSetup ensures the correct flow
@@ -167,7 +182,25 @@ func TestPanickingTestSuiteDuringTeardown(t *testing.T) {
 	assert.Equal(t, pts.setupCount, 1)
 	assert.Equal(t, pts.testFooCount, 1)
 	assert.Equal(t, pts.testBarCount, 1)
-	assert.Equal(t, pts.bazCount, 0)
 	assert.Equal(t, pts.teardownCount, 1)
 	assert.Assert(t, is.Len(pts.testsRan, 2))
+	checkMalformedTests(t, &pts.basicTestSuite)
+}
+
+func checkTestName(t *testing.T, testsRan []string) {
+	for _, testRan := range testsRan {
+		parts := strings.Split(testRan, "/")
+		// Make sure that the name of the test has exactly one parent name and one subtest name
+		assert.Assert(t, is.Len(parts, 2))
+		// Check the parent test's name
+		assert.Equal(t, parts[0], t.Name())
+	}
+}
+
+// checkMalformedTests ensures that any malformed test functions are not run by the test suite
+func checkMalformedTests(t *testing.T, bts *basicTestSuite) {
+	assert.Equal(t, bts.bazCount, 0)
+	assert.Equal(t, bts.testFooBarCount, 0)
+	assert.Equal(t, bts.testFooBazCount, 0)
+	assert.Equal(t, bts.testBarBazCount, 0)
 }
