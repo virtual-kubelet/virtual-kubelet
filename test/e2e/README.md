@@ -7,7 +7,9 @@ Virtual Kubelet (VK) provides an importable end-to-end (e2e) test suite containi
 To run the e2e test suite, three things are required:
 - A local Kubernetes cluster (we have tested with [Docker for Mac](https://docs.docker.com/docker-for-mac/install/) and [Minikube](https://kubernetes.io/docs/tasks/tools/install-minikube/);
 - Your _kubeconfig_ default context points to the local Kubernetes cluster;
-- [skaffold](https://skaffold.dev/docs/getting-started/#installing-skaffold).
+- [skaffold](https://skaffold.dev/docs/getting-started/#installing-skaffold);
+
+Note that the test suite is based on [VK 1.0](https://github.com/virtual-kubelet/virtual-kubelet/releases/tag/v1.0.0). If your VK implementation is based on legacy VK library (< v1.0.0), you will have to upgrade it to VK 1.0 using [virtual-kubelet/node-cli](https://github.com/virtual-kubelet/node-cli).
 
 ### Skaffold Artifacts
 
