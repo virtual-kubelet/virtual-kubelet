@@ -145,7 +145,6 @@ func (ts *EndToEndTestSuite) TestPodLifecycleGracefulDelete(t *testing.T) {
 func (ts *EndToEndTestSuite) TestPodLifecycleForceDelete(t *testing.T) {
 	podSpec := f.CreateDummyPodObjectWithPrefix(t.Name(), "nginx", "foo")
 	// Create a pod with prefix having a single container.
-
 	pod, err := f.CreatePod(podSpec)
 	if err != nil {
 		t.Fatal(err)

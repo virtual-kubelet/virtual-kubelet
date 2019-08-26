@@ -4,35 +4,33 @@ package e2e
 
 import (
 	"github.com/virtual-kubelet/virtual-kubelet/test/e2e/framework"
+	"github.com/virtual-kubelet/virtual-kubelet/test/suite"
 )
 
 // f is a testing framework that is accessible across the e2e package
 var f *framework.Framework
 
-// SetUpFunc sets up provider-specific resource in the test suite
-type SetUpFunc func() error
-
-// TeardownFunc tears down provider-specific resources from the test suite
-type TeardownFunc func() error
-
-// ShouldSkipTestFunc is a function to determine whether the test suite should skip a particular test
-type ShouldSkipTestFunc func(string) bool
-
 // EndToEndTestSuite holds the setup, teardown, and shouldSkipTest functions for a specific provider
 type EndToEndTestSuite struct {
-	setup          SetUpFunc
-	teardown       TeardownFunc
-	shouldSkipTest ShouldSkipTestFunc
+	setup          suite.SetUpFunc
+	teardown       suite.TeardownFunc
+	shouldSkipTest suite.ShouldSkipTestFunc
 }
 
 // EndToEndTestSuiteConfig is the config passed to initialize the testing framework and test suite.
 type EndToEndTestSuiteConfig struct {
-	Kubeconfig     string
-	Namespace      string
-	NodeName       string
-	Setup          SetUpFunc
-	Teardown       TeardownFunc
-	ShouldSkipTest ShouldSkipTestFunc
+	// Kubeconfig is the path to the kubeconfig file to use when running the test suite outside a Kubernetes cluster.
+	Kubeconfig string
+	// Namespace is the name of the Kubernetes namespace to use for running the test suite (i.e. where to create pods).
+	Namespace string
+	// NodeName is the name of the virtual-kubelet node to test.
+	NodeName string
+	// Setup is a function that sets up provider-specific resource in the test suite
+	Setup suite.SetUpFunc
+	// Teardown is a function that tears down provider-specific resources from the test suite
+	Teardown suite.TeardownFunc
+	// ShouldSkipTest is a function that determines whether the test suite should skip certain tests
+	ShouldSkipTest suite.ShouldSkipTestFunc
 }
 
 // Setup runs the setup function from the provider and other

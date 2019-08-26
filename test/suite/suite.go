@@ -13,6 +13,15 @@ type TestFunc func(*testing.T)
 // FailOnPanicFunc defines the function to run when there is a panic
 type FailOnPanicFunc func(*testing.T)
 
+// SetUpFunc sets up provider-specific resource in the test suite
+type SetUpFunc func() error
+
+// TeardownFunc tears down provider-specific resources from the test suite
+type TeardownFunc func() error
+
+// ShouldSkipTestFunc determines whether the test suite should skip certain tests
+type ShouldSkipTestFunc func(string) bool
+
 // TestSuite contains methods that defines the lifecycle of a test suite
 type TestSuite interface {
 	Setup()

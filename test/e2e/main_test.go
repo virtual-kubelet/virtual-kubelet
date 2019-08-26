@@ -4,6 +4,7 @@ package e2e
 
 import (
 	"flag"
+	"fmt"
 	"testing"
 
 	"github.com/virtual-kubelet/virtual-kubelet/test/suite"
@@ -16,12 +17,9 @@ const (
 )
 
 var (
-	// kubeconfig is the path to the kubeconfig file to use when running the test suite outside a Kubernetes cluster.
 	kubeconfig string
-	// namespace is the name of the Kubernetes namespace to use for running the test suite (i.e. where to create pods).
-	namespace string
-	// nodeName is the name of the virtual-kubelet node to test.
-	nodeName string
+	namespace  string
+	nodeName   string
 )
 
 func init() {
@@ -33,11 +31,13 @@ func init() {
 
 // Provider-specific setup function
 func setup() error {
+	fmt.Println("Setting up end-to-end test suite for mock provider...")
 	return nil
 }
 
 // Provider-specific teardown function
 func teardown() error {
+	fmt.Println("Tearing down end-to-end test suite for mock provider...")
 	return nil
 }
 
@@ -49,7 +49,6 @@ func shouldSkipTest(testName string) bool {
 // TestEndToEnd creates and runs the end-to-end test suite for virtual kubelet
 func TestEndToEnd(t *testing.T) {
 	setDefaults()
-
 	config := EndToEndTestSuiteConfig{
 		Kubeconfig:     kubeconfig,
 		Namespace:      namespace,
@@ -58,9 +57,8 @@ func TestEndToEnd(t *testing.T) {
 		Teardown:       teardown,
 		ShouldSkipTest: shouldSkipTest,
 	}
-	ts := NewEndToEndTestSuite(config)
 
-	suite.Run(t, ts)
+	suite.Run(t, NewEndToEndTestSuite(config))
 }
 
 // setDefaults sets sane defaults in case no values (or empty ones) have been provided.
