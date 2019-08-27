@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/virtual-kubelet/virtual-kubelet/test/suite"
 	v1 "k8s.io/api/core/v1"
 )
 
@@ -57,8 +56,8 @@ func TestEndToEnd(t *testing.T) {
 		Teardown:       teardown,
 		ShouldSkipTest: shouldSkipTest,
 	}
-
-	suite.Run(t, NewEndToEndTestSuite(config))
+	ts := NewEndToEndTestSuite(config)
+	ts.Run(t)
 }
 
 // setDefaults sets sane defaults in case no values (or empty ones) have been provided.

@@ -3,8 +3,10 @@
 package e2e
 
 import (
-	"github.com/virtual-kubelet/virtual-kubelet/test/e2e/framework"
-	"github.com/virtual-kubelet/virtual-kubelet/test/suite"
+	"testing"
+
+	"github.com/virtual-kubelet/virtual-kubelet/internal/test/e2e/framework"
+	"github.com/virtual-kubelet/virtual-kubelet/internal/test/suite"
 )
 
 // f is a testing framework that is accessible across the e2e package
@@ -57,6 +59,11 @@ func (ts *EndToEndTestSuite) Teardown() {
 // ShouldSkipTest returns true if a provider wants to skip running a particular test
 func (ts *EndToEndTestSuite) ShouldSkipTest(testName string) bool {
 	return ts.shouldSkipTest(testName)
+}
+
+// Run runs tests registered in the test suite
+func (ts *EndToEndTestSuite) Run(t *testing.T) {
+	suite.Run(t, ts)
 }
 
 // NewEndToEndTestSuite returns a new EndToEndTestSuite given a test suite configuration,
