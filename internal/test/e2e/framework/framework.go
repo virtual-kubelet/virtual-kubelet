@@ -1,6 +1,8 @@
 package framework
 
 import (
+	"time"
+
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
@@ -8,17 +10,19 @@ import (
 
 // Framework encapsulates the configuration for the current run, and provides helper methods to be used during testing.
 type Framework struct {
-	KubeClient kubernetes.Interface
-	Namespace  string
-	NodeName   string
+	KubeClient   kubernetes.Interface
+	Namespace    string
+	NodeName     string
+	WatchTimeout time.Duration
 }
 
 // NewTestingFramework returns a new instance of the testing framework.
-func NewTestingFramework(kubeconfig, namespace, nodeName string) *Framework {
+func NewTestingFramework(kubeconfig, namespace, nodeName string, watchTimeout time.Duration) *Framework {
 	return &Framework{
-		KubeClient: createKubeClient(kubeconfig),
-		Namespace:  namespace,
-		NodeName:   nodeName,
+		KubeClient:   createKubeClient(kubeconfig),
+		Namespace:    namespace,
+		NodeName:     nodeName,
+		WatchTimeout: watchTimeout,
 	}
 }
 

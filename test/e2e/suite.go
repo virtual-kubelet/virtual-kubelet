@@ -4,10 +4,13 @@ package e2e
 
 import (
 	"testing"
+	"time"
 
 	"github.com/virtual-kubelet/virtual-kubelet/internal/test/e2e/framework"
 	"github.com/virtual-kubelet/virtual-kubelet/internal/test/suite"
 )
+
+const defaultWatchTimeout = 2 * time.Minute
 
 // f is a testing framework that is accessible across the e2e package
 var f *framework.Framework
@@ -27,6 +30,8 @@ type EndToEndTestSuiteConfig struct {
 	Namespace string
 	// NodeName is the name of the virtual-kubelet node to test.
 	NodeName string
+	// WatchTimeout is the duration that the framework watches the provider to satisfy a certain condition (e.g. watches a pod to become ready)
+	WatchTimeout time.Duration
 	// Setup is a function that sets up provider-specific resource in the test suite
 	Setup suite.SetUpFunc
 	// Teardown is a function that tears down provider-specific resources from the test suite
@@ -39,7 +44,7 @@ type EndToEndTestSuiteConfig struct {
 // procedures before running the test suite
 func (ts *EndToEndTestSuite) Setup() {
 	if err := ts.setup(); err != nil {
-		panic("Error in Setup()")
+		panic(err)
 	}
 
 	// Wait for the virtual kubelet (deployed as a pod) to become fully ready
@@ -52,7 +57,7 @@ func (ts *EndToEndTestSuite) Setup() {
 // procedures after running the test suite
 func (ts *EndToEndTestSuite) Teardown() {
 	if err := ts.teardown(); err != nil {
-		panic("Error in Teardown()")
+		panic(err)
 	}
 }
 
@@ -75,7 +80,11 @@ func NewEndToEndTestSuite(cfg EndToEndTestSuiteConfig) *EndToEndTestSuite {
 		panic("Empty node name")
 	}
 
-	f = framework.NewTestingFramework(cfg.Kubeconfig, cfg.Namespace, cfg.NodeName)
+	if cfg.WatchTimeout == time.Duration(0) {
+		cfg.WatchTimeout = defaultWatchTimeout
+	}
+
+	f = framework.NewTestingFramework(cfg.Kubeconfig, cfg.Namespace, cfg.NodeName, cfg.WatchTimeout)
 
 	emptyFunc := func() error { return nil }
 	if cfg.Setup == nil {

@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"strings"
-	"time"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -15,8 +14,6 @@ import (
 	"k8s.io/client-go/tools/watch"
 	podutil "k8s.io/kubernetes/pkg/api/v1/pod"
 )
-
-const defaultWatchTimeout = 2 * time.Minute
 
 // CreateDummyPodObjectWithPrefix creates a dujmmy pod object using the specified prefix as the value of .metadata.generateName.
 // A variable number of strings can be provided.
@@ -88,7 +85,7 @@ func (f *Framework) WaitUntilPodCondition(namespace, name string, fn watch.Condi
 		},
 	}
 	// Watch for updates to the Pod resource until fn is satisfied, or until the timeout is reached.
-	ctx, cfn := context.WithTimeout(context.Background(), defaultWatchTimeout)
+	ctx, cfn := context.WithTimeout(context.Background(), f.WatchTimeout)
 	defer cfn()
 	last, err := watch.UntilWithSync(ctx, lw, &corev1.Pod{}, nil, fn)
 	if err != nil {
@@ -147,7 +144,7 @@ func (f *Framework) WaitUntilPodEventWithReason(pod *corev1.Pod, reason string) 
 		},
 	}
 	// Watch for updates to the Event resource until fn is satisfied, or until the timeout is reached.
-	ctx, cfn := context.WithTimeout(context.Background(), defaultWatchTimeout)
+	ctx, cfn := context.WithTimeout(context.Background(), f.WatchTimeout)
 	defer cfn()
 	last, err := watch.UntilWithSync(ctx, lw, &corev1.Event{}, nil, func(event watchapi.Event) (b bool, e error) {
 		switch event.Type {

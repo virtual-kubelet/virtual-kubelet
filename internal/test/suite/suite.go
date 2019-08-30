@@ -10,9 +10,6 @@ import (
 // TestFunc defines the test function in a test case
 type TestFunc func(*testing.T)
 
-// FailOnPanicFunc defines the function to run when there is a panic
-type FailOnPanicFunc func(*testing.T)
-
 // SetUpFunc sets up provider-specific resource in the test suite
 type SetUpFunc func() error
 
@@ -33,11 +30,6 @@ type TestSkipper interface {
 	ShouldSkipTest(string) bool
 }
 
-// TestPanicker allows providers to implement custom logic when the test suite panics
-type TestPanicker interface {
-	FailOnPanic(*testing.T)
-}
-
 type testCase struct {
 	name string
 	f    TestFunc
@@ -45,14 +37,7 @@ type testCase struct {
 
 // Run runs tests registered in the test suite
 func Run(t *testing.T, ts TestSuite) {
-	var failOnPanic FailOnPanicFunc
-	if tPanicker, ok := ts.(TestPanicker); ok {
-		failOnPanic = tPanicker.FailOnPanic
-	} else {
-		failOnPanic = defaultFailOnPanic
-	}
-
-	defer failOnPanic(t)
+	defer failOnPanic(t, ts)
 
 	ts.Setup()
 	defer ts.Teardown()
@@ -83,9 +68,10 @@ func Run(t *testing.T, ts TestSuite) {
 	}
 }
 
-// defaultFailOnPanic recovers from test panicking and mark that test as failed
-func defaultFailOnPanic(t *testing.T) {
+// failOnPanic recovers from test panicking and mark that test as failed
+func failOnPanic(t *testing.T, ts TestSuite) {
 	if r := recover(); r != nil {
+		ts.Teardown()
 		t.Fatalf("%v\n%s", r, debug.Stack())
 	}
 }

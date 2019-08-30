@@ -24,7 +24,7 @@ const (
 // It expects this endpoint to return stats for the current node, as well as for the aforementioned pod and each of its two containers.
 func (ts *EndToEndTestSuite) TestGetStatsSummary(t *testing.T) {
 	// Create a pod with prefix "nginx-" having three containers.
-	pod, err := f.CreatePod(f.CreateDummyPodObjectWithPrefix(t.Name(), "nginx", "foo", "bar", "baz"))
+	pod, err := f.CreatePod(f.CreateDummyPodObjectWithPrefix(t.Name(), "nginx", "nginx"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -71,7 +71,7 @@ func (ts *EndToEndTestSuite) TestGetStatsSummary(t *testing.T) {
 // Hence, the provider being tested must implement the PodMetricsProvider interface.
 func (ts *EndToEndTestSuite) TestPodLifecycleGracefulDelete(t *testing.T) {
 	// Create a pod with prefix "nginx-" having a single container.
-	podSpec := f.CreateDummyPodObjectWithPrefix(t.Name(), "nginx", "foo")
+	podSpec := f.CreateDummyPodObjectWithPrefix(t.Name(), "nginx", "nginx")
 	podSpec.Spec.NodeName = f.NodeName
 
 	pod, err := f.CreatePod(podSpec)
@@ -143,7 +143,7 @@ func (ts *EndToEndTestSuite) TestPodLifecycleGracefulDelete(t *testing.T) {
 // and put them in the running lifecycle. It then does a force delete on the pod, and verifies the provider
 // has deleted it.
 func (ts *EndToEndTestSuite) TestPodLifecycleForceDelete(t *testing.T) {
-	podSpec := f.CreateDummyPodObjectWithPrefix(t.Name(), "nginx", "foo")
+	podSpec := f.CreateDummyPodObjectWithPrefix(t.Name(), "nginx", "nginx")
 	// Create a pod with prefix having a single container.
 	pod, err := f.CreatePod(podSpec)
 	if err != nil {
@@ -344,6 +344,7 @@ func (ts *EndToEndTestSuite) TestCreatePodWithMandatoryInexistentConfigMap(t *te
 // findPodInPodStats returns the index of the specified pod in the .pods field of the specified Summary object.
 // It returns an error if the specified pod is not found.
 func findPodInPodStats(summary *v1alpha1.Summary, pod *v1.Pod) (int, error) {
+	fmt.Println(summary)
 	for i, p := range summary.Pods {
 		if p.PodRef.Namespace == pod.Namespace && p.PodRef.Name == pod.Name && string(p.PodRef.UID) == string(pod.UID) {
 			return i, nil

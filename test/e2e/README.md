@@ -85,6 +85,8 @@ The customizations above can be specified in `EndToEndTestSuiteConfig`. In summa
 package e2e
 
 import (
+	"time"
+
 	vke2e "github.com/virtual-kubelet/virtual-kubelet/test/e2e"
 )
 
@@ -125,6 +127,7 @@ func TestEndToEnd(t *testing.T) {
 		Setup:          setup,
 		Teardown:       teardown,
 		ShouldSkipTest: shouldSkipTest,
+		WaitTimeout:    5 * time.Minute,
 	}
 	ts := vke2e.NewEndToEndTestSuite(config)
 	ts.Run(t)
