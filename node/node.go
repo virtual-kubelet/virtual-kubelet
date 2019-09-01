@@ -168,7 +168,7 @@ const (
 // Run registers the node in kubernetes and starts loops for updating the node
 // status in Kubernetes.
 //
-// The node status must be updated periodically in Kubertnetes to keep the node
+// The node status must be updated periodically in Kubernetes to keep the node
 // active. Newer versions of Kubernetes support node leases, which are
 // essentially light weight pings. Older versions of Kubernetes require updating
 // the node status periodically.
@@ -267,7 +267,7 @@ func (n *NodeController) controlLoop(ctx context.Context) error {
 
 			log.G(ctx).Debug("Received node status update")
 			// Performing a status update so stop/reset the status update timer in this
-			// branch otherwise there could be an uneccessary status update.
+			// branch otherwise there could be an unnecessary status update.
 			if !t.Stop() {
 				<-t.C
 			}
@@ -443,7 +443,7 @@ func preparePatchBytesforNodeStatus(nodeName types.NodeName, oldNode *corev1.Nod
 // It first fetches the current node details and then sets the status according
 // to the passed in node object.
 //
-// If you use this function, it is up to you to syncronize this with other operations.
+// If you use this function, it is up to you to synchronize this with other operations.
 // This reduces the time to second-level precision.
 func updateNodeStatus(ctx context.Context, nodes v1.NodeInterface, n *corev1.Node) (_ *corev1.Node, retErr error) {
 	ctx, span := trace.StartSpan(ctx, "UpdateNodeStatus")

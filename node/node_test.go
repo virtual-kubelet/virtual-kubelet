@@ -44,7 +44,7 @@ func testNodeRun(t *testing.T, enableLease bool) {
 	testP := &testNodeProvider{NodeProvider: &NaiveNodeProvider{}}
 
 	nodes := c.CoreV1().Nodes()
-	leases := c.Coordination().Leases(corev1.NamespaceNodeLease)
+	leases := c.CoordinationV1beta1().Leases(corev1.NamespaceNodeLease)
 
 	interval := 1 * time.Millisecond
 	opts := []NodeControllerOpt{
@@ -54,7 +54,11 @@ func testNodeRun(t *testing.T, enableLease bool) {
 	if enableLease {
 		opts = append(opts, WithNodeEnableLeaseV1Beta1(leases, nil))
 	}
-	node, err := NewNodeController(testP, testNode(t), nodes, opts...)
+	testNode := testNode(t)
+	// We have to refer to testNodeCopy during the course of the test. testNode is modified by the node controller
+	// so it will trigger the race detector.
+	testNodeCopy := testNode.DeepCopy()
+	node, err := NewNodeController(testP, testNode, nodes, opts...)
 	assert.NilError(t, err)
 
 	chErr := make(chan error)
@@ -68,11 +72,11 @@ func testNodeRun(t *testing.T, enableLease bool) {
 		close(chErr)
 	}()
 
-	nw := makeWatch(t, nodes, node.n.Name)
+	nw := makeWatch(t, nodes, testNodeCopy.Name)
 	defer nw.Stop()
 	nr := nw.ResultChan()
 
-	lw := makeWatch(t, leases, node.n.Name)
+	lw := makeWatch(t, leases, testNodeCopy.Name)
 	defer lw.Stop()
 	lr := lw.ResultChan()
 
@@ -105,7 +109,8 @@ func testNodeRun(t *testing.T, enableLease bool) {
 			leaseUpdates++
 
 			assert.Assert(t, cmp.Equal(l.Spec.HolderIdentity != nil, true))
-			assert.Check(t, cmp.Equal(*l.Spec.HolderIdentity, node.n.Name))
+			assert.NilError(t, err)
+			assert.Check(t, cmp.Equal(*l.Spec.HolderIdentity, testNodeCopy.Name))
 			if lBefore != nil {
 				assert.Check(t, before(lBefore.Spec.RenewTime.Time, l.Spec.RenewTime.Time))
 			}
@@ -125,14 +130,15 @@ func testNodeRun(t *testing.T, enableLease bool) {
 	}
 
 	// trigger an async node status update
-	n := node.n.DeepCopy()
+	n, err := nodes.Get(testNode.Name, metav1.GetOptions{})
+	assert.NilError(t, err)
 	newCondition := corev1.NodeCondition{
 		Type:               corev1.NodeConditionType("UPDATED"),
 		LastTransitionTime: metav1.Now().Rfc3339Copy(),
 	}
 	n.Status.Conditions = append(n.Status.Conditions, newCondition)
 
-	nw = makeWatch(t, nodes, node.n.Name)
+	nw = makeWatch(t, nodes, testNodeCopy.Name)
 	defer nw.Stop()
 	nr = nw.ResultChan()
 
@@ -216,7 +222,7 @@ func TestNodeCustomUpdateStatusErrorHandler(t *testing.T) {
 }
 
 func TestEnsureLease(t *testing.T) {
-	c := testclient.NewSimpleClientset().Coordination().Leases(corev1.NamespaceNodeLease)
+	c := testclient.NewSimpleClientset().CoordinationV1beta1().Leases(corev1.NamespaceNodeLease)
 	n := testNode(t)
 	ctx := context.Background()
 
@@ -270,7 +276,7 @@ func TestUpdateNodeStatus(t *testing.T) {
 }
 
 func TestUpdateNodeLease(t *testing.T) {
-	leases := testclient.NewSimpleClientset().Coordination().Leases(corev1.NamespaceNodeLease)
+	leases := testclient.NewSimpleClientset().CoordinationV1beta1().Leases(corev1.NamespaceNodeLease)
 	lease := newLease(nil)
 	n := testNode(t)
 	setLeaseAttrs(lease, n, 0)

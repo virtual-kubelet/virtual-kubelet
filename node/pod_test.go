@@ -16,7 +16,6 @@ package node
 
 import (
 	"context"
-	"sync/atomic"
 	"testing"
 
 	pkgerrors "github.com/pkg/errors"
@@ -54,78 +53,104 @@ func newTestController() *TestController {
 	}
 }
 
-func TestPodHashingEqual(t *testing.T) {
-	p1 := corev1.PodSpec{
-		Containers: []corev1.Container{
-			corev1.Container{
-				Name:  "nginx",
-				Image: "nginx:1.15.12-perl",
-				Ports: []corev1.ContainerPort{
-					corev1.ContainerPort{
-						ContainerPort: 443,
-						Protocol:      "tcp",
+func TestPodsEqual(t *testing.T) {
+	p1 := &corev1.Pod{
+		Spec: corev1.PodSpec{
+			Containers: []corev1.Container{
+				corev1.Container{
+					Name:  "nginx",
+					Image: "nginx:1.15.12-perl",
+					Ports: []corev1.ContainerPort{
+						corev1.ContainerPort{
+							ContainerPort: 443,
+							Protocol:      "tcp",
+						},
 					},
 				},
 			},
 		},
 	}
 
-	h1 := hashPodSpec(p1)
-
-	p2 := corev1.PodSpec{
-		Containers: []corev1.Container{
-			corev1.Container{
-				Name:  "nginx",
-				Image: "nginx:1.15.12-perl",
-				Ports: []corev1.ContainerPort{
-					corev1.ContainerPort{
-						ContainerPort: 443,
-						Protocol:      "tcp",
+	p2 := &corev1.Pod{
+		Spec: corev1.PodSpec{
+			Containers: []corev1.Container{
+				corev1.Container{
+					Name:  "nginx",
+					Image: "nginx:1.15.12-perl",
+					Ports: []corev1.ContainerPort{
+						corev1.ContainerPort{
+							ContainerPort: 443,
+							Protocol:      "tcp",
+						},
 					},
 				},
 			},
 		},
 	}
 
-	h2 := hashPodSpec(p2)
-	assert.Check(t, is.Equal(h1, h2))
+	assert.Assert(t, podsEqual(p1, p2))
 }
 
-func TestPodHashingDifferent(t *testing.T) {
-	p1 := corev1.PodSpec{
-		Containers: []corev1.Container{
-			corev1.Container{
-				Name:  "nginx",
-				Image: "nginx:1.15.12",
-				Ports: []corev1.ContainerPort{
-					corev1.ContainerPort{
-						ContainerPort: 443,
-						Protocol:      "tcp",
+func TestPodsDifferent(t *testing.T) {
+	p1 := &corev1.Pod{
+		Spec: corev1.PodSpec{
+			Containers: []corev1.Container{
+				corev1.Container{
+					Name:  "nginx",
+					Image: "nginx:1.15.12",
+					Ports: []corev1.ContainerPort{
+						corev1.ContainerPort{
+							ContainerPort: 443,
+							Protocol:      "tcp",
+						},
 					},
 				},
 			},
 		},
 	}
 
-	h1 := hashPodSpec(p1)
-
-	p2 := corev1.PodSpec{
-		Containers: []corev1.Container{
-			corev1.Container{
-				Name:  "nginx",
-				Image: "nginx:1.15.12-perl",
-				Ports: []corev1.ContainerPort{
-					corev1.ContainerPort{
-						ContainerPort: 443,
-						Protocol:      "tcp",
+	p2 := &corev1.Pod{
+		Spec: corev1.PodSpec{
+			Containers: []corev1.Container{
+				corev1.Container{
+					Name:  "nginx",
+					Image: "nginx:1.15.12-perl",
+					Ports: []corev1.ContainerPort{
+						corev1.ContainerPort{
+							ContainerPort: 443,
+							Protocol:      "tcp",
+						},
 					},
 				},
 			},
 		},
 	}
 
-	h2 := hashPodSpec(p2)
-	assert.Check(t, h1 != h2)
+	assert.Assert(t, !podsEqual(p1, p2))
+}
+
+func TestPodsDifferentIgnoreValue(t *testing.T) {
+	p1 := &corev1.Pod{
+		Spec: corev1.PodSpec{
+			Containers: []corev1.Container{
+				corev1.Container{
+					Name:  "nginx",
+					Image: "nginx:1.15.12",
+					Ports: []corev1.ContainerPort{
+						corev1.ContainerPort{
+							ContainerPort: 443,
+							Protocol:      "tcp",
+						},
+					},
+				},
+			},
+		},
+	}
+
+	p2 := p1.DeepCopy()
+	p2.Status.Phase = corev1.PodFailed
+
+	assert.Assert(t, podsEqual(p1, p2))
 }
 
 func TestPodCreateNewPod(t *testing.T) {
@@ -149,12 +174,12 @@ func TestPodCreateNewPod(t *testing.T) {
 		},
 	}
 
-	err := svr.createOrUpdatePod(context.Background(), pod)
+	err := svr.createOrUpdatePod(context.Background(), pod.DeepCopy())
 
 	assert.Check(t, is.Nil(err))
 	// createOrUpdate called CreatePod but did not call UpdatePod because the pod did not exist
-	assert.Check(t, is.Equal(atomic.LoadUint64(&svr.mock.creates), uint64(1)))
-	assert.Check(t, is.Equal(atomic.LoadUint64(&svr.mock.updates), uint64(0)))
+	assert.Check(t, is.Equal(svr.mock.creates.read(), 1))
+	assert.Check(t, is.Equal(svr.mock.updates.read(), 0))
 }
 
 func TestPodUpdateExisting(t *testing.T) {
@@ -178,10 +203,10 @@ func TestPodUpdateExisting(t *testing.T) {
 		},
 	}
 
-	err := svr.provider.CreatePod(context.Background(), pod)
+	err := svr.createOrUpdatePod(context.Background(), pod.DeepCopy())
 	assert.Check(t, is.Nil(err))
-	assert.Check(t, is.Equal(atomic.LoadUint64(&svr.mock.creates), uint64(1)))
-	assert.Check(t, is.Equal(atomic.LoadUint64(&svr.mock.updates), uint64(0)))
+	assert.Check(t, is.Equal(svr.mock.creates.read(), 1))
+	assert.Check(t, is.Equal(svr.mock.updates.read(), 0))
 
 	pod2 := &corev1.Pod{}
 	pod2.ObjectMeta.Namespace = "default"
@@ -201,12 +226,12 @@ func TestPodUpdateExisting(t *testing.T) {
 		},
 	}
 
-	err = svr.createOrUpdatePod(context.Background(), pod2)
+	err = svr.createOrUpdatePod(context.Background(), pod2.DeepCopy())
 	assert.Check(t, is.Nil(err))
 
 	// createOrUpdate didn't call CreatePod but did call UpdatePod because the spec changed
-	assert.Check(t, is.Equal(atomic.LoadUint64(&svr.mock.creates), uint64(1)))
-	assert.Check(t, is.Equal(atomic.LoadUint64(&svr.mock.updates), uint64(1)))
+	assert.Check(t, is.Equal(svr.mock.creates.read(), 1))
+	assert.Check(t, is.Equal(svr.mock.updates.read(), 1))
 }
 
 func TestPodNoSpecChange(t *testing.T) {
@@ -230,17 +255,17 @@ func TestPodNoSpecChange(t *testing.T) {
 		},
 	}
 
-	err := svr.mock.CreatePod(context.Background(), pod)
+	err := svr.createOrUpdatePod(context.Background(), pod.DeepCopy())
 	assert.Check(t, is.Nil(err))
-	assert.Check(t, is.Equal(atomic.LoadUint64(&svr.mock.creates), uint64(1)))
-	assert.Check(t, is.Equal(atomic.LoadUint64(&svr.mock.updates), uint64(0)))
+	assert.Check(t, is.Equal(svr.mock.creates.read(), 1))
+	assert.Check(t, is.Equal(svr.mock.updates.read(), 0))
 
-	err = svr.createOrUpdatePod(context.Background(), pod)
+	err = svr.createOrUpdatePod(context.Background(), pod.DeepCopy())
 	assert.Check(t, is.Nil(err))
 
 	// createOrUpdate didn't call CreatePod or UpdatePod, spec didn't change
-	assert.Check(t, is.Equal(atomic.LoadUint64(&svr.mock.creates), uint64(1)))
-	assert.Check(t, is.Equal(atomic.LoadUint64(&svr.mock.updates), uint64(0)))
+	assert.Check(t, is.Equal(svr.mock.creates.read(), 1))
+	assert.Check(t, is.Equal(svr.mock.updates.read(), 0))
 }
 
 func TestPodDelete(t *testing.T) {
@@ -278,9 +303,9 @@ func TestPodDelete(t *testing.T) {
 			assert.NilError(t, err)
 
 			ctx := context.Background()
-			err = c.createOrUpdatePod(ctx, p) // make sure it's actually created
+			err = c.createOrUpdatePod(ctx, p.DeepCopy()) // make sure it's actually created
 			assert.NilError(t, err)
-			assert.Check(t, is.Equal(atomic.LoadUint64(&c.mock.creates), uint64(1)))
+			assert.Check(t, is.Equal(c.mock.creates.read(), 1))
 
 			err = c.deletePod(ctx, pod.Namespace, pod.Name)
 			assert.Equal(t, pkgerrors.Cause(err), err)
@@ -289,7 +314,7 @@ func TestPodDelete(t *testing.T) {
 			if tc.delErr == nil {
 				expectDeletes = 1
 			}
-			assert.Check(t, is.Equal(atomic.LoadUint64(&c.mock.deletes), uint64(expectDeletes)))
+			assert.Check(t, is.Equal(c.mock.deletes.read(), expectDeletes))
 
 			expectDeleted := tc.delErr == nil || errdefs.IsNotFound(tc.delErr)
 

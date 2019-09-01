@@ -4,14 +4,16 @@ import (
 	"context"
 	"fmt"
 	"strconv"
-	"sync/atomic"
 	"testing"
 	"time"
 
+	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
+	"github.com/virtual-kubelet/virtual-kubelet/errdefs"
 	"github.com/virtual-kubelet/virtual-kubelet/log"
 	logruslogger "github.com/virtual-kubelet/virtual-kubelet/log/logrus"
 	"gotest.tools/assert"
+	is "gotest.tools/assert/cmp"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
@@ -21,9 +23,11 @@ import (
 	kubeinformers "k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes/fake"
 	corev1client "k8s.io/client-go/kubernetes/typed/core/v1"
+	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
 	watchutils "k8s.io/client-go/tools/watch"
 	"k8s.io/klog"
+	ktesting "k8s.io/client-go/testing"
 )
 
 var (
@@ -90,11 +94,26 @@ func TestPodLifecycle(t *testing.T) {
 
 	ctx = log.WithLogger(ctx, log.L)
 
-	t.Run("createStartDeleteScenario", func(t *testing.T) {
-		t.Run("mockProvider", func(t *testing.T) {
+	// isPodDeletedPermanentlyFunc is a condition func that waits until the pod is _deleted_, which is the VK's
+	// action when the pod is deleted from the provider
+	isPodDeletedPermanentlyFunc := func(ctx context.Context, watcher watch.Interface) error {
+		_, watchErr := watchutils.UntilWithoutRetry(ctx, watcher, func(ev watch.Event) (bool, error) {
+			log.G(ctx).WithField("event", ev).Info("got event")
+			// TODO(Sargun): The pod should have transitioned into some status around failed / succeeded
+			// prior to being deleted.
+			// In addition, we should check if the deletion timestamp gets set
+			return ev.Type == watch.Deleted, nil
+		})
+		return watchErr
+	}
 
+	// createStartDeleteScenario tests the basic flow of creating a pod, waiting for it to start, and deleting
+	// it gracefully
+	t.Run("createStartDeleteScenario", func(t *testing.T) {
+
+		t.Run("mockProvider", func(t *testing.T) {
 			assert.NilError(t, wireUpSystem(ctx, newMockProvider(), func(ctx context.Context, s *system) {
-				testCreateStartDeleteScenario(ctx, t, s)
+				testCreateStartDeleteScenario(ctx, t, s, isPodDeletedPermanentlyFunc)
 			}))
 		})
 
@@ -103,13 +122,41 @@ func TestPodLifecycle(t *testing.T) {
 		}
 		t.Run("mockV0Provider", func(t *testing.T) {
 			assert.NilError(t, wireUpSystem(ctx, newMockV0Provider(), func(ctx context.Context, s *system) {
-				testCreateStartDeleteScenario(ctx, t, s)
+				testCreateStartDeleteScenario(ctx, t, s, isPodDeletedPermanentlyFunc)
 			}))
 		})
 	})
 
+	// createStartDeleteScenarioWithDeletionErrorNotFound tests the flow if the pod was not found in the provider
+	// for some reason
+	t.Run("createStartDeleteScenarioWithDeletionErrorNotFound", func(t *testing.T) {
+		mp := newMockProvider()
+		mp.errorOnDelete = errdefs.NotFound("not found")
+		assert.NilError(t, wireUpSystem(ctx, mp, func(ctx context.Context, s *system) {
+			testCreateStartDeleteScenario(ctx, t, s, isPodDeletedPermanentlyFunc)
+		}))
+	})
+
+	// createStartDeleteScenarioWithDeletionRandomError tests the flow if the pod was unable to be deleted in the
+	// provider
+	t.Run("createStartDeleteScenarioWithDeletionRandomError", func(t *testing.T) {
+		mp := newMockProvider()
+		deletionFunc := func(ctx context.Context, watcher watch.Interface) error {
+			return mp.attemptedDeletes.until(ctx, func(v int) bool { return v >= 2 })
+		}
+		mp.errorOnDelete = errors.New("random error")
+		assert.NilError(t, wireUpSystem(ctx, mp, func(ctx context.Context, s *system) {
+			testCreateStartDeleteScenario(ctx, t, s, deletionFunc)
+			pods, err := s.client.CoreV1().Pods(testNamespace).List(metav1.ListOptions{})
+			assert.NilError(t, err)
+			assert.Assert(t, is.Len(pods.Items, 1))
+			assert.Assert(t, pods.Items[0].DeletionTimestamp != nil)
+		}))
+	})
+
+	// danglingPodScenario tests if a pod is created in the provider prior to the pod controller starting,
+	// and ensures the pod controller deletes the pod prior to continuing.
 	t.Run("danglingPodScenario", func(t *testing.T) {
-		t.Parallel()
 		t.Run("mockProvider", func(t *testing.T) {
 			mp := newMockProvider()
 			assert.NilError(t, wireUpSystem(ctx, mp, func(ctx context.Context, s *system) {
@@ -129,8 +176,8 @@ func TestPodLifecycle(t *testing.T) {
 		})
 	})
 
+	// failedPodScenario ensures that the VK ignores failed pods that were failed prior to the PC starting up
 	t.Run("failedPodScenario", func(t *testing.T) {
-		t.Parallel()
 		t.Run("mockProvider", func(t *testing.T) {
 			mp := newMockProvider()
 			assert.NilError(t, wireUpSystem(ctx, mp, func(ctx context.Context, s *system) {
@@ -149,8 +196,8 @@ func TestPodLifecycle(t *testing.T) {
 		})
 	})
 
+	// succeededPodScenario ensures that the VK ignores succeeded pods that were succeeded prior to the PC starting up.
 	t.Run("succeededPodScenario", func(t *testing.T) {
-		t.Parallel()
 		t.Run("mockProvider", func(t *testing.T) {
 			mp := newMockProvider()
 			assert.NilError(t, wireUpSystem(ctx, mp, func(ctx context.Context, s *system) {
@@ -167,8 +214,9 @@ func TestPodLifecycle(t *testing.T) {
 		})
 	})
 
+	// updatePodWhileRunningScenario updates a pod while the VK is running to ensure the update is propagated
+	// to the provider
 	t.Run("updatePodWhileRunningScenario", func(t *testing.T) {
-		t.Parallel()
 		t.Run("mockProvider", func(t *testing.T) {
 			mp := newMockProvider()
 			assert.NilError(t, wireUpSystem(ctx, mp, func(ctx context.Context, s *system) {
@@ -216,15 +264,26 @@ func wireUpSystem(ctx context.Context, provider PodLifecycleHandler, f testFunct
 	// Create the fake client.
 	client := fake.NewSimpleClientset()
 
+	client.PrependReactor("update", "pods", func(action ktesting.Action) (handled bool, ret runtime.Object, err error) {
+		var pod *corev1.Pod
+
+		updateAction := action.(ktesting.UpdateAction)
+		pod = updateAction.GetObject().(*corev1.Pod)
+
+		resourceVersion, err := strconv.Atoi(pod.ResourceVersion)
+		if err != nil {
+			panic(errors.Wrap(err, "Could not parse resource version of pod"))
+		}
+		pod.ResourceVersion = strconv.Itoa(resourceVersion + 1)
+		return false, nil, nil
+	})
+
 	// This is largely copy and pasted code from the root command
-	podInformerFactory := kubeinformers.NewSharedInformerFactoryWithOptions(
+	sharedInformerFactory := kubeinformers.NewSharedInformerFactoryWithOptions(
 		client,
 		informerResyncPeriod,
-		kubeinformers.WithNamespace(testNamespace),
 	)
-	podInformer := podInformerFactory.Core().V1().Pods()
-
-	scmInformerFactory := kubeinformers.NewSharedInformerFactory(client, informerResyncPeriod)
+	podInformer := sharedInformerFactory.Core().V1().Pods()
 
 	eb := record.NewBroadcaster()
 	eb.StartLogging(log.G(ctx).Infof)
@@ -233,9 +292,9 @@ func wireUpSystem(ctx context.Context, provider PodLifecycleHandler, f testFunct
 		logger: log.G(ctx),
 	}
 
-	secretInformer := scmInformerFactory.Core().V1().Secrets()
-	configMapInformer := scmInformerFactory.Core().V1().ConfigMaps()
-	serviceInformer := scmInformerFactory.Core().V1().Services()
+	secretInformer := sharedInformerFactory.Core().V1().Secrets()
+	configMapInformer := sharedInformerFactory.Core().V1().ConfigMaps()
+	serviceInformer := sharedInformerFactory.Core().V1().Services()
 	sys := &system{
 		client:  client,
 		retChan: make(chan error, 1),
@@ -256,8 +315,15 @@ func wireUpSystem(ctx context.Context, provider PodLifecycleHandler, f testFunct
 		return err
 	}
 
-	go scmInformerFactory.Start(ctx.Done())
-	go podInformerFactory.Start(ctx.Done())
+	go sharedInformerFactory.Start(ctx.Done())
+	sharedInformerFactory.WaitForCacheSync(ctx.Done())
+	if ok := cache.WaitForCacheSync(ctx.Done(), podInformer.Informer().HasSynced); !ok {
+		return errors.New("podinformer failed to sync")
+	}
+
+	if err := ctx.Err(); err != nil {
+		return err
+	}
 
 	f(ctx, sys)
 
@@ -287,6 +353,7 @@ func testTerminalStatePodScenario(ctx context.Context, t *testing.T, s *system, 
 	s.start(ctx)
 
 	for s.pc.k8sQ.Len() > 0 {
+		time.Sleep(10 * time.Millisecond)
 	}
 
 	p2, err := s.client.CoreV1().Pods(testNamespace).Get(p1.Name, metav1.GetOptions{})
@@ -305,12 +372,12 @@ func testDanglingPodScenario(ctx context.Context, t *testing.T, s *system, m *mo
 	// Start the pod controller
 	s.start(ctx)
 
-	assert.Assert(t, m.deletes == 1)
+	assert.Assert(t, is.Equal(m.deletes.read(), 1))
 
 }
 
-func testCreateStartDeleteScenario(ctx context.Context, t *testing.T, s *system) {
-	t.Parallel()
+func testCreateStartDeleteScenario(ctx context.Context, t *testing.T, s *system, waitFunction func(ctx context.Context, watch watch.Interface) error) {
+
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
@@ -325,7 +392,7 @@ func testCreateStartDeleteScenario(ctx context.Context, t *testing.T, s *system)
 	// Setup a watch (prior to pod creation, and pod controller startup)
 	watcher, err := s.client.CoreV1().Pods(testNamespace).Watch(listOptions)
 	assert.NilError(t, err)
-
+	defer watcher.Stop()
 	// This ensures that the pod is created.
 	go func() {
 		_, watchErr := watchutils.UntilWithoutRetry(ctx, watcher,
@@ -342,6 +409,7 @@ func testCreateStartDeleteScenario(ctx context.Context, t *testing.T, s *system)
 	// Create the Pod
 	_, e := s.client.CoreV1().Pods(testNamespace).Create(p)
 	assert.NilError(t, e)
+	log.G(ctx).Debug("Created pod")
 
 	// This will return once
 	select {
@@ -355,6 +423,7 @@ func testCreateStartDeleteScenario(ctx context.Context, t *testing.T, s *system)
 	// Setup a watch to check if the pod is in running
 	watcher, err = s.client.CoreV1().Pods(testNamespace).Watch(listOptions)
 	assert.NilError(t, err)
+	defer watcher.Stop()
 	go func() {
 		_, watchErr := watchutils.UntilWithoutRetry(ctx, watcher,
 			// Wait for the pod to be started
@@ -369,43 +438,31 @@ func testCreateStartDeleteScenario(ctx context.Context, t *testing.T, s *system)
 	// Start the pod controller
 	podControllerErrCh := s.start(ctx)
 
-	// Wait for pod to be in running
+	// Wait for the pod to go into running
 	select {
 	case <-ctx.Done():
 		t.Fatalf("Context ended early: %s", ctx.Err().Error())
-	case err = <-podControllerErrCh:
-		assert.NilError(t, err)
-		t.Fatal("Pod controller exited prematurely without error")
 	case err = <-watchErrCh:
 		assert.NilError(t, err)
-
+	case err = <-podControllerErrCh:
+		assert.NilError(t, err)
+		t.Fatal("Pod controller terminated early")
 	}
 
 	// Setup a watch prior to pod deletion
 	watcher, err = s.client.CoreV1().Pods(testNamespace).Watch(listOptions)
 	assert.NilError(t, err)
+	defer watcher.Stop()
 	go func() {
-		_, watchErr := watchutils.UntilWithoutRetry(ctx, watcher,
-			// Wait for the pod to be started
-			func(ev watch.Event) (bool, error) {
-				log.G(ctx).WithField("event", ev).Info("got event")
-				// TODO(Sargun): The pod should have transitioned into some status around failed / succeeded
-				// prior to being deleted.
-				// In addition, we should check if the deletion timestamp gets set
-				return ev.Type == watch.Deleted, nil
-			})
-		watchErrCh <- watchErr
+		watchErrCh <- waitFunction(ctx, watcher)
 	}()
 
-	// Delete the pod
+	// Delete the pod via deletiontimestamp
 
 	// 1. Get the pod
 	currentPod, err := s.client.CoreV1().Pods(testNamespace).Get(p.Name, metav1.GetOptions{})
 	assert.NilError(t, err)
 	// 2. Set the pod's deletion timestamp, version, and so on
-	curVersion, err := strconv.Atoi(currentPod.ResourceVersion)
-	assert.NilError(t, err)
-	currentPod.ResourceVersion = strconv.Itoa(curVersion + 1)
 	var deletionGracePeriod int64 = 30
 	currentPod.DeletionGracePeriodSeconds = &deletionGracePeriod
 	deletionTimestamp := metav1.NewTime(time.Now().Add(time.Second * time.Duration(deletionGracePeriod)))
@@ -446,14 +503,16 @@ func testUpdatePodWhileRunningScenario(ctx context.Context, t *testing.T, s *sys
 	// Setup a watch to check if the pod is in running
 	watcher, err := s.client.CoreV1().Pods(testNamespace).Watch(listOptions)
 	assert.NilError(t, err)
+	defer watcher.Stop()
 	go func() {
-		_, watchErr := watchutils.UntilWithoutRetry(ctx, watcher,
+		newPod, watchErr := watchutils.UntilWithoutRetry(ctx, watcher,
 			// Wait for the pod to be started
 			func(ev watch.Event) (bool, error) {
 				pod := ev.Object.(*corev1.Pod)
 				return pod.Status.Phase == corev1.PodRunning, nil
 			})
-
+		// This deepcopy is required to please the race detector
+		p = newPod.Object.(*corev1.Pod).DeepCopy()
 		watchErrCh <- watchErr
 	}()
 
@@ -473,13 +532,19 @@ func testUpdatePodWhileRunningScenario(ctx context.Context, t *testing.T, s *sys
 	}
 
 	// Update the pod
+	version, err := strconv.Atoi(p.ResourceVersion)
+	if err != nil {
+		t.Fatalf("Could not parse pod's resource version: %s", err.Error())
+	}
 
-	bumpResourceVersion(p)
-	p.Spec.SchedulerName = "joe"
+	p.ResourceVersion = strconv.Itoa(version + 1)
+	var activeDeadlineSeconds int64 = 300
+	p.Spec.ActiveDeadlineSeconds = &activeDeadlineSeconds
+
+	log.G(ctx).WithField("pod", p).Info("Updating pod")
 	_, err = s.client.CoreV1().Pods(p.Namespace).Update(p)
 	assert.NilError(t, err)
-	for atomic.LoadUint64(&m.updates) == 0 {
-	}
+	assert.NilError(t, m.updates.until(ctx, func(v int) bool { return v > 0 }))
 }
 
 func BenchmarkCreatePods(b *testing.B) {
@@ -523,15 +588,6 @@ func randomizeUID(pod *corev1.Pod) {
 func randomizeName(pod *corev1.Pod) {
 	name := fmt.Sprintf("pod-%s", uuid.NewUUID())
 	pod.Name = name
-}
-
-func bumpResourceVersion(pod *corev1.Pod) {
-	version, err := strconv.Atoi(pod.ResourceVersion)
-	if err != nil {
-		panic(err)
-	}
-
-	pod.ResourceVersion = strconv.Itoa(version + 1)
 }
 
 func newPod(podmodifiers ...podModifier) *corev1.Pod {
