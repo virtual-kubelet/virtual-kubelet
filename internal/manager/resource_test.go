@@ -17,13 +17,13 @@ package manager_test
 import (
 	"testing"
 
+	"github.com/virtual-kubelet/virtual-kubelet/internal/manager"
+	testutil "github.com/virtual-kubelet/virtual-kubelet/internal/test/util"
+	"gotest.tools/assert"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	corev1listers "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/tools/cache"
-
-	"github.com/virtual-kubelet/virtual-kubelet/internal/manager"
-	testutil "github.com/virtual-kubelet/virtual-kubelet/internal/test/util"
 )
 
 // TestGetPods verifies that the resource manager acts as a passthrough to a pod lister.
@@ -38,7 +38,7 @@ func TestGetPods(t *testing.T) {
 	// Create a pod lister that will list the pods defined above.
 	indexer := cache.NewIndexer(cache.MetaNamespaceKeyFunc, cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc})
 	for _, pod := range lsPods {
-		indexer.Add(pod)
+		assert.NilError(t, indexer.Add(pod))
 	}
 	podLister := corev1listers.NewPodLister(indexer)
 
@@ -67,7 +67,7 @@ func TestGetSecret(t *testing.T) {
 	// Create a secret lister that will list the secrets defined above.
 	indexer := cache.NewIndexer(cache.MetaNamespaceKeyFunc, cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc})
 	for _, secret := range lsSecrets {
-		indexer.Add(secret)
+		assert.NilError(t, indexer.Add(secret))
 	}
 	secretLister := corev1listers.NewSecretLister(indexer)
 
@@ -106,7 +106,7 @@ func TestGetConfigMap(t *testing.T) {
 	// Create a config map lister that will list the config maps defined above.
 	indexer := cache.NewIndexer(cache.MetaNamespaceKeyFunc, cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc})
 	for _, secret := range lsConfigMaps {
-		indexer.Add(secret)
+		assert.NilError(t, indexer.Add(secret))
 	}
 	configMapLister := corev1listers.NewConfigMapLister(indexer)
 
@@ -145,7 +145,7 @@ func TestListServices(t *testing.T) {
 	// Create a pod lister that will list the pods defined above.
 	indexer := cache.NewIndexer(cache.MetaNamespaceKeyFunc, cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc})
 	for _, service := range lsServices {
-		indexer.Add(service)
+		assert.NilError(t, indexer.Add(service))
 	}
 	serviceLister := corev1listers.NewServiceLister(indexer)
 
