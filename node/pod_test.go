@@ -71,80 +71,25 @@ func TestPodsEqual(t *testing.T) {
 		},
 	}
 
-	p2 := &corev1.Pod{
-		Spec: corev1.PodSpec{
-			Containers: []corev1.Container{
-				corev1.Container{
-					Name:  "nginx",
-					Image: "nginx:1.15.12-perl",
-					Ports: []corev1.ContainerPort{
-						corev1.ContainerPort{
-							ContainerPort: 443,
-							Protocol:      "tcp",
-						},
-					},
-				},
-			},
-		},
-	}
+	p2 := p1.DeepCopy()
 
 	assert.Assert(t, podsEqual(p1, p2))
 }
 
 func TestPodsDifferent(t *testing.T) {
 	p1 := &corev1.Pod{
-		Spec: corev1.PodSpec{
-			Containers: []corev1.Container{
-				corev1.Container{
-					Name:  "nginx",
-					Image: "nginx:1.15.12",
-					Ports: []corev1.ContainerPort{
-						corev1.ContainerPort{
-							ContainerPort: 443,
-							Protocol:      "tcp",
-						},
-					},
-				},
-			},
-		},
+		Spec: newPodSpec(),
 	}
 
-	p2 := &corev1.Pod{
-		Spec: corev1.PodSpec{
-			Containers: []corev1.Container{
-				corev1.Container{
-					Name:  "nginx",
-					Image: "nginx:1.15.12-perl",
-					Ports: []corev1.ContainerPort{
-						corev1.ContainerPort{
-							ContainerPort: 443,
-							Protocol:      "tcp",
-						},
-					},
-				},
-			},
-		},
-	}
+	p2 := p1.DeepCopy()
+	p2.Spec.Containers[0].Image = "nginx:1.15.12-perl"
 
 	assert.Assert(t, !podsEqual(p1, p2))
 }
 
 func TestPodsDifferentIgnoreValue(t *testing.T) {
 	p1 := &corev1.Pod{
-		Spec: corev1.PodSpec{
-			Containers: []corev1.Container{
-				corev1.Container{
-					Name:  "nginx",
-					Image: "nginx:1.15.12",
-					Ports: []corev1.ContainerPort{
-						corev1.ContainerPort{
-							ContainerPort: 443,
-							Protocol:      "tcp",
-						},
-					},
-				},
-			},
-		},
+		Spec: newPodSpec(),
 	}
 
 	p2 := p1.DeepCopy()
@@ -157,22 +102,9 @@ func TestPodCreateNewPod(t *testing.T) {
 	svr := newTestController()
 
 	pod := &corev1.Pod{}
-	pod.ObjectMeta.Namespace = "default"
-	pod.ObjectMeta.Name = "nginx"
-	pod.Spec = corev1.PodSpec{
-		Containers: []corev1.Container{
-			corev1.Container{
-				Name:  "nginx",
-				Image: "nginx:1.15.12",
-				Ports: []corev1.ContainerPort{
-					corev1.ContainerPort{
-						ContainerPort: 443,
-						Protocol:      "tcp",
-					},
-				},
-			},
-		},
-	}
+	pod.ObjectMeta.Namespace = "default" //nolint:goconst
+	pod.ObjectMeta.Name = "nginx"        //nolint:goconst
+	pod.Spec = newPodSpec()
 
 	err := svr.createOrUpdatePod(context.Background(), pod.DeepCopy())
 
@@ -188,43 +120,15 @@ func TestPodUpdateExisting(t *testing.T) {
 	pod := &corev1.Pod{}
 	pod.ObjectMeta.Namespace = "default"
 	pod.ObjectMeta.Name = "nginx"
-	pod.Spec = corev1.PodSpec{
-		Containers: []corev1.Container{
-			corev1.Container{
-				Name:  "nginx",
-				Image: "nginx:1.15.12",
-				Ports: []corev1.ContainerPort{
-					corev1.ContainerPort{
-						ContainerPort: 443,
-						Protocol:      "tcp",
-					},
-				},
-			},
-		},
-	}
+	pod.Spec = newPodSpec()
 
 	err := svr.createOrUpdatePod(context.Background(), pod.DeepCopy())
 	assert.Check(t, is.Nil(err))
 	assert.Check(t, is.Equal(svr.mock.creates.read(), 1))
 	assert.Check(t, is.Equal(svr.mock.updates.read(), 0))
 
-	pod2 := &corev1.Pod{}
-	pod2.ObjectMeta.Namespace = "default"
-	pod2.ObjectMeta.Name = "nginx"
-	pod2.Spec = corev1.PodSpec{
-		Containers: []corev1.Container{
-			corev1.Container{
-				Name:  "nginx",
-				Image: "nginx:1.15.12-perl",
-				Ports: []corev1.ContainerPort{
-					corev1.ContainerPort{
-						ContainerPort: 443,
-						Protocol:      "tcp",
-					},
-				},
-			},
-		},
-	}
+	pod2 := pod.DeepCopy()
+	pod2.Spec.Containers[0].Image = "nginx:1.15.12-perl"
 
 	err = svr.createOrUpdatePod(context.Background(), pod2.DeepCopy())
 	assert.Check(t, is.Nil(err))
@@ -240,20 +144,7 @@ func TestPodNoSpecChange(t *testing.T) {
 	pod := &corev1.Pod{}
 	pod.ObjectMeta.Namespace = "default"
 	pod.ObjectMeta.Name = "nginx"
-	pod.Spec = corev1.PodSpec{
-		Containers: []corev1.Container{
-			corev1.Container{
-				Name:  "nginx",
-				Image: "nginx:1.15.12",
-				Ports: []corev1.ContainerPort{
-					corev1.ContainerPort{
-						ContainerPort: 443,
-						Protocol:      "tcp",
-					},
-				},
-			},
-		},
-	}
+	pod.Spec = newPodSpec()
 
 	err := svr.createOrUpdatePod(context.Background(), pod.DeepCopy())
 	assert.Check(t, is.Nil(err))
@@ -288,14 +179,7 @@ func TestPodDelete(t *testing.T) {
 			pod := &corev1.Pod{}
 			pod.ObjectMeta.Namespace = "default"
 			pod.ObjectMeta.Name = "nginx"
-			pod.Spec = corev1.PodSpec{
-				Containers: []corev1.Container{
-					corev1.Container{
-						Name:  "nginx",
-						Image: "nginx:1.15.12",
-					},
-				},
-			}
+			pod.Spec = newPodSpec()
 
 			pc := c.client.CoreV1().Pods("default")
 
@@ -325,5 +209,22 @@ func TestPodDelete(t *testing.T) {
 				assert.NilError(t, err)
 			}
 		})
+	}
+}
+
+func newPodSpec() corev1.PodSpec {
+	return corev1.PodSpec{
+		Containers: []corev1.Container{
+			corev1.Container{
+				Name:  "nginx",
+				Image: "nginx:1.15.12",
+				Ports: []corev1.ContainerPort{
+					corev1.ContainerPort{
+						ContainerPort: 443,
+						Protocol:      "tcp",
+					},
+				},
+			},
+		},
 	}
 }
