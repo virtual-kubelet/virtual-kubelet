@@ -26,43 +26,17 @@ Virtual Kubelet currently has a wide variety of providers:
 
 ## Adding new providers {#adding}
 
-To add a new Virtual Kubelet provider, create a new directory for your provider in the [`providers`](https://github.com/virtual-kubelet/virtual-kubelet/tree/master/providers) directory.
+To add a new Virtual Kubelet provider, create a new directory for your provider.
 
-```shell
-git clone https://github.com/virtual-kubelet/virtual-kubelet
-cd virtual-kubelet
-mkdir providers/my-provider
-```
+In that created directory, implement [`PodLifecycleHandler`](https://godoc.org/github.com/virtual-kubelet/virtual-kubelet/node#PodLifecycleHandler) interface in [Go](https://golang.org).
 
-In that created directory, implement the [`Provider`](https://godoc.org/github.com/virtual-kubelet/virtual-kubelet/cmd/virtual-kubelet/internal/provider#Provider) interface in [Go](https://golang.org).
-
-> For an example implementation of the Virtual Kubelet `Provider` interface, see the [Virtual Kubelet CRI Provider](https://github.com/virtual-kubelet/cri), especially [`cri.go`](https://github.com/virtual-kubelet/cri/blob/master/cri.go).
+> For an example implementation of the Virtual Kubelet `PodLifecycleHandler` interface, see the [Virtual Kubelet CRI Provider](https://github.com/virtual-kubelet/cri), especially [`cri.go`](https://github.com/virtual-kubelet/cri/blob/master/cri.go).
 
 Each Virtual Kubelet provider can be configured using its own configuration file and environment variables.
 
 You can see the list of required methods, with relevant descriptions of each method, below:
 
 ```go
-// Provider contains the methods required to implement a virtual-kubelet provider.
-//
-// Errors produced by these methods should implement an interface from
-// github.com/virtual-kubelet/virtual-kubelet/errdefs package in order for the
-// core logic to be able to understand the type of failure.
-type Provider interface {
-    node.PodLifecycleHandler
-
-    // GetContainerLogs retrieves the logs of a container by name from the provider.
-    GetContainerLogs(ctx context.Context, namespace, podName, containerName string, opts api.ContainerLogOpts) (io.ReadCloser, error)
-
-    // RunInContainer executes a command in a container in the pod, copying data
-    // between in/out/err and the container's stdin/stdout/stderr.
-    RunInContainer(ctx context.Context, namespace, podName, containerName string, cmd []string, attach api.AttachIO) error
-
-    // ConfigureNode enables a provider to configure the node object that
-    // will be used for Kubernetes.
-    ConfigureNode(context.Context, *v1.Node)
-}
-
 // PodLifecycleHandler defines the interface used by the PodController to react
 // to new and changed pods scheduled to the node that is being managed.
 //
@@ -99,7 +73,7 @@ type PodLifecycleHandler interface {
 }
 ```
 
-In addition to `Provider`, there's an optional [`PodMetricsProvider`](https://godoc.org/github.com/virtual-kubelet/virtual-kubelet/cmd/virtual-kubelet/internal/provider#PodMetricsProvider) interface that providers can implement to expose Kubernetes Pod stats:
+In addition to `PodLifecycleHandler`, there's an optional [`PodMetricsProvider`](https://godoc.org/github.com/virtual-kubelet/virtual-kubelet/cmd/virtual-kubelet/internal/provider#PodMetricsProvider) interface that providers can implement to expose Kubernetes Pod stats:
 
 ```go
 type PodMetricsProvider interface {
