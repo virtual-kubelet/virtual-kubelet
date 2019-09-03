@@ -42,7 +42,7 @@ var (
 */
 
 // MockV0Provider implements the virtual-kubelet provider interface and stores pods in memory.
-type MockV0Provider struct {
+type MockV0Provider struct { //nolint:golint
 	nodeName           string
 	operatingSystem    string
 	internalIP         string
@@ -54,12 +54,12 @@ type MockV0Provider struct {
 }
 
 // MockProvider is like MockV0Provider, but implements the PodNotifier interface
-type MockProvider struct {
+type MockProvider struct { //nolint:golint
 	*MockV0Provider
 }
 
 // MockConfig contains a mock virtual-kubelet's configurable parameters.
-type MockConfig struct {
+type MockConfig struct { //nolint:golint
 	CPU    string `json:"cpu,omitempty"`
 	Memory string `json:"memory,omitempty"`
 	Pods   string `json:"pods,omitempty"`
@@ -355,7 +355,7 @@ func (p *MockV0Provider) GetPods(ctx context.Context) ([]*v1.Pod, error) {
 }
 
 func (p *MockV0Provider) ConfigureNode(ctx context.Context, n *v1.Node) {
-	ctx, span := trace.StartSpan(ctx, "mock.ConfigureNode")
+	ctx, span := trace.StartSpan(ctx, "mock.ConfigureNode") //nolint:ineffassign
 	defer span.End()
 
 	n.Status.Capacity = p.capacity()
@@ -453,7 +453,8 @@ func (p *MockV0Provider) nodeDaemonEndpoints() v1.NodeDaemonEndpoints {
 
 // GetStatsSummary returns dummy stats for all pods known by this provider.
 func (p *MockV0Provider) GetStatsSummary(ctx context.Context) (*stats.Summary, error) {
-	ctx, span := trace.StartSpan(ctx, "GetStatsSummary")
+	var span trace.Span
+	ctx, span = trace.StartSpan(ctx, "GetStatsSummary") //nolint: ineffassign
 	defer span.End()
 
 	// Grab the current timestamp so we can report it as the time the stats were generated.

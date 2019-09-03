@@ -28,7 +28,7 @@ type PodListerFunc func(context.Context) ([]*v1.Pod, error)
 
 func HandleRunningPods(getPods PodListerFunc) http.HandlerFunc {
 	scheme := runtime.NewScheme()
-	v1.SchemeBuilder.AddToScheme(scheme)
+	v1.SchemeBuilder.AddToScheme(scheme) //nolint:errcheck
 	codecs := serializer.NewCodecFactory(scheme)
 
 	return handleError(func(w http.ResponseWriter, req *http.Request) error {
