@@ -64,11 +64,15 @@ func (w *waitableInt) increment() {
 
 type mockV0Provider struct {
 	creates          *waitableInt
+	attemptedCreates *waitableInt
 	updates          *waitableInt
 	deletes          *waitableInt
 	attemptedDeletes *waitableInt
+	attemptedUpdates *waitableInt
 
 	errorOnDelete error
+	errorOnCreate error
+	errorOnUpdate error
 
 	pods         sync.Map
 	startTime    time.Time
@@ -87,6 +91,8 @@ func newMockV0Provider() *mockV0Provider {
 		updates:          newWaitableInt(),
 		deletes:          newWaitableInt(),
 		attemptedDeletes: newWaitableInt(),
+		attemptedCreates: newWaitableInt(),
+		attemptedUpdates: newWaitableInt(),
 	}
 	// By default notifier is set to a function which is a no-op. In the event we've implemented the PodNotifier interface,
 	// it will be set, and then we'll call a real underlying implementation.
@@ -111,6 +117,10 @@ func (p *mockV0Provider) notifier(pod *v1.Pod) {
 func (p *mockV0Provider) CreatePod(ctx context.Context, pod *v1.Pod) error {
 	log.G(ctx).Infof("receive CreatePod %q", pod.Name)
 
+	p.attemptedCreates.increment()
+	if p.errorOnCreate != nil {
+		return p.errorOnCreate
+	}
 	p.creates.increment()
 	key, err := buildKey(pod)
 	if err != nil {
@@ -163,6 +173,10 @@ func (p *mockV0Provider) CreatePod(ctx context.Context, pod *v1.Pod) error {
 func (p *mockV0Provider) UpdatePod(ctx context.Context, pod *v1.Pod) error {
 	log.G(ctx).Infof("receive UpdatePod %q", pod.Name)
 
+	p.attemptedUpdates.increment()
+	if p.errorOnUpdate != nil {
+		return p.errorOnUpdate
+	}
 	p.updates.increment()
 	key, err := buildKey(pod)
 	if err != nil {
