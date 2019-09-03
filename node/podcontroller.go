@@ -262,20 +262,20 @@ func (pc *PodController) Ready() <-chan struct{} {
 }
 
 // runWorker is a long-running function that will continually call the processNextWorkItem function in order to read and process an item on the work queue.
-func (pc *PodController) runWorker(ctx context.Context, workerId string, q workqueue.RateLimitingInterface) {
-	for pc.processNextWorkItem(ctx, workerId, q) {
+func (pc *PodController) runWorker(ctx context.Context, workerID string, q workqueue.RateLimitingInterface) {
+	for pc.processNextWorkItem(ctx, workerID, q) {
 	}
 }
 
 // processNextWorkItem will read a single work item off the work queue and attempt to process it,by calling the syncHandler.
-func (pc *PodController) processNextWorkItem(ctx context.Context, workerId string, q workqueue.RateLimitingInterface) bool {
+func (pc *PodController) processNextWorkItem(ctx context.Context, workerID string, q workqueue.RateLimitingInterface) bool {
 
 	// We create a span only after popping from the queue so that we can get an adequate picture of how long it took to process the item.
 	ctx, span := trace.StartSpan(ctx, "processNextWorkItem")
 	defer span.End()
 
 	// Add the ID of the current worker as an attribute to the current span.
-	ctx = span.WithField(ctx, "workerId", workerId)
+	ctx = span.WithField(ctx, "workerId", workerID)
 	return handleQueueItem(ctx, q, pc.syncHandler)
 }
 
