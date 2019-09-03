@@ -1,24 +1,24 @@
 # Importable End-To-End Test Suite
 
-Virtual Kubelet (VK) provides an importable end-to-end (e2e) test suite containing a set of common integration tests. As a provider, you can import the test suite and use it to validate your VK implementation.
+Virtual Kubelet (VK) provides an importable end-to-end (E2E) test suite containing a set of common integration tests. As a provider, you can import the test suite and use it to validate your VK implementation.
 
 ## Prerequisite
 
-To run the e2e test suite, three things are required:
+To run the E2E test suite, three things are required:
 
 - A local Kubernetes cluster (we have tested with [Docker for Mac](https://docs.docker.com/docker-for-mac/install/) and [Minikube](https://kubernetes.io/docs/tasks/tools/install-minikube/));
 - Your _kubeconfig_ default context points to the local Kubernetes cluster;
-- [skaffold](https://skaffold.dev/docs/getting-started/#installing-skaffold);
+- [skaffold](https://skaffold.dev/docs/getting-started/#installing-skaffold)
 
-Note that the test suite is based on [VK 1.0](https://github.com/virtual-kubelet/virtual-kubelet/releases/tag/v1.0.0). If your VK implementation is based on legacy VK library (< v1.0.0), you will have to upgrade it to VK 1.0 using [virtual-kubelet/node-cli](https://github.com/virtual-kubelet/node-cli).
+> The test suite is based on [VK 1.0](https://github.com/virtual-kubelet/virtual-kubelet/releases/tag/v1.0.0). If your VK implementation is based on legacy VK library (< v1.0.0), you will have to upgrade it to VK 1.0 using [virtual-kubelet/node-cli](https://github.com/virtual-kubelet/node-cli).
 
 ### Skaffold Folder
 
-Before running the e2e test suite, you will need to copy the [`./hack`](../../hack) folder containing Skaffold-related files such as Dockerfile, manifests, and certificates to your VK project root. Skaffold essentially helps package your virtual kubelet into a container based on the given [`Dockerfile`](../../hack/skaffold/virtual-kubelet/Dockerfile) and deploy it as a pod (see [`pod.yml`](../../hack/skaffold/virtual-kubelet/pod.yml)) to your Kubernetes test cluster. In summary, you will need to modify the VK name in those files, the VK configuration file, and your API server certificates (`<vk-name>-crt.pem` and `<vk-name>-key.pem`) to suit your particular provider.
+Before running the E2E test suite, you will need to copy the [`./hack`](../../hack) folder containing Skaffold-related files such as Dockerfile, manifests, and certificates to your VK project root. Skaffold essentially helps package your virtual kubelet into a container based on the given [`Dockerfile`](../../hack/skaffold/virtual-kubelet/Dockerfile) and deploy it as a pod (see [`pod.yml`](../../hack/skaffold/virtual-kubelet/pod.yml)) to your Kubernetes test cluster. In summary, you will likely need to modify the VK name in those files, customize the VK configuration file, and the API server certificates (`<vk-name>-crt.pem` and `<vk-name>-key.pem`) before running the test suite.
 
 ### Makefile.e2e
 
-Also, you will need to copy [`Makefile.e2e`](../../Makefile.e2e) to your VK project root. It contains necessary `make` commands to run the e2e test suite. Do not forget to add `include Makefile.e2e` in your `Makefile`.
+Also, you will need to copy [`Makefile.e2e`](../../Makefile.e2e) to your VK project root. It contains necessary `make` commands to run the E2E test suite. Do not forget to add `include Makefile.e2e` in your `Makefile`.
 
 ### File Structure
 
@@ -46,7 +46,7 @@ A minimal VK provider should now have a file structure similar to the one below:
 │           └── vkubelet-provider-0-key.pem
 ├── test
 │   └── e2e
-│       └── main_test.go # import and run the e2e test suite here
+│       └── main_test.go # import and run the E2E test suite here
 ├── provider.go # provider-specific VK implementation
 ├── provider_test.go # unit test
 ```
@@ -62,24 +62,31 @@ import (
 
 ### Test Suite Customization
 
-The test suite allows providers to specify custom logic for setting up and tearing down the test suite. `Setup()` is invoked before running the e2e test suite, and `Teardown()` is invoked after all the e2e tests are finished. The test suite also allows providers to skip certain tests of their choices.
-
-The following interfaces describe the method signatures of `Setup()`, `Teardown()`, and `ShouldSkipTest()`
+The test suite allows providers to customize the test suite using `EndToEndTestSuiteConfig`:
 
 ```go
-// TestSuite contains methods that defines the lifecycle of a test suite
-type TestSuite interface {
-	Setup()
-	Teardown()
-}
-
-// TestSkipper allows providers to skip certain tests
-type TestSkipper interface {
-	ShouldSkipTest(testName string) bool
+// EndToEndTestSuiteConfig is the config passed to initialize the testing framework and test suite.
+type EndToEndTestSuiteConfig struct {
+	// Kubeconfig is the path to the kubeconfig file to use when running the test suite outside a Kubernetes cluster.
+	Kubeconfig string
+	// Namespace is the name of the Kubernetes namespace to use for running the test suite (i.e. where to create pods).
+	Namespace string
+	// NodeName is the name of the virtual-kubelet node to test.
+	NodeName string
+	// WatchTimeout is the duration for which the framework watch a particular condition to be satisfied (e.g. watches a pod  becoming ready)
+	WatchTimeout time.Duration
+	// Setup is a function that sets up provider-specific resource in the test suite
+	Setup suite.SetUpFunc
+	// Teardown is a function that tears down provider-specific resources from the test suite
+	Teardown suite.TeardownFunc
+	// ShouldSkipTest is a function that determines whether the test suite should skip certain tests
+	ShouldSkipTest suite.ShouldSkipTestFunc
 }
 ```
 
-The customizations above can be specified in `EndToEndTestSuiteConfig`. In summary, you will need to initialize a `EndToEndTestSuiteConfig` struct to specify various parameters. After that, you will need it to create a `EndToEndTestSuite` using `NewEndToEndTestSuite`. Finally, invoke `Run` from `EndToEndTestSuite` to start the test suite. The code snippet below is a minimal example of how to import and run the test suite in your test file.
+> `Setup()` is invoked before running the E2E test suite, and `Teardown()` is invoked after all the E2E tests are finished.
+
+You will need an `EndToEndTestSuiteConfig` to create an `EndToEndTestSuite` using `NewEndToEndTestSuite`. After that, invoke `Run` from `EndToEndTestSuite` to start the test suite. The code snippet below is a minimal example of how to import and run the test suite in your test file.
 
 ```go
 package e2e
@@ -136,7 +143,7 @@ func TestEndToEnd(t *testing.T) {
 
 ## Running the Test Suite
 
-Since our CI uses Minikube, we describe below how to run e2e on top of it.
+Since our CI uses Minikube, we describe below how to run E2E on top of it.
 
 To create a Minikube cluster, run the following command after [installing Minikube](https://github.com/kubernetes/minikube#installation):
 
@@ -144,7 +151,7 @@ To create a Minikube cluster, run the following command after [installing Miniku
 minikube start
 ```
 
-To run the e2e test suite, you can run the following command:
+To run the E2E test suite, you can run the following command:
 
 ```bash
 make e2e

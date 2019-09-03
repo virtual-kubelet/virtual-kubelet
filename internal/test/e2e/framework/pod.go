@@ -22,8 +22,7 @@ import (
 func (f *Framework) CreateDummyPodObjectWithPrefix(testName string, prefix string, images ...string) *corev1.Pod {
 	// Safe the test name
 	if testName != "" {
-		testName = strings.Replace(stripParentTestName(testName), "/", "-", -1)
-		testName = strings.ToLower(testName)
+		testName = stripParentTestName(strings.ToLower(testName))
 		prefix = prefix + "-" + testName + "-"
 	}
 	enableServiceLink := false

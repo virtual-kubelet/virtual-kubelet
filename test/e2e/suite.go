@@ -1,5 +1,3 @@
-// +build e2e
-
 package e2e
 
 import (
@@ -30,7 +28,7 @@ type EndToEndTestSuiteConfig struct {
 	Namespace string
 	// NodeName is the name of the virtual-kubelet node to test.
 	NodeName string
-	// WatchTimeout is the duration that the framework watches the provider to satisfy a certain condition (e.g. watches a pod to become ready)
+	// WatchTimeout is the duration for which the framework watch a particular condition to be satisfied (e.g. watches a pod  becoming ready)
 	WatchTimeout time.Duration
 	// Setup is a function that sets up provider-specific resource in the test suite
 	Setup suite.SetUpFunc

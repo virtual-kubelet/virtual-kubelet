@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"testing"
 
+	vke2e "github.com/virtual-kubelet/virtual-kubelet/test/e2e"
+
 	v1 "k8s.io/api/core/v1"
 )
 
@@ -48,7 +50,7 @@ func shouldSkipTest(testName string) bool {
 // TestEndToEnd creates and runs the end-to-end test suite for virtual kubelet
 func TestEndToEnd(t *testing.T) {
 	setDefaults()
-	config := EndToEndTestSuiteConfig{
+	config := vke2e.EndToEndTestSuiteConfig{
 		Kubeconfig:     kubeconfig,
 		Namespace:      namespace,
 		NodeName:       nodeName,
@@ -56,7 +58,7 @@ func TestEndToEnd(t *testing.T) {
 		Teardown:       teardown,
 		ShouldSkipTest: shouldSkipTest,
 	}
-	ts := NewEndToEndTestSuite(config)
+	ts := vke2e.NewEndToEndTestSuite(config)
 	ts.Run(t)
 }
 

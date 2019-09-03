@@ -37,7 +37,7 @@ type testCase struct {
 
 // Run runs tests registered in the test suite
 func Run(t *testing.T, ts TestSuite) {
-	defer failOnPanic(t, ts)
+	defer failOnPanic(t)
 
 	ts.Setup()
 	defer ts.Teardown()
@@ -54,8 +54,9 @@ func Run(t *testing.T, ts TestSuite) {
 		test := testCase{
 			name: method.Name,
 			f: func(t *testing.T) {
+				defer failOnPanic(t)
 				if tSkipper, ok := ts.(TestSkipper); ok && tSkipper.ShouldSkipTest(method.Name) {
-					t.Skipf("Skipped by provider")
+					t.Skipf("Skipped due to shouldSkipTest()")
 				}
 				method.Func.Call([]reflect.Value{reflect.ValueOf(ts), reflect.ValueOf(t)})
 			},
@@ -68,10 +69,9 @@ func Run(t *testing.T, ts TestSuite) {
 	}
 }
 
-// failOnPanic recovers from test panicking and mark that test as failed
-func failOnPanic(t *testing.T, ts TestSuite) {
+// failOnPanic recovers panic occurred in the test suite and marks the test / test suite as failed
+func failOnPanic(t *testing.T) {
 	if r := recover(); r != nil {
-		ts.Teardown()
 		t.Fatalf("%v\n%s", r, debug.Stack())
 	}
 }
@@ -81,5 +81,5 @@ func isValidTestFunc(method reflect.Method) bool {
 	return strings.HasPrefix(method.Name, "Test") && // Test function name must start with "Test",
 		method.Type.NumIn() == 2 && // the number of function input should be 2 (*TestSuite ts and t *testing.T),
 		method.Type.In(1) == reflect.TypeOf(&testing.T{}) &&
-		method.Type.NumOut() == 0 // and the numberof function output should be 0
+		method.Type.NumOut() == 0 // and the number of function output should be 0
 }

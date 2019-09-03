@@ -76,8 +76,8 @@ func TestBasicTestSuite(t *testing.T) {
 	assert.Equal(t, bts.testBarCount, 1)
 	assert.Equal(t, bts.teardownCount, 1)
 	assert.Assert(t, is.Len(bts.testsRan, 2))
-	checkTestName(t, bts.testsRan)
-	checkMalformedTests(t, bts)
+	assertTestsRan(t, bts.testsRan)
+	assertNonTests(t, bts)
 }
 
 type skipTestSuite struct {
@@ -103,11 +103,11 @@ func TestSkipTest(t *testing.T) {
 	assert.Equal(t, sts.teardownCount, 1)
 	assert.Equal(t, sts.skippedTestCount, 1)
 	assert.Assert(t, is.Len(sts.testsRan, 1))
-	checkTestName(t, sts.testsRan)
-	checkMalformedTests(t, &sts.basicTestSuite)
+	assertTestsRan(t, sts.testsRan)
+	assertNonTests(t, &sts.basicTestSuite)
 }
 
-func checkTestName(t *testing.T, testsRan []string) {
+func assertTestsRan(t *testing.T, testsRan []string) {
 	for _, testRan := range testsRan {
 		parts := strings.Split(testRan, "/")
 		// Make sure that the name of the test has exactly one parent name and one subtest name
@@ -117,8 +117,8 @@ func checkTestName(t *testing.T, testsRan []string) {
 	}
 }
 
-// checkMalformedTests ensures that any malformed test functions are not run by the test suite
-func checkMalformedTests(t *testing.T, bts *basicTestSuite) {
+// assertNonTests ensures that any malformed test functions are not run by the test suite
+func assertNonTests(t *testing.T, bts *basicTestSuite) {
 	assert.Equal(t, bts.bazCount, 0)
 	assert.Equal(t, bts.testFooBarCount, 0)
 	assert.Equal(t, bts.testFooBazCount, 0)

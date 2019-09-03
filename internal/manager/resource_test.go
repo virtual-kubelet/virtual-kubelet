@@ -24,21 +24,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	corev1listers "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/tools/cache"
-<<<<<<< HEAD
-=======
-
-<<<<<<< HEAD
-	"github.com/chewong/virtual-kubelet/internal/manager"
-	testutil "github.com/chewong/virtual-kubelet/test/util"
->>>>>>> 9547e751... Rename VK to chewong for development purpose
-=======
-	"github.com/virtual-kubelet/virtual-kubelet/internal/manager"
-<<<<<<< HEAD
-	testutil "github.com/virtual-kubelet/virtual-kubelet/test/util"
->>>>>>> aeec4ac8... Rename chewong back to virtual-kubelet
-=======
-	testutil "github.com/virtual-kubelet/virtual-kubelet/internal/test/util"
->>>>>>> ea4fe7a5... Move certain files back to internal folder
 )
 
 // TestGetPods verifies that the resource manager acts as a passthrough to a pod lister.
