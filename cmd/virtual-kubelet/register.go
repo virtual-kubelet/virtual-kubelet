@@ -6,7 +6,7 @@ import (
 )
 
 func registerMock(s *provider.Store) {
-	s.Register("mock", func(cfg provider.InitConfig) (provider.Provider, error) {
+	s.Register("mock", func(cfg provider.InitConfig) (provider.Provider, error) { //nolint:errcheck
 		return mock.NewMockProvider(
 			cfg.ConfigPath,
 			cfg.NodeName,
@@ -16,7 +16,7 @@ func registerMock(s *provider.Store) {
 		)
 	})
 
-	s.Register("mockV0", func(cfg provider.InitConfig) (provider.Provider, error) {
+	s.Register("mockV0", func(cfg provider.InitConfig) (provider.Provider, error) { //nolint:errcheck
 		return mock.NewMockProvider(
 			cfg.ConfigPath,
 			cfg.NodeName,

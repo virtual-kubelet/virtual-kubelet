@@ -58,7 +58,7 @@ func (w *waitableInt) until(ctx context.Context, f func(int) bool) error {
 func (w *waitableInt) increment() {
 	w.cond.L.Lock()
 	defer w.cond.L.Unlock()
-	w.val += 1
+	w.val++
 	w.cond.Broadcast()
 }
 

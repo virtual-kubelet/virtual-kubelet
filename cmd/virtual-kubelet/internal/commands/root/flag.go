@@ -69,7 +69,7 @@ func installFlags(flags *pflag.FlagSet, c *Opts) {
 
 	flags.StringVar(&c.TaintKey, "taint", c.TaintKey, "Set node taint key")
 	flags.BoolVar(&c.DisableTaint, "disable-taint", c.DisableTaint, "disable the virtual-kubelet node taint")
-	flags.MarkDeprecated("taint", "Taint key should now be configured using the VK_TAINT_KEY environment variable")
+	flags.MarkDeprecated("taint", "Taint key should now be configured using the VK_TAINT_KEY environment variable") //nolint:errcheck
 
 	flags.IntVar(&c.PodSyncWorkers, "pod-sync-workers", c.PodSyncWorkers, `set the number of pod synchronization workers`)
 	flags.BoolVar(&c.EnableNodeLease, "enable-node-lease", c.EnableNodeLease, `use node leases (1.13) for node heartbeats`)

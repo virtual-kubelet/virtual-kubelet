@@ -15,10 +15,10 @@ jobs:
           command: V=1 CI=1 make vet
       - run:
           name: Install linters
-          command: curl -sfL https://install.goreleaser.com/github.com/golangci/golangci-lint.sh | bash -s v1.15.0 && mv ./bin/* /go/bin/
+          command: curl -sfL https://install.goreleaser.com/github.com/golangci/golangci-lint.sh | bash -s v1.17.1 && mv ./bin/* /go/bin/
       - run:
           name: Lint
-          command: golangci-lint run --new-from-rev "HEAD~$(git rev-list master.. --count)" ./...
+          command: golangci-lint run ./...
       - run:
           name: Dependencies
           command: scripts/validate/gomod.sh

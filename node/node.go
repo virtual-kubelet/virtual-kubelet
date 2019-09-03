@@ -38,7 +38,7 @@ import (
 //
 // Note: Implementers can choose to manage a node themselves, in which case
 // it is not needed to provide an implementation for this interface.
-type NodeProvider interface {
+type NodeProvider interface { //nolint:golint
 	// Ping checks if the node is still active.
 	// This is intended to be lightweight as it will be called periodically as a
 	// heartbeat to keep the node marked as ready in Kubernetes.
