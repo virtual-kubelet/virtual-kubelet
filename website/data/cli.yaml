@@ -1,7 +1,16 @@
 description: The command-line tool for running Virtual Kubelets
 flags:
+- name: --cluster-domain
+  arg: string
+  description: Kubernetes cluster domain
+  default: cluster.local
 - name: --disable-taint
+  arg: bool
   description: Disable the Virtual Kubelet [Node taint](https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/)
+  default: "false"
+- name: --enable-node-lease
+  arg: bool
+  description: Use node leases (1.13) for node heartbeats
   default: "false"
 - name: --full-resync-period
   arg: duration
@@ -41,9 +50,13 @@ flags:
 - name: --provider-config
   arg: string
   description: The Virtual Kubelet [provider](/docs/providers) configuration file
+- name: --startup-timeout
+  arg: duration
+  description: How long to wait for the virtual-kubelet to start
+  default: 0
 - name: --trace-exporter
   arg: strings
-  description: The tracing exporter to use. Available exporters are `jaeger` and `ocagent`.
+  description: The tracing exporter to use. Available exporters are `jaeger` and `ocagent`
 - name: --trace-sample-rate
   arg: string
   description: The probability of tracing samples
@@ -54,7 +67,3 @@ flags:
 - name: --trace-tag
   arg: map
   description: Tags to include with traces, in `key=value` form
-- name: --version
-  description: The Virtual Kubelet version
-- name: --help
-  description: Command help information
