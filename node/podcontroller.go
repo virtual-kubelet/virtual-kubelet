@@ -109,6 +109,17 @@ type PodController struct {
 	resourceManager *manager.ResourceManager
 
 	k8sQ workqueue.RateLimitingInterface
+
+	// From the time of creation, to termination the knownPods map will contain the pods key
+	// (derived from Kubernetes' cache library) -> a *knownPod struct.
+	knownPods sync.Map
+}
+
+type knownPod struct {
+	// You cannot read (or modify) the fields in this struct without taking the lock. The individual fields
+	// should be immutable to avoid having to hold the lock the entire time you're working with them
+	sync.Mutex
+	lastPodStatusReceivedFromProvider *corev1.Pod
 }
 
 // PodControllerConfig is used to configure a new PodController.
@@ -199,6 +210,7 @@ func (pc *PodController) Run(ctx context.Context, podSyncWorkers int) error {
 			if key, err := cache.MetaNamespaceKeyFunc(pod); err != nil {
 				log.G(ctx).Error(err)
 			} else {
+				pc.knownPods.Store(key, &knownPod{})
 				pc.k8sQ.AddRateLimited(key)
 			}
 		},
@@ -225,6 +237,7 @@ func (pc *PodController) Run(ctx context.Context, podSyncWorkers int) error {
 			if key, err := cache.DeletionHandlingMetaNamespaceKeyFunc(pod); err != nil {
 				log.G(ctx).Error(err)
 			} else {
+				pc.knownPods.Delete(key)
 				pc.k8sQ.AddRateLimited(key)
 			}
 		},

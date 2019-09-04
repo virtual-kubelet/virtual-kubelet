@@ -134,7 +134,7 @@ func (pc *PodController) providerSyncLoop(ctx context.Context, q workqueue.RateL
 			t.Stop()
 
 			ctx, span := trace.StartSpan(ctx, "syncActualState")
-			pc.updatePodStatuses(ctx, q)
+			pc.fetchPodStatusesFromProvider(ctx, q)
 			span.End()
 
 			// restart the timer
@@ -146,7 +146,7 @@ func (pc *PodController) providerSyncLoop(ctx context.Context, q workqueue.RateL
 func (pc *PodController) runSyncFromProvider(ctx context.Context, q workqueue.RateLimitingInterface) {
 	if pn, ok := pc.provider.(PodNotifier); ok {
 		pn.NotifyPods(ctx, func(pod *corev1.Pod) {
-			enqueuePodStatusUpdate(ctx, q, pod)
+			pc.enqueuePodStatusUpdate(ctx, q, pod.DeepCopy())
 		})
 	} else {
 		go pc.providerSyncLoop(ctx, q)
