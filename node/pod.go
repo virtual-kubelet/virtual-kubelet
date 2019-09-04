@@ -34,7 +34,12 @@ import (
 )
 
 const (
-	podStatusReasonProviderFailed = "ProviderFailed"
+	podStatusReasonProviderFailed   = "ProviderFailed"
+	podStatusReasonNotFound         = "NotFound"
+	podStatusMessageNotFound        = "The pod status was not found and may have been deleted from the provider"
+	containerStatusReasonNotFound   = "NotFound"
+	containerStatusMessageNotFound  = "Container was not found and was likely deleted"
+	containerStatusExitCodeNotFound = -137
 )
 
 func addPodAttributes(ctx context.Context, span trace.Span, pod *corev1.Pod) context.Context {
@@ -252,17 +257,17 @@ func (pc *PodController) fetchPodStatusFromProvider(ctx context.Context, q workq
 			// Set the pod to failed, this makes sure if the underlying container implementation is gone that a new pod will be created.
 			podStatus = podFromKubernetes.Status.DeepCopy()
 			podStatus.Phase = corev1.PodFailed
-			podStatus.Reason = "NotFound"
-			podStatus.Message = "The pod status was not found and may have been deleted from the provider"
+			podStatus.Reason = podStatusReasonNotFound
+			podStatus.Message = podStatusMessageNotFound
 			now := metav1.NewTime(time.Now())
 			for i, c := range podStatus.ContainerStatuses {
 				if c.State.Running == nil {
 					continue
 				}
 				podStatus.ContainerStatuses[i].State.Terminated = &corev1.ContainerStateTerminated{
-					ExitCode:    -137,
-					Reason:      "NotFound",
-					Message:     "Container was not found and was likely deleted",
+					ExitCode:    containerStatusExitCodeNotFound,
+					Reason:      containerStatusReasonNotFound,
+					Message:     containerStatusMessageNotFound,
 					FinishedAt:  now,
 					StartedAt:   c.State.Running.StartedAt,
 					ContainerID: c.ContainerID,
