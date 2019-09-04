@@ -224,6 +224,15 @@ func TestPodLifecycle(t *testing.T) {
 			}))
 		})
 	})
+
+	// podStatusMissingWhileRunningScenario waits for the pod to go into the running state, with a V0 style provider,
+	// and then makes the pod disappear!
+	t.Run("podStatusMissingWhileRunningScenario", func(t *testing.T) {
+		mp := newMockV0Provider()
+		assert.NilError(t, wireUpSystem(ctx, mp, func(ctx context.Context, s *system) {
+			testPodStatusMissingWhileRunningScenario(ctx, t, s, mp)
+		}))
+	})
 }
 
 type testFunction func(ctx context.Context, s *system)
@@ -545,6 +554,87 @@ func testUpdatePodWhileRunningScenario(ctx context.Context, t *testing.T, s *sys
 	_, err = s.client.CoreV1().Pods(p.Namespace).Update(p)
 	assert.NilError(t, err)
 	assert.NilError(t, m.updates.until(ctx, func(v int) bool { return v > 0 }))
+}
+
+func testPodStatusMissingWhileRunningScenario(ctx context.Context, t *testing.T, s *system, m *mockV0Provider) {
+	t.Parallel()
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
+	p := newPod()
+	key, err := buildKey(p)
+	assert.NilError(t, err)
+
+	listOptions := metav1.ListOptions{
+		FieldSelector: fields.OneTermEqualSelector("metadata.name", p.ObjectMeta.Name).String(),
+	}
+
+	watchErrCh := make(chan error)
+
+	// Create a Pod
+	_, e := s.client.CoreV1().Pods(testNamespace).Create(p)
+	assert.NilError(t, e)
+
+	// Setup a watch to check if the pod is in running
+	watcher, err := s.client.CoreV1().Pods(testNamespace).Watch(listOptions)
+	assert.NilError(t, err)
+	defer watcher.Stop()
+	go func() {
+		newPod, watchErr := watchutils.UntilWithoutRetry(ctx, watcher,
+			// Wait for the pod to be started
+			func(ev watch.Event) (bool, error) {
+				pod := ev.Object.(*corev1.Pod)
+				return pod.Status.Phase == corev1.PodRunning, nil
+			})
+		// This deepcopy is required to please the race detector
+		p = newPod.Object.(*corev1.Pod).DeepCopy()
+		watchErrCh <- watchErr
+	}()
+
+	// Start the pod controller
+	podControllerErrCh := s.start(ctx)
+
+	// Wait for pod to be in running
+	select {
+	case <-ctx.Done():
+		t.Fatalf("Context ended early: %s", ctx.Err().Error())
+	case err = <-podControllerErrCh:
+		assert.NilError(t, err)
+		t.Fatal("Pod controller exited prematurely without error")
+	case err = <-watchErrCh:
+		assert.NilError(t, err)
+
+	}
+
+	// Setup a watch to check if the pod is in failed due to provider issues
+	watcher, err = s.client.CoreV1().Pods(testNamespace).Watch(listOptions)
+	assert.NilError(t, err)
+	defer watcher.Stop()
+	go func() {
+		newPod, watchErr := watchutils.UntilWithoutRetry(ctx, watcher,
+			// Wait for the pod to be failed
+			func(ev watch.Event) (bool, error) {
+				pod := ev.Object.(*corev1.Pod)
+				return pod.Status.Phase == corev1.PodFailed, nil
+			})
+		// This deepcopy is required to please the race detector
+		p = newPod.Object.(*corev1.Pod).DeepCopy()
+		watchErrCh <- watchErr
+	}()
+
+	// delete the pod from the mock provider
+	m.pods.Delete(key)
+	select {
+	case <-ctx.Done():
+		t.Fatalf("Context ended early: %s", ctx.Err().Error())
+	case err = <-podControllerErrCh:
+		assert.NilError(t, err)
+		t.Fatal("Pod controller exited prematurely without error")
+	case err = <-watchErrCh:
+		assert.NilError(t, err)
+	}
+
+	assert.Equal(t, p.Status.Reason, podStatusReasonNotFound)
 }
 
 func BenchmarkCreatePods(b *testing.B) {
