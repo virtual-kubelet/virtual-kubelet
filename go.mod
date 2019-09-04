@@ -8,7 +8,7 @@ require (
 	github.com/davecgh/go-spew v1.1.1
 	github.com/docker/spdystream v0.0.0-20170912183627-bc6354cbbc29 // indirect
 	github.com/elazarl/goproxy v0.0.0-20190421051319-9d40249d3c2f // indirect
-	github.com/elazarl/goproxy/ext v0.0.0-20190421051319-9d40249d3c2f // indirect
+	github.com/elazarl/goproxy/ext v0.0.0-20190711103511-473e67f1d7d2 // indirect
 	github.com/evanphx/json-patch v4.1.0+incompatible // indirect
 	github.com/gogo/protobuf v1.2.1 // indirect
 	github.com/golang/groupcache v0.0.0-20181024230925-c65c006176ff // indirect
@@ -40,7 +40,7 @@ require (
 	gotest.tools v2.2.0+incompatible
 	k8s.io/api v0.0.0
 	k8s.io/apimachinery v0.0.0
-	k8s.io/client-go v0.0.0
+	k8s.io/client-go v10.0.0+incompatible
 	k8s.io/klog v0.3.1
 	k8s.io/kube-openapi v0.0.0-20190510232812-a01b7d5d6c22 // indirect
 	k8s.io/kubernetes v1.15.2

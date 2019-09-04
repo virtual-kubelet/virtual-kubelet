@@ -1,5 +1,3 @@
-// +build e2e
-
 package e2e
 
 import (
@@ -17,7 +15,7 @@ import (
 
 // TestNodeCreateAfterDelete makes sure that a node is automatically recreated
 // if it is deleted while VK is running.
-func TestNodeCreateAfterDelete(t *testing.T) {
+func (ts *EndToEndTestSuite) TestNodeCreateAfterDelete(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 

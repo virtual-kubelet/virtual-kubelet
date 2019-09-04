@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"strings"
-	"time"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -16,8 +15,6 @@ import (
 	podutil "k8s.io/kubernetes/pkg/api/v1/pod"
 )
 
-const defaultWatchTimeout = 2 * time.Minute
-
 // CreateDummyPodObjectWithPrefix creates a dujmmy pod object using the specified prefix as the value of .metadata.generateName.
 // A variable number of strings can be provided.
 // For each one of these strings, a container that uses the string as its image will be appended to the pod.
@@ -25,8 +22,7 @@ const defaultWatchTimeout = 2 * time.Minute
 func (f *Framework) CreateDummyPodObjectWithPrefix(testName string, prefix string, images ...string) *corev1.Pod {
 	// Safe the test name
 	if testName != "" {
-		testName = strings.Replace(testName, "/", "-", -1)
-		testName = strings.ToLower(testName)
+		testName = stripParentTestName(strings.ToLower(testName))
 		prefix = prefix + "-" + testName + "-"
 	}
 	enableServiceLink := false
@@ -88,7 +84,7 @@ func (f *Framework) WaitUntilPodCondition(namespace, name string, fn watch.Condi
 		},
 	}
 	// Watch for updates to the Pod resource until fn is satisfied, or until the timeout is reached.
-	ctx, cfn := context.WithTimeout(context.Background(), defaultWatchTimeout)
+	ctx, cfn := context.WithTimeout(context.Background(), f.WatchTimeout)
 	defer cfn()
 	last, err := watch.UntilWithSync(ctx, lw, &corev1.Pod{}, nil, fn)
 	if err != nil {
@@ -147,7 +143,7 @@ func (f *Framework) WaitUntilPodEventWithReason(pod *corev1.Pod, reason string) 
 		},
 	}
 	// Watch for updates to the Event resource until fn is satisfied, or until the timeout is reached.
-	ctx, cfn := context.WithTimeout(context.Background(), defaultWatchTimeout)
+	ctx, cfn := context.WithTimeout(context.Background(), f.WatchTimeout)
 	defer cfn()
 	last, err := watch.UntilWithSync(ctx, lw, &corev1.Event{}, nil, func(event watchapi.Event) (b bool, e error) {
 		switch event.Type {
@@ -183,4 +179,16 @@ func (f *Framework) GetRunningPods() (*corev1.PodList, error) {
 		Into(result)
 
 	return result, err
+}
+
+// stripParentTestName strips out the parent's test name from the input (in the form of 'TestParent/TestChild').
+// Some test cases use their name as the pod name for testing purpose, and sometimes it might exceed 63
+// characters (Kubernetes's limit for pod name). This function ensures that we strip out the parent's
+// test name to decrease the length of the pod name
+func stripParentTestName(name string) string {
+	parts := strings.Split(name, "/")
+	if len(parts) == 1 {
+		return parts[0]
+	}
+	return parts[len(parts)-1]
 }

@@ -259,49 +259,7 @@ Running the unit tests locally is as simple as `make test`.
 
 ### End-to-end tests
 
-Virtual Kubelet includes an end-to-end (e2e) test suite which is used to validate its implementation.
-The current e2e suite **does not** run for any providers other than the `mock` provider.
-
-To run the e2e suite, three things are required:
-- a local Kubernetes cluster (we have tested with [Docker for Mac](https://docs.docker.com/docker-for-mac/install/) and [Minikube](https://github.com/kubernetes/minikube));
-- Your _kubeconfig_ default context points to the local Kubernetes cluster;
-- [`skaffold`](https://github.com/GoogleContainerTools/skaffold).
-
-Since our CI uses Minikube, we describe below how to run e2e on top of it.
-
-To create a Minikube cluster, run the following command after [installing Minikube](https://github.com/kubernetes/minikube#installation):
-
-```console
-$ minikube start
-```
-
-The e2e suite requires Virtual Kubelet to be running as a pod inside the Kubernetes cluster.
-In order to make the testing process easier, the build toolchain leverages on `skaffold` to automatically deploy the Virtual Kubelet to the Kubernetes cluster using the mock provider.
-
-To run the e2e test suite, you can run the following command:
-
-```console
-$ make e2e
-```
-
-When you're done testing, you can run the following command to cleanup the resources created by `skaffold`:
-
-```console
-$ make skaffold MODE=delete
-```
-
-Please note that this will not unregister the Virtual Kubelet as a node in the Kubernetes cluster.
-In order to do so, you should run:
-
-```console
-$ kubectl delete node vkubelet-mock-0
-```
-
-To clean up all resources you can run:
-
-```console
-$ make e2e.clean
-```
+Check out [`test/e2e`](./test/e2e) for more details.
 
 ## Known quirks and workarounds
 

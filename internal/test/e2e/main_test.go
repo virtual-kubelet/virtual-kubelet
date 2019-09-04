@@ -4,12 +4,12 @@ package e2e
 
 import (
 	"flag"
-	"os"
+	"fmt"
 	"testing"
 
-	v1 "k8s.io/api/core/v1"
+	vke2e "github.com/virtual-kubelet/virtual-kubelet/test/e2e"
 
-	"github.com/virtual-kubelet/virtual-kubelet/internal/test/e2e/framework"
+	v1 "k8s.io/api/core/v1"
 )
 
 const (
@@ -18,15 +18,9 @@ const (
 )
 
 var (
-	// f is the testing framework used for running the test suite.
-	f *framework.Framework
-
-	// kubeconfig is the path to the kubeconfig file to use when running the test suite outside a Kubernetes cluster.
 	kubeconfig string
-	// namespace is the name of the Kubernetes namespace to use for running the test suite (i.e. where to create pods).
-	namespace string
-	// nodeName is the name of the virtual-kubelet node to test.
-	nodeName string
+	namespace  string
+	nodeName   string
 )
 
 func init() {
@@ -36,17 +30,36 @@ func init() {
 	flag.Parse()
 }
 
-func TestMain(m *testing.M) {
-	// Set sane defaults in case no values (or empty ones) have been provided.
+// Provider-specific setup function
+func setup() error {
+	fmt.Println("Setting up end-to-end test suite for mock provider...")
+	return nil
+}
+
+// Provider-specific teardown function
+func teardown() error {
+	fmt.Println("Tearing down end-to-end test suite for mock provider...")
+	return nil
+}
+
+//  Provider-specific shouldSkipTest function
+func shouldSkipTest(testName string) bool {
+	return false
+}
+
+// TestEndToEnd creates and runs the end-to-end test suite for virtual kubelet
+func TestEndToEnd(t *testing.T) {
 	setDefaults()
-	// Create a new instance of the test framework targeting the specified node.
-	f = framework.NewTestingFramework(kubeconfig, namespace, nodeName)
-	// Wait for the virtual-kubelet pod to be ready.
-	if _, err := f.WaitUntilPodReady(namespace, nodeName); err != nil {
-		panic(err)
+	config := vke2e.EndToEndTestSuiteConfig{
+		Kubeconfig:     kubeconfig,
+		Namespace:      namespace,
+		NodeName:       nodeName,
+		Setup:          setup,
+		Teardown:       teardown,
+		ShouldSkipTest: shouldSkipTest,
 	}
-	// Run the test suite.
-	os.Exit(m.Run())
+	ts := vke2e.NewEndToEndTestSuite(config)
+	ts.Run(t)
 }
 
 // setDefaults sets sane defaults in case no values (or empty ones) have been provided.

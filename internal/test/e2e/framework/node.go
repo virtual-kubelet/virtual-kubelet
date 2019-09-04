@@ -31,7 +31,7 @@ func (f *Framework) WaitUntilNodeCondition(fn watch.ConditionFunc) error {
 	}
 
 	// Watch for updates to the Pod resource until fn is satisfied, or until the timeout is reached.
-	ctx, cancel := context.WithTimeout(context.Background(), defaultWatchTimeout)
+	ctx, cancel := context.WithTimeout(context.Background(), f.WatchTimeout)
 	defer cancel()
 	last, err := watch.UntilWithSync(ctx, lw, &corev1.Node{}, nil, fn)
 	if err != nil {
