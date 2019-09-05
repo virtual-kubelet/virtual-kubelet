@@ -213,7 +213,7 @@ func TestPodDelete(t *testing.T) {
 	}
 }
 
-func TestPodUpdateStatus(t *testing.T) {
+func TestFetchPodStatusFromProvider(t *testing.T) {
 	startedAt := metav1.NewTime(time.Now())
 	finishedAt := metav1.NewTime(startedAt.Add(time.Second * 10))
 	containerStateRunning := &corev1.ContainerStateRunning{StartedAt: startedAt}
@@ -255,10 +255,9 @@ func TestPodUpdateStatus(t *testing.T) {
 			assert.NilError(t, err)
 
 			ctx := context.Background()
-			err = c.updatePodStatus(ctx, p.DeepCopy())
+			updatedPod, err := c.fetchPodStatusFromProvider(ctx, nil, p)
 			assert.NilError(t, err)
 
-			updatedPod, err := pc.Get(pod.Name, metav1.GetOptions{})
 			assert.Equal(t, updatedPod.Status.Phase, corev1.PodFailed)
 			assert.Assert(t, is.Len(updatedPod.Status.ContainerStatuses, 1))
 			assert.Assert(t, updatedPod.Status.ContainerStatuses[0].State.Running == nil)
@@ -282,6 +281,39 @@ func TestPodUpdateStatus(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestFetchPodStatusFromProviderWithExpiredPod(t *testing.T) {
+	c := newTestController()
+	pod := &corev1.Pod{}
+	pod.ObjectMeta.Namespace = "default"
+	pod.ObjectMeta.Name = "nginx"
+	pod.Status.Phase = corev1.PodRunning
+	containerStatus := corev1.ContainerStatus{}
+
+	// We should terminate containters in a pod that has not provided pod status update for more than a minute
+	startedAt := time.Now().Add(-(time.Minute + time.Second))
+	containerStatus.State.Running = &corev1.ContainerStateRunning{StartedAt: metav1.NewTime(startedAt)}
+	pod.ObjectMeta.CreationTimestamp.Time = startedAt
+	pod.Status.ContainerStatuses = []corev1.ContainerStatus{containerStatus}
+
+	pc := c.client.CoreV1().Pods("default")
+	p, err := pc.Create(pod)
+	assert.NilError(t, err)
+
+	ctx := context.Background()
+	updatedPod, err := c.fetchPodStatusFromProvider(ctx, nil, p)
+	assert.NilError(t, err)
+
+	assert.Equal(t, updatedPod.Status.Phase, corev1.PodFailed)
+	assert.Assert(t, is.Len(updatedPod.Status.ContainerStatuses, 1))
+	assert.Assert(t, updatedPod.Status.ContainerStatuses[0].State.Running == nil)
+	assert.Assert(t, updatedPod.Status.ContainerStatuses[0].State.Terminated != nil)
+	assert.Assert(t, updatedPod.Status.ContainerStatuses[0].State.Waiting == nil)
+
+	terminated := updatedPod.Status.ContainerStatuses[0].State.Terminated
+	assert.Equal(t, terminated.StartedAt, metav1.NewTime(startedAt))
+	assert.Assert(t, terminated.StartedAt.Before(&terminated.FinishedAt))
 }
 
 func newPodSpec() corev1.PodSpec {
