@@ -179,7 +179,7 @@ type PodLifecycleHandler interface {
 ```
 
 There is also an optional interface `PodNotifier` which enables the provider to
-asyncronously notify the virtual-kubelet about pod status changes. If this
+asynchronously notify the virtual-kubelet about pod status changes. If this
 interface is not implemented, virtual-kubelet will periodically check the status
 of all pods.
 
