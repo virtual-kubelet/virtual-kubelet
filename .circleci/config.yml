@@ -10,6 +10,9 @@ jobs:
     working_directory: /go/src/github.com/virtual-kubelet/virtual-kubelet
     steps:
       - checkout
+      - restore_cache:
+          keys:
+            - validate-{{ checksum "go.mod" }}-{{ checksum "go.sum" }}
       - run:
           name: go vet
           command: V=1 CI=1 make vet
@@ -22,6 +25,10 @@ jobs:
       - run:
           name: Dependencies
           command: scripts/validate/gomod.sh
+      - save_cache:
+          key: validate-{{ checksum "go.mod" }}-{{ checksum "go.sum" }}
+          paths:
+            - "/go/pkg/mod"
 
   test:
     resource_class: xlarge
@@ -32,12 +39,19 @@ jobs:
     working_directory: /go/src/github.com/virtual-kubelet/virtual-kubelet
     steps:
       - checkout
+      - restore_cache:
+          keys:
+            - test-{{ checksum "go.mod" }}-{{ checksum "go.sum" }}
       - run:
           name: Build
           command: V=1 make build
       - run:
           name: Tests
           command: V=1 CI=1 make test
+      - save_cache:
+          key: test-{{ checksum "go.mod" }}-{{ checksum "go.sum" }}
+          paths:
+            - "/go/pkg/mod"
 
   e2e:
     machine:
@@ -95,6 +109,9 @@ jobs:
           name: Watch nodes
           command: kubectl get nodes -o json --watch
           background: true
+      - restore_cache:
+          keys:
+            - e2e-{{ checksum "go.mod" }}-{{ checksum "go.sum" }}-2
       - run:
           name: Run the end-to-end test suite
           command: |
@@ -104,6 +121,10 @@ jobs:
             tar -C $HOME/.go --strip-components=1 -xzf "/tmp/go.tar.gz"
             go version
             make e2e
+      - save_cache:
+          key: e2e-{{ checksum "go.mod" }}-{{ checksum "go.sum" }}-2
+          paths:
+            - "/home/circleci/go/pkg/mod"
       - run:
           name: Collect logs on failure from vkubelet-mock-0
           command: |
