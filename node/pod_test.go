@@ -17,6 +17,7 @@ package node
 import (
 	"context"
 	"testing"
+	"time"
 
 	pkgerrors "github.com/pkg/errors"
 	"github.com/virtual-kubelet/virtual-kubelet/errdefs"
@@ -26,7 +27,9 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	kubeinformers "k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes/fake"
+	"k8s.io/client-go/util/workqueue"
 )
 
 type TestController struct {
@@ -40,17 +43,27 @@ func newTestController() *TestController {
 
 	rm := testutil.FakeResourceManager()
 	p := newMockProvider()
-
+	iFactory := kubeinformers.NewSharedInformerFactoryWithOptions(fk8s, 10*time.Minute)
 	return &TestController{
 		PodController: &PodController{
 			client:          fk8s.CoreV1(),
 			provider:        p,
 			resourceManager: rm,
 			recorder:        testutil.FakeEventRecorder(5),
+			k8sQ:            workqueue.NewRateLimitingQueue(workqueue.DefaultControllerRateLimiter()),
+			done:            make(chan struct{}),
+			ready:           make(chan struct{}),
+			podsInformer:    iFactory.Core().V1().Pods(),
 		},
 		mock:   p,
 		client: fk8s,
 	}
+}
+
+// Run starts the informer and runs the pod controller
+func (tc *TestController) Run(ctx context.Context, n int) error {
+	go tc.podsInformer.Informer().Run(ctx.Done())
+	return tc.PodController.Run(ctx, n)
 }
 
 func TestPodsEqual(t *testing.T) {

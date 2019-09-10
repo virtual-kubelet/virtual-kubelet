@@ -18,7 +18,6 @@ import (
 	"context"
 	"os"
 	"path"
-	"time"
 
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
@@ -207,11 +206,16 @@ func runRootCommand(ctx context.Context, s *provider.Store, c Opts) error {
 	}()
 
 	if c.StartupTimeout > 0 {
-		// If there is a startup timeout, it does two things:
-		// 1. It causes the VK to shutdown if we haven't gotten into an operational state in a time period
-		// 2. It prevents node advertisement from happening until we're in an operational state
-		err = waitFor(ctx, c.StartupTimeout, pc.Ready())
-		if err != nil {
+		ctx, cancel := context.WithTimeout(ctx, c.StartupTimeout)
+		log.G(ctx).Info("Waiting for pod controller / VK to be ready")
+		select {
+		case <-ctx.Done():
+			cancel()
+			return ctx.Err()
+		case <-pc.Ready():
+		}
+		cancel()
+		if err := pc.Err(); err != nil {
 			return err
 		}
 	}
@@ -226,21 +230,6 @@ func runRootCommand(ctx context.Context, s *provider.Store, c Opts) error {
 
 	<-ctx.Done()
 	return nil
-}
-
-func waitFor(ctx context.Context, time time.Duration, ready <-chan struct{}) error {
-	ctx, cancel := context.WithTimeout(ctx, time)
-	defer cancel()
-
-	// Wait for the VK / PC close the the ready channel, or time out and return
-	log.G(ctx).Info("Waiting for pod controller / VK to be ready")
-
-	select {
-	case <-ready:
-		return nil
-	case <-ctx.Done():
-		return errors.Wrap(ctx.Err(), "Error while starting up VK")
-	}
 }
 
 func newClient(configPath string) (*kubernetes.Clientset, error) {
