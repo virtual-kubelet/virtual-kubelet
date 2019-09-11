@@ -116,7 +116,7 @@ func (pc *PodController) processPodStatusUpdate(ctx context.Context, workerID st
 	return handleQueueItem(ctx, q, pc.podStatusHandler)
 }
 
-// providerSyncLoop syncronizes pod states from the provider back to kubernetes
+// providerSyncLoop synchronizes pod states from the provider back to kubernetes
 // Deprecated: This is only used when the provider does not support async updates
 // Providers should implement async update support, even if it just means copying
 // something like this in.
