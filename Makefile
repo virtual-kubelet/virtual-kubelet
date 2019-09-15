@@ -6,6 +6,8 @@ github_repo := virtual-kubelet/virtual-kubelet
 binary := virtual-kubelet
 
 export GO111MODULE ?= on
+export GOOS ?= linux
+export GOARCH ?= amd64
 
 include Makefile.e2e
 # Currently this looks for a globally installed gobin. When we move to modules,
@@ -37,9 +39,9 @@ safebuild:
 build: build_tags := netgo osusergo
 build: OUTPUT_DIR ?= bin
 build: authors
-	@echo "Building..."
-	$Q CGO_ENABLED=0 go build -ldflags '-extldflags "-static"' -o $(OUTPUT_DIR)/$(binary) $(if $V,-v) $(VERSION_FLAGS) ./cmd/$(binary)
-
+	@echo "Building for $(GOARCH)..."
+	$Q CGO_ENABLED=0 GOARCH=$(GOARCH) GOOS=$(GOOS) go build -ldflags '-extldflags "-static"' -o $(OUTPUT_DIR)/$(binary) $(if $V,-v) $(VERSION_FLAGS) ./cmd/$(binary)
+	
 .PHONY: tags
 tags:
 	@echo "Listing tags..."
