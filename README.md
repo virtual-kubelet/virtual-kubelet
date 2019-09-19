@@ -99,10 +99,6 @@ You can find detailed instructions on how to set it up and how to test it in the
 The Azure connector can use a configuration file specified by the `--provider-config` flag.
 The config file is in TOML format, and an example lives in `providers/azure/example.toml`.
 
-#### More Details
-
-See the [ACI Readme](https://github.com/virtual-kubelet/alibabacloud-eci/blob/master/eci.toml)
-
 ### AWS Fargate Provider
 
 [AWS Fargate](https://aws.amazon.com/fargate/) is a technology that allows you to run containers
@@ -114,7 +110,7 @@ IP addresses to connect to the internet, private IP addresses to connect to your
 security groups, IAM roles, CloudWatch Logs and many other AWS services. Pods on Fargate can
 co-exist with pods on regular worker nodes in the same Kubernetes cluster.
 
-Easy instructions and a sample configuration file is available in the [AWS Fargate provider documentation](https://github.com/virtual-kubelet/aws-fargate/blob/master/README.md).
+Easy instructions and a sample configuration file is available in the [AWS Fargate provider documentation](https://github.com/virtual-kubelet/aws-fargate). Please note that this provider is not currently supported. 
 
 ### HashiCorp Nomad Provider
 
@@ -280,8 +276,10 @@ Enable the ServiceNodeExclusion flag, by modifying the Controller Manager manife
 Virtual Kubelet follows the [CNCF Code of Conduct](https://github.com/cncf/foundation/blob/master/code-of-conduct.md).
 Sign the [CNCF CLA](https://github.com/kubernetes/community/blob/master/CLA.md) to be able to make Pull Requests to this repo.
 
-Bi-weekly Virtual Kubelet Architecture meetings are held at 11am PST in this [zoom meeting room](https://zoom.us/j/245165908).  Check out the calendar [here](https://calendar.google.com/calendar?cid=bjRtbGMxYWNtNXR0NXQ1a2hqZmRkNTRncGNAZ3JvdXAuY2FsZW5kYXIuZ29vZ2xlLmNvbQ).
+Bi-weekly Virtual Kubelet Architecture meetings are held at 11am PST every other Wednesday in this [zoom meeting room](https://zoom.us/j/245165908).  Check out the calendar [here](https://calendar.google.com/calendar?cid=bjRtbGMxYWNtNXR0NXQ1a2hqZmRkNTRncGNAZ3JvdXAuY2FsZW5kYXIuZ29vZ2xlLmNvbQ).
 
 Our google drive with design specifications and meeting notes are [here](https://drive.google.com/drive/folders/19Ndu11WBCCBDowo9CrrGUHoIfd2L8Ueg?usp=sharing).
+
+We also have a community slack channel named virtual-kubelet in the Kubernetes slack. 
 
 
