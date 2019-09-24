@@ -16,10 +16,8 @@ package node
 
 import (
 	"context"
-	"hash/fnv"
 	"time"
 
-	"github.com/davecgh/go-spew/spew"
 	"github.com/google/go-cmp/cmp"
 	pkgerrors "github.com/pkg/errors"
 	"github.com/virtual-kubelet/virtual-kubelet/errdefs"
@@ -115,20 +113,6 @@ func podsEqual(pod1, pod2 *corev1.Pod) bool {
 		cmp.Equal(pod1.ObjectMeta.Labels, pod2.Labels) &&
 		cmp.Equal(pod1.ObjectMeta.Annotations, pod2.Annotations)
 
-}
-
-// This is basically the kube runtime's hash container functionality.
-// VK only operates at the Pod level so this is adapted for that
-func hashPodSpec(spec corev1.PodSpec) uint64 {
-	hash := fnv.New32a()
-	printer := spew.ConfigState{
-		Indent:         " ",
-		SortKeys:       true,
-		DisableMethods: true,
-		SpewKeys:       true,
-	}
-	printer.Fprintf(hash, "%#v", spec)
-	return uint64(hash.Sum32())
 }
 
 func (pc *PodController) handleProviderError(ctx context.Context, span trace.Span, origErr error, pod *corev1.Pod) {
