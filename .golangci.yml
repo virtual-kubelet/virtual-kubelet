@@ -12,3 +12,6 @@ linters:
     - goconst
     - goimports
     - unused
+    - varcheck
+    - deadcode
+    - misspell

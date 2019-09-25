@@ -303,7 +303,7 @@ func TestFetchPodStatusFromProviderWithExpiredPod(t *testing.T) {
 	pod.Status.Phase = corev1.PodRunning
 	containerStatus := corev1.ContainerStatus{}
 
-	// We should terminate containters in a pod that has not provided pod status update for more than a minute
+	// We should terminate containers in a pod that has not provided pod status update for more than a minute
 	startedAt := time.Now().Add(-(time.Minute + time.Second))
 	containerStatus.State.Running = &corev1.ContainerStateRunning{StartedAt: metav1.NewTime(startedAt)}
 	pod.ObjectMeta.CreationTimestamp.Time = startedAt
