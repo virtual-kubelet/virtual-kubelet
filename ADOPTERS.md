@@ -1,11 +1,11 @@
 ## Virtual Kubelet adopters
 
-Microsoft Azure
-AWS
-Alibaba
-VMWare
-Netflix
-Hashi Corp
+* Microsoft Azure
+* AWS
+* Alibaba
+* VMWare
+* Netflix
+* Hashi Corp
 
 Since end-users are specific per provider within VK we have many end-user customers that we don't have permission to list publically. Please contact ribhatia@microsoft.com for more informtation.
 
