@@ -109,7 +109,6 @@ func getExecOptions(req *http.Request) (*remotecommand.Options, error) {
 
 type containerExecContext struct {
 	h                         ContainerExecHandlerFunc
-	eio                       *execIO
 	namespace, pod, container string
 	ctx                       context.Context
 }

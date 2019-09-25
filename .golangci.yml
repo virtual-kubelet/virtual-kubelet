@@ -11,3 +11,4 @@ linters:
     - golint
     - goconst
     - goimports
+    - unused
