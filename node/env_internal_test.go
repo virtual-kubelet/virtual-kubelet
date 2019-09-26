@@ -663,7 +663,7 @@ func TestEnvFromConfigMapAndSecretWithInvalidKeys(t *testing.T) {
 }
 
 // TestEnvOverridesEnvFrom populates the environment of a container from a configmap, and from another configmap's key with a "conflicting" key.
-// Then, it checks that the value of the "conflicting" key has been correctly overriden.
+// Then, it checks that the value of the "conflicting" key has been correctly overridden.
 func TestEnvOverridesEnvFrom(t *testing.T) {
 	rm := testutil.FakeResourceManager(configMap3)
 	er := testutil.FakeEventRecorder(defaultEventRecorderBufferSize)
@@ -672,7 +672,7 @@ func TestEnvOverridesEnvFrom(t *testing.T) {
 	override := "__override__"
 
 	// Create a pod object having a single container.
-	// The container's environment is to be populated from a configmap, and later overriden with a value provided directly.
+	// The container's environment is to be populated from a configmap, and later overridden with a value provided directly.
 	pod := &corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: namespace,

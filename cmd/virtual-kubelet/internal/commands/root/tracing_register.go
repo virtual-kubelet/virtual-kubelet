@@ -29,7 +29,7 @@ var (
 )
 
 // TracingExporterInitFunc is the function that is called to initialize an exporter.
-// This is used when registering an exporter and called when a user specifed they want to use the exporter.
+// This is used when registering an exporter and called when a user specified they want to use the exporter.
 type TracingExporterInitFunc func(TracingExporterOptions) (trace.Exporter, error)
 
 // RegisterTracingExporter registers a tracing exporter.
