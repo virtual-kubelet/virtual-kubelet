@@ -70,11 +70,11 @@ func TestPodsEqual(t *testing.T) {
 	p1 := &corev1.Pod{
 		Spec: corev1.PodSpec{
 			Containers: []corev1.Container{
-				corev1.Container{
+				{
 					Name:  "nginx",
 					Image: "nginx:1.15.12-perl",
 					Ports: []corev1.ContainerPort{
-						corev1.ContainerPort{
+						{
 							ContainerPort: 443,
 							Protocol:      "tcp",
 						},
@@ -331,11 +331,11 @@ func TestFetchPodStatusFromProviderWithExpiredPod(t *testing.T) {
 func newPodSpec() corev1.PodSpec {
 	return corev1.PodSpec{
 		Containers: []corev1.Container{
-			corev1.Container{
+			{
 				Name:  "nginx",
 				Image: "nginx:1.15.12",
 				Ports: []corev1.ContainerPort{
-					corev1.ContainerPort{
+					{
 						ContainerPort: 443,
 						Protocol:      "tcp",
 					},
