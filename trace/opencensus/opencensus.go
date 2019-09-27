@@ -140,7 +140,7 @@ func (l *logger) Debug(args ...interface{}) {
 }
 
 func (l *logger) Debugf(f string, args ...interface{}) {
-	l.l.Debugf(f, args)
+	l.l.Debugf(f, args...)
 	l.s.Annotatef(withLevel(lDebug, l.a), f, args...)
 }
 
@@ -156,7 +156,7 @@ func (l *logger) Info(args ...interface{}) {
 }
 
 func (l *logger) Infof(f string, args ...interface{}) {
-	l.l.Infof(f, args)
+	l.l.Infof(f, args...)
 	l.s.Annotatef(withLevel(lInfo, l.a), f, args...)
 }
 
@@ -172,7 +172,7 @@ func (l *logger) Warn(args ...interface{}) {
 }
 
 func (l *logger) Warnf(f string, args ...interface{}) {
-	l.l.Warnf(f, args)
+	l.l.Warnf(f, args...)
 	l.s.Annotatef(withLevel(lWarn, l.a), f, args...)
 }
 
@@ -188,7 +188,7 @@ func (l *logger) Error(args ...interface{}) {
 }
 
 func (l *logger) Errorf(f string, args ...interface{}) {
-	l.l.Errorf(f, args)
+	l.l.Errorf(f, args...)
 	l.s.Annotatef(withLevel(lErr, l.a), f, args...)
 }
 
@@ -205,7 +205,7 @@ func (l *logger) Fatal(args ...interface{}) {
 
 func (l *logger) Fatalf(f string, args ...interface{}) {
 	l.s.Annotatef(withLevel(lFatal, l.a), f, args...)
-	l.l.Fatalf(f, args)
+	l.l.Fatalf(f, args...)
 }
 
 func (l *logger) WithError(err error) log.Logger {
