@@ -13,8 +13,7 @@ import (
 )
 
 var (
-	_ PodLifecycleHandler = (*mockV0Provider)(nil)
-	_ PodNotifier         = (*mockProvider)(nil)
+	_ PodLifecycleHandler = (*mockProvider)(nil)
 )
 
 type waitableInt struct {
@@ -62,7 +61,7 @@ func (w *waitableInt) increment() {
 	w.cond.Broadcast()
 }
 
-type mockV0Provider struct {
+type mockProvider struct {
 	creates          *waitableInt
 	updates          *waitableInt
 	deletes          *waitableInt
@@ -75,13 +74,9 @@ type mockV0Provider struct {
 	realNotifier func(*v1.Pod)
 }
 
-type mockProvider struct {
-	*mockV0Provider
-}
-
-// NewMockProviderMockConfig creates a new mockV0Provider. Mock legacy provider does not implement the new asynchronous podnotifier interface
-func newMockV0Provider() *mockV0Provider {
-	provider := mockV0Provider{
+// newMockProvider creates a new mockProvider.
+func newMockProvider() *mockProvider {
+	provider := mockProvider{
 		startTime:        time.Now(),
 		creates:          newWaitableInt(),
 		updates:          newWaitableInt(),
@@ -95,20 +90,15 @@ func newMockV0Provider() *mockV0Provider {
 	return &provider
 }
 
-// NewMockProviderMockConfig creates a new MockProvider with the given config
-func newMockProvider() *mockProvider {
-	return &mockProvider{mockV0Provider: newMockV0Provider()}
-}
-
 // notifier calls the callback that we got from the pod controller to notify it of updates (if it is set)
-func (p *mockV0Provider) notifier(pod *v1.Pod) {
+func (p *mockProvider) notifier(pod *v1.Pod) {
 	if p.realNotifier != nil {
 		p.realNotifier(pod)
 	}
 }
 
 // CreatePod accepts a Pod definition and stores it in memory.
-func (p *mockV0Provider) CreatePod(ctx context.Context, pod *v1.Pod) error {
+func (p *mockProvider) CreatePod(ctx context.Context, pod *v1.Pod) error {
 	log.G(ctx).Infof("receive CreatePod %q", pod.Name)
 
 	p.creates.increment()
@@ -160,7 +150,7 @@ func (p *mockV0Provider) CreatePod(ctx context.Context, pod *v1.Pod) error {
 }
 
 // UpdatePod accepts a Pod definition and updates its reference.
-func (p *mockV0Provider) UpdatePod(ctx context.Context, pod *v1.Pod) error {
+func (p *mockProvider) UpdatePod(ctx context.Context, pod *v1.Pod) error {
 	log.G(ctx).Infof("receive UpdatePod %q", pod.Name)
 
 	p.updates.increment()
@@ -177,7 +167,7 @@ func (p *mockV0Provider) UpdatePod(ctx context.Context, pod *v1.Pod) error {
 
 // DeletePod deletes the specified pod out of memory. The PodController deepcopies the pod object
 // for us, so we don't have to worry about mutation.
-func (p *mockV0Provider) DeletePod(ctx context.Context, pod *v1.Pod) (err error) {
+func (p *mockProvider) DeletePod(ctx context.Context, pod *v1.Pod) (err error) {
 	log.G(ctx).Infof("receive DeletePod %q", pod.Name)
 
 	p.attemptedDeletes.increment()
@@ -213,21 +203,13 @@ func (p *mockV0Provider) DeletePod(ctx context.Context, pod *v1.Pod) (err error)
 	}
 
 	p.notifier(pod)
-	p.pods.Store(key, pod)
-	if pod.DeletionGracePeriodSeconds == nil || *pod.DeletionGracePeriodSeconds == 0 {
-		p.pods.Delete(key)
-	} else {
-		time.AfterFunc(time.Duration(*pod.DeletionGracePeriodSeconds)*time.Second, func() {
-			p.pods.Delete(key)
-		})
-
-	}
+	p.pods.Delete(key)
 
 	return nil
 }
 
 // GetPod returns a pod by name that is stored in memory.
-func (p *mockV0Provider) GetPod(ctx context.Context, namespace, name string) (pod *v1.Pod, err error) {
+func (p *mockProvider) GetPod(ctx context.Context, namespace, name string) (pod *v1.Pod, err error) {
 	log.G(ctx).Infof("receive GetPod %q", name)
 
 	key, err := buildKeyFromNames(namespace, name)
@@ -243,7 +225,7 @@ func (p *mockV0Provider) GetPod(ctx context.Context, namespace, name string) (po
 
 // GetPodStatus returns the status of a pod by name that is "running".
 // returns nil if a pod by that name is not found.
-func (p *mockV0Provider) GetPodStatus(ctx context.Context, namespace, name string) (*v1.PodStatus, error) {
+func (p *mockProvider) GetPodStatus(ctx context.Context, namespace, name string) (*v1.PodStatus, error) {
 	log.G(ctx).Infof("receive GetPodStatus %q", name)
 
 	pod, err := p.GetPod(ctx, namespace, name)
@@ -255,7 +237,7 @@ func (p *mockV0Provider) GetPodStatus(ctx context.Context, namespace, name strin
 }
 
 // GetPods returns a list of all pods known to be "running".
-func (p *mockV0Provider) GetPods(ctx context.Context) ([]*v1.Pod, error) {
+func (p *mockProvider) GetPods(ctx context.Context) ([]*v1.Pod, error) {
 	log.G(ctx).Info("receive GetPods")
 
 	var pods []*v1.Pod

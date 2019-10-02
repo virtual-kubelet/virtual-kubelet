@@ -41,8 +41,8 @@ var (
 )
 */
 
-// MockV0Provider implements the virtual-kubelet provider interface and stores pods in memory.
-type MockV0Provider struct { //nolint:golint
+// MockProvider implements the virtual-kubelet provider interface and stores pods in memory.
+type MockProvider struct { // nolint:golint
 	nodeName           string
 	operatingSystem    string
 	internalIP         string
@@ -53,11 +53,6 @@ type MockV0Provider struct { //nolint:golint
 	notifier           func(*v1.Pod)
 }
 
-// MockProvider is like MockV0Provider, but implements the PodNotifier interface
-type MockProvider struct { //nolint:golint
-	*MockV0Provider
-}
-
 // MockConfig contains a mock virtual-kubelet's configurable parameters.
 type MockConfig struct { //nolint:golint
 	CPU    string `json:"cpu,omitempty"`
@@ -66,7 +61,7 @@ type MockConfig struct { //nolint:golint
 }
 
 // NewMockProviderMockConfig creates a new MockV0Provider. Mock legacy provider does not implement the new asynchronous podnotifier interface
-func NewMockV0ProviderMockConfig(config MockConfig, nodeName, operatingSystem string, internalIP string, daemonEndpointPort int32) (*MockV0Provider, error) {
+func NewMockProviderMockConfig(config MockConfig, nodeName, operatingSystem string, internalIP string, daemonEndpointPort int32) (*MockProvider, error) {
 	//set defaults
 	if config.CPU == "" {
 		config.CPU = defaultCPUCapacity
@@ -77,7 +72,7 @@ func NewMockV0ProviderMockConfig(config MockConfig, nodeName, operatingSystem st
 	if config.Pods == "" {
 		config.Pods = defaultPodCapacity
 	}
-	provider := MockV0Provider{
+	provider := MockProvider{
 		nodeName:           nodeName,
 		operatingSystem:    operatingSystem,
 		internalIP:         internalIP,
@@ -85,30 +80,9 @@ func NewMockV0ProviderMockConfig(config MockConfig, nodeName, operatingSystem st
 		pods:               make(map[string]*v1.Pod),
 		config:             config,
 		startTime:          time.Now(),
-		// By default notifier is set to a function which is a no-op. In the event we've implemented the PodNotifier interface,
-		// it will be set, and then we'll call a real underlying implementation.
-		// This makes it easier in the sense we don't need to wrap each method.
-		notifier: func(*v1.Pod) {},
 	}
 
 	return &provider, nil
-}
-
-// NewMockV0Provider creates a new MockV0Provider
-func NewMockV0Provider(providerConfig, nodeName, operatingSystem string, internalIP string, daemonEndpointPort int32) (*MockV0Provider, error) {
-	config, err := loadConfig(providerConfig, nodeName)
-	if err != nil {
-		return nil, err
-	}
-
-	return NewMockV0ProviderMockConfig(config, nodeName, operatingSystem, internalIP, daemonEndpointPort)
-}
-
-// NewMockProviderMockConfig creates a new MockProvider with the given config
-func NewMockProviderMockConfig(config MockConfig, nodeName, operatingSystem string, internalIP string, daemonEndpointPort int32) (*MockProvider, error) {
-	p, err := NewMockV0ProviderMockConfig(config, nodeName, operatingSystem, internalIP, daemonEndpointPort)
-
-	return &MockProvider{MockV0Provider: p}, err
 }
 
 // NewMockProvider creates a new MockProvider, which implements the PodNotifier interface
@@ -158,7 +132,7 @@ func loadConfig(providerConfig, nodeName string) (config MockConfig, err error) 
 }
 
 // CreatePod accepts a Pod definition and stores it in memory.
-func (p *MockV0Provider) CreatePod(ctx context.Context, pod *v1.Pod) error {
+func (p *MockProvider) CreatePod(ctx context.Context, pod *v1.Pod) error {
 	ctx, span := trace.StartSpan(ctx, "CreatePod")
 	defer span.End()
 
@@ -215,7 +189,7 @@ func (p *MockV0Provider) CreatePod(ctx context.Context, pod *v1.Pod) error {
 }
 
 // UpdatePod accepts a Pod definition and updates its reference.
-func (p *MockV0Provider) UpdatePod(ctx context.Context, pod *v1.Pod) error {
+func (p *MockProvider) UpdatePod(ctx context.Context, pod *v1.Pod) error {
 	ctx, span := trace.StartSpan(ctx, "UpdatePod")
 	defer span.End()
 
@@ -236,7 +210,7 @@ func (p *MockV0Provider) UpdatePod(ctx context.Context, pod *v1.Pod) error {
 }
 
 // DeletePod deletes the specified pod out of memory.
-func (p *MockV0Provider) DeletePod(ctx context.Context, pod *v1.Pod) (err error) {
+func (p *MockProvider) DeletePod(ctx context.Context, pod *v1.Pod) (err error) {
 	ctx, span := trace.StartSpan(ctx, "DeletePod")
 	defer span.End()
 
@@ -277,7 +251,7 @@ func (p *MockV0Provider) DeletePod(ctx context.Context, pod *v1.Pod) (err error)
 }
 
 // GetPod returns a pod by name that is stored in memory.
-func (p *MockV0Provider) GetPod(ctx context.Context, namespace, name string) (pod *v1.Pod, err error) {
+func (p *MockProvider) GetPod(ctx context.Context, namespace, name string) (pod *v1.Pod, err error) {
 	ctx, span := trace.StartSpan(ctx, "GetPod")
 	defer func() {
 		span.SetStatus(err)
@@ -301,7 +275,7 @@ func (p *MockV0Provider) GetPod(ctx context.Context, namespace, name string) (po
 }
 
 // GetContainerLogs retrieves the logs of a container by name from the provider.
-func (p *MockV0Provider) GetContainerLogs(ctx context.Context, namespace, podName, containerName string, opts api.ContainerLogOpts) (io.ReadCloser, error) {
+func (p *MockProvider) GetContainerLogs(ctx context.Context, namespace, podName, containerName string, opts api.ContainerLogOpts) (io.ReadCloser, error) {
 	ctx, span := trace.StartSpan(ctx, "GetContainerLogs")
 	defer span.End()
 
@@ -314,14 +288,14 @@ func (p *MockV0Provider) GetContainerLogs(ctx context.Context, namespace, podNam
 
 // RunInContainer executes a command in a container in the pod, copying data
 // between in/out/err and the container's stdin/stdout/stderr.
-func (p *MockV0Provider) RunInContainer(ctx context.Context, namespace, name, container string, cmd []string, attach api.AttachIO) error {
+func (p *MockProvider) RunInContainer(ctx context.Context, namespace, name, container string, cmd []string, attach api.AttachIO) error {
 	log.G(context.TODO()).Infof("receive ExecInContainer %q", container)
 	return nil
 }
 
 // GetPodStatus returns the status of a pod by name that is "running".
 // returns nil if a pod by that name is not found.
-func (p *MockV0Provider) GetPodStatus(ctx context.Context, namespace, name string) (*v1.PodStatus, error) {
+func (p *MockProvider) GetPodStatus(ctx context.Context, namespace, name string) (*v1.PodStatus, error) {
 	ctx, span := trace.StartSpan(ctx, "GetPodStatus")
 	defer span.End()
 
@@ -339,7 +313,7 @@ func (p *MockV0Provider) GetPodStatus(ctx context.Context, namespace, name strin
 }
 
 // GetPods returns a list of all pods known to be "running".
-func (p *MockV0Provider) GetPods(ctx context.Context) ([]*v1.Pod, error) {
+func (p *MockProvider) GetPods(ctx context.Context) ([]*v1.Pod, error) {
 	ctx, span := trace.StartSpan(ctx, "GetPods")
 	defer span.End()
 
@@ -354,7 +328,7 @@ func (p *MockV0Provider) GetPods(ctx context.Context) ([]*v1.Pod, error) {
 	return pods, nil
 }
 
-func (p *MockV0Provider) ConfigureNode(ctx context.Context, n *v1.Node) {
+func (p *MockProvider) ConfigureNode(ctx context.Context, n *v1.Node) {
 	ctx, span := trace.StartSpan(ctx, "mock.ConfigureNode") //nolint:ineffassign
 	defer span.End()
 
@@ -373,7 +347,7 @@ func (p *MockV0Provider) ConfigureNode(ctx context.Context, n *v1.Node) {
 }
 
 // Capacity returns a resource list containing the capacity limits.
-func (p *MockV0Provider) capacity() v1.ResourceList {
+func (p *MockProvider) capacity() v1.ResourceList {
 	return v1.ResourceList{
 		"cpu":    resource.MustParse(p.config.CPU),
 		"memory": resource.MustParse(p.config.Memory),
@@ -383,7 +357,7 @@ func (p *MockV0Provider) capacity() v1.ResourceList {
 
 // NodeConditions returns a list of conditions (Ready, OutOfDisk, etc), for updates to the node status
 // within Kubernetes.
-func (p *MockV0Provider) nodeConditions() []v1.NodeCondition {
+func (p *MockProvider) nodeConditions() []v1.NodeCondition {
 	// TODO: Make this configurable
 	return []v1.NodeCondition{
 		{
@@ -432,7 +406,7 @@ func (p *MockV0Provider) nodeConditions() []v1.NodeCondition {
 
 // NodeAddresses returns a list of addresses for the node status
 // within Kubernetes.
-func (p *MockV0Provider) nodeAddresses() []v1.NodeAddress {
+func (p *MockProvider) nodeAddresses() []v1.NodeAddress {
 	return []v1.NodeAddress{
 		{
 			Type:    "InternalIP",
@@ -443,7 +417,7 @@ func (p *MockV0Provider) nodeAddresses() []v1.NodeAddress {
 
 // NodeDaemonEndpoints returns NodeDaemonEndpoints for the node status
 // within Kubernetes.
-func (p *MockV0Provider) nodeDaemonEndpoints() v1.NodeDaemonEndpoints {
+func (p *MockProvider) nodeDaemonEndpoints() v1.NodeDaemonEndpoints {
 	return v1.NodeDaemonEndpoints{
 		KubeletEndpoint: v1.DaemonEndpoint{
 			Port: p.daemonEndpointPort,
@@ -452,7 +426,7 @@ func (p *MockV0Provider) nodeDaemonEndpoints() v1.NodeDaemonEndpoints {
 }
 
 // GetStatsSummary returns dummy stats for all pods known by this provider.
-func (p *MockV0Provider) GetStatsSummary(ctx context.Context) (*stats.Summary, error) {
+func (p *MockProvider) GetStatsSummary(ctx context.Context) (*stats.Summary, error) {
 	var span trace.Span
 	ctx, span = trace.StartSpan(ctx, "GetStatsSummary") //nolint: ineffassign
 	defer span.End()
