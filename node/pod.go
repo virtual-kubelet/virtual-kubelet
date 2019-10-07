@@ -16,7 +16,6 @@ package node
 
 import (
 	"context"
-	"time"
 
 	"github.com/google/go-cmp/cmp"
 	pkgerrors "github.com/pkg/errors"
@@ -26,18 +25,12 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/workqueue"
 )
 
 const (
-	podStatusReasonProviderFailed   = "ProviderFailed"
-	podStatusReasonNotFound         = "NotFound"
-	podStatusMessageNotFound        = "The pod status was not found and may have been deleted from the provider"
-	containerStatusReasonNotFound   = "NotFound"
-	containerStatusMessageNotFound  = "Container was not found and was likely deleted"
-	containerStatusExitCodeNotFound = -137
+	podStatusReasonProviderFailed = "ProviderFailed"
 )
 
 func addPodAttributes(ctx context.Context, span trace.Span, pod *corev1.Pod) context.Context {
@@ -196,78 +189,6 @@ func (pc *PodController) forceDeletePodResource(ctx context.Context, namespace, 
 		return pkgerrors.Wrap(err, "Failed to delete Kubernetes pod")
 	}
 	return nil
-}
-
-// fetchPodStatusesFromProvider syncs the providers pod status with the kubernetes pod status.
-func (pc *PodController) fetchPodStatusesFromProvider(ctx context.Context, q workqueue.RateLimitingInterface) {
-	ctx, span := trace.StartSpan(ctx, "fetchPodStatusesFromProvider")
-	defer span.End()
-
-	// Update all the pods with the provider status.
-	pods, err := pc.podsLister.List(labels.Everything())
-	if err != nil {
-		err = pkgerrors.Wrap(err, "error getting pod list from kubernetes")
-		span.SetStatus(err)
-		log.G(ctx).WithError(err).Error("Error updating pod statuses")
-		return
-	}
-	ctx = span.WithField(ctx, "nPods", int64(len(pods)))
-
-	for _, pod := range pods {
-		if !shouldSkipPodStatusUpdate(pod) {
-			enrichedPod, err := pc.fetchPodStatusFromProvider(ctx, q, pod)
-			if err != nil {
-				log.G(ctx).WithFields(map[string]interface{}{
-					"name":      pod.Name,
-					"namespace": pod.Namespace,
-				}).WithError(err).Error("Could not fetch pod status")
-			} else if enrichedPod != nil {
-				pc.enqueuePodStatusUpdate(ctx, q, enrichedPod)
-			}
-		}
-	}
-}
-
-// fetchPodStatusFromProvider returns a pod (the pod we pass in) enriched with the pod status from the provider. If the pod is not found,
-// and it has been 1 minute since the pod was created, or the pod was previously running, it will be marked as failed.
-// If a valid pod status cannot be generated, for example, if a pod is not found in the provider, and it has been less than 1 minute
-// since pod creation, we will return nil for the pod.
-func (pc *PodController) fetchPodStatusFromProvider(ctx context.Context, q workqueue.RateLimitingInterface, podFromKubernetes *corev1.Pod) (*corev1.Pod, error) {
-	podStatus, err := pc.provider.GetPodStatus(ctx, podFromKubernetes.Namespace, podFromKubernetes.Name)
-	if errdefs.IsNotFound(err) || (err == nil && podStatus == nil) {
-		// Only change the status when the pod was already up
-		// Only doing so when the pod was successfully running makes sure we don't run into race conditions during pod creation.
-		if podFromKubernetes.Status.Phase == corev1.PodRunning || time.Since(podFromKubernetes.ObjectMeta.CreationTimestamp.Time) > time.Minute {
-			// Set the pod to failed, this makes sure if the underlying container implementation is gone that a new pod will be created.
-			podStatus = podFromKubernetes.Status.DeepCopy()
-			podStatus.Phase = corev1.PodFailed
-			podStatus.Reason = podStatusReasonNotFound
-			podStatus.Message = podStatusMessageNotFound
-			now := metav1.NewTime(time.Now())
-			for i, c := range podStatus.ContainerStatuses {
-				if c.State.Running == nil {
-					continue
-				}
-				podStatus.ContainerStatuses[i].State.Terminated = &corev1.ContainerStateTerminated{
-					ExitCode:    containerStatusExitCodeNotFound,
-					Reason:      containerStatusReasonNotFound,
-					Message:     containerStatusMessageNotFound,
-					FinishedAt:  now,
-					StartedAt:   c.State.Running.StartedAt,
-					ContainerID: c.ContainerID,
-				}
-				podStatus.ContainerStatuses[i].State.Running = nil
-			}
-		} else if err != nil {
-			return nil, nil
-		}
-	} else if err != nil {
-		return nil, err
-	}
-
-	pod := podFromKubernetes.DeepCopy()
-	podStatus.DeepCopyInto(&pod.Status)
-	return pod, nil
 }
 
 func shouldSkipPodStatusUpdate(pod *corev1.Pod) bool {

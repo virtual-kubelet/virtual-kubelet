@@ -49,7 +49,9 @@ type PodLifecycleHandler interface {
 	// UpdatePod takes a Kubernetes Pod and updates it within the provider.
 	UpdatePod(ctx context.Context, pod *corev1.Pod) error
 
-	// DeletePod takes a Kubernetes Pod and deletes it from the provider.
+	// DeletePod takes a Kubernetes Pod and deletes it from the provider. Once a pod is deleted, the provider is
+	// expected to call the NotifyPods callback with a terminal pod status where all the containers are in a terminal
+	// state, as well as the pod.
 	DeletePod(ctx context.Context, pod *corev1.Pod) error
 
 	// GetPod retrieves a pod by name from the provider (can be cached).
@@ -69,12 +71,7 @@ type PodLifecycleHandler interface {
 	// concurrently outside of the calling goroutine. Therefore it is recommended
 	// to return a version after DeepCopy.
 	GetPods(context.Context) ([]*corev1.Pod, error)
-}
 
-// PodNotifier notifies callers of pod changes.
-// Providers should implement this interface to enable callers to be notified
-// of pod status updates asynchronously.
-type PodNotifier interface {
 	// NotifyPods instructs the notifier to call the passed in function when
 	// the pod status changes. It should be called when a pod's status changes.
 	//
@@ -218,7 +215,10 @@ func (pc *PodController) Run(ctx context.Context, podSyncWorkers int) (retErr er
 	}()
 
 	podStatusQueue := workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "syncPodStatusFromProvider")
-	pc.runSyncFromProvider(ctx, podStatusQueue)
+	pc.provider.NotifyPods(ctx, func(pod *corev1.Pod) {
+		pc.enqueuePodStatusUpdate(ctx, podStatusQueue, pod.DeepCopy())
+	})
+
 	defer podStatusQueue.ShutDown()
 
 	// Wait for the caches to be synced *before* starting to do work.

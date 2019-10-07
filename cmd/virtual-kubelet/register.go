@@ -15,14 +15,4 @@ func registerMock(s *provider.Store) {
 			cfg.DaemonPort,
 		)
 	})
-
-	s.Register("mockV0", func(cfg provider.InitConfig) (provider.Provider, error) { //nolint:errcheck
-		return mock.NewMockProvider(
-			cfg.ConfigPath,
-			cfg.NodeName,
-			cfg.OperatingSystem,
-			cfg.InternalIP,
-			cfg.DaemonPort,
-		)
-	})
 }
