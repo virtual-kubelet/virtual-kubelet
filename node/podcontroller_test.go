@@ -6,6 +6,8 @@ import (
 	"time"
 
 	"gotest.tools/assert"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func TestPodControllerExitOnContextCancel(t *testing.T) {
@@ -41,4 +43,50 @@ func TestPodControllerExitOnContextCancel(t *testing.T) {
 		assert.NilError(t, err)
 	}
 	assert.NilError(t, tc.Err())
+}
+
+func TestCompareResourceVersion(t *testing.T) {
+	p1 := &corev1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			ResourceVersion: "1",
+		},
+	}
+	p2 := &corev1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			ResourceVersion: "2",
+		},
+	}
+	assert.Assert(t, podsEffectivelyEqual(p1, p2))
+}
+
+func TestCompareStatus(t *testing.T) {
+	p1 := &corev1.Pod{
+		Status: corev1.PodStatus{
+			Phase: corev1.PodRunning,
+		},
+	}
+	p2 := &corev1.Pod{
+		Status: corev1.PodStatus{
+			Phase: corev1.PodFailed,
+		},
+	}
+	assert.Assert(t, podsEffectivelyEqual(p1, p2))
+}
+
+func TestCompareLabels(t *testing.T) {
+	p1 := &corev1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Labels: map[string]string{
+				"foo": "bar1",
+			},
+		},
+	}
+	p2 := &corev1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Labels: map[string]string{
+				"foo": "bar2",
+			},
+		},
+	}
+	assert.Assert(t, !podsEffectivelyEqual(p1, p2))
 }

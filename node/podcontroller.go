@@ -17,10 +17,10 @@ package node
 import (
 	"context"
 	"fmt"
-	"reflect"
 	"strconv"
 	"sync"
 
+	"github.com/google/go-cmp/cmp"
 	pkgerrors "github.com/pkg/errors"
 	"github.com/virtual-kubelet/virtual-kubelet/errdefs"
 	"github.com/virtual-kubelet/virtual-kubelet/internal/manager"
@@ -243,12 +243,9 @@ func (pc *PodController) Run(ctx context.Context, podSyncWorkers int) (retErr er
 			// Create a copy of the old and new pod objects so we don't mutate the cache.
 			oldPod := oldObj.(*corev1.Pod).DeepCopy()
 			newPod := newObj.(*corev1.Pod).DeepCopy()
-			// We want to check if the two objects differ in anything other than their resource versions.
-			// Hence, we make them equal so that this change isn't picked up by reflect.DeepEqual.
-			newPod.ResourceVersion = oldPod.ResourceVersion
 			// Skip adding this pod's key to the work queue if its .metadata (except .metadata.resourceVersion) and .spec fields haven't changed.
 			// This guarantees that we don't attempt to sync the pod every time its .status field is updated.
-			if reflect.DeepEqual(oldPod.ObjectMeta, newPod.ObjectMeta) && reflect.DeepEqual(oldPod.Spec, newPod.Spec) {
+			if podsEffectivelyEqual(oldPod, newPod) {
 				return
 			}
 			// At this point we know that something in .metadata or .spec has changed, so we must proceed to sync the pod.
@@ -502,4 +499,19 @@ func loggablePodName(pod *corev1.Pod) string {
 // loggablePodNameFromCoordinates returns the "namespace/name" key for the pod identified by the specified namespace and name (coordinates).
 func loggablePodNameFromCoordinates(namespace, name string) string {
 	return fmt.Sprintf("%s/%s", namespace, name)
+}
+
+// podsEffectivelyEqual compares two pods, and ignores the pod status, and the resource version
+func podsEffectivelyEqual(p1, p2 *corev1.Pod) bool {
+	filterForResourceVersion := func(p cmp.Path) bool {
+		if p.String() == "ObjectMeta.ResourceVersion" {
+			return true
+		}
+		if p.String() == "Status" {
+			return true
+		}
+		return false
+	}
+
+	return cmp.Equal(p1, p2, cmp.FilterPath(filterForResourceVersion, cmp.Ignore()))
 }
