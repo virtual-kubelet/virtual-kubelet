@@ -213,8 +213,12 @@ func (pc *PodController) updatePodStatus(ctx context.Context, podFromKubernetes 
 	}
 	kPod := obj.(*knownPod)
 	kPod.Lock()
-	podFromProvider := kPod.lastPodStatusReceivedFromProvider
+	podFromProvider := kPod.lastPodStatusReceivedFromProvider.DeepCopy()
 	kPod.Unlock()
+	// We need to do this because the other parts of the pod can be updated elsewhere. Since we're only updating
+	// the pod status, and we should be the sole writers of the pod status, we can blind overwrite it. Therefore
+	// we need to copy the pod and set ResourceVersion to 0.
+	podFromProvider.ResourceVersion = "0"
 
 	if _, err := pc.client.Pods(podFromKubernetes.Namespace).UpdateStatus(podFromProvider); err != nil {
 		span.SetStatus(err)
