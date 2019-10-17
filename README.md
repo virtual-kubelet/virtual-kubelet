@@ -342,7 +342,6 @@ Enable the ServiceNodeExclusion flag, by modifying the Controller Manager manife
 
 ## Contributing
 
-
 Virtual Kubelet follows the [CNCF Code of Conduct](https://github.com/cncf/foundation/blob/master/code-of-conduct.md).
 Sign the [CNCF CLA](https://github.com/kubernetes/community/blob/master/CLA.md) to be able to make Pull Requests to this repo. 
 
