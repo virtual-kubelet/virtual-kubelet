@@ -19,14 +19,10 @@ import (
 	"testing"
 	"time"
 
-	pkgerrors "github.com/pkg/errors"
-	"github.com/virtual-kubelet/virtual-kubelet/errdefs"
 	testutil "github.com/virtual-kubelet/virtual-kubelet/internal/test/util"
 	"gotest.tools/assert"
 	is "gotest.tools/assert/cmp"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kubeinformers "k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes/fake"
 	"k8s.io/client-go/util/workqueue"
@@ -51,6 +47,7 @@ func newTestController() *TestController {
 			resourceManager: rm,
 			recorder:        testutil.FakeEventRecorder(5),
 			k8sQ:            workqueue.NewRateLimitingQueue(workqueue.DefaultControllerRateLimiter()),
+			deletionQ:       workqueue.NewRateLimitingQueue(workqueue.DefaultControllerRateLimiter()),
 			done:            make(chan struct{}),
 			ready:           make(chan struct{}),
 			podsInformer:    iFactory.Core().V1().Pods(),
@@ -170,59 +167,6 @@ func TestPodNoSpecChange(t *testing.T) {
 	// createOrUpdate didn't call CreatePod or UpdatePod, spec didn't change
 	assert.Check(t, is.Equal(svr.mock.creates.read(), 1))
 	assert.Check(t, is.Equal(svr.mock.updates.read(), 0))
-}
-
-func TestPodDelete(t *testing.T) {
-	type testCase struct {
-		desc   string
-		delErr error
-	}
-
-	cases := []testCase{
-		{desc: "no error on delete", delErr: nil},
-		{desc: "not found error on delete", delErr: errdefs.NotFound("not found")},
-		{desc: "unknown error on delete", delErr: pkgerrors.New("random error")},
-	}
-
-	for _, tc := range cases {
-		t.Run(tc.desc, func(t *testing.T) {
-			c := newTestController()
-			c.mock.errorOnDelete = tc.delErr
-
-			pod := &corev1.Pod{}
-			pod.ObjectMeta.Namespace = "default"
-			pod.ObjectMeta.Name = "nginx"
-			pod.Spec = newPodSpec()
-
-			pc := c.client.CoreV1().Pods("default")
-
-			p, err := pc.Create(pod)
-			assert.NilError(t, err)
-
-			ctx := context.Background()
-			err = c.createOrUpdatePod(ctx, p.DeepCopy()) // make sure it's actually created
-			assert.NilError(t, err)
-			assert.Check(t, is.Equal(c.mock.creates.read(), 1))
-
-			err = c.deletePod(ctx, pod.Namespace, pod.Name)
-			assert.Equal(t, pkgerrors.Cause(err), err)
-
-			var expectDeletes int
-			if tc.delErr == nil {
-				expectDeletes = 1
-			}
-			assert.Check(t, is.Equal(c.mock.deletes.read(), expectDeletes))
-
-			expectDeleted := tc.delErr == nil || errdefs.IsNotFound(tc.delErr)
-
-			_, err = pc.Get(pod.Name, metav1.GetOptions{})
-			if expectDeleted {
-				assert.Assert(t, errors.IsNotFound(err))
-			} else {
-				assert.NilError(t, err)
-			}
-		})
-	}
 }
 
 func newPodSpec() corev1.PodSpec {

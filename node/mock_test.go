@@ -12,6 +12,10 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+const (
+	mockProviderPodDeletedReason = "MockProviderPodDeleted"
+)
+
 var (
 	_ PodLifecycleHandler = (*mockProvider)(nil)
 )
@@ -171,15 +175,19 @@ func (p *mockProvider) DeletePod(ctx context.Context, pod *v1.Pod) (err error) {
 	log.G(ctx).Infof("receive DeletePod %q", pod.Name)
 
 	p.attemptedDeletes.increment()
+	key, err := buildKey(pod)
+	if err != nil {
+		return err
+	}
+
+	if errdefs.IsNotFound(p.errorOnDelete) {
+		p.pods.Delete(key)
+	}
 	if p.errorOnDelete != nil {
 		return p.errorOnDelete
 	}
 
 	p.deletes.increment()
-	key, err := buildKey(pod)
-	if err != nil {
-		return err
-	}
 
 	if _, exists := p.pods.Load(key); !exists {
 		return errdefs.NotFound("pod not found")
@@ -188,7 +196,7 @@ func (p *mockProvider) DeletePod(ctx context.Context, pod *v1.Pod) (err error) {
 	now := metav1.Now()
 
 	pod.Status.Phase = v1.PodSucceeded
-	pod.Status.Reason = "MockProviderPodDeleted"
+	pod.Status.Reason = mockProviderPodDeletedReason
 
 	for idx := range pod.Status.ContainerStatuses {
 		pod.Status.ContainerStatuses[idx].Ready = false
