@@ -163,10 +163,17 @@ func TestPodLifecycle(t *testing.T) {
 				testDanglingPodScenario(ctx, t, s, mp)
 			}))
 		})
+	})
 
-		if testing.Short() {
-			return
-		}
+	// testDanglingPodScenarioWithDeletionTimestamp tests if a pod is created in the provider and on api server it had
+	// deletiontimestamp set. It ensures deletion occurs.
+	t.Run("testDanglingPodScenarioWithDeletionTimestamp", func(t *testing.T) {
+		t.Run("mockProvider", func(t *testing.T) {
+			mp := newMockProvider()
+			assert.NilError(t, wireUpSystem(ctx, mp, func(ctx context.Context, s *system) {
+				testDanglingPodScenarioWithDeletionTimestamp(ctx, t, s, mp)
+			}))
+		})
 	})
 
 	// failedPodScenario ensures that the VK ignores failed pods that were failed prior to the PC starting up
@@ -335,6 +342,49 @@ func testDanglingPodScenario(ctx context.Context, t *testing.T, s *system, m *mo
 
 	assert.Assert(t, is.Equal(m.deletes.read(), 1))
 
+}
+
+func testDanglingPodScenarioWithDeletionTimestamp(ctx context.Context, t *testing.T, s *system, m *mockProvider) {
+	t.Parallel()
+
+	pod := newPod()
+	listOptions := metav1.ListOptions{
+		FieldSelector: fields.OneTermEqualSelector("metadata.name", pod.ObjectMeta.Name).String(),
+	}
+	// Setup a watch (prior to pod creation, and pod controller startup)
+	watcher, err := s.client.CoreV1().Pods(testNamespace).Watch(listOptions)
+	assert.NilError(t, err)
+	defer watcher.Stop()
+
+	assert.NilError(t, m.CreatePod(ctx, pod))
+
+	// Create the Pod
+	podCopyWithDeletionTimestamp := pod.DeepCopy()
+	var deletionGracePeriod int64 = 10
+	podCopyWithDeletionTimestamp.DeletionGracePeriodSeconds = &deletionGracePeriod
+	deletionTimestamp := metav1.NewTime(time.Now().Add(time.Second * time.Duration(deletionGracePeriod)))
+	podCopyWithDeletionTimestamp.DeletionTimestamp = &deletionTimestamp
+	_, e := s.client.CoreV1().Pods(testNamespace).Create(podCopyWithDeletionTimestamp)
+	assert.NilError(t, e)
+
+	// Start the pod controller
+	assert.NilError(t, s.start(ctx))
+	watchErrCh := make(chan error)
+
+	go func() {
+		_, watchErr := watchutils.UntilWithoutRetry(ctx, watcher,
+			func(ev watch.Event) (bool, error) {
+				return ev.Type == watch.Deleted, nil
+			})
+		watchErrCh <- watchErr
+	}()
+
+	select {
+	case <-ctx.Done():
+		t.Fatalf("Context ended early: %s", ctx.Err().Error())
+	case err = <-watchErrCh:
+		assert.NilError(t, err)
+	}
 }
 
 func testCreateStartDeleteScenario(ctx context.Context, t *testing.T, s *system, waitFunction func(ctx context.Context, watch watch.Interface) error, waitForPermanentDeletion bool) {
