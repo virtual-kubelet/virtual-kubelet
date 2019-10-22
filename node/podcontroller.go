@@ -124,6 +124,8 @@ type PodController struct {
 	// This is used since `pc.Run()` is typically called in a goroutine and managing
 	// this can be non-trivial for callers.
 	err error
+
+	podDeletionPolicy PodDeletionPolicy
 }
 
 type knownPod struct {
@@ -155,6 +157,8 @@ type PodControllerConfig struct {
 	ConfigMapInformer corev1informers.ConfigMapInformer
 	SecretInformer    corev1informers.SecretInformer
 	ServiceInformer   corev1informers.ServiceInformer
+
+	PodDeletionPolicy PodDeletionPolicy
 }
 
 func NewPodController(cfg PodControllerConfig) (*PodController, error) {
@@ -186,16 +190,21 @@ func NewPodController(cfg PodControllerConfig) (*PodController, error) {
 	}
 
 	pc := &PodController{
-		client:          cfg.PodClient,
-		podsInformer:    cfg.PodInformer,
-		podsLister:      cfg.PodInformer.Lister(),
-		provider:        cfg.Provider,
-		resourceManager: rm,
-		ready:           make(chan struct{}),
-		done:            make(chan struct{}),
-		recorder:        cfg.EventRecorder,
-		k8sQ:            workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "syncPodsFromKubernetes"),
-		deletionQ:       workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "deletePodsFromKubernetes"),
+		client:            cfg.PodClient,
+		podsInformer:      cfg.PodInformer,
+		podsLister:        cfg.PodInformer.Lister(),
+		provider:          cfg.Provider,
+		resourceManager:   rm,
+		ready:             make(chan struct{}),
+		done:              make(chan struct{}),
+		recorder:          cfg.EventRecorder,
+		k8sQ:              workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "syncPodsFromKubernetes"),
+		deletionQ:         workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "deletePodsFromKubernetes"),
+		podDeletionPolicy: cfg.PodDeletionPolicy,
+	}
+
+	if pc.podDeletionPolicy == nil {
+		pc.podDeletionPolicy = DefaultDeletionPolicy
 	}
 
 	return pc, nil

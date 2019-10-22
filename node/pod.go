@@ -265,8 +265,18 @@ func (pc *PodController) deletePodHandler(ctx context.Context, key string) error
 		return err
 	}
 
+	if !pc.podDeletionPolicy.ShouldDelete(k8sPod) {
+		return nil
+	}
+
 	if running(&k8sPod.Status) {
 		log.G(ctx).Error("Force deleting pod in running state")
+	}
+
+	if delay := pc.podDeletionPolicy.ShouldDelayDelete(k8sPod); delay > 0 {
+		log.G(ctx).WithField("delay", delay).Debug("Delaying Pod GC due to pod deletion policy")
+		pc.deletionQ.AddAfter(key, delay)
+		return nil
 	}
 
 	// We don't check with the provider before doing this delete. At this point, even if an outstanding pod status update
