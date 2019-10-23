@@ -72,7 +72,10 @@ type PodLifecycleHandler interface {
 	// concurrently outside of the calling goroutine. Therefore it is recommended
 	// to return a version after DeepCopy.
 	GetPods(context.Context) ([]*corev1.Pod, error)
+}
 
+// PodNotifier is used as an extenstion to PodLifecycleHandler to support async updates of pod statues.
+type PodNotifier interface {
 	// NotifyPods instructs the notifier to call the passed in function when
 	// the pod status changes. It should be called when a pod's status changes.
 	//
@@ -157,6 +160,7 @@ type PodControllerConfig struct {
 	ServiceInformer   corev1informers.ServiceInformer
 }
 
+// NewPodController creates a new pod controller from the provided config
 func NewPodController(cfg PodControllerConfig) (*PodController, error) {
 	if cfg.PodClient == nil {
 		return nil, errdefs.InvalidInput("missing core client")
@@ -201,6 +205,11 @@ func NewPodController(cfg PodControllerConfig) (*PodController, error) {
 	return pc, nil
 }
 
+type asyncProvider interface {
+	PodLifecycleHandler
+	PodNotifier
+}
+
 // Run will set up the event handlers for types we are interested in, as well
 // as syncing informer caches and starting workers.  It will block until the
 // context is cancelled, at which point it will shutdown the work queue and
@@ -220,10 +229,24 @@ func (pc *PodController) Run(ctx context.Context, podSyncWorkers int) (retErr er
 		pc.mu.Unlock()
 	}()
 
+	var provider asyncProvider
+	runProvider := func(context.Context) {}
+
+	if p, ok := pc.provider.(asyncProvider); ok {
+		provider = p
+	} else {
+		wrapped := &syncProviderWrapper{PodLifecycleHandler: pc.provider, l: pc.podsLister}
+		runProvider = wrapped.run
+		provider = wrapped
+		log.G(ctx).Debug("Wrapped non-async provider with async")
+	}
+	pc.provider = provider
+
 	podStatusQueue := workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "syncPodStatusFromProvider")
-	pc.provider.NotifyPods(ctx, func(pod *corev1.Pod) {
+	provider.NotifyPods(ctx, func(pod *corev1.Pod) {
 		pc.enqueuePodStatusUpdate(ctx, podStatusQueue, pod.DeepCopy())
 	})
+	go runProvider(ctx)
 
 	defer podStatusQueue.ShutDown()
 

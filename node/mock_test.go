@@ -79,7 +79,15 @@ type mockProvider struct {
 }
 
 // newMockProvider creates a new mockProvider.
-func newMockProvider() *mockProvider {
+func newMockProvider() *mockProviderAsync {
+	provider := newSyncMockProvider()
+	// By default notifier is set to a function which is a no-op. In the event we've implemented the PodNotifier interface,
+	// it will be set, and then we'll call a real underlying implementation.
+	// This makes it easier in the sense we don't need to wrap each method.
+	return &mockProviderAsync{provider}
+}
+
+func newSyncMockProvider() *mockProvider {
 	provider := mockProvider{
 		startTime:        time.Now(),
 		creates:          newWaitableInt(),
@@ -87,10 +95,6 @@ func newMockProvider() *mockProvider {
 		deletes:          newWaitableInt(),
 		attemptedDeletes: newWaitableInt(),
 	}
-	// By default notifier is set to a function which is a no-op. In the event we've implemented the PodNotifier interface,
-	// it will be set, and then we'll call a real underlying implementation.
-	// This makes it easier in the sense we don't need to wrap each method.
-
 	return &provider
 }
 
@@ -258,10 +262,24 @@ func (p *mockProvider) GetPods(ctx context.Context) ([]*v1.Pod, error) {
 	return pods, nil
 }
 
-// NotifyPods is called to set a pod notifier callback function. This should be called before any operations are done
-// within the provider.
-func (p *mockProvider) NotifyPods(ctx context.Context, notifier func(*v1.Pod)) {
-	p.realNotifier = notifier
+func (p *mockProvider) setErrorOnDelete(err error) {
+	p.errorOnDelete = err
+}
+
+func (p *mockProvider) getAttemptedDeletes() *waitableInt {
+	return p.attemptedDeletes
+}
+
+func (p *mockProvider) getCreates() *waitableInt {
+	return p.creates
+}
+
+func (p *mockProvider) getDeletes() *waitableInt {
+	return p.deletes
+}
+
+func (p *mockProvider) getUpdates() *waitableInt {
+	return p.updates
 }
 
 func buildKeyFromNames(namespace string, name string) (string, error) {
@@ -279,4 +297,23 @@ func buildKey(pod *v1.Pod) (string, error) {
 	}
 
 	return buildKeyFromNames(pod.ObjectMeta.Namespace, pod.ObjectMeta.Name)
+}
+
+type mockProviderAsync struct {
+	*mockProvider
+}
+
+// NotifyPods is called to set a pod notifier callback function. This should be called before any operations are done
+// within the provider.
+func (p *mockProviderAsync) NotifyPods(ctx context.Context, notifier func(*v1.Pod)) {
+	p.realNotifier = notifier
+}
+
+type testingProvider interface {
+	PodLifecycleHandler
+	setErrorOnDelete(error)
+	getAttemptedDeletes() *waitableInt
+	getDeletes() *waitableInt
+	getCreates() *waitableInt
+	getUpdates() *waitableInt
 }
