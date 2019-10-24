@@ -26,19 +26,19 @@ const (
 	containerStatusTerminatedMessage = "Container was terminated. The exit code may not reflect the real exit code"
 )
 
-// syncProvderWrapper wraps a PodLifecycleHandler to give it async-like pod status notification behavior
+// syncProviderWrapper wraps a PodLifecycleHandler to give it async-like pod status notification behavior.
 type syncProviderWrapper struct {
 	PodLifecycleHandler
 	notify func(*corev1.Pod)
 	l      corev1listers.PodLister
 
-	// deletedPods makes sure we don't set the "NotFOund" status
+	// deletedPods makes sure we don't set the "NotFound" status
 	// for pods which have been requested to be deleted.
-	// This is needed for our loop which just grabs pod statues every 5 seconds
+	// This is needed for our loop which just grabs pod statuses every 5 seconds.
 	deletedPods sync.Map
 }
 
-// This is used to clean up keys for deleted pods after they have been fully deleted in the API server
+// This is used to clean up keys for deleted pods after they have been fully deleted in the API server.
 type syncWrapper interface {
 	_deletePodKey(context.Context, string)
 }
@@ -53,7 +53,7 @@ func (p *syncProviderWrapper) _deletePodKey(ctx context.Context, key string) {
 }
 
 func (p *syncProviderWrapper) DeletePod(ctx context.Context, pod *corev1.Pod) error {
-	log.G(ctx).Debug("syncProviderWrappped.DeletePod")
+	log.G(ctx).Debug("syncProviderWrappper.DeletePod")
 	key, err := cache.MetaNamespaceKeyFunc(pod)
 	if err != nil {
 		return err
@@ -148,7 +148,7 @@ func (p *syncProviderWrapper) syncPodStatuses(ctx context.Context) {
 }
 
 func (p *syncProviderWrapper) updatePodStatus(ctx context.Context, podFromKubernetes *corev1.Pod) error {
-	ctx, span := trace.StartSpan(ctx, "syncProviderWrapper.getPodStatus")
+	ctx, span := trace.StartSpan(ctx, "syncProviderWrapper.updatePodStatus")
 	defer span.End()
 	ctx = addPodAttributes(ctx, span, podFromKubernetes)
 
@@ -176,7 +176,7 @@ func (p *syncProviderWrapper) updatePodStatus(ctx context.Context, podFromKubern
 		return nil
 	}
 
-	// Only change the status when the pod was already up
+	// Only change the status when the pod was already up.
 	// Only doing so when the pod was successfully running makes sure we don't run into race conditions during pod creation.
 	if podFromKubernetes.Status.Phase == corev1.PodRunning || time.Since(podFromKubernetes.ObjectMeta.CreationTimestamp.Time) > time.Minute {
 		// Set the pod to failed, this makes sure if the underlying container implementation is gone that a new pod will be created.

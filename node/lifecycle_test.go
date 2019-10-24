@@ -107,7 +107,7 @@ func TestPodLifecycle(t *testing.T) {
 	}
 
 	// isPodDeletedGracefullyFunc is a condition func that waits until the pod is in a terminal state, which is the VK's
-	// action when the pod is deleted from the provider
+	// action when the pod is deleted from the provider.
 	isPodDeletedGracefullyFunc := func(ctx context.Context, watcher watch.Interface) error {
 		_, watchErr := watchutils.UntilWithoutRetry(ctx, watcher, func(ev watch.Event) (bool, error) {
 			log.G(ctx).WithField("event", ev).Info("got event")
@@ -130,7 +130,7 @@ func TestPodLifecycle(t *testing.T) {
 		t.Run(env, func(t *testing.T) {
 
 			// createStartDeleteScenario tests the basic flow of creating a pod, waiting for it to start, and deleting
-			// it gracefully
+			// it gracefully.
 			t.Run("createStartDeleteScenario", func(t *testing.T) {
 				assert.NilError(t, wireUpSystem(ctx, h(), func(ctx context.Context, s *system) {
 					testCreateStartDeleteScenario(ctx, t, s, isPodDeletedGracefullyFunc, true)
@@ -138,7 +138,7 @@ func TestPodLifecycle(t *testing.T) {
 			})
 
 			// createStartDeleteScenarioWithDeletionErrorNotFound tests the flow if the pod was not found in the provider
-			// for some reason
+			// for some reason.
 			t.Run("createStartDeleteScenarioWithDeletionErrorNotFound", func(t *testing.T) {
 				mp := h()
 				mp.setErrorOnDelete(errdefs.NotFound("not found"))
@@ -148,7 +148,7 @@ func TestPodLifecycle(t *testing.T) {
 			})
 
 			// createStartDeleteScenarioWithDeletionRandomError tests the flow if the pod was unable to be deleted in the
-			// provider
+			// provider.
 			t.Run("createStartDeleteScenarioWithDeletionRandomError", func(t *testing.T) {
 				mp := h()
 				deletionFunc := func(ctx context.Context, watcher watch.Interface) error {
@@ -186,7 +186,7 @@ func TestPodLifecycle(t *testing.T) {
 				})
 			})
 
-			// failedPodScenario ensures that the VK ignores failed pods that were failed prior to the PC starting up
+			// failedPodScenario ensures that the VK ignores failed pods that were failed prior to the pod controller starting up.
 			t.Run("failedPodScenario", func(t *testing.T) {
 				t.Run("mockProvider", func(t *testing.T) {
 					mp := newMockProvider()
@@ -196,7 +196,7 @@ func TestPodLifecycle(t *testing.T) {
 				})
 			})
 
-			// succeededPodScenario ensures that the VK ignores succeeded pods that were succeeded prior to the PC starting up.
+			// succeededPodScenario ensures that the VK ignores succeeded pods that were succeeded prior to the pod controller starting up.
 			t.Run("succeededPodScenario", func(t *testing.T) {
 				t.Run("mockProvider", func(t *testing.T) {
 					mp := newMockProvider()
@@ -207,7 +207,7 @@ func TestPodLifecycle(t *testing.T) {
 			})
 
 			// updatePodWhileRunningScenario updates a pod while the VK is running to ensure the update is propagated
-			// to the provider
+			// to the provider.
 			t.Run("updatePodWhileRunningScenario", func(t *testing.T) {
 				t.Run("mockProvider", func(t *testing.T) {
 					mp := newMockProvider()

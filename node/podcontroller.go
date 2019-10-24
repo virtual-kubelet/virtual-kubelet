@@ -74,7 +74,7 @@ type PodLifecycleHandler interface {
 	GetPods(context.Context) ([]*corev1.Pod, error)
 }
 
-// PodNotifier is used as an extenstion to PodLifecycleHandler to support async updates of pod statues.
+// PodNotifier is used as an extension to PodLifecycleHandler to support async updates of pod statuses.
 type PodNotifier interface {
 	// NotifyPods instructs the notifier to call the passed in function when
 	// the pod status changes. It should be called when a pod's status changes.
@@ -160,7 +160,7 @@ type PodControllerConfig struct {
 	ServiceInformer   corev1informers.ServiceInformer
 }
 
-// NewPodController creates a new pod controller from the provided config
+// NewPodController creates a new pod controller with the provided config.
 func NewPodController(cfg PodControllerConfig) (*PodController, error) {
 	if cfg.PodClient == nil {
 		return nil, errdefs.InvalidInput("missing core client")
