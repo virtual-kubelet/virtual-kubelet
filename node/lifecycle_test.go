@@ -117,11 +117,14 @@ func TestPodLifecycle(t *testing.T) {
 		return watchErr
 	}
 
-	envs := map[string]func() testingProvider{
-		"Async": func() testingProvider {
+	envs := map[string]func(*testing.T) testingProvider{
+		"Async": func(t *testing.T) testingProvider {
 			return newMockProvider()
 		},
-		"Sync": func() testingProvider {
+		"Sync": func(t *testing.T) testingProvider {
+			if testing.Short() {
+				t.Skip()
+			}
 			return newSyncMockProvider()
 		},
 	}
@@ -132,7 +135,7 @@ func TestPodLifecycle(t *testing.T) {
 			// createStartDeleteScenario tests the basic flow of creating a pod, waiting for it to start, and deleting
 			// it gracefully.
 			t.Run("createStartDeleteScenario", func(t *testing.T) {
-				assert.NilError(t, wireUpSystem(ctx, h(), func(ctx context.Context, s *system) {
+				assert.NilError(t, wireUpSystem(ctx, h(t), func(ctx context.Context, s *system) {
 					testCreateStartDeleteScenario(ctx, t, s, isPodDeletedGracefullyFunc, true)
 				}))
 			})
@@ -140,7 +143,7 @@ func TestPodLifecycle(t *testing.T) {
 			// createStartDeleteScenarioWithDeletionErrorNotFound tests the flow if the pod was not found in the provider
 			// for some reason.
 			t.Run("createStartDeleteScenarioWithDeletionErrorNotFound", func(t *testing.T) {
-				mp := h()
+				mp := h(t)
 				mp.setErrorOnDelete(errdefs.NotFound("not found"))
 				assert.NilError(t, wireUpSystem(ctx, mp, func(ctx context.Context, s *system) {
 					testCreateStartDeleteScenario(ctx, t, s, isPodDeletedPermanentlyFunc, false)
@@ -150,7 +153,7 @@ func TestPodLifecycle(t *testing.T) {
 			// createStartDeleteScenarioWithDeletionRandomError tests the flow if the pod was unable to be deleted in the
 			// provider.
 			t.Run("createStartDeleteScenarioWithDeletionRandomError", func(t *testing.T) {
-				mp := h()
+				mp := h(t)
 				deletionFunc := func(ctx context.Context, watcher watch.Interface) error {
 					return mp.getAttemptedDeletes().until(ctx, func(v int) bool { return v >= 2 })
 				}
@@ -168,7 +171,7 @@ func TestPodLifecycle(t *testing.T) {
 			// and ensures the pod controller deletes the pod prior to continuing.
 			t.Run("danglingPodScenario", func(t *testing.T) {
 				t.Run("mockProvider", func(t *testing.T) {
-					mp := newMockProvider()
+					mp := h(t)
 					assert.NilError(t, wireUpSystem(ctx, mp, func(ctx context.Context, s *system) {
 						testDanglingPodScenario(ctx, t, s, mp)
 					}))
@@ -179,7 +182,7 @@ func TestPodLifecycle(t *testing.T) {
 			// deletiontimestamp set. It ensures deletion occurs.
 			t.Run("testDanglingPodScenarioWithDeletionTimestamp", func(t *testing.T) {
 				t.Run("mockProvider", func(t *testing.T) {
-					mp := newMockProvider()
+					mp := h(t)
 					assert.NilError(t, wireUpSystem(ctx, mp, func(ctx context.Context, s *system) {
 						testDanglingPodScenarioWithDeletionTimestamp(ctx, t, s, mp)
 					}))
@@ -189,7 +192,7 @@ func TestPodLifecycle(t *testing.T) {
 			// failedPodScenario ensures that the VK ignores failed pods that were failed prior to the pod controller starting up.
 			t.Run("failedPodScenario", func(t *testing.T) {
 				t.Run("mockProvider", func(t *testing.T) {
-					mp := newMockProvider()
+					mp := h(t)
 					assert.NilError(t, wireUpSystem(ctx, mp, func(ctx context.Context, s *system) {
 						testFailedPodScenario(ctx, t, s)
 					}))
@@ -199,7 +202,7 @@ func TestPodLifecycle(t *testing.T) {
 			// succeededPodScenario ensures that the VK ignores succeeded pods that were succeeded prior to the pod controller starting up.
 			t.Run("succeededPodScenario", func(t *testing.T) {
 				t.Run("mockProvider", func(t *testing.T) {
-					mp := newMockProvider()
+					mp := h(t)
 					assert.NilError(t, wireUpSystem(ctx, mp, func(ctx context.Context, s *system) {
 						testSucceededPodScenario(ctx, t, s)
 					}))
@@ -210,7 +213,7 @@ func TestPodLifecycle(t *testing.T) {
 			// to the provider.
 			t.Run("updatePodWhileRunningScenario", func(t *testing.T) {
 				t.Run("mockProvider", func(t *testing.T) {
-					mp := newMockProvider()
+					mp := h(t)
 					assert.NilError(t, wireUpSystem(ctx, mp, func(ctx context.Context, s *system) {
 						testUpdatePodWhileRunningScenario(ctx, t, s, mp)
 					}))
