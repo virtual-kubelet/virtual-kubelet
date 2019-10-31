@@ -258,6 +258,27 @@ func (p *mockProvider) GetPods(ctx context.Context) ([]*v1.Pod, error) {
 	return pods, nil
 }
 
+func (p *mockProvider) triggerTermination(ctx context.Context, key string) error {
+	obj, ok := p.pods.Load(key)
+	if !ok {
+		return fmt.Errorf("Could not find pod with key %s", key)
+	}
+	pod := obj.(*v1.Pod)
+	pod = pod.DeepCopy()
+	pod.Status.Phase = v1.PodSucceeded
+	pod.Status.Reason = mockProviderPodDeletedReason
+	for idx := range pod.Status.ContainerStatuses {
+		pod.Status.ContainerStatuses[idx].State.Terminated = &v1.ContainerStateTerminated{
+			ExitCode:   1,
+			Message:    "triggerTermination",
+			FinishedAt: metav1.Now(),
+		}
+	}
+	p.pods.Store(key, pod)
+	p.notifier(pod)
+	return nil
+}
+
 // NotifyPods is called to set a pod notifier callback function. This should be called before any operations are done
 // within the provider.
 func (p *mockProvider) NotifyPods(ctx context.Context, notifier func(*v1.Pod)) {

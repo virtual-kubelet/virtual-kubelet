@@ -189,6 +189,13 @@ func (pc *PodController) updatePodStatus(ctx context.Context, podFromKubernetes 
 		"old reason": podFromKubernetes.Status.Reason,
 	}).Debug("Updated pod status in kubernetes")
 
+	if !running(&podFromProvider.Status) && (podFromProvider.Status.Phase == corev1.PodFailed || podFromProvider.Status.Phase == corev1.PodSucceeded) {
+		log.G(ctx).Debug("Deleting terminal pod from API server")
+		if err := pc.client.Pods(podFromKubernetes.Namespace).Delete(podFromProvider.Name, nil); err != nil {
+			span.SetStatus(err)
+			return pkgerrors.Wrap(err, "error while deleting pod in kubernetes")
+		}
+	}
 	return nil
 }
 

@@ -137,6 +137,16 @@ func TestPodLifecycle(t *testing.T) {
 		}))
 	})
 
+	// podTerminatedByProvider tests the flow where the provider originates a terminal pod status
+	t.Run("podTerminatedByProvider", func(t *testing.T) {
+		t.Run("mockProvider", func(t *testing.T) {
+			mp := newMockProvider()
+			assert.NilError(t, wireUpSystem(ctx, mp, func(ctx context.Context, s *system) {
+				testPodTerminatedByProvider(ctx, t, mp, s, isPodDeletedGracefullyFunc)
+			}))
+		})
+	})
+
 	// createStartDeleteScenarioWithDeletionRandomError tests the flow if the pod was unable to be deleted in the
 	// provider
 	t.Run("createStartDeleteScenarioWithDeletionRandomError", func(t *testing.T) {
@@ -378,6 +388,107 @@ func testDanglingPodScenarioWithDeletionTimestamp(ctx context.Context, t *testin
 			})
 		watchErrCh <- watchErr
 	}()
+
+	select {
+	case <-ctx.Done():
+		t.Fatalf("Context ended early: %s", ctx.Err().Error())
+	case err = <-watchErrCh:
+		assert.NilError(t, err)
+	}
+}
+
+func testPodTerminatedByProvider(ctx context.Context, t *testing.T, mp *mockProvider, s *system, waitFunction func(ctx context.Context, watch watch.Interface) error) {
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
+	p := newPod()
+
+	listOptions := metav1.ListOptions{
+		FieldSelector: fields.OneTermEqualSelector("metadata.name", p.ObjectMeta.Name).String(),
+	}
+
+	watchErrCh := make(chan error)
+
+	// Setup a watch (prior to pod creation, and pod controller startup)
+	watcher, err := s.client.CoreV1().Pods(testNamespace).Watch(listOptions)
+	assert.NilError(t, err)
+	defer watcher.Stop()
+	// This ensures that the pod is created.
+	go func() {
+		_, watchErr := watchutils.UntilWithoutRetry(ctx, watcher,
+			// Wait for the pod to be created
+			// TODO(Sargun): Make this "smarter" about the status the pod is in.
+			func(ev watch.Event) (bool, error) {
+				pod := ev.Object.(*corev1.Pod)
+				return pod.Name == p.ObjectMeta.Name, nil
+			})
+
+		watchErrCh <- watchErr
+	}()
+
+	// Create the Pod
+	_, e := s.client.CoreV1().Pods(testNamespace).Create(p)
+	assert.NilError(t, e)
+	log.G(ctx).Debug("Created pod")
+
+	// This will return once
+	select {
+	case <-ctx.Done():
+		t.Fatalf("Context ended early: %s", ctx.Err().Error())
+	case err = <-watchErrCh:
+		assert.NilError(t, err)
+
+	}
+
+	// Setup a watch to check if the pod is in running
+	watcher, err = s.client.CoreV1().Pods(testNamespace).Watch(listOptions)
+	assert.NilError(t, err)
+	defer watcher.Stop()
+	go func() {
+		_, watchErr := watchutils.UntilWithoutRetry(ctx, watcher,
+			// Wait for the pod to be started
+			func(ev watch.Event) (bool, error) {
+				pod := ev.Object.(*corev1.Pod)
+				return pod.Status.Phase == corev1.PodRunning, nil
+			})
+
+		watchErrCh <- watchErr
+	}()
+
+	assert.NilError(t, s.start(ctx))
+
+	// Wait for the pod to go into running
+	select {
+	case <-ctx.Done():
+		t.Fatalf("Context ended early: %s", ctx.Err().Error())
+	case err = <-watchErrCh:
+		assert.NilError(t, err)
+	}
+
+	// Setup a watch to look for the pod eventually going away completely
+	watcher2, err := s.client.CoreV1().Pods(testNamespace).Watch(listOptions)
+	assert.NilError(t, err)
+	defer watcher2.Stop()
+	waitDeleteCh := make(chan error)
+	go func() {
+		_, watchDeleteErr := watchutils.UntilWithoutRetry(ctx, watcher2, func(ev watch.Event) (bool, error) {
+			return ev.Type == watch.Deleted, nil
+		})
+		waitDeleteCh <- watchDeleteErr
+	}()
+
+	// Setup a watch prior to pod deletion
+	watcher, err = s.client.CoreV1().Pods(testNamespace).Watch(listOptions)
+	assert.NilError(t, err)
+	defer watcher.Stop()
+	go func() {
+		watchErrCh <- waitFunction(ctx, watcher)
+	}()
+
+	// Make the provider originate a terminal pod status
+	key, err := buildKeyFromNames(p.Namespace, p.Name)
+	assert.NilError(t, err)
+	assert.NilError(t, mp.triggerTermination(ctx, key))
 
 	select {
 	case <-ctx.Done():
