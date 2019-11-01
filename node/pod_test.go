@@ -30,7 +30,7 @@ import (
 
 type TestController struct {
 	*PodController
-	mock   *mockProvider
+	mock   *mockProviderAsync
 	client *fake.Clientset
 }
 

@@ -238,7 +238,7 @@ func (pc *PodController) podStatusHandler(ctx context.Context, key string) (retE
 	return pc.updatePodStatus(ctx, pod, key)
 }
 
-func (pc *PodController) deletePodHandler(ctx context.Context, key string) error {
+func (pc *PodController) deletePodHandler(ctx context.Context, key string) (retErr error) {
 	ctx, span := trace.StartSpan(ctx, "processDeletionReconcilationWorkItem")
 	defer span.End()
 
@@ -254,6 +254,14 @@ func (pc *PodController) deletePodHandler(ctx context.Context, key string) error
 		span.SetStatus(err)
 		return nil
 	}
+
+	defer func() {
+		if retErr == nil {
+			if w, ok := pc.provider.(syncWrapper); ok {
+				w._deletePodKey(ctx, key)
+			}
+		}
+	}()
 
 	// If the pod has been deleted from API server, we don't need to do anything.
 	k8sPod, err := pc.podsLister.Pods(namespace).Get(name)
