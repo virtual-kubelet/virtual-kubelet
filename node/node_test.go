@@ -302,6 +302,78 @@ func TestUpdateNodeLease(t *testing.T) {
 	assert.Assert(t, cmp.DeepEqual(compare.Spec.HolderIdentity, lease.Spec.HolderIdentity))
 }
 
+// TestPingAfterStatusUpdate checks that Ping continues to be called with the specified interval
+// after a node status update occurs, when leases are disabled.
+//
+// Timing ratios used in this test:
+// ping interval (10 ms)
+// maximum allowed interval = 2.5 * ping interval
+// status update interval = 6 * ping interval
+//
+// The allowed maximum time is 2.5 times the ping interval because
+// the status update resets the ping interval timer, meaning
+// that there can be a full two interval durations between
+// successive calls to Ping. The extra half is to allow
+// for timing variations when using such short durations.
+//
+// Once the node controller is ready:
+// send status update after 10 * ping interval
+// end test after another 10 * ping interval
+func TestPingAfterStatusUpdate(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	c := testclient.NewSimpleClientset()
+	nodes := c.CoreV1().Nodes()
+
+	testP := &testNodeProviderPing{}
+
+	interval := 10 * time.Millisecond
+	maxAllowedInterval := time.Duration(2.5 * float64(interval.Nanoseconds()))
+
+	opts := []NodeControllerOpt{
+		WithNodePingInterval(interval),
+		WithNodeStatusUpdateInterval(interval * time.Duration(6)),
+	}
+
+	testNode := testNode(t)
+	testNodeCopy := testNode.DeepCopy()
+
+	node, err := NewNodeController(testP, testNode, nodes, opts...)
+	assert.NilError(t, err)
+
+	chErr := make(chan error, 1)
+	go func() {
+		chErr <- node.Run(ctx)
+	}()
+
+	timer := time.NewTimer(10 * time.Second)
+	defer timer.Stop()
+
+	// wait for the node to be ready
+	select {
+	case <-timer.C:
+		t.Fatal("timeout waiting for node to be ready")
+	case <-chErr:
+		t.Fatalf("node.Run returned earlier than expected: %v", err)
+	case <-node.Ready():
+	}
+
+	notifyTimer := time.After(interval * time.Duration(10))
+	select {
+	case <-notifyTimer:
+		testP.triggerStatusUpdate(testNodeCopy)
+	}
+
+	endTimer := time.After(interval * time.Duration(10))
+	select {
+	case <-endTimer:
+		break
+	}
+
+	assert.Assert(t, testP.maxPingInterval < maxAllowedInterval, "maximum time between node pings (%v) was greater than the maximum expected interval (%v)", testP.maxPingInterval, maxAllowedInterval)
+}
+
 func testNode(t *testing.T) *corev1.Node {
 	n := &corev1.Node{}
 	n.Name = strings.ToLower(t.Name())
@@ -321,6 +393,26 @@ func (p *testNodeProvider) triggerStatusUpdate(n *corev1.Node) {
 	for _, h := range p.statusHandlers {
 		h(n)
 	}
+}
+
+// testNodeProviderPing tracks the maximum time interval between calls to Ping
+type testNodeProviderPing struct {
+	testNodeProvider
+	lastPingTime    time.Time
+	maxPingInterval time.Duration
+}
+
+func (tnp *testNodeProviderPing) Ping(ctx context.Context) error {
+	now := time.Now()
+	if tnp.lastPingTime.IsZero() {
+		tnp.lastPingTime = now
+		return nil
+	}
+	if now.Sub(tnp.lastPingTime) > tnp.maxPingInterval {
+		tnp.maxPingInterval = now.Sub(tnp.lastPingTime)
+	}
+	tnp.lastPingTime = now
+	return nil
 }
 
 type watchGetter interface {
