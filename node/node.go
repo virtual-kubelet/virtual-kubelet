@@ -244,7 +244,12 @@ func (n *NodeController) controlLoop(ctx context.Context) error {
 
 	statusTimer := time.NewTimer(n.statusInterval)
 	defer statusTimer.Stop()
+	timerResetDuration := n.statusInterval
 	if n.disableLease {
+		// when resetting the timer after processing a status update, reset it to the ping interval
+		// (since it will be the ping timer as n.disableLease == true)
+		timerResetDuration = n.pingInterval
+
 		// hack to make sure this channel always blocks since we won't be using it
 		if !statusTimer.Stop() {
 			<-statusTimer.C
@@ -276,7 +281,7 @@ func (n *NodeController) controlLoop(ctx context.Context) error {
 			if err := n.updateStatus(ctx, false); err != nil {
 				log.G(ctx).WithError(err).Error("Error handling node status update")
 			}
-			t.Reset(n.statusInterval)
+			t.Reset(timerResetDuration)
 		case <-statusTimer.C:
 			if err := n.updateStatus(ctx, false); err != nil {
 				log.G(ctx).WithError(err).Error("Error handling node status update")
