@@ -152,12 +152,14 @@ func (p *syncProviderWrapper) updatePodStatus(ctx context.Context, podFromKubern
 	defer span.End()
 	ctx = addPodAttributes(ctx, span, podFromKubernetes)
 
+	var statusErr error
 	podStatus, err := p.PodLifecycleHandler.GetPodStatus(ctx, podFromKubernetes.Namespace, podFromKubernetes.Name)
 	if err != nil {
 		if !errdefs.IsNotFound(err) {
 			span.SetStatus(err)
 			return err
 		}
+		statusErr = err
 	}
 	if podStatus != nil {
 		pod := podFromKubernetes.DeepCopy()
@@ -168,6 +170,7 @@ func (p *syncProviderWrapper) updatePodStatus(ctx context.Context, podFromKubern
 
 	key, err := cache.MetaNamespaceKeyFunc(podFromKubernetes)
 	if err != nil {
+		span.SetStatus(err)
 		return err
 	}
 
@@ -176,32 +179,35 @@ func (p *syncProviderWrapper) updatePodStatus(ctx context.Context, podFromKubern
 		return nil
 	}
 
-	// Only change the status when the pod was already up.
-	// Only doing so when the pod was successfully running makes sure we don't run into race conditions during pod creation.
-	if podFromKubernetes.Status.Phase == corev1.PodRunning || time.Since(podFromKubernetes.ObjectMeta.CreationTimestamp.Time) > time.Minute {
-		// Set the pod to failed, this makes sure if the underlying container implementation is gone that a new pod will be created.
-		podStatus = podFromKubernetes.Status.DeepCopy()
-		podStatus.Phase = corev1.PodFailed
-		podStatus.Reason = podStatusReasonNotFound
-		podStatus.Message = podStatusMessageNotFound
-		now := metav1.NewTime(time.Now())
-		for i, c := range podStatus.ContainerStatuses {
-			if c.State.Running == nil {
-				continue
-			}
-			podStatus.ContainerStatuses[i].State.Terminated = &corev1.ContainerStateTerminated{
-				ExitCode:    containerStatusExitCodeNotFound,
-				Reason:      containerStatusReasonNotFound,
-				Message:     containerStatusMessageNotFound,
-				FinishedAt:  now,
-				StartedAt:   c.State.Running.StartedAt,
-				ContainerID: c.ContainerID,
-			}
-			podStatus.ContainerStatuses[i].State.Running = nil
-		}
-		log.G(ctx).Debug("Setting pod not found on pod status")
+	if podFromKubernetes.Status.Phase != corev1.PodRunning && time.Since(podFromKubernetes.ObjectMeta.CreationTimestamp.Time) <= time.Minute {
+		span.SetStatus(statusErr)
+		return statusErr
 	}
 
+	// Only change the status when the pod was already up.
+	// Only doing so when the pod was successfully running makes sure we don't run into race conditions during pod creation.
+	// Set the pod to failed, this makes sure if the underlying container implementation is gone that a new pod will be created.
+	podStatus = podFromKubernetes.Status.DeepCopy()
+	podStatus.Phase = corev1.PodFailed
+	podStatus.Reason = podStatusReasonNotFound
+	podStatus.Message = podStatusMessageNotFound
+	now := metav1.NewTime(time.Now())
+	for i, c := range podStatus.ContainerStatuses {
+		if c.State.Running == nil {
+			continue
+		}
+		podStatus.ContainerStatuses[i].State.Terminated = &corev1.ContainerStateTerminated{
+			ExitCode:    containerStatusExitCodeNotFound,
+			Reason:      containerStatusReasonNotFound,
+			Message:     containerStatusMessageNotFound,
+			FinishedAt:  now,
+			StartedAt:   c.State.Running.StartedAt,
+			ContainerID: c.ContainerID,
+		}
+		podStatus.ContainerStatuses[i].State.Running = nil
+	}
+
+	log.G(ctx).Debug("Setting pod not found on pod status")
 	pod := podFromKubernetes.DeepCopy()
 	podStatus.DeepCopyInto(&pod.Status)
 	p.notify(pod)
