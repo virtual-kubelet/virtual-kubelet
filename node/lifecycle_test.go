@@ -7,7 +7,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/pkg/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
+
+	pkgerrors "github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"github.com/virtual-kubelet/virtual-kubelet/errdefs"
 	"github.com/virtual-kubelet/virtual-kubelet/log"
@@ -15,6 +17,7 @@ import (
 	"gotest.tools/assert"
 	is "gotest.tools/assert/cmp"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -157,7 +160,7 @@ func TestPodLifecycle(t *testing.T) {
 				deletionFunc := func(ctx context.Context, watcher watch.Interface) error {
 					return mp.getAttemptedDeletes().until(ctx, func(v int) bool { return v >= 2 })
 				}
-				mp.setErrorOnDelete(errors.New("random error"))
+				mp.setErrorOnDelete(pkgerrors.New("random error"))
 				assert.NilError(t, wireUpSystem(ctx, mp, func(ctx context.Context, s *system) {
 					testCreateStartDeleteScenario(ctx, t, s, deletionFunc, false)
 					pods, err := s.client.CoreV1().Pods(testNamespace).List(metav1.ListOptions{})
@@ -212,12 +215,45 @@ func TestPodLifecycle(t *testing.T) {
 			// updatePodWhileRunningScenario updates a pod while the VK is running to ensure the update is propagated
 			// to the provider.
 			t.Run("updatePodWhileRunningScenario", func(t *testing.T) {
-				t.Run("mockProvider", func(t *testing.T) {
-					mp := h(t)
-					assert.NilError(t, wireUpSystem(ctx, mp, func(ctx context.Context, s *system) {
-						testUpdatePodWhileRunningScenario(ctx, t, s, mp)
-					}))
-				})
+				mp := h(t)
+				assert.NilError(t, wireUpSystem(ctx, mp, func(ctx context.Context, s *system) {
+					testUpdatePodWhileRunningScenario(ctx, t, s, mp)
+					assert.Assert(t, is.Equal(mp.getUpdates().read(), 1))
+				}))
+			})
+
+			// updatePodUnsupportedWhileRunningScenario updates a pod while the VK is running to ensure
+			// the update is propagated to the provider, and the provider can return an error without issue
+			t.Run("updatePodUnsupportedWhileRunningScenario", func(t *testing.T) {
+				mp := h(t)
+				mp.setErrorOnUpdate(errdefs.Unsupported("Update unsupported"))
+				assert.NilError(t, wireUpSystem(ctx, mp, func(ctx context.Context, s *system) {
+					md := testUpdatePodWhileRunningScenario(ctx, t, s, mp)
+					assert.Assert(t, is.Equal(mp.getUpdates().read(), 0))
+					pod, err := s.client.CoreV1().Pods(md.Namespace).Get(md.Name, metav1.GetOptions{})
+					assert.NilError(t, err)
+					// No update should have occurred
+					assert.Assert(t, is.Equal(pod.ResourceVersion, md.ResourceVersion))
+				}))
+			})
+
+			// updatePodFailureWhileRunningScenario updates a pod while the VK is running to ensure
+			// the update is propagated to the provider, and when the provider returns an error,
+			// the VK properly updates the API server with a failed pod
+			t.Run("updatePodFailureWhileRunningScenario", func(t *testing.T) {
+				mp := h(t)
+				mp.setErrorOnUpdate(pkgerrors.New("Updates broken"))
+				assert.NilError(t, wireUpSystem(ctx, mp, func(ctx context.Context, s *system) {
+					md := testUpdatePodWhileRunningScenario(ctx, t, s, mp)
+					assert.Assert(t, is.Equal(mp.getUpdates().read(), 0))
+					for s.pc.k8sQ.Len() > 0 {
+						time.Sleep(10 * time.Millisecond)
+					}
+					pod, err := s.client.CoreV1().Pods(md.Namespace).Get(md.Name, metav1.GetOptions{})
+					assert.NilError(t, err)
+					assert.Assert(t, is.Equal(pod.Status.Reason, podStatusReasonProviderFailed))
+					assert.Assert(t, pod.ResourceVersion != md.ResourceVersion)
+				}))
 			})
 		})
 	}
@@ -247,19 +283,51 @@ func wireUpSystem(ctx context.Context, provider PodLifecycleHandler, f testFunct
 
 	// Create the fake client.
 	client := fake.NewSimpleClientset()
+	tracker := client.Tracker()
+	defaultReactionFunc := ktesting.ObjectReaction(tracker)
+	i := 1
+	client.PrependReactor("create", "pods", func(action ktesting.Action) (handled bool, ret runtime.Object, err error) {
+		createAction := action.(ktesting.CreateActionImpl)
+		objMeta, err := meta.Accessor(createAction.GetObject())
+		if err != nil {
+			return true, nil, err
+		}
+		objMeta.SetResourceVersion(strconv.Itoa(i))
+		i++
+		return defaultReactionFunc(createAction)
+	})
 
 	client.PrependReactor("update", "pods", func(action ktesting.Action) (handled bool, ret runtime.Object, err error) {
-		var pod *corev1.Pod
-
-		updateAction := action.(ktesting.UpdateAction)
-		pod = updateAction.GetObject().(*corev1.Pod)
-
-		resourceVersion, err := strconv.Atoi(pod.ResourceVersion)
+		updateAction := action.(ktesting.UpdateActionImpl)
+		newObjMeta, err := meta.Accessor(updateAction.GetObject())
 		if err != nil {
-			panic(errors.Wrap(err, "Could not parse resource version of pod"))
+			return true, nil, err
 		}
-		pod.ResourceVersion = strconv.Itoa(resourceVersion + 1)
-		return false, nil, nil
+
+		if newObjMeta.GetResourceVersion() == "" || newObjMeta.GetResourceVersion() == "0" {
+			return defaultReactionFunc(updateAction)
+		}
+
+		oldObj, err := tracker.Get(updateAction.Resource, updateAction.Namespace, newObjMeta.GetName())
+		if err != nil {
+			// No idea what to do here?
+			return defaultReactionFunc(updateAction)
+		}
+
+		oldObjMeta, err := meta.Accessor(oldObj)
+		if err != nil {
+			return true, nil, err
+		}
+
+		oldVersion := oldObjMeta.GetResourceVersion()
+		newVersion := newObjMeta.GetResourceVersion()
+		if oldVersion != newVersion {
+			return true, nil, errors.NewConflict(updateAction.Resource.GroupResource(), newObjMeta.GetName(), fmt.Errorf("Update version %s does not match in-database version %s", newVersion, oldVersion))
+		}
+
+		newObjMeta.SetResourceVersion(strconv.Itoa(i))
+		i++
+		return defaultReactionFunc(updateAction)
 	})
 
 	// This is largely copy and pasted code from the root command
@@ -301,7 +369,7 @@ func wireUpSystem(ctx context.Context, provider PodLifecycleHandler, f testFunct
 	go sharedInformerFactory.Start(ctx.Done())
 	sharedInformerFactory.WaitForCacheSync(ctx.Done())
 	if ok := cache.WaitForCacheSync(ctx.Done(), podInformer.Informer().HasSynced); !ok {
-		return errors.New("podinformer failed to sync")
+		return pkgerrors.New("podinformer failed to sync")
 	}
 
 	if err := ctx.Err(); err != nil {
@@ -329,7 +397,7 @@ func testTerminalStatePodScenario(ctx context.Context, t *testing.T, s *system, 
 	p1 := newPod()
 	p1.Status.Phase = state
 	// Create the Pod
-	_, e := s.client.CoreV1().Pods(testNamespace).Create(p1)
+	createdP1, e := s.client.CoreV1().Pods(testNamespace).Create(p1)
 	assert.NilError(t, e)
 
 	// Start the pod controller
@@ -343,7 +411,7 @@ func testTerminalStatePodScenario(ctx context.Context, t *testing.T, s *system, 
 	assert.NilError(t, err)
 
 	// Make sure the pods have not changed
-	assert.DeepEqual(t, p1, p2)
+	assert.DeepEqual(t, createdP1, p2)
 }
 
 func testDanglingPodScenario(ctx context.Context, t *testing.T, s *system, m testingProvider) {
@@ -521,7 +589,7 @@ func testCreateStartDeleteScenario(ctx context.Context, t *testing.T, s *system,
 	}
 }
 
-func testUpdatePodWhileRunningScenario(ctx context.Context, t *testing.T, s *system, m testingProvider) {
+func testUpdatePodWhileRunningScenario(ctx context.Context, t *testing.T, s *system, m testingProvider) metav1.ObjectMeta {
 	t.Parallel()
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
@@ -565,20 +633,17 @@ func testUpdatePodWhileRunningScenario(ctx context.Context, t *testing.T, s *sys
 		assert.NilError(t, err)
 	}
 
-	// Update the pod
-	version, err := strconv.Atoi(p.ResourceVersion)
-	if err != nil {
-		t.Fatalf("Could not parse pod's resource version: %s", err.Error())
-	}
-
-	p.ResourceVersion = strconv.Itoa(version + 1)
 	var activeDeadlineSeconds int64 = 300
 	p.Spec.ActiveDeadlineSeconds = &activeDeadlineSeconds
 
 	log.G(ctx).WithField("pod", p).Info("Updating pod")
-	_, err = s.client.CoreV1().Pods(p.Namespace).Update(p)
+	p2, err := s.client.CoreV1().Pods(p.Namespace).Update(p)
 	assert.NilError(t, err)
-	assert.NilError(t, m.getUpdates().until(ctx, func(v int) bool { return v > 0 }))
+	assert.NilError(t, m.getAttemptedUpdates().until(ctx, func(v int) bool { return v > 0 }))
+	for s.pc.k8sQ.Len() > 0 {
+		time.Sleep(10 * time.Millisecond)
+	}
+	return p2.ObjectMeta
 }
 
 func BenchmarkCreatePods(b *testing.B) {

@@ -19,6 +19,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	pkgerrors "github.com/pkg/errors"
+	"github.com/virtual-kubelet/virtual-kubelet/errdefs"
 	"github.com/virtual-kubelet/virtual-kubelet/log"
 	"github.com/virtual-kubelet/virtual-kubelet/trace"
 	corev1 "k8s.io/api/core/v1"
@@ -77,9 +78,10 @@ func (pc *PodController) createOrUpdatePod(ctx context.Context, pod *corev1.Pod)
 		if !podsEqual(podFromProvider, podForProvider) {
 			log.G(ctx).Debugf("Pod %s exists, updating pod in provider", podFromProvider.Name)
 			if origErr := pc.provider.UpdatePod(ctx, podForProvider); origErr != nil {
-				pc.handleProviderError(ctx, span, origErr, pod)
+				if !errdefs.IsUnsupported(origErr) {
+					pc.handleProviderError(ctx, span, origErr, pod)
+				}
 				pc.recorder.Event(pod, corev1.EventTypeWarning, podEventUpdateFailed, origErr.Error())
-
 				return origErr
 			}
 			log.G(ctx).Info("Updated pod in provider")

@@ -68,10 +68,12 @@ func (w *waitableInt) increment() {
 type mockProvider struct {
 	creates          *waitableInt
 	updates          *waitableInt
+	attemptedUpdates *waitableInt
 	deletes          *waitableInt
 	attemptedDeletes *waitableInt
 
 	errorOnDelete error
+	errorOnUpdate error
 
 	pods         sync.Map
 	startTime    time.Time
@@ -92,6 +94,7 @@ func newSyncMockProvider() *mockProvider {
 		startTime:        time.Now(),
 		creates:          newWaitableInt(),
 		updates:          newWaitableInt(),
+		attemptedUpdates: newWaitableInt(),
 		deletes:          newWaitableInt(),
 		attemptedDeletes: newWaitableInt(),
 	}
@@ -161,11 +164,17 @@ func (p *mockProvider) CreatePod(ctx context.Context, pod *v1.Pod) error {
 func (p *mockProvider) UpdatePod(ctx context.Context, pod *v1.Pod) error {
 	log.G(ctx).Infof("receive UpdatePod %q", pod.Name)
 
-	p.updates.increment()
+	p.attemptedUpdates.increment()
 	key, err := buildKey(pod)
 	if err != nil {
 		return err
 	}
+
+	if p.errorOnUpdate != nil {
+		return p.errorOnUpdate
+	}
+
+	p.updates.increment()
 
 	p.pods.Store(key, pod)
 	p.notifier(pod)
@@ -266,6 +275,10 @@ func (p *mockProvider) setErrorOnDelete(err error) {
 	p.errorOnDelete = err
 }
 
+func (p *mockProvider) setErrorOnUpdate(err error) {
+	p.errorOnUpdate = err
+}
+
 func (p *mockProvider) getAttemptedDeletes() *waitableInt {
 	return p.attemptedDeletes
 }
@@ -276,6 +289,10 @@ func (p *mockProvider) getCreates() *waitableInt {
 
 func (p *mockProvider) getDeletes() *waitableInt {
 	return p.deletes
+}
+
+func (p *mockProvider) getAttemptedUpdates() *waitableInt {
+	return p.attemptedUpdates
 }
 
 func (p *mockProvider) getUpdates() *waitableInt {
@@ -316,4 +333,6 @@ type testingProvider interface {
 	getDeletes() *waitableInt
 	getCreates() *waitableInt
 	getUpdates() *waitableInt
+	getAttemptedUpdates() *waitableInt
+	setErrorOnUpdate(error)
 }

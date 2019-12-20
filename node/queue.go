@@ -18,6 +18,7 @@ import (
 	"context"
 
 	pkgerrors "github.com/pkg/errors"
+	"github.com/virtual-kubelet/virtual-kubelet/errdefs"
 	"github.com/virtual-kubelet/virtual-kubelet/log"
 	"github.com/virtual-kubelet/virtual-kubelet/trace"
 	"k8s.io/client-go/util/workqueue"
@@ -63,7 +64,9 @@ func handleQueueItem(ctx context.Context, q workqueue.RateLimitingInterface, han
 		// Add the current key as an attribute to the current span.
 		ctx = span.WithField(ctx, "key", key)
 		// Run the syncHandler, passing it the namespace/name string of the Pod resource to be synced.
-		if err := handler(ctx, key); err != nil {
+		if err := handler(ctx, key); errdefs.IsUnsupported(err) {
+			log.G(ctx).WithError(err).Debugf("Forgetting %q because received unsupported error", key)
+		} else if err != nil {
 			if q.NumRequeues(key) < maxRetries {
 				// Put the item back on the work queue to handle any transient errors.
 				log.G(ctx).WithError(err).Warnf("requeuing %q due to failed sync", key)
