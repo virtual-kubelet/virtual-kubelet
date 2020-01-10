@@ -30,6 +30,12 @@ import (
 
 const (
 	podStatusReasonProviderFailed = "ProviderFailed"
+	podEventCreateFailed          = "ProviderCreateFailed"
+	podEventCreateSuccess         = "ProviderCreateSuccess"
+	podEventDeleteFailed          = "ProviderDeleteFailed"
+	podEventDeleteSuccess         = "ProviderDeleteSuccess"
+	podEventUpdateFailed          = "ProviderUpdateFailed"
+	podEventUpdateSuccess         = "ProviderUpdateSuccess"
 )
 
 func addPodAttributes(ctx context.Context, span trace.Span, pod *corev1.Pod) context.Context {
@@ -72,16 +78,22 @@ func (pc *PodController) createOrUpdatePod(ctx context.Context, pod *corev1.Pod)
 			log.G(ctx).Debugf("Pod %s exists, updating pod in provider", podFromProvider.Name)
 			if origErr := pc.provider.UpdatePod(ctx, podForProvider); origErr != nil {
 				pc.handleProviderError(ctx, span, origErr, pod)
+				pc.recorder.Event(pod, corev1.EventTypeWarning, podEventUpdateFailed, origErr.Error())
+
 				return origErr
 			}
 			log.G(ctx).Info("Updated pod in provider")
+			pc.recorder.Event(pod, corev1.EventTypeNormal, podEventUpdateSuccess, "Update pod in provider successfully")
+
 		}
 	} else {
 		if origErr := pc.provider.CreatePod(ctx, podForProvider); origErr != nil {
 			pc.handleProviderError(ctx, span, origErr, pod)
+			pc.recorder.Event(pod, corev1.EventTypeWarning, podEventCreateFailed, origErr.Error())
 			return origErr
 		}
 		log.G(ctx).Info("Created pod in provider")
+		pc.recorder.Event(pod, corev1.EventTypeNormal, podEventCreateSuccess, "Create pod in provider successfully")
 	}
 	return nil
 }
@@ -140,9 +152,10 @@ func (pc *PodController) deletePod(ctx context.Context, pod *corev1.Pod) error {
 	err := pc.provider.DeletePod(ctx, pod.DeepCopy())
 	if err != nil {
 		span.SetStatus(err)
+		pc.recorder.Event(pod, corev1.EventTypeWarning, podEventDeleteFailed, err.Error())
 		return err
 	}
-
+	pc.recorder.Event(pod, corev1.EventTypeNormal, podEventDeleteSuccess, "Delete pod in provider successfully")
 	log.G(ctx).Debug("Deleted pod from provider")
 
 	return nil
@@ -176,7 +189,6 @@ func (pc *PodController) updatePodStatus(ctx context.Context, podFromKubernetes 
 	// the pod status, and we should be the sole writers of the pod status, we can blind overwrite it. Therefore
 	// we need to copy the pod and set ResourceVersion to 0.
 	podFromProvider.ResourceVersion = "0"
-
 	if _, err := pc.client.Pods(podFromKubernetes.Namespace).UpdateStatus(podFromProvider); err != nil {
 		span.SetStatus(err)
 		return pkgerrors.Wrap(err, "error while updating pod status in kubernetes")
