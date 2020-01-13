@@ -16,6 +16,7 @@ package api
 
 import (
 	"net/http"
+	"time"
 
 	"github.com/gorilla/mux"
 	"github.com/virtual-kubelet/virtual-kubelet/log"
@@ -39,7 +40,7 @@ type PodHandlerConfig struct {
 }
 
 // PodHandler creates an http handler for interacting with pods/containers.
-func PodHandler(p PodHandlerConfig, debug bool) http.Handler {
+func PodHandler(p PodHandlerConfig, debug bool, streamIdleTimeout, streamCreationTimeout time.Duration) http.Handler {
 	r := mux.NewRouter()
 
 	// This matches the behaviour in the reference kubelet
@@ -48,7 +49,8 @@ func PodHandler(p PodHandlerConfig, debug bool) http.Handler {
 		r.HandleFunc("/runningpods/", HandleRunningPods(p.GetPods)).Methods("GET")
 	}
 	r.HandleFunc("/containerLogs/{namespace}/{pod}/{container}", HandleContainerLogs(p.GetContainerLogs)).Methods("GET")
-	r.HandleFunc("/exec/{namespace}/{pod}/{container}", HandleContainerExec(p.RunInContainer)).Methods("POST")
+	r.HandleFunc("/exec/{namespace}/{pod}/{container}", HandleContainerExec(p.RunInContainer, streamIdleTimeout,
+		streamCreationTimeout)).Methods("POST")
 	r.NotFoundHandler = http.HandlerFunc(NotFound)
 	return r
 }
@@ -78,8 +80,8 @@ func PodStatsSummaryHandler(f PodStatsSummaryHandlerFunc) http.Handler {
 //
 // Callers should take care to namespace the serve mux as they see fit, however
 // these routes get called by the Kubernetes API server.
-func AttachPodRoutes(p PodHandlerConfig, mux ServeMux, debug bool) {
-	mux.Handle("/", InstrumentHandler(PodHandler(p, debug)))
+func AttachPodRoutes(p PodHandlerConfig, mux ServeMux, debug bool, streamIdleTimeout, streamCreationTimeout time.Duration) {
+	mux.Handle("/", InstrumentHandler(PodHandler(p, debug, streamIdleTimeout, streamCreationTimeout)))
 }
 
 // PodMetricsConfig stores the handlers for pod metrics routes

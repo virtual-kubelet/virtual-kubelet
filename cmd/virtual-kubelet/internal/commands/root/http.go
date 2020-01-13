@@ -22,6 +22,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/pkg/errors"
 	"github.com/virtual-kubelet/virtual-kubelet/cmd/virtual-kubelet/internal/provider"
@@ -92,7 +93,7 @@ func setupHTTPServer(ctx context.Context, p provider.Provider, cfg *apiServerCon
 			GetContainerLogs: p.GetContainerLogs,
 			GetPods:          p.GetPods,
 		}
-		api.AttachPodRoutes(podRoutes, mux, true)
+		api.AttachPodRoutes(podRoutes, mux, true, cfg.StreamIdleTimeout, cfg.StreamCreationTimeout)
 
 		s := &http.Server{
 			Handler:   mux,
@@ -142,10 +143,12 @@ func serveHTTP(ctx context.Context, s *http.Server, l net.Listener, name string)
 }
 
 type apiServerConfig struct {
-	CertPath    string
-	KeyPath     string
-	Addr        string
-	MetricsAddr string
+	CertPath              string
+	KeyPath               string
+	Addr                  string
+	MetricsAddr           string
+	StreamIdleTimeout     time.Duration
+	StreamCreationTimeout time.Duration
 }
 
 func getAPIConfig(c Opts) (*apiServerConfig, error) {
@@ -156,6 +159,8 @@ func getAPIConfig(c Opts) (*apiServerConfig, error) {
 
 	config.Addr = fmt.Sprintf(":%d", c.ListenPort)
 	config.MetricsAddr = c.MetricsAddr
+	config.StreamIdleTimeout = c.StreamIdleTimeout
+	config.StreamCreationTimeout = c.StreamCreationTimeout
 
 	return &config, nil
 }

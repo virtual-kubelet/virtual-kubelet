@@ -52,7 +52,8 @@ type TermSize struct {
 // HandleContainerExec makes an http handler func from a Provider which execs a command in a pod's container
 // Note that this handler currently depends on gorrilla/mux to get url parts as variables.
 // TODO(@cpuguy83): don't force gorilla/mux on consumers of this function
-func HandleContainerExec(h ContainerExecHandlerFunc) http.HandlerFunc {
+func HandleContainerExec(h ContainerExecHandlerFunc, streamIdleTimeout, streamCreationTimeout time.Duration) http.
+	HandlerFunc {
 	if h == nil {
 		return NotImplemented
 	}
@@ -73,14 +74,12 @@ func HandleContainerExec(h ContainerExecHandlerFunc) http.HandlerFunc {
 			return errdefs.AsInvalidInput(err)
 		}
 
-		idleTimeout := time.Second * 30
-		streamCreationTimeout := time.Second * 30
-
 		ctx, cancel := context.WithCancel(context.TODO())
 		defer cancel()
 
 		exec := &containerExecContext{ctx: ctx, h: h, pod: pod, namespace: namespace, container: container}
-		remotecommand.ServeExec(w, req, exec, "", "", container, command, streamOpts, idleTimeout, streamCreationTimeout, supportedStreamProtocols)
+		remotecommand.ServeExec(w, req, exec, "", "", container, command, streamOpts, streamIdleTimeout,
+			streamCreationTimeout, supportedStreamProtocols)
 
 		return nil
 	})
