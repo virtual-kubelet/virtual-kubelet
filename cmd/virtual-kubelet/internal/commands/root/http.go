@@ -89,11 +89,14 @@ func setupHTTPServer(ctx context.Context, p provider.Provider, cfg *apiServerCon
 		mux := http.NewServeMux()
 
 		podRoutes := api.PodHandlerConfig{
-			RunInContainer:   p.RunInContainer,
-			GetContainerLogs: p.GetContainerLogs,
-			GetPods:          p.GetPods,
+			RunInContainer:        p.RunInContainer,
+			GetContainerLogs:      p.GetContainerLogs,
+			GetPods:               p.GetPods,
+			StreamIdleTimeout:     cfg.StreamIdleTimeout,
+			StreamCreationTimeout: cfg.StreamCreationTimeout,
 		}
-		api.AttachPodRoutes(podRoutes, mux, true, cfg.StreamIdleTimeout, cfg.StreamCreationTimeout)
+
+		api.AttachPodRoutes(podRoutes, mux, true)
 
 		s := &http.Server{
 			Handler:   mux,
