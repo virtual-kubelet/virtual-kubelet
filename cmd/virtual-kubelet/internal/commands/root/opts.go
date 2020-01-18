@@ -36,8 +36,10 @@ const (
 	DefaultKubeNamespace        = corev1.NamespaceAll
 	DefaultKubeClusterDomain    = "cluster.local"
 
-	DefaultTaintEffect = string(corev1.TaintEffectNoSchedule)
-	DefaultTaintKey    = "virtual-kubelet.io/provider"
+	DefaultTaintEffect           = string(corev1.TaintEffectNoSchedule)
+	DefaultTaintKey              = "virtual-kubelet.io/provider"
+	DefaultStreamIdleTimeout     = 30 * time.Second
+	DefaultStreamCreationTimeout = 30 * time.Second
 )
 
 // Opts stores all the options for configuring the root virtual-kubelet command.
@@ -84,6 +86,11 @@ type Opts struct {
 
 	// Startup Timeout is how long to wait for the kubelet to start
 	StartupTimeout time.Duration
+	// StreamIdleTimeout is the maximum time a streaming connection
+	// can be idle before the connection is automatically closed.
+	StreamIdleTimeout time.Duration
+	// StreamCreationTimeout is the maximum time for streaming connection
+	StreamCreationTimeout time.Duration
 
 	Version string
 }
@@ -150,6 +157,14 @@ func SetDefaultOpts(c *Opts) error {
 				c.KubeConfigPath = filepath.Join(home, ".kube", "config")
 			}
 		}
+	}
+
+	if c.StreamIdleTimeout == 0 {
+		c.StreamIdleTimeout = DefaultStreamIdleTimeout
+	}
+
+	if c.StreamCreationTimeout == 0 {
+		c.StreamCreationTimeout = DefaultStreamCreationTimeout
 	}
 
 	return nil
