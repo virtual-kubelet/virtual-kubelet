@@ -112,8 +112,19 @@ func HandleContainerExec(h ContainerExecHandlerFunc, opts ...ContainerExecHandle
 		defer cancel()
 
 		exec := &containerExecContext{ctx: ctx, h: h, pod: pod, namespace: namespace, container: container}
-		remotecommand.ServeExec(w, req, exec, "", "", container, command, streamOpts, cfg.StreamIdleTimeout,
-			cfg.StreamCreationTimeout, supportedStreamProtocols)
+		remotecommand.ServeExec(
+			w,
+			req,
+			exec,
+			"",
+			"",
+			container,
+			command,
+			streamOpts,
+			cfg.StreamIdleTimeout,
+			cfg.StreamCreationTimeout,
+			supportedStreamProtocols.
+		)
 
 		return nil
 	})
