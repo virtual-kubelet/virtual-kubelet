@@ -123,7 +123,7 @@ func HandleContainerExec(h ContainerExecHandlerFunc, opts ...ContainerExecHandle
 			streamOpts,
 			cfg.StreamIdleTimeout,
 			cfg.StreamCreationTimeout,
-			supportedStreamProtocols.
+			supportedStreamProtocols,
 		)
 
 		return nil
