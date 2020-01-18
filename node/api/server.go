@@ -50,9 +50,10 @@ func PodHandler(p PodHandlerConfig, debug bool) http.Handler {
 	if debug {
 		r.HandleFunc("/runningpods/", HandleRunningPods(p.GetPods)).Methods("GET")
 	}
+
 	r.HandleFunc("/containerLogs/{namespace}/{pod}/{container}", HandleContainerLogs(p.GetContainerLogs)).Methods("GET")
-	r.HandleFunc("/exec/{namespace}/{pod}/{container}", HandleContainerExec(p.RunInContainer, p.StreamIdleTimeout,
-		p.StreamCreationTimeout)).Methods("POST")
+	r.HandleFunc("/exec/{namespace}/{pod}/{container}", HandleContainerExec(p.RunInContainer,
+		WithExecStreamCreationTimeout(p.StreamCreationTimeout), WithExecStreamIdleTimeout(p.StreamIdleTimeout))).Methods("POST")
 	r.NotFoundHandler = http.HandlerFunc(NotFound)
 	return r
 }

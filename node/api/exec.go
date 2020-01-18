@@ -53,10 +53,10 @@ type TermSize struct {
 // Note that this handler currently depends on gorrilla/mux to get url parts as variables.
 // TODO(@cpuguy83): don't force gorilla/mux on consumers of this function
 // ContainerExecHandlerConfig is used to pass options to options to the container exec handler.
-type ContainerExecHandlerConfig {
+type ContainerExecHandlerConfig struct {
 	// StreamIdleTimeout is the maximum time a streaming connection
 	// can be idle before the connection is automatically closed.
-	StreamCreationTimeout time.Duration
+	StreamIdleTimeout time.Duration
 	// StreamCreationTimeout is the maximum time for streaming connection
 	StreamCreationTimeout time.Duration
 }
@@ -72,21 +72,24 @@ func WithExecStreamIdleTimeout(dur time.Duration) ContainerExecHandlerOption {
 	}
 }
 
+// WithExecStreamIdleTimeout sets the idle timeout for a container exec stream
+func WithExecStreamCreationTimeout(dur time.Duration) ContainerExecHandlerOption {
+	return func(cfg *ContainerExecHandlerConfig) {
+		cfg.StreamCreationTimeout = dur
+	}
+}
+
 // HandleContainerExec makes an http handler func from a Provider which execs a command in a pod's container
 // Note that this handler currently depends on gorrilla/mux to get url parts as variables.
 // TODO(@cpuguy83): don't force gorilla/mux on consumers of this function
-func HandleContainerExec(h ContainerExecHandlerFunc, opts ..ContainerExecHandlerOption) HandlerFunc {
-    if h == nil {
-    	return NotImplemented
-    }
-    
-    var cfg ContainerExecHandlerConfig
-    for _, o := range opts {
-    	o(&cfg)
-    }
-	HandlerFunc {
+func HandleContainerExec(h ContainerExecHandlerFunc, opts ...ContainerExecHandlerOption) http.HandlerFunc {
 	if h == nil {
 		return NotImplemented
+	}
+
+	var cfg ContainerExecHandlerConfig
+	for _, o := range opts {
+		o(&cfg)
 	}
 	return handleError(func(w http.ResponseWriter, req *http.Request) error {
 		vars := mux.Vars(req)
@@ -109,8 +112,8 @@ func HandleContainerExec(h ContainerExecHandlerFunc, opts ..ContainerExecHandler
 		defer cancel()
 
 		exec := &containerExecContext{ctx: ctx, h: h, pod: pod, namespace: namespace, container: container}
-		remotecommand.ServeExec(w, req, exec, "", "", container, command, streamOpts, streamIdleTimeout,
-			streamCreationTimeout, supportedStreamProtocols)
+		remotecommand.ServeExec(w, req, exec, "", "", container, command, streamOpts, cfg.StreamIdleTimeout,
+			cfg.StreamCreationTimeout, supportedStreamProtocols)
 
 		return nil
 	})
