@@ -52,7 +52,38 @@ type TermSize struct {
 // HandleContainerExec makes an http handler func from a Provider which execs a command in a pod's container
 // Note that this handler currently depends on gorrilla/mux to get url parts as variables.
 // TODO(@cpuguy83): don't force gorilla/mux on consumers of this function
-func HandleContainerExec(h ContainerExecHandlerFunc, streamIdleTimeout, streamCreationTimeout time.Duration) http.
+// ContainerExecHandlerConfig is used to pass options to options to the container exec handler.
+type ContainerExecHandlerConfig {
+	// StreamIdleTimeout is the maximum time a streaming connection
+	// can be idle before the connection is automatically closed.
+	StreamCreationTimeout time.Duration
+	// StreamCreationTimeout is the maximum time for streaming connection
+	StreamCreationTimeout time.Duration
+}
+
+// ContainerExecHandlerOption configures a ContainerExecHandlerConfig
+// It is used as functional options passed to `HandleContainerExec`
+type ContainerExecHandlerOption func(*ContainerExecHandlerConfig)
+
+// WithExecStreamIdleTimeout sets the idle timeout for a container exec stream
+func WithExecStreamIdleTimeout(dur time.Duration) ContainerExecHandlerOption {
+	return func(cfg *ContainerExecHandlerConfig) {
+		cfg.StreamIdleTimeout = dur
+	}
+}
+
+// HandleContainerExec makes an http handler func from a Provider which execs a command in a pod's container
+// Note that this handler currently depends on gorrilla/mux to get url parts as variables.
+// TODO(@cpuguy83): don't force gorilla/mux on consumers of this function
+func HandleContainerExec(h ContainerExecHandlerFunc, opts ..ContainerExecHandlerOption) HandlerFunc {
+    if h == nil {
+    	return NotImplemented
+    }
+    
+    var cfg ContainerExecHandlerConfig
+    for _, o := range opts {
+    	o(&cfg)
+    }
 	HandlerFunc {
 	if h == nil {
 		return NotImplemented
