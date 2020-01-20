@@ -56,16 +56,14 @@ type flushWriter struct {
 }
 
 type writeFlusher interface {
-	Flush() error
+	Flush()
 	Write([]byte) (int, error)
 }
 
 func (fw *flushWriter) Write(p []byte) (int, error) {
 	n, err := fw.w.Write(p)
 	if n > 0 {
-		if err := fw.w.Flush(); err != nil {
-			return n, err
-		}
+		fw.w.Flush()
 	}
 	return n, err
 }
