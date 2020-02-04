@@ -275,6 +275,45 @@ func TestUpdateNodeStatus(t *testing.T) {
 	assert.Equal(t, errors.IsNotFound(err), true, err)
 }
 
+func TestUpdateNodeConditions(t *testing.T) {
+	// Create a "Running" node
+	n := testNode(t)
+	n.Status.Conditions = append(n.Status.Conditions, corev1.NodeCondition{
+		Type:              "Ready",
+		Status:            corev1.ConditionTrue,
+		LastHeartbeatTime: metav1.Now().Rfc3339Copy(),
+		Reason:            "KubeletReady",
+		Message:           "kubelet is ready.",
+	})
+	n.Status.Phase = corev1.NodeRunning
+	nodes := testclient.NewSimpleClientset().CoreV1().Nodes()
+	n, err := nodes.Create(n)
+	assert.NilError(t, err)
+
+	// Add a NodeCondition out-of-band (e.g. node-problem-detector)
+	npdNode := n.DeepCopy()
+	npdNode.Status.Conditions = append(npdNode.Status.Conditions, corev1.NodeCondition{
+		Type:               "CustomProblem",
+		Status:             "False",
+		LastHeartbeatTime:  metav1.Now().Rfc3339Copy(),
+		LastTransitionTime: metav1.Now().Rfc3339Copy(),
+		Reason:             "CustomReason",
+		Message:            "custom message",
+	})
+	apiNode, err := nodes.Update(npdNode)
+
+	// The node in the API server should now be the node with the added NodeCondition
+	assert.NilError(t, err)
+	assert.Check(t, cmp.DeepEqual(apiNode, npdNode))
+
+	// Now update the Node again from VK, which does not know about the out of band update.
+	// This should not alter or remove the NodeCondition added out of band.
+	ctx := context.Background()
+	updated, err := updateNodeStatus(ctx, nodes, n.DeepCopy())
+	assert.NilError(t, err)
+	assert.Check(t, cmp.DeepEqual(npdNode, updated))
+}
+
 func TestUpdateNodeLease(t *testing.T) {
 	leases := testclient.NewSimpleClientset().CoordinationV1beta1().Leases(corev1.NamespaceNodeLease)
 	lease := newLease(nil)
