@@ -16,6 +16,7 @@ The best description is "Kubernetes API on top, programmable back."
 * [How It Works](#how-it-works)
 * [Usage](#usage)
 * [Providers](#providers)
+    + [Admiralty Multi-Cluster Scheduler](#admiralty-multi-cluster-scheduler)
     + [Alibaba Cloud ECI Provider](#alibaba-cloud-eci-provider)
     + [Azure Container Instances Provider](#azure-container-instances-provider)
 	+ [Azure Batch GPU Provider](https://github.com/virtual-kubelet/azure-batch/blob/master/README.md)
@@ -73,6 +74,9 @@ Providers must provide the following functionality to be considered a supported 
 2. Conforms to the current API provided by Virtual Kubelet.
 3. Does not have access to the Kubernetes API Server and has a well-defined callback mechanism for getting data like secrets or configmaps.
 
+### Admiralty Multi-Cluster Scheduler
+
+Admiralty Multi-Cluster Scheduler mutates annotated pods into "proxy pods" scheduled on a virtual-kubelet node and creates corresponding "delegate pods" in remote clusters (actually running the containers). A feedback loop updates the statuses and annotations of the proxy pods to reflect the statuses and annotations of the delegate pods. You can find more details in the [Admiralty Multi-Cluster Scheduler documentation](https://github.com/admiraltyio/multicluster-scheduler).
 
 ### Alibaba Cloud ECI Provider
 
