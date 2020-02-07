@@ -3,8 +3,9 @@
   <tbody>
     {{ range $providers }}
     {{ $name     := .name | markdownify }}
-    {{ $pkgName  := printf "github.com/virtual-kubelet/%s" .tag }}
-    {{ $pkgUrl   := printf "https://github.com/virtual-kubelet/%s/blob/master/README.md#readme" .tag }}
+    {{ $githubPath := printf "github.com/%s/%s" (.org | default "virtual-kubelet") .tag }}
+    {{ $pkgName  := .vanityImportPath | default $githubPath }}
+    {{ $pkgUrl   := printf "https://%s/blob/master/README.md#readme" $githubPath }}
     {{ $godocUrl := printf "https://godoc.org/%s" $pkgName }}
     <tr>
       <td>

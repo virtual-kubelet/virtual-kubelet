@@ -1,3 +1,7 @@
+- name: Admiralty Multi-Cluster Scheduler
+  tag: multicluster-scheduler
+  org: admiraltyio
+  vanityImportPath: admiralty.io/multicluster-scheduler
 - name: Alibaba Cloud Elastic Container Instance (**ECI**)
   tag: alibabacloud-eci
 - name: AWS Fargate
