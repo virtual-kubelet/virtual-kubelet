@@ -59,7 +59,7 @@ func PodHandler(p PodHandlerConfig, debug bool) http.Handler {
 			WithExecStreamCreationTimeout(p.StreamCreationTimeout),
 			WithExecStreamIdleTimeout(p.StreamIdleTimeout),
 		),
-	).Methods("POST")
+	).Methods("POST", "GET")
 	r.NotFoundHandler = http.HandlerFunc(NotFound)
 	return r
 }
