@@ -213,6 +213,10 @@ func (pc *PodController) enqueuePodStatusUpdate(ctx context.Context, q workqueue
 		if obj, ok := pc.knownPods.Load(key); ok {
 			kpod := obj.(*knownPod)
 			kpod.Lock()
+			if cmp.Equal(kpod.lastPodStatusReceivedFromProvider, pod) {
+				kpod.Unlock()
+				return
+			}
 			kpod.lastPodStatusReceivedFromProvider = pod
 			kpod.Unlock()
 			q.AddRateLimited(key)
