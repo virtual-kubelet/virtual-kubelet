@@ -79,7 +79,7 @@ func runRootCommand(ctx context.Context, s *provider.Store, c Opts) error {
 		}
 	}
 
-	client, err := newClient(c.KubeConfigPath)
+	client, err := newClient(c.KubeConfigPath, c.KubeAPIQPS, c.KubeAPIBurst)
 	if err != nil {
 		return err
 	}
@@ -232,7 +232,7 @@ func runRootCommand(ctx context.Context, s *provider.Store, c Opts) error {
 	return nil
 }
 
-func newClient(configPath string) (*kubernetes.Clientset, error) {
+func newClient(configPath string, qps, burst int32) (*kubernetes.Clientset, error) {
 	var config *rest.Config
 
 	// Check if the kubeConfig file exists.
@@ -248,6 +248,14 @@ func newClient(configPath string) (*kubernetes.Clientset, error) {
 		if err != nil {
 			return nil, errors.Wrap(err, "error building in cluster config")
 		}
+	}
+
+	if qps != 0 {
+		config.QPS = float32(qps)
+	}
+
+	if burst != 0 {
+		config.Burst = int(burst)
 	}
 
 	if masterURI := os.Getenv("MASTER_URI"); masterURI != "" {

@@ -86,6 +86,10 @@ func installFlags(flags *pflag.FlagSet, c *Opts) {
 			" automatically closed, default 30s.")
 	flags.DurationVar(&c.StreamCreationTimeout, "stream-creation-timeout", c.StreamCreationTimeout,
 		"stream-creation-timeout is the maximum time for streaming connection, default 30s.")
+	flags.Int32Var(&c.KubeAPIQPS, "kube-api-qps", c.KubeAPIQPS,
+		"kubeAPIQPS is the QPS to use while talking with kubernetes apiserver")
+	flags.Int32Var(&c.KubeAPIBurst, "kube-api-burst", c.KubeAPIQPS,
+		"kubeAPIBurst is the burst to allow while talking with kubernetes apiserver")
 
 	flagset := flag.NewFlagSet("klog", flag.PanicOnError)
 	klog.InitFlags(flagset)
