@@ -16,15 +16,20 @@ package api
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"net/http"
-	"strconv"
+	"net/url"
 	"time"
 
 	"github.com/gorilla/mux"
 	"github.com/pkg/errors"
 	"github.com/virtual-kubelet/virtual-kubelet/errdefs"
 	"github.com/virtual-kubelet/virtual-kubelet/log"
+	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/kubernetes/pkg/api/legacyscheme"
+	"k8s.io/kubernetes/pkg/apis/core/v1/validation"
 )
 
 // ContainerLogsHandlerFunc is used in place of backend implementations for getting container logs
@@ -37,6 +42,10 @@ type ContainerLogOpts struct {
 	Since      time.Duration
 	LimitBytes int
 	Timestamps bool
+}
+
+func init() {
+	legacyscheme.Scheme.AddKnownTypes(v1.SchemeGroupVersion, &v1.PodLogOptions{})
 }
 
 // HandleContainerLogs creates an http handler function from a provider to serve logs from a pod
@@ -55,25 +64,17 @@ func HandleContainerLogs(h ContainerLogsHandlerFunc) http.HandlerFunc {
 		namespace := vars["namespace"]
 		pod := vars["pod"]
 		container := vars["container"]
-		tail := 10
 		q := req.URL.Query()
 
-		if queryTail := q.Get("tailLines"); queryTail != "" {
-			t, err := strconv.Atoi(queryTail)
-			if err != nil {
-				return errdefs.AsInvalidInput(errors.Wrap(err, "could not parse \"tailLines\""))
-			}
-			tail = t
+		var (
+			opts *ContainerLogOpts
+			err  error
+		)
+		if opts, err = formatContainerLogOpts(q); err != nil {
+			return err
 		}
 
-		// TODO(@cpuguy83): support v1.PodLogOptions
-		// The kubelet decoding here is not straight forward, so this needs to be disected
-
-		opts := ContainerLogOpts{
-			Tail: tail,
-		}
-
-		logs, err := h(ctx, namespace, pod, container, opts)
+		logs, err := h(ctx, namespace, pod, container, *opts)
 		if err != nil {
 			return errors.Wrap(err, "error getting container logs?)")
 		}
@@ -91,4 +92,34 @@ func HandleContainerLogs(h ContainerLogsHandlerFunc) http.HandlerFunc {
 		}
 		return nil
 	})
+}
+
+// formatContainerLogOpts formats the logs options
+func formatContainerLogOpts(query url.Values) (*ContainerLogOpts, error) {
+
+	// container logs on the kubelet are locked to the v1 API version of PodLogOptions
+	logOptions := &v1.PodLogOptions{}
+	if err := legacyscheme.ParameterCodec.DecodeParameters(query, v1.SchemeGroupVersion, logOptions); err != nil {
+		return nil, fmt.Errorf("unable to decode query, error: %v", err)
+	}
+
+	logOptions.TypeMeta = metav1.TypeMeta{}
+	if errs := validation.ValidatePodLogOptions(logOptions); len(errs) > 0 {
+		return nil, fmt.Errorf("invalid request, error: %v", errs.ToAggregate())
+	}
+
+	opts := &ContainerLogOpts{
+		Timestamps: logOptions.Timestamps,
+	}
+	if logOptions.TailLines != nil {
+		opts.Tail = int(*logOptions.TailLines)
+	}
+	if logOptions.SinceSeconds != nil {
+		opts.Since = time.Duration(*logOptions.SinceSeconds) * time.Second
+	}
+	if logOptions.LimitBytes != nil {
+		opts.LimitBytes = int(*logOptions.LimitBytes)
+	}
+
+	return opts, nil
 }
