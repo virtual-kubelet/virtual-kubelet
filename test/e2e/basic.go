@@ -18,6 +18,49 @@ const (
 	deleteGracePeriodForProvider = 1 * time.Second
 )
 
+// TestGetPods tests that the /pods endpoint works, and only returns pods for our kubelet
+func (ts *EndToEndTestSuite) TestGetPods(t *testing.T) {
+	// Create a pod with prefix "nginx-" having a single container.
+	podSpec := f.CreateDummyPodObjectWithPrefix(t.Name(), "nginx", "foo")
+	podSpec.Spec.NodeName = f.NodeName
+
+	nginx, err := f.CreatePod(podSpec)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Delete the pod after the test finishes.
+	defer func() {
+		if err := f.DeletePodImmediately(nginx.Namespace, nginx.Name); err != nil && !apierrors.IsNotFound(err) {
+			t.Error(err)
+		}
+	}()
+	t.Logf("Created pod: %s", nginx.Name)
+
+	// Wait for the "nginx-" pod to be reported as running and ready.
+	if _, err := f.WaitUntilPodReady(nginx.Namespace, nginx.Name); err != nil {
+		t.Fatal(err)
+	}
+	t.Logf("Pod %s ready", nginx.Name)
+
+	k8sPods, err := f.GetRunningPodsFromKubernetes()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	podFound := false
+	for _, pod := range k8sPods.Items {
+		if pod.Spec.NodeName != f.NodeName {
+			t.Fatalf("Found pod with node name %s, whereas expected %s", pod.Spec.NodeName, f.NodeName)
+		}
+		if pod.UID == nginx.UID {
+			podFound = true
+		}
+	}
+	if !podFound {
+		t.Fatal("Nginx pod not found")
+	}
+}
+
 // TestGetStatsSummary creates a pod having two containers and queries the /stats/summary endpoint of the virtual-kubelet.
 // It expects this endpoint to return stats for the current node, as well as for the aforementioned pod and each of its two containers.
 func (ts *EndToEndTestSuite) TestGetStatsSummary(t *testing.T) {
@@ -91,7 +134,7 @@ func (ts *EndToEndTestSuite) TestPodLifecycleGracefulDelete(t *testing.T) {
 	t.Logf("Pod %s ready", pod.Name)
 
 	// Grab the pods from the provider.
-	pods, err := f.GetRunningPods()
+	pods, err := f.GetRunningPodsFromProvider()
 	assert.NilError(t, err)
 
 	// Check if the pod exists in the slice of PodStats.
@@ -125,7 +168,7 @@ func (ts *EndToEndTestSuite) TestPodLifecycleGracefulDelete(t *testing.T) {
 	time.Sleep(deleteGracePeriodForProvider)
 	// Give the provider some time to react to the MODIFIED/DELETED events before proceeding.
 	// Grab the pods from the provider.
-	pods, err = f.GetRunningPods()
+	pods, err = f.GetRunningPodsFromProvider()
 	assert.NilError(t, err)
 
 	// Make sure the pod DOES NOT exist in the provider's set of running pods
@@ -162,7 +205,7 @@ func (ts *EndToEndTestSuite) TestPodLifecycleForceDelete(t *testing.T) {
 	t.Logf("Pod %s ready", pod.Name)
 
 	// Grab the pods from the provider.
-	pods, err := f.GetRunningPods()
+	pods, err := f.GetRunningPodsFromProvider()
 	assert.NilError(t, err)
 
 	// Check if the pod exists in the slice of Pods.
@@ -203,7 +246,7 @@ func (ts *EndToEndTestSuite) TestPodLifecycleForceDelete(t *testing.T) {
 	time.Sleep(deleteGracePeriodForProvider)
 
 	// Grab the pods from the provider.
-	pods, err = f.GetRunningPods()
+	pods, err = f.GetRunningPodsFromProvider()
 	assert.NilError(t, err)
 
 	// Make sure the "nginx-" pod DOES NOT exist in the slice of Pods anymore.
@@ -240,7 +283,7 @@ func (ts *EndToEndTestSuite) TestCreatePodWithOptionalInexistentSecrets(t *testi
 	}
 
 	// Grab the pods from the provider.
-	pods, err := f.GetRunningPods()
+	pods, err := f.GetRunningPodsFromProvider()
 	assert.NilError(t, err)
 
 	// Check if the pod exists in the slice of Pods.
@@ -269,7 +312,7 @@ func (ts *EndToEndTestSuite) TestCreatePodWithMandatoryInexistentSecrets(t *test
 	}
 
 	// Grab the pods from the provider.
-	pods, err := f.GetRunningPods()
+	pods, err := f.GetRunningPodsFromProvider()
 	assert.NilError(t, err)
 
 	// Check if the pod exists in the slice of PodStats.
@@ -303,7 +346,7 @@ func (ts *EndToEndTestSuite) TestCreatePodWithOptionalInexistentConfigMap(t *tes
 	}
 
 	// Grab the pods from the provider.
-	pods, err := f.GetRunningPods()
+	pods, err := f.GetRunningPodsFromProvider()
 	assert.NilError(t, err)
 
 	// Check if the pod exists in the slice of PodStats.
@@ -332,7 +375,7 @@ func (ts *EndToEndTestSuite) TestCreatePodWithMandatoryInexistentConfigMap(t *te
 	}
 
 	// Grab the pods from the provider.
-	pods, err := f.GetRunningPods()
+	pods, err := f.GetRunningPodsFromProvider()
 	assert.NilError(t, err)
 
 	// Check if the pod exists in the slice of PodStats.

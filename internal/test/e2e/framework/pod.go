@@ -164,8 +164,8 @@ func (f *Framework) WaitUntilPodEventWithReason(pod *corev1.Pod, reason string) 
 	return nil
 }
 
-// GetRunningPods gets the running pods from the provider of the virtual kubelet
-func (f *Framework) GetRunningPods() (*corev1.PodList, error) {
+// GetRunningPodsFromProvider gets the running pods from the provider of the virtual kubelet
+func (f *Framework) GetRunningPodsFromProvider() (*corev1.PodList, error) {
 	result := &corev1.PodList{}
 
 	err := f.KubeClient.CoreV1().
@@ -175,6 +175,23 @@ func (f *Framework) GetRunningPods() (*corev1.PodList, error) {
 		Name(f.NodeName).
 		SubResource("proxy").
 		Suffix("runningpods/").
+		Do().
+		Into(result)
+
+	return result, err
+}
+
+// GetRunningPodsFromProvider gets the running pods from the provider of the virtual kubelet
+func (f *Framework) GetRunningPodsFromKubernetes() (*corev1.PodList, error) {
+	result := &corev1.PodList{}
+
+	err := f.KubeClient.CoreV1().
+		RESTClient().
+		Get().
+		Resource("nodes").
+		Name(f.NodeName).
+		SubResource("proxy").
+		Suffix("pods").
 		Do().
 		Into(result)
 
