@@ -34,9 +34,12 @@ type ServeMux interface {
 }
 
 type PodHandlerConfig struct {
-	RunInContainer        ContainerExecHandlerFunc
-	GetContainerLogs      ContainerLogsHandlerFunc
-	GetPods               PodListerFunc
+	RunInContainer   ContainerExecHandlerFunc
+	GetContainerLogs ContainerLogsHandlerFunc
+	// GetPods is meant to enumerate the pods that the provider knows about
+	GetPods PodListerFunc
+	// GetPodsFromKubernetes is meant to enumerate the pods that the node is meant to be running
+	GetPodsFromKubernetes PodListerFunc
 	StreamIdleTimeout     time.Duration
 	StreamCreationTimeout time.Duration
 }
@@ -51,6 +54,7 @@ func PodHandler(p PodHandlerConfig, debug bool) http.Handler {
 		r.HandleFunc("/runningpods/", HandleRunningPods(p.GetPods)).Methods("GET")
 	}
 
+	r.HandleFunc("/pods", HandleRunningPods(p.GetPodsFromKubernetes)).Methods("GET")
 	r.HandleFunc("/containerLogs/{namespace}/{pod}/{container}", HandleContainerLogs(p.GetContainerLogs)).Methods("GET")
 	r.HandleFunc(
 		"/exec/{namespace}/{pod}/{container}",
