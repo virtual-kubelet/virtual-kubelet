@@ -10,6 +10,9 @@
   tag: azure-batch
 - name: Azure Container Instances (**ACI**)
   tag: azure-aci
+- name: Elotl Kip
+  tag: kip
+  org: elotl
 - name: Kubernetes Container Runtime Interface (**CRI**)
   tag: cri
 - name: Huawei Cloud Container Instance (**CCI**)

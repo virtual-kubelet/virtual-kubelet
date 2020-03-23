@@ -21,6 +21,7 @@ The best description is "Kubernetes API on top, programmable back."
     + [Azure Container Instances Provider](#azure-container-instances-provider)
 	+ [Azure Batch GPU Provider](https://github.com/virtual-kubelet/azure-batch/blob/master/README.md)
     + [AWS Fargate Provider](#aws-fargate-provider)
+    + [Elotl Kip](#elotl-kip)
 	+ [HashiCorp Nomad](#hashicorp-nomad-provider)
     + [OpenStack Zun](#openstack-zun-provider)
     + [Adding a New Provider via the Provider Interface](#adding-a-new-provider-via-the-provider-interface)
@@ -115,6 +116,12 @@ security groups, IAM roles, CloudWatch Logs and many other AWS services. Pods on
 co-exist with pods on regular worker nodes in the same Kubernetes cluster.
 
 Easy instructions and a sample configuration file is available in the [AWS Fargate provider documentation](https://github.com/virtual-kubelet/aws-fargate). Please note that this provider is not currently supported. 
+
+### Elotl Kip
+
+[Kip](https://github.com/elotl/kip) is a provider that runs pods in cloud instances, allowing a Kubernetes cluster to transparently scale workloads into a cloud. When a pod is scheduled onto the virtual node, Kip starts a right-sized cloud instance for the pod's workload and dispatches the pod onto the instance. When the pod is finished running, the cloud instance is terminated.
+
+When workloads run on Kip, your cluster size naturally scales with the cluster workload, pods are strongly isolated from each other and the user is freed from managing worker nodes and strategically packing pods onto nodes.
 
 ### HashiCorp Nomad Provider
 
