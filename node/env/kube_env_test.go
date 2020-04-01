@@ -11,7 +11,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	// TODO: remove this import if
 	// api.Registry.GroupOrDie(v1.GroupName).GroupVersions[0].String() is changed
@@ -29,15 +28,7 @@ type InternalEnvVar struct {
 	Value string
 }
 
-type testServiceLister struct {
-	services []*v1.Service
-}
-
-func (ls testServiceLister) List(labels.Selector) ([]*v1.Service, error) {
-	return ls.services, nil
-}
-
-type envs []InternalEnvVar
+type envs []v1.EnvVar
 
 func (e envs) Len() int {
 	return len(e)
@@ -70,17 +61,17 @@ func TestMakeEnvironmentVariables(t *testing.T) {
 	trueValue := true
 	falseValue := false
 	testCases := []struct {
-		name               string           // the name of the test case
-		ns                 string           // the namespace to generate environment for
-		enableServiceLinks *bool            // enabling service links
-		container          *v1.Container    // the container to use
-		masterServiceNs    string           // the namespace to read master service info from
-		nilLister          bool             // whether the lister should be nil
-		configMap          *v1.ConfigMap    // an optional ConfigMap to pull from
-		secret             *v1.Secret       // an optional Secret to pull from
-		expectedEnvs       []InternalEnvVar // a set of expected environment vars
-		expectedError      bool             // does the test fail
-		expectedEvent      string           // does the test emit an event
+		name               string        // the name of the test case
+		ns                 string        // the namespace to generate environment for
+		enableServiceLinks *bool         // enabling service links
+		container          *v1.Container // the container to use
+		masterServiceNs    string        // the namespace to read master service info from
+		nilLister          bool          // whether the lister should be nil
+		configMap          *v1.ConfigMap // an optional ConfigMap to pull from
+		secret             *v1.Secret    // an optional Secret to pull from
+		expectedEnvs       []v1.EnvVar   // a set of expected environment vars
+		expectedError      bool          // does the test fail
+		expectedEvent      string        // does the test emit an event
 	}{
 
 		{
@@ -101,7 +92,7 @@ func TestMakeEnvironmentVariables(t *testing.T) {
 			},
 			masterServiceNs: metav1.NamespaceDefault,
 			nilLister:       false,
-			expectedEnvs: []InternalEnvVar{
+			expectedEnvs: []v1.EnvVar{
 				{Name: "FOO", Value: "BAR"},
 				{Name: "TEST_SERVICE_HOST", Value: "1.2.3.3"},
 				{Name: "TEST_SERVICE_PORT", Value: "8083"},
@@ -137,7 +128,7 @@ func TestMakeEnvironmentVariables(t *testing.T) {
 			},
 			masterServiceNs: metav1.NamespaceDefault,
 			nilLister:       true,
-			expectedEnvs: []InternalEnvVar{
+			expectedEnvs: []v1.EnvVar{
 				{Name: "FOO", Value: "BAR"},
 				{Name: "TEST_SERVICE_HOST", Value: "1.2.3.3"},
 				{Name: "TEST_SERVICE_PORT", Value: "8083"},
@@ -159,7 +150,7 @@ func TestMakeEnvironmentVariables(t *testing.T) {
 			},
 			masterServiceNs: metav1.NamespaceDefault,
 			nilLister:       false,
-			expectedEnvs: []InternalEnvVar{
+			expectedEnvs: []v1.EnvVar{
 				{Name: "FOO", Value: "BAZ"},
 				{Name: "KUBERNETES_SERVICE_HOST", Value: "1.2.3.1"},
 				{Name: "KUBERNETES_SERVICE_PORT", Value: "8081"},
@@ -181,7 +172,7 @@ func TestMakeEnvironmentVariables(t *testing.T) {
 			},
 			masterServiceNs: metav1.NamespaceDefault,
 			nilLister:       false,
-			expectedEnvs: []InternalEnvVar{
+			expectedEnvs: []v1.EnvVar{
 				{Name: "FOO", Value: "BAZ"},
 				{Name: "TEST_SERVICE_HOST", Value: "1.2.3.3"},
 				{Name: "TEST_SERVICE_PORT", Value: "8083"},
@@ -272,7 +263,7 @@ func TestMakeEnvironmentVariables(t *testing.T) {
 			},
 			masterServiceNs: "nothing",
 			nilLister:       true,
-			expectedEnvs: []InternalEnvVar{
+			expectedEnvs: []v1.EnvVar{
 				{Name: "POD_NAME", Value: "dapi-test-pod-name"},
 				{Name: "POD_NAMESPACE", Value: "downward-api"},
 				{Name: "POD_NODE_NAME", Value: "node-name"},
@@ -336,7 +327,7 @@ func TestMakeEnvironmentVariables(t *testing.T) {
 			},
 			masterServiceNs: "nothing",
 			nilLister:       false,
-			expectedEnvs: []InternalEnvVar{
+			expectedEnvs: []v1.EnvVar{
 				{
 					Name:  "TEST_LITERAL",
 					Value: "test-test-test",
@@ -436,7 +427,7 @@ func TestMakeEnvironmentVariables(t *testing.T) {
 			},
 			masterServiceNs: "nothing",
 			nilLister:       false,
-			expectedEnvs: []InternalEnvVar{
+			expectedEnvs: []v1.EnvVar{
 				{
 					Name:  "TEST_LITERAL",
 					Value: "test-test-test",
@@ -529,7 +520,8 @@ func TestMakeEnvironmentVariables(t *testing.T) {
 				},
 			},
 			masterServiceNs: "nothing",
-			expectedEnvs:    []InternalEnvVar{},
+			expectedEnvs:    []v1.EnvVar{},
+			expectedEvent:   "Warning OptionalConfigMapNotFound skipping optional envvar \"POD_NAME\": configmap \"missing-config-map\" not found",
 		},
 		{
 			name:               "configmapkeyref_missing_key_optional",
@@ -560,7 +552,8 @@ func TestMakeEnvironmentVariables(t *testing.T) {
 					"a": "b",
 				},
 			},
-			expectedEnvs: []InternalEnvVar{},
+			expectedEnvs:  []v1.EnvVar{},
+			expectedEvent: "Warning OptionalConfigMapNotFound skipping optional envvar \"POD_NAME\": configmap \"test-config-map\" not found",
 		},
 		{
 			name:               "secretkeyref_missing_optional",
@@ -581,7 +574,8 @@ func TestMakeEnvironmentVariables(t *testing.T) {
 				},
 			},
 			masterServiceNs: "nothing",
-			expectedEnvs:    []InternalEnvVar{},
+			expectedEnvs:    []v1.EnvVar{},
+			expectedEvent:   "Warning OptionalSecretNotFound skipping optional envvar \"POD_NAME\": secret \"missing-secret\" not found",
 		},
 		{
 			name:               "secretkeyref_missing_key_optional",
@@ -612,7 +606,8 @@ func TestMakeEnvironmentVariables(t *testing.T) {
 					"a": []byte("b"),
 				},
 			},
-			expectedEnvs: []InternalEnvVar{},
+			expectedEnvs:  []v1.EnvVar{},
+			expectedEvent: "Warning OptionalSecretNotFound skipping optional envvar \"POD_NAME\": secret \"test-secret\" not found",
 		},
 		{
 			name:               "configmap",
@@ -655,7 +650,7 @@ func TestMakeEnvironmentVariables(t *testing.T) {
 					"DUPE_TEST":  "CONFIG_MAP",
 				},
 			},
-			expectedEnvs: []InternalEnvVar{
+			expectedEnvs: []v1.EnvVar{
 				{
 					Name:  "TEST_LITERAL",
 					Value: "test-test-test",
@@ -723,7 +718,7 @@ func TestMakeEnvironmentVariables(t *testing.T) {
 					"DUPE_TEST":  "CONFIG_MAP",
 				},
 			},
-			expectedEnvs: []InternalEnvVar{
+			expectedEnvs: []v1.EnvVar{
 				{
 					Name:  "TEST_LITERAL",
 					Value: "test-test-test",
@@ -789,6 +784,7 @@ func TestMakeEnvironmentVariables(t *testing.T) {
 			},
 			masterServiceNs: "nothing",
 			expectedError:   true,
+			expectedEvent:   "Warning MandatoryConfigMapNotFound configmap \"test-config-map\" not found",
 		},
 		{
 			name:               "configmap_missing_optional",
@@ -802,9 +798,9 @@ func TestMakeEnvironmentVariables(t *testing.T) {
 				},
 			},
 			masterServiceNs: "nothing",
-			expectedEnvs:    []InternalEnvVar{},
+			expectedEnvs:    []v1.EnvVar{},
+			expectedEvent:   "Warning OptionalConfigMapNotFound configmap \"missing-config-map\" not found",
 		},
-
 		{
 			name:               "configmap_invalid_keys",
 			ns:                 "test1",
@@ -826,13 +822,13 @@ func TestMakeEnvironmentVariables(t *testing.T) {
 					"key":  "value",
 				},
 			},
-			expectedEnvs: []InternalEnvVar{
+			expectedEnvs: []v1.EnvVar{
 				{
 					Name:  "key",
 					Value: "value",
 				},
 			},
-			expectedEvent: "Warning InvalidEnvironmentVariableNames Keys [1234, 1z] from the EnvFrom configMap test/test-config-map were skipped since they are considered invalid environment variable names.",
+			expectedEvent: "Warning InvalidEnvironmentVariableNames Keys [1234, 1z] from the EnvFrom configMap test1/test-config-map were skipped since they are considered invalid environment variable names.",
 		},
 		{
 			name:               "configmap_invalid_keys_valid",
@@ -856,7 +852,7 @@ func TestMakeEnvironmentVariables(t *testing.T) {
 					"1234": "abc",
 				},
 			},
-			expectedEnvs: []InternalEnvVar{
+			expectedEnvs: []v1.EnvVar{
 				{
 					Name:  "p_1234",
 					Value: "abc",
@@ -904,7 +900,7 @@ func TestMakeEnvironmentVariables(t *testing.T) {
 					"DUPE_TEST":  []byte("SECRET"),
 				},
 			},
-			expectedEnvs: []InternalEnvVar{
+			expectedEnvs: []v1.EnvVar{
 				{
 					Name:  "TEST_LITERAL",
 					Value: "test-test-test",
@@ -972,7 +968,7 @@ func TestMakeEnvironmentVariables(t *testing.T) {
 					"DUPE_TEST":  []byte("SECRET"),
 				},
 			},
-			expectedEnvs: []InternalEnvVar{
+			expectedEnvs: []v1.EnvVar{
 				{
 					Name:  "TEST_LITERAL",
 					Value: "test-test-test",
@@ -1038,6 +1034,7 @@ func TestMakeEnvironmentVariables(t *testing.T) {
 			},
 			masterServiceNs: "nothing",
 			expectedError:   true,
+			expectedEvent:   "Warning MandatorySecretNotFound secret \"test-secret\" not found",
 		},
 		{
 			name:               "secret_missing_optional",
@@ -1051,7 +1048,8 @@ func TestMakeEnvironmentVariables(t *testing.T) {
 				},
 			},
 			masterServiceNs: "nothing",
-			expectedEnvs:    []InternalEnvVar{},
+			expectedEnvs:    []v1.EnvVar{},
+			expectedEvent:   "Warning OptionalSecretNotFound secret \"missing-secret\" not found",
 		},
 		{
 			name:               "secret_invalid_keys",
@@ -1074,13 +1072,13 @@ func TestMakeEnvironmentVariables(t *testing.T) {
 					"key.1": []byte("value"),
 				},
 			},
-			expectedEnvs: []InternalEnvVar{
+			expectedEnvs: []v1.EnvVar{
 				{
 					Name:  "key.1",
 					Value: "value",
 				},
 			},
-			expectedEvent: "Warning InvalidEnvironmentVariableNames Keys [1234, 1z] from the EnvFrom secret test/test-secret were skipped since they are considered invalid environment variable names.",
+			expectedEvent: "Warning InvalidEnvironmentVariableNames Keys [1234, 1z] from the EnvFrom secret test1/test-secret were skipped since they are considered invalid environment variable names.",
 		},
 		{
 			name:               "secret_invalid_keys_valid",
@@ -1104,7 +1102,7 @@ func TestMakeEnvironmentVariables(t *testing.T) {
 					"1234.name": []byte("abc"),
 				},
 			},
-			expectedEnvs: []InternalEnvVar{
+			expectedEnvs: []v1.EnvVar{
 				{
 					Name:  "p_1234.name",
 					Value: "abc",
@@ -1134,6 +1132,7 @@ func TestMakeEnvironmentVariables(t *testing.T) {
 				},
 			},
 			expectedError: true,
+			expectedEvent: "Warning MandatorySecretNotFound secret \"test-secret\" not found",
 		},
 	}
 
@@ -1175,30 +1174,21 @@ func TestMakeEnvironmentVariables(t *testing.T) {
 		// podIPs := []string{"1.2.3.4,fd00::6"}
 
 		err := populateEnvironmentVariables(context.Background(), testPod, rm, er)
-		resultEnvVars := make([]InternalEnvVar, len(testPod.Spec.Containers[0].Env))
-		for i, ev := range testPod.Spec.Containers[0].Env {
-			resultEnvVars[i] = InternalEnvVar{
-				Name:  ev.Name,
-				Value: ev.Value,
-			}
-		}
-		// assert.NilError(t, err)
-		//result, err := kl.makeEnvironmentVariables(testPod, tc.container, podIP, podIPs)
 
-		// select {
-		// case e := <-fakeRecorder.Events:
-		// 	assert.Equal(t, tc.expectedEvent, e)
-		// default:
-		// 	assert.Equal(t, "", tc.expectedEvent)
-		// }
+		select {
+		case e := <-er.Events:
+			assert.Equal(t, tc.expectedEvent, e, tc.name)
+		default:
+			assert.Equal(t, "", tc.expectedEvent)
+		}
 		if tc.expectedError {
 			assert.Assert(t, err != nil, tc.name)
 		} else {
 			assert.NilError(t, err, "[%s]", tc.name)
 
-			sort.Sort(envs(resultEnvVars))
+			sort.Sort(envs(testPod.Spec.Containers[0].Env))
 			sort.Sort(envs(tc.expectedEnvs))
-			assert.Check(t, is.DeepEqual(tc.expectedEnvs, resultEnvVars), "[%s] env entries", tc.name)
+			assert.Check(t, is.DeepEqual(tc.expectedEnvs, testPod.Spec.Containers[0].Env), "[%s] env entries", tc.name)
 		}
 	}
 }
