@@ -17,17 +17,6 @@ import (
 	// to "v1"?
 )
 
-const (
-	testKubeletHostIP = "127.0.0.1"
-)
-
-//type InternalEnvVar = v1.EnvVar
-
-type InternalEnvVar struct {
-	Name  string
-	Value string
-}
-
 type envs []v1.EnvVar
 
 func (e envs) Len() int {
@@ -73,7 +62,6 @@ func TestMakeEnvironmentVariables(t *testing.T) {
 		expectedError      bool          // does the test fail
 		expectedEvent      string        // does the test emit an event
 	}{
-
 		{
 			name:               "api server = Y, kubelet = Y",
 			ns:                 "test1",
@@ -268,9 +256,6 @@ func TestMakeEnvironmentVariables(t *testing.T) {
 				{Name: "POD_NAMESPACE", Value: "downward-api"},
 				{Name: "POD_NODE_NAME", Value: "node-name"},
 				{Name: "POD_SERVICE_ACCOUNT_NAME", Value: "special"},
-				// {Name: "POD_IP", Value: "1.2.3.4"},
-				// {Name: "POD_IPS", Value: "1.2.3.4,fd00::6"},
-				// {Name: "HOST_IP", Value: testKubeletHostIP},
 			},
 		},
 		{
@@ -1170,10 +1155,8 @@ func TestMakeEnvironmentVariables(t *testing.T) {
 				},
 			},
 		}
-		// podIP := "1.2.3.4"
-		// podIPs := []string{"1.2.3.4,fd00::6"}
 
-		err := populateEnvironmentVariables(context.Background(), testPod, rm, er)
+		err := PopulateEnvironmentVariables(context.Background(), testPod, rm, er)
 
 		select {
 		case e := <-er.Events:

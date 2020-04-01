@@ -17,10 +17,11 @@ package node
 import (
 	"context"
 
+	"github.com/elotl/virtual-kubelet/log"
+	"github.com/elotl/virtual-kubelet/node/env"
+	"github.com/elotl/virtual-kubelet/trace"
 	"github.com/google/go-cmp/cmp"
 	pkgerrors "github.com/pkg/errors"
-	"github.com/elotl/virtual-kubelet/log"
-	"github.com/elotl/virtual-kubelet/trace"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -61,7 +62,7 @@ func (pc *PodController) createOrUpdatePod(ctx context.Context, pod *corev1.Pod)
 
 	// We do this so we don't mutate the pod from the informer cache
 	pod = pod.DeepCopy()
-	if err := populateEnvironmentVariables(ctx, pod, pc.resourceManager, pc.recorder); err != nil {
+	if err := env.PopulateEnvironmentVariables(ctx, pod, pc.resourceManager, pc.recorder); err != nil {
 		span.SetStatus(err)
 		return err
 	}

@@ -52,7 +52,22 @@ const (
 
 var masterServices = sets.NewString("kubernetes")
 
-func populateEnvironmentVariables(ctx context.Context, pod *corev1.Pod, rm *manager.ResourceManager, recorder record.EventRecorder) error {
+// Run through all containers in a pod and call f to modify each container
+func forEachContainer(pod *corev1.Pod, f func(container *corev1.Container)) {
+	for i := range pod.Spec.InitContainers {
+		f(&pod.Spec.InitContainers[i])
+	}
+	for i := range pod.Spec.Containers {
+		f(&pod.Spec.Containers[i])
+	}
+}
+
+// PopulateEnvironmentVariables populates the environment of each
+// container (and init container) in the specified pod. While distinct
+// steps have been broken out and the order of operations is different
+// from the kubelet, the resulting environment variables should
+// remain the same.
+func PopulateEnvironmentVariables(ctx context.Context, pod *corev1.Pod, rm *manager.ResourceManager, recorder record.EventRecorder) error {
 	err := ResolveConfigMapRefs(ctx, pod, rm, recorder)
 	if err != nil {
 		return err
@@ -61,6 +76,7 @@ func populateEnvironmentVariables(ctx context.Context, pod *corev1.Pod, rm *mana
 	if err != nil {
 		return err
 	}
+	RemoveEnvFromVars(pod)
 	err = InsertServiceEnvVars(ctx, pod, rm)
 	if err != nil {
 		return err
@@ -69,12 +85,18 @@ func populateEnvironmentVariables(ctx context.Context, pod *corev1.Pod, rm *mana
 	if err != nil {
 		return err
 	}
+	// Remove unresolved vars before resolving expansions or else
+	// expansions that reference an unresolved variable will expand to
+	// empty string ("") instead of remaining unexpanded.
+	RemoveUnresolvedEnvVars(pod)
 	ResolveEnvVarExpansions(pod)
-	Uniqify(pod)
-	RemoveUnresolvedVars(pod)
+	UniqifyEnvVars(pod)
 	return nil
 }
 
+// Resolves all EnvFrom and Env ConfigMap environment variable
+// reference in the pod. Any optional references that don't have a
+// valid configmap will be left unresolved in the environment.
 func ResolveConfigMapRefs(ctx context.Context, pod *corev1.Pod, rm *manager.ResourceManager, recorder record.EventRecorder) error {
 	configMaps := make(map[string]*corev1.ConfigMap)
 
@@ -92,6 +114,8 @@ func ResolveConfigMapRefs(ctx context.Context, pod *corev1.Pod, rm *manager.Reso
 	return nil
 }
 
+// Resolves EnvFrom and Env ConfigMap environment variable references
+// in a container.
 func resolveContainerConfigMapRefs(ctx context.Context, pod *corev1.Pod, container *corev1.Container, rm *manager.ResourceManager, recorder record.EventRecorder, configMaps map[string]*v1.ConfigMap) error {
 	envFromVals := make([]corev1.EnvVar, 0)
 	for i := range container.EnvFrom {
@@ -184,6 +208,9 @@ func resolveContainerConfigMapRefs(ctx context.Context, pod *corev1.Pod, contain
 	return nil
 }
 
+// Resolves all EnvFrom and Env Secret environment variable
+// reference in the pod. Any optional references that don't have a
+// valid secret will be left unresolved in the environment.
 func ResolveSecretRefs(ctx context.Context, pod *corev1.Pod, rm *manager.ResourceManager, recorder record.EventRecorder) error {
 	secrets := make(map[string]*corev1.Secret)
 
@@ -200,6 +227,8 @@ func ResolveSecretRefs(ctx context.Context, pod *corev1.Pod, rm *manager.Resourc
 	return nil
 }
 
+// Resolves EnvFrom and Env Secret environment variable references
+// in a container.
 func resolveContainerSecretRefs(ctx context.Context, pod *corev1.Pod, container *corev1.Container, rm *manager.ResourceManager, recorder record.EventRecorder, secrets map[string]*v1.Secret) error {
 	envFromVals := make([]corev1.EnvVar, 0)
 	for i := range container.EnvFrom {
@@ -292,6 +321,18 @@ func resolveContainerSecretRefs(ctx context.Context, pod *corev1.Pod, container 
 	return nil
 }
 
+// Replaces each container's EnvVarFrom with an empty slice
+func RemoveEnvFromVars(pod *corev1.Pod) {
+	forEachContainer(pod, func(c *corev1.Container) {
+		c.EnvFrom = []corev1.EnvFromSource{}
+	})
+}
+
+// Inserts service env vars into all containers in a pod. Service env
+// vars are inserted into the front of the env var list to match
+// kubelet behavior.  They are available for resolving all env var
+// expansions but should be overwritten by identically named env vars
+// present in the container's env (see Uniqify).
 func InsertServiceEnvVars(ctx context.Context, pod *corev1.Pod, rm *manager.ResourceManager) error {
 	// TODO If pod.Spec.EnableServiceLinks is nil then fail as per 1.14 kubelet.
 	enableServiceLinks := corev1.DefaultEnableServiceLinks
@@ -299,7 +340,7 @@ func InsertServiceEnvVars(ctx context.Context, pod *corev1.Pod, rm *manager.Reso
 		enableServiceLinks = *pod.Spec.EnableServiceLinks
 	}
 
-	svcEnv, err := getServiceEnvVarSlice(rm, pod.Namespace, enableServiceLinks)
+	svcEnv, err := GetServiceEnvVarSlice(rm, pod.Namespace, enableServiceLinks)
 	if err != nil {
 		return err
 	}
@@ -317,10 +358,10 @@ func InsertServiceEnvVars(ctx context.Context, pod *corev1.Pod, rm *manager.Reso
 	return nil
 }
 
-// getServiceEnvVarMap makes a map[string]string of env vars for services a
-// pod in namespace ns should see.
-// Based on getServiceEnvVarMap in kubelet_pods.go.
-func getServiceEnvVarSlice(rm *manager.ResourceManager, ns string, enableServiceLinks bool) ([]corev1.EnvVar, error) {
+// GetServiceEnvVarMap makes a slice of corev1.EnvVar for services a
+// pod in namespace ns should see.  Based on getServiceEnvVarMap in
+// kubelet_pods.go.
+func GetServiceEnvVarSlice(rm *manager.ResourceManager, ns string, enableServiceLinks bool) ([]corev1.EnvVar, error) {
 	var (
 		serviceMap = make(map[string]*corev1.Service)
 	)
@@ -361,6 +402,7 @@ func getServiceEnvVarSlice(rm *manager.ResourceManager, ns string, enableService
 
 }
 
+// Resolves the runtime value of all field selectors in a pod's envs.
 func ResolveFieldRefs(pod *corev1.Pod) error {
 	for i := range pod.Spec.InitContainers {
 		err := resolveContainerFieldRefs(pod, &pod.Spec.InitContainers[i])
@@ -378,6 +420,7 @@ func ResolveFieldRefs(pod *corev1.Pod) error {
 	return nil
 }
 
+// Resolves the runtime value of all field selectors in a pod's envs.
 func resolveContainerFieldRefs(pod *corev1.Pod, container *corev1.Container) error {
 	for i := range container.Env {
 		if container.Env[i].ValueFrom != nil && container.Env[i].ValueFrom.FieldRef != nil {
@@ -393,7 +436,8 @@ func resolveContainerFieldRefs(pod *corev1.Pod, container *corev1.Container) err
 }
 
 // podFieldSelectorRuntimeValue returns the runtime value of the given
-// selector for a pod.
+// selector for a pod.  Will throw an error if asked to resolve
+// status.hostIP, status.podIP, status.podIPs
 func podFieldSelectorRuntimeValue(fs *corev1.ObjectFieldSelector, pod *corev1.Pod) (string, error) {
 	internalFieldPath, _, err := podshelper.ConvertDownwardAPIFieldLabel(fs.APIVersion, fs.FieldPath, "")
 	if err != nil {
@@ -409,19 +453,16 @@ func podFieldSelectorRuntimeValue(fs *corev1.ObjectFieldSelector, pod *corev1.Po
 	return fieldpath.ExtractFieldPathAsString(pod, internalFieldPath)
 }
 
-func ResolveResourceRefs(pod *corev1.Pod, node *corev1.Node) error {
-	return nil
-}
-
+// expand a pod's `$(var)` references to other variables in each env
+// var's Value field the sources of variables are the preious declared
+// variables of the container and the service environment variables
 func ResolveEnvVarExpansions(pod *corev1.Pod) {
-	for i := range pod.Spec.InitContainers {
-		resolveContainerEnvVarExpansions(&pod.Spec.InitContainers[i])
-	}
-	for i := range pod.Spec.Containers {
-		resolveContainerEnvVarExpansions(&pod.Spec.Containers[i])
-	}
+	forEachContainer(pod, resolveContainerEnvVarExpansions)
 }
 
+// expand a container's `$(var)` references to other variables in each env
+// var's Value field the sources of variables are the preious declared
+// variables of the container and the service environment variables
 func resolveContainerEnvVarExpansions(container *corev1.Container) {
 	res := make(map[string]string)
 	mappingFunc := expansion.MappingFuncFor(res)
@@ -431,16 +472,15 @@ func resolveContainerEnvVarExpansions(container *corev1.Container) {
 	}
 }
 
-func Uniqify(pod *corev1.Pod) {
-	for i := range pod.Spec.InitContainers {
-		uniqifyContainer(&pod.Spec.InitContainers[i])
-	}
-	for i := range pod.Spec.Containers {
-		uniqifyContainer(&pod.Spec.Containers[i])
-	}
+// For each pod container, ensure the environment variables are unique
+// by only keeping the latest definition of an environment variable.
+func UniqifyEnvVars(pod *corev1.Pod) {
+	forEachContainer(pod, uniqifyContainerEnvVars)
 }
 
-func uniqifyContainer(container *corev1.Container) {
+// nsure the environment variables in a container are unique by only
+// keeping the latest definition of an environment variable.
+func uniqifyContainerEnvVars(container *corev1.Container) {
 	seenVars := sets.NewString()
 	keepVars := make([]corev1.EnvVar, 0, len(container.Env))
 	for i := len(container.Env) - 1; i >= 0; i-- {
@@ -452,16 +492,15 @@ func uniqifyContainer(container *corev1.Container) {
 	container.Env = keepVars
 }
 
-func RemoveUnresolvedVars(pod *corev1.Pod) {
-	for i := range pod.Spec.InitContainers {
-		removeContainerUnresolvedVars(&pod.Spec.InitContainers[i])
-	}
-	for i := range pod.Spec.Containers {
-		removeContainerUnresolvedVars(&pod.Spec.Containers[i])
-	}
+//Remove any unresolved (Value is empty, ValueFrom is not nil) from
+//each container in a pod.
+func RemoveUnresolvedEnvVars(pod *corev1.Pod) {
+	forEachContainer(pod, removeContainerUnresolvedEnvVars)
 }
 
-func removeContainerUnresolvedVars(container *corev1.Container) {
+//Remove any unresolved (Value is empty, ValueFrom is not nil) env vars from
+//the container.
+func removeContainerUnresolvedEnvVars(container *corev1.Container) {
 	keepVars := make([]corev1.EnvVar, 0, len(container.Env))
 	for i := range container.Env {
 		if container.Env[i].Value == "" && container.Env[i].ValueFrom != nil {
