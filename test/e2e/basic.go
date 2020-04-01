@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/virtual-kubelet/virtual-kubelet/node"
+	"github.com/elotl/virtual-kubelet/node"
 	"gotest.tools/assert"
 	v1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"

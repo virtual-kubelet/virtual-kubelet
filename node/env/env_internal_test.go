@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package node
+package env
 
 import (
 	"context"
@@ -570,7 +570,7 @@ func TestEnvFromTwoConfigMapsAndOneSecret(t *testing.T) {
 	}
 
 	// Populate the container's environment.
-	err := populateContainerEnvironment(context.Background(), pod, &pod.Spec.Containers[0], rm, er)
+	err := populateEnvironmentVariables(context.Background(), pod, rm, er)
 	assert.Check(t, err)
 
 	// Make sure that the container's environment contains all the expected keys and values.

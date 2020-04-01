@@ -4,8 +4,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/virtual-kubelet/virtual-kubelet/internal/test/e2e/framework"
-	"github.com/virtual-kubelet/virtual-kubelet/internal/test/suite"
+	"github.com/elotl/virtual-kubelet/internal/test/e2e/framework"
+	"github.com/elotl/virtual-kubelet/internal/test/suite"
 )
 
 const defaultWatchTimeout = 2 * time.Minute
