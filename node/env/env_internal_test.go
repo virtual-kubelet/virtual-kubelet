@@ -23,6 +23,8 @@ import (
 	"gotest.tools/assert"
 	is "gotest.tools/assert/cmp"
 	corev1 "k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	testutil "github.com/elotl/virtual-kubelet/internal/test/util"
@@ -1164,4 +1166,161 @@ func TestRemoveUnresolvedVars(t *testing.T) {
 			Value: envVarValue2,
 		},
 	}))
+}
+
+func TestResourceFieldRefs(t *testing.T) {
+	cpuReq := "1"
+	memReq := "1000000000"
+	containerRequests := corev1.ResourceList{
+		v1.ResourceCPU:    resource.MustParse(cpuReq),
+		v1.ResourceMemory: resource.MustParse(memReq),
+	}
+	cpuLimit := "2"
+	memLimit := "2000000000"
+	containerLimits := corev1.ResourceList{
+		v1.ResourceCPU:    resource.MustParse(cpuLimit),
+		v1.ResourceMemory: resource.MustParse(memLimit),
+	}
+	nodeCPU := "5"
+	nodeRAM := "5000000000"
+	nodeStorage := "50000000000"
+	nodeAllocatable := v1.ResourceList{
+		v1.ResourceCPU:              resource.MustParse(nodeCPU),
+		v1.ResourceMemory:           resource.MustParse(nodeRAM),
+		v1.ResourceEphemeralStorage: resource.MustParse(nodeStorage),
+	}
+	containerName := "main-container"
+
+	testCases := []struct {
+		name            string
+		initEnv         []corev1.EnvVar
+		env             []corev1.EnvVar
+		expectedInitEnv []corev1.EnvVar
+		expectedEnv     []corev1.EnvVar
+	}{
+		{
+			name: "initcontainer references its own resources",
+			initEnv: []corev1.EnvVar{
+				{
+					Name: envVarName1,
+					ValueFrom: &corev1.EnvVarSource{
+						ResourceFieldRef: &corev1.ResourceFieldSelector{
+							Resource: "requests.cpu",
+						},
+					},
+				},
+			},
+			expectedInitEnv: []corev1.EnvVar{
+				{
+					Name:  envVarName1,
+					Value: cpuReq,
+				},
+			},
+		},
+		{
+			name: "initcontainer limits falls back to nodeAllocatable",
+			initEnv: []corev1.EnvVar{
+				{
+					Name: envVarName1,
+					ValueFrom: &corev1.EnvVarSource{
+						ResourceFieldRef: &corev1.ResourceFieldSelector{
+							Resource: "limits.cpu",
+						},
+					},
+				},
+			},
+			expectedInitEnv: []corev1.EnvVar{
+				{
+					Name:  envVarName1,
+					Value: nodeCPU,
+				},
+			},
+		},
+		{
+			name: "initcontainer references container resources by name",
+			initEnv: []corev1.EnvVar{
+				{
+					Name: envVarName1,
+					ValueFrom: &corev1.EnvVarSource{
+						ResourceFieldRef: &corev1.ResourceFieldSelector{
+							ContainerName: containerName,
+							Resource:      "limits.cpu",
+						},
+					},
+				},
+			},
+			expectedInitEnv: []corev1.EnvVar{
+				{
+					Name:  envVarName1,
+					Value: cpuLimit,
+				},
+			},
+		},
+		{
+			name: "container references its own resource",
+			env: []corev1.EnvVar{
+				{
+					Name: envVarName1,
+					ValueFrom: &corev1.EnvVarSource{
+						ResourceFieldRef: &corev1.ResourceFieldSelector{
+							Resource: "limits.memory",
+						},
+					},
+				},
+			},
+			expectedEnv: []corev1.EnvVar{
+				{
+					Name:  envVarName1,
+					Value: memLimit,
+				},
+			},
+		},
+		{
+			name: "container limits falls back to nodeAllocatable",
+			env: []corev1.EnvVar{
+				{
+					Name: envVarName1,
+					ValueFrom: &corev1.EnvVarSource{
+						ResourceFieldRef: &corev1.ResourceFieldSelector{
+							Resource: "limits.ephemeral-storage",
+						},
+					},
+				},
+			},
+			expectedEnv: []corev1.EnvVar{
+				{
+					Name:  envVarName1,
+					Value: nodeStorage,
+				},
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		pod := &corev1.Pod{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: namespace,
+				Name:      "test-pod-name",
+			},
+			Spec: corev1.PodSpec{
+				InitContainers: []corev1.Container{{
+					Resources: v1.ResourceRequirements{
+						Requests: containerRequests,
+					},
+					Env: tc.initEnv,
+				}},
+				Containers: []corev1.Container{{
+					Name: containerName,
+					Resources: v1.ResourceRequirements{
+						Limits: containerLimits,
+					},
+					Env: tc.env,
+				}},
+			},
+		}
+		err := ResolveResourceFieldRefs(pod, nodeAllocatable)
+		assert.NilError(t, err)
+		assert.Check(t, is.DeepEqual(tc.expectedInitEnv, pod.Spec.InitContainers[0].Env))
+		assert.Check(t, is.DeepEqual(tc.expectedEnv, pod.Spec.Containers[0].Env))
+	}
 }

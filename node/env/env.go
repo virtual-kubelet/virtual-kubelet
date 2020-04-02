@@ -14,6 +14,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 	apivalidation "k8s.io/apimachinery/pkg/util/validation"
 	"k8s.io/client-go/tools/record"
+	"k8s.io/kubernetes/pkg/api/v1/resource"
 	podshelper "k8s.io/kubernetes/pkg/apis/core/pods"
 	v1helper "k8s.io/kubernetes/pkg/apis/core/v1/helper"
 	"k8s.io/kubernetes/pkg/fieldpath"
@@ -60,6 +61,24 @@ func forEachContainer(pod *corev1.Pod, f func(container *corev1.Container)) {
 	for i := range pod.Spec.Containers {
 		f(&pod.Spec.Containers[i])
 	}
+}
+
+// Run through all containers in a pod and call f to modify each
+// container stop iterating if f returns an error
+func forEachContainerWithError(pod *corev1.Pod, f func(container *corev1.Container) error) error {
+	for i := range pod.Spec.InitContainers {
+		err := f(&pod.Spec.InitContainers[i])
+		if err != nil {
+			return err
+		}
+	}
+	for i := range pod.Spec.Containers {
+		err := f(&pod.Spec.Containers[i])
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // PopulateEnvironmentVariables populates the environment of each
@@ -404,20 +423,10 @@ func GetServiceEnvVarSlice(rm *manager.ResourceManager, ns string, enableService
 
 // Resolves the runtime value of all field selectors in a pod's envs.
 func ResolveFieldRefs(pod *corev1.Pod) error {
-	for i := range pod.Spec.InitContainers {
-		err := resolveContainerFieldRefs(pod, &pod.Spec.InitContainers[i])
-		if err != nil {
-			return err
-		}
-	}
-	for i := range pod.Spec.Containers {
-		err := resolveContainerFieldRefs(pod, &pod.Spec.Containers[i])
-		if err != nil {
-			return err
-		}
-
-	}
-	return nil
+	err := forEachContainerWithError(pod, func(container *corev1.Container) error {
+		return resolveContainerFieldRefs(pod, container)
+	})
+	return err
 }
 
 // Resolves the runtime value of all field selectors in a pod's envs.
@@ -451,6 +460,74 @@ func podFieldSelectorRuntimeValue(fs *corev1.ObjectFieldSelector, pod *corev1.Po
 
 	}
 	return fieldpath.ExtractFieldPathAsString(pod, internalFieldPath)
+}
+
+// Resolve ValueFrom.ResourceFieldRef values using either the
+// container's resource limits or falls back to nodeAllocatable, the
+// node's resource limits.  For virtual kubelet, it's suggested that
+// nodeAllocatable contain the resource limits of the compute system
+// responsible for running the pod, not the resources of the virtual
+// kubelet.
+func ResolveResourceFieldRefs(pod *corev1.Pod, nodeAllocatable corev1.ResourceList) error {
+	// Most containers don't use resource field refs, speed up the
+	// common case by checking for those refs before computing
+	// resources for a container
+	hasResourceFieldRefEnvVars := func(container *corev1.Container) bool {
+		for i := range container.Env {
+			if container.Env[i].ValueFrom != nil &&
+				container.Env[i].ValueFrom.ResourceFieldRef != nil {
+				return true
+			}
+		}
+		return false
+	}
+
+	defaultedPod := defaultPodLimitsForDownwardAPI(pod, nodeAllocatable)
+	err := forEachContainerWithError(pod, func(container *corev1.Container) error {
+		if !hasResourceFieldRefEnvVars(container) {
+			return nil
+		}
+		defaultedContainer := defaultContainerLimitsForDownwardAPI(container, nodeAllocatable)
+		for i := range container.Env {
+			if container.Env[i].ValueFrom != nil &&
+				container.Env[i].ValueFrom.ResourceFieldRef != nil {
+				runtimeVal, err := resolveContainerResourceRuntimeValue(container.Env[i].ValueFrom.ResourceFieldRef, defaultedPod, defaultedContainer)
+				if err != nil {
+					return err
+				}
+				container.Env[i].ValueFrom = nil
+				container.Env[i].Value = runtimeVal
+			}
+		}
+		return nil
+	})
+	return err
+}
+
+func defaultPodLimitsForDownwardAPI(pod *corev1.Pod, nodeAllocatable corev1.ResourceList) *corev1.Pod {
+	outputPod := pod.DeepCopy()
+	for idx := range outputPod.Spec.Containers {
+		resource.MergeContainerResourceLimits(&outputPod.Spec.Containers[idx], nodeAllocatable)
+	}
+	return outputPod
+}
+
+func defaultContainerLimitsForDownwardAPI(container *corev1.Container, nodeAllocatable corev1.ResourceList) *corev1.Container {
+	var outputContainer *v1.Container
+	if container != nil {
+		outputContainer = container.DeepCopy()
+		resource.MergeContainerResourceLimits(outputContainer, nodeAllocatable)
+	}
+	return outputContainer
+}
+
+// containerResourceRuntimeValue returns the value of the provided container resource
+func resolveContainerResourceRuntimeValue(fs *v1.ResourceFieldSelector, pod *v1.Pod, container *v1.Container) (string, error) {
+	containerName := fs.ContainerName
+	if len(containerName) == 0 {
+		return resource.ExtractContainerResourceValue(fs, container)
+	}
+	return resource.ExtractResourceValueByContainerName(fs, pod, containerName)
 }
 
 // expand a pod's `$(var)` references to other variables in each env
