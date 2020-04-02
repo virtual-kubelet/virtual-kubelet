@@ -17,7 +17,7 @@ package root
 import (
 	"testing"
 
-	"github.com/elotl/virtual-kubelet/errdefs"
+	"github.com/virtual-kubelet/virtual-kubelet/errdefs"
 	"go.opencensus.io/trace"
 )
 

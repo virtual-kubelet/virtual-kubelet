@@ -18,8 +18,8 @@ import (
 	"context"
 
 	pkgerrors "github.com/pkg/errors"
-	"github.com/elotl/virtual-kubelet/log"
-	"github.com/elotl/virtual-kubelet/trace"
+	"github.com/virtual-kubelet/virtual-kubelet/log"
+	"github.com/virtual-kubelet/virtual-kubelet/trace"
 	"k8s.io/client-go/util/workqueue"
 )
 

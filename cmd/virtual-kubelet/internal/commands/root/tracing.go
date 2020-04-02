@@ -23,8 +23,8 @@ import (
 	"strings"
 
 	"github.com/pkg/errors"
-	"github.com/elotl/virtual-kubelet/errdefs"
-	"github.com/elotl/virtual-kubelet/log"
+	"github.com/virtual-kubelet/virtual-kubelet/errdefs"
+	"github.com/virtual-kubelet/virtual-kubelet/log"
 	octrace "go.opencensus.io/trace"
 	"go.opencensus.io/zpages"
 )

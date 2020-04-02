@@ -19,7 +19,7 @@ package logrus
 
 import (
 	"github.com/sirupsen/logrus"
-	"github.com/elotl/virtual-kubelet/log"
+	"github.com/virtual-kubelet/virtual-kubelet/log"
 )
 
 // Adapter implements the `log.Logger` interface for logrus

@@ -6,7 +6,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/elotl/virtual-kubelet/internal/manager"
+	"github.com/virtual-kubelet/virtual-kubelet/internal/manager"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"

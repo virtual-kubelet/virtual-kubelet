@@ -5,7 +5,7 @@ import (
 	"sort"
 	"testing"
 
-	testutil "github.com/elotl/virtual-kubelet/internal/test/util"
+	testutil "github.com/virtual-kubelet/virtual-kubelet/internal/test/util"
 	"gotest.tools/assert"
 	is "gotest.tools/assert/cmp"
 	corev1 "k8s.io/api/core/v1"

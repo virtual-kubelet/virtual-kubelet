@@ -19,7 +19,7 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	corev1listers "k8s.io/client-go/listers/core/v1"
 
-	"github.com/elotl/virtual-kubelet/log"
+	"github.com/virtual-kubelet/virtual-kubelet/log"
 )
 
 // ResourceManager acts as a passthrough to a cache (lister) for pods assigned to the current node.

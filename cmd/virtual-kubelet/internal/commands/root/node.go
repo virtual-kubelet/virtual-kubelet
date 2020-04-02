@@ -18,8 +18,8 @@ import (
 	"context"
 	"strings"
 
-	"github.com/elotl/virtual-kubelet/cmd/virtual-kubelet/internal/provider"
-	"github.com/elotl/virtual-kubelet/errdefs"
+	"github.com/virtual-kubelet/virtual-kubelet/cmd/virtual-kubelet/internal/provider"
+	"github.com/virtual-kubelet/virtual-kubelet/errdefs"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"

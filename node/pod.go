@@ -17,9 +17,9 @@ package node
 import (
 	"context"
 
-	"github.com/elotl/virtual-kubelet/log"
-	"github.com/elotl/virtual-kubelet/node/env"
-	"github.com/elotl/virtual-kubelet/trace"
+	"github.com/virtual-kubelet/virtual-kubelet/log"
+	"github.com/virtual-kubelet/virtual-kubelet/node/env"
+	"github.com/virtual-kubelet/virtual-kubelet/trace"
 	"github.com/google/go-cmp/cmp"
 	pkgerrors "github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"

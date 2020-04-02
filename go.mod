@@ -1,4 +1,4 @@
-module github.com/elotl/virtual-kubelet
+module github.com/virtual-kubelet/virtual-kubelet
 
 go 1.12
 

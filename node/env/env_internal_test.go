@@ -27,7 +27,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	testutil "github.com/elotl/virtual-kubelet/internal/test/util"
+	testutil "github.com/virtual-kubelet/virtual-kubelet/internal/test/util"
 )
 
 const (
