@@ -1138,7 +1138,7 @@ func TestMakeEnvironmentVariables(t *testing.T) {
 		if tc.secret != nil {
 			objs = append(objs, tc.secret)
 		}
-		rm := testutil.FakeResourceManager(objs...)
+		rc := makeFakeResolverConfig(objs...)
 		er := testutil.FakeEventRecorder(defaultEventRecorderBufferSize)
 
 		testPod := &v1.Pod{
@@ -1156,7 +1156,7 @@ func TestMakeEnvironmentVariables(t *testing.T) {
 			},
 		}
 
-		err := PopulateEnvironmentVariables(context.Background(), testPod, rm, er)
+		err := PopulateEnvironmentVariables(context.Background(), testPod, er, rc)
 
 		select {
 		case e := <-er.Events:

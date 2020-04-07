@@ -24,7 +24,6 @@ import (
 	"github.com/google/go-cmp/cmp"
 	pkgerrors "github.com/pkg/errors"
 	"github.com/virtual-kubelet/virtual-kubelet/errdefs"
-	"github.com/virtual-kubelet/virtual-kubelet/internal/manager"
 	"github.com/virtual-kubelet/virtual-kubelet/log"
 	"github.com/virtual-kubelet/virtual-kubelet/node/env"
 	"github.com/virtual-kubelet/virtual-kubelet/trace"
@@ -102,8 +101,6 @@ type PodController struct {
 
 	client corev1client.PodsGetter
 
-	resourceManager *manager.ResourceManager
-
 	k8sQ workqueue.RateLimitingInterface
 
 	// deletionQ is a queue on which pods are reconciled, and we check if pods are in API server after grace period
@@ -129,8 +126,11 @@ type PodController struct {
 	// this can be non-trivial for callers.
 	err error
 
-	// Function that gets called to resolve environment variable references in the pod.
-	envResolver func(ctx context.Context, pod *corev1.Pod, rm *manager.ResourceManager, recorder record.EventRecorder) error
+	// Function that gets called to resolve environment variable references in
+	// the pod.  Defaults to env.PopulateEnvironmentVariables
+	envResolver func(ctx context.Context, pod *corev1.Pod, recorder record.EventRecorder, config env.ResolverConfig) error
+
+	envResolverConfig env.ResolverConfig
 }
 
 type knownPod struct {
@@ -163,7 +163,7 @@ type PodControllerConfig struct {
 	SecretInformer    corev1informers.SecretInformer
 	ServiceInformer   corev1informers.ServiceInformer
 
-	EnvResolver func(ctx context.Context, pod *corev1.Pod, rm *manager.ResourceManager, recorder record.EventRecorder) error
+	EnvResolver func(ctx context.Context, pod *corev1.Pod, recorder record.EventRecorder, config env.ResolverConfig) error
 }
 
 // NewPodController creates a new pod controller with the provided config.
@@ -193,23 +193,24 @@ func NewPodController(cfg PodControllerConfig) (*PodController, error) {
 		cfg.EnvResolver = env.PopulateEnvironmentVariables
 	}
 
-	rm, err := manager.NewResourceManager(cfg.PodInformer.Lister(), cfg.SecretInformer.Lister(), cfg.ConfigMapInformer.Lister(), cfg.ServiceInformer.Lister())
-	if err != nil {
-		return nil, pkgerrors.Wrap(err, "could not create resource manager")
+	erc := env.ResolverConfig{
+		ConfigMapLister: cfg.ConfigMapInformer.Lister(),
+		SecretLister:    cfg.SecretInformer.Lister(),
+		ServiceLister:   cfg.ServiceInformer.Lister(),
 	}
 
 	pc := &PodController{
-		client:          cfg.PodClient,
-		podsInformer:    cfg.PodInformer,
-		podsLister:      cfg.PodInformer.Lister(),
-		provider:        cfg.Provider,
-		resourceManager: rm,
-		ready:           make(chan struct{}),
-		done:            make(chan struct{}),
-		recorder:        cfg.EventRecorder,
-		k8sQ:            workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "syncPodsFromKubernetes"),
-		deletionQ:       workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "deletePodsFromKubernetes"),
-		envResolver:     cfg.EnvResolver,
+		client:            cfg.PodClient,
+		podsInformer:      cfg.PodInformer,
+		podsLister:        cfg.PodInformer.Lister(),
+		provider:          cfg.Provider,
+		ready:             make(chan struct{}),
+		done:              make(chan struct{}),
+		recorder:          cfg.EventRecorder,
+		k8sQ:              workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "syncPodsFromKubernetes"),
+		deletionQ:         workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "deletePodsFromKubernetes"),
+		envResolver:       cfg.EnvResolver,
+		envResolverConfig: erc,
 	}
 
 	return pc, nil

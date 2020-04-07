@@ -6,13 +6,14 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/virtual-kubelet/virtual-kubelet/internal/manager"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/util/sets"
 	apivalidation "k8s.io/apimachinery/pkg/util/validation"
+	corev1listers "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/kubernetes/pkg/api/v1/resource"
 	podshelper "k8s.io/kubernetes/pkg/apis/core/pods"
@@ -53,6 +54,12 @@ const (
 
 var masterServices = sets.NewString("kubernetes")
 
+type ResolverConfig struct {
+	ConfigMapLister corev1listers.ConfigMapLister
+	SecretLister    corev1listers.SecretLister
+	ServiceLister   corev1listers.ServiceLister
+}
+
 // Run through all containers in a pod and call f to modify each container
 func forEachContainer(pod *corev1.Pod, f func(container *corev1.Container)) {
 	for i := range pod.Spec.InitContainers {
@@ -86,17 +93,17 @@ func forEachContainerWithError(pod *corev1.Pod, f func(container *corev1.Contain
 // steps have been broken out and the order of operations is different
 // from the kubelet, the resulting environment variables should
 // remain the same.
-func PopulateEnvironmentVariables(ctx context.Context, pod *corev1.Pod, rm *manager.ResourceManager, recorder record.EventRecorder) error {
-	err := ResolveConfigMapRefs(ctx, pod, rm, recorder)
+func PopulateEnvironmentVariables(ctx context.Context, pod *corev1.Pod, recorder record.EventRecorder, config ResolverConfig) error {
+	err := ResolveConfigMapRefs(ctx, pod, config.ConfigMapLister, recorder)
 	if err != nil {
 		return err
 	}
-	err = ResolveSecretRefs(ctx, pod, rm, recorder)
+	err = ResolveSecretRefs(ctx, pod, config.SecretLister, recorder)
 	if err != nil {
 		return err
 	}
 	RemoveEnvFromVars(pod)
-	err = InsertServiceEnvVars(ctx, pod, rm)
+	err = InsertServiceEnvVars(ctx, pod, config.ServiceLister)
 	if err != nil {
 		return err
 	}
@@ -116,26 +123,20 @@ func PopulateEnvironmentVariables(ctx context.Context, pod *corev1.Pod, rm *mana
 // Resolves all EnvFrom and Env ConfigMap environment variable
 // reference in the pod. Any optional references that don't have a
 // valid configmap will be left unresolved in the environment.
-func ResolveConfigMapRefs(ctx context.Context, pod *corev1.Pod, rm *manager.ResourceManager, recorder record.EventRecorder) error {
+func ResolveConfigMapRefs(ctx context.Context, pod *corev1.Pod, configMapLister corev1listers.ConfigMapLister, recorder record.EventRecorder) error {
 	configMaps := make(map[string]*corev1.ConfigMap)
 
-	for i := range pod.Spec.InitContainers {
-		if err := resolveContainerConfigMapRefs(ctx, pod, &pod.Spec.InitContainers[i], rm, recorder, configMaps); err != nil {
+	return forEachContainerWithError(pod, func(container *corev1.Container) error {
+		if err := resolveContainerConfigMapRefs(ctx, pod, container, configMapLister, recorder, configMaps); err != nil {
 			return err
 		}
-	}
-	// Populate each container's environment.
-	for i := range pod.Spec.Containers {
-		if err := resolveContainerConfigMapRefs(ctx, pod, &pod.Spec.Containers[i], rm, recorder, configMaps); err != nil {
-			return err
-		}
-	}
-	return nil
+		return nil
+	})
 }
 
 // Resolves EnvFrom and Env ConfigMap environment variable references
 // in a container.
-func resolveContainerConfigMapRefs(ctx context.Context, pod *corev1.Pod, container *corev1.Container, rm *manager.ResourceManager, recorder record.EventRecorder, configMaps map[string]*v1.ConfigMap) error {
+func resolveContainerConfigMapRefs(ctx context.Context, pod *corev1.Pod, container *corev1.Container, configMapLister corev1listers.ConfigMapLister, recorder record.EventRecorder, configMaps map[string]*v1.ConfigMap) error {
 	envFromVals := make([]corev1.EnvVar, 0)
 	for i := range container.EnvFrom {
 		if container.EnvFrom[i].ConfigMapRef != nil {
@@ -146,7 +147,7 @@ func resolveContainerConfigMapRefs(ctx context.Context, pod *corev1.Pod, contain
 			if !ok {
 				var err error
 				optional := cm.Optional != nil && *cm.Optional
-				configMap, err = rm.GetConfigMap(name, pod.Namespace)
+				configMap, err = configMapLister.ConfigMaps(pod.Namespace).Get(name)
 				if err != nil {
 					if errors.IsNotFound(err) && optional {
 						recorder.Eventf(pod, corev1.EventTypeWarning, ReasonOptionalConfigMapNotFound, "configmap %q not found", name)
@@ -193,7 +194,7 @@ func resolveContainerConfigMapRefs(ctx context.Context, pod *corev1.Pod, contain
 			configMap, ok := configMaps[name]
 			if !ok {
 				var err error
-				configMap, err = rm.GetConfigMap(name, pod.Namespace)
+				configMap, err = configMapLister.ConfigMaps(pod.Namespace).Get(name)
 				if err != nil {
 					if errors.IsNotFound(err) && optional {
 						// ignore error when marked optional
@@ -230,25 +231,20 @@ func resolveContainerConfigMapRefs(ctx context.Context, pod *corev1.Pod, contain
 // Resolves all EnvFrom and Env Secret environment variable
 // reference in the pod. Any optional references that don't have a
 // valid secret will be left unresolved in the environment.
-func ResolveSecretRefs(ctx context.Context, pod *corev1.Pod, rm *manager.ResourceManager, recorder record.EventRecorder) error {
+func ResolveSecretRefs(ctx context.Context, pod *corev1.Pod, secretLister corev1listers.SecretLister, recorder record.EventRecorder) error {
 	secrets := make(map[string]*corev1.Secret)
 
-	for i := range pod.Spec.InitContainers {
-		if err := resolveContainerSecretRefs(ctx, pod, &pod.Spec.InitContainers[i], rm, recorder, secrets); err != nil {
+	return forEachContainerWithError(pod, func(container *corev1.Container) error {
+		if err := resolveContainerSecretRefs(ctx, pod, container, secretLister, recorder, secrets); err != nil {
 			return err
 		}
-	}
-	for i := range pod.Spec.Containers {
-		if err := resolveContainerSecretRefs(ctx, pod, &pod.Spec.Containers[i], rm, recorder, secrets); err != nil {
-			return err
-		}
-	}
-	return nil
+		return nil
+	})
 }
 
 // Resolves EnvFrom and Env Secret environment variable references
 // in a container.
-func resolveContainerSecretRefs(ctx context.Context, pod *corev1.Pod, container *corev1.Container, rm *manager.ResourceManager, recorder record.EventRecorder, secrets map[string]*v1.Secret) error {
+func resolveContainerSecretRefs(ctx context.Context, pod *corev1.Pod, container *corev1.Container, secretLister corev1listers.SecretLister, recorder record.EventRecorder, secrets map[string]*v1.Secret) error {
 	envFromVals := make([]corev1.EnvVar, 0)
 	for i := range container.EnvFrom {
 		if container.EnvFrom[i].SecretRef != nil {
@@ -259,7 +255,7 @@ func resolveContainerSecretRefs(ctx context.Context, pod *corev1.Pod, container 
 			if !ok {
 				var err error
 				optional := s.Optional != nil && *s.Optional
-				secret, err = rm.GetSecret(name, pod.Namespace)
+				secret, err = secretLister.Secrets(pod.Namespace).Get(name)
 				if err != nil {
 					if errors.IsNotFound(err) && optional {
 						// ignore error when marked optional
@@ -307,7 +303,7 @@ func resolveContainerSecretRefs(ctx context.Context, pod *corev1.Pod, container 
 			secret, ok := secrets[name]
 			if !ok {
 				var err error
-				secret, err = rm.GetSecret(name, pod.Namespace)
+				secret, err = secretLister.Secrets(pod.Namespace).Get(name)
 				if err != nil {
 					if errors.IsNotFound(err) && optional {
 						// ignore error when marked optional
@@ -352,14 +348,14 @@ func RemoveEnvFromVars(pod *corev1.Pod) {
 // kubelet behavior.  They are available for resolving all env var
 // expansions but should be overwritten by identically named env vars
 // present in the container's env (see Uniqify).
-func InsertServiceEnvVars(ctx context.Context, pod *corev1.Pod, rm *manager.ResourceManager) error {
+func InsertServiceEnvVars(ctx context.Context, pod *corev1.Pod, serviceLister corev1listers.ServiceLister) error {
 	// TODO If pod.Spec.EnableServiceLinks is nil then fail as per 1.14 kubelet.
 	enableServiceLinks := corev1.DefaultEnableServiceLinks
 	if pod.Spec.EnableServiceLinks != nil {
 		enableServiceLinks = *pod.Spec.EnableServiceLinks
 	}
 
-	svcEnv, err := GetServiceEnvVarSlice(rm, pod.Namespace, enableServiceLinks)
+	svcEnv, err := GetServiceEnvVarSlice(serviceLister, pod.Namespace, enableServiceLinks)
 	if err != nil {
 		return err
 	}
@@ -380,12 +376,12 @@ func InsertServiceEnvVars(ctx context.Context, pod *corev1.Pod, rm *manager.Reso
 // GetServiceEnvVarMap makes a slice of corev1.EnvVar for services a
 // pod in namespace ns should see.  Based on getServiceEnvVarMap in
 // kubelet_pods.go.
-func GetServiceEnvVarSlice(rm *manager.ResourceManager, ns string, enableServiceLinks bool) ([]corev1.EnvVar, error) {
+func GetServiceEnvVarSlice(serviceLister corev1listers.ServiceLister, ns string, enableServiceLinks bool) ([]corev1.EnvVar, error) {
 	var (
 		serviceMap = make(map[string]*corev1.Service)
 	)
 
-	services, err := rm.ListServices()
+	services, err := serviceLister.List(labels.Everything())
 	if err != nil {
 		return nil, err
 	}
