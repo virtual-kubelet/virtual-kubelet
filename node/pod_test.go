@@ -20,6 +20,7 @@ import (
 	"time"
 
 	testutil "github.com/virtual-kubelet/virtual-kubelet/internal/test/util"
+	"github.com/virtual-kubelet/virtual-kubelet/node/env"
 	"gotest.tools/assert"
 	is "gotest.tools/assert/cmp"
 	corev1 "k8s.io/api/core/v1"
@@ -51,6 +52,7 @@ func newTestController() *TestController {
 			done:            make(chan struct{}),
 			ready:           make(chan struct{}),
 			podsInformer:    iFactory.Core().V1().Pods(),
+			envResolver:     env.PopulateEnvironmentVariables,
 		},
 		mock:   p,
 		client: fk8s,

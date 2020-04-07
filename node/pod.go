@@ -17,11 +17,10 @@ package node
 import (
 	"context"
 
-	"github.com/virtual-kubelet/virtual-kubelet/log"
-	"github.com/virtual-kubelet/virtual-kubelet/node/env"
-	"github.com/virtual-kubelet/virtual-kubelet/trace"
 	"github.com/google/go-cmp/cmp"
 	pkgerrors "github.com/pkg/errors"
+	"github.com/virtual-kubelet/virtual-kubelet/log"
+	"github.com/virtual-kubelet/virtual-kubelet/trace"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -62,7 +61,7 @@ func (pc *PodController) createOrUpdatePod(ctx context.Context, pod *corev1.Pod)
 
 	// We do this so we don't mutate the pod from the informer cache
 	pod = pod.DeepCopy()
-	if err := env.PopulateEnvironmentVariables(ctx, pod, pc.resourceManager, pc.recorder); err != nil {
+	if err := pc.envResolver(ctx, pod, pc.resourceManager, pc.recorder); err != nil {
 		span.SetStatus(err)
 		return err
 	}
