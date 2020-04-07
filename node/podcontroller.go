@@ -128,7 +128,7 @@ type PodController struct {
 
 	// Function that gets called to resolve environment variable references in
 	// the pod.  Defaults to env.PopulateEnvironmentVariables
-	envResolver func(ctx context.Context, pod *corev1.Pod, recorder record.EventRecorder, config env.ResolverConfig) error
+	envResolver env.ResolverFunc
 
 	envResolverConfig env.ResolverConfig
 }
@@ -163,7 +163,7 @@ type PodControllerConfig struct {
 	SecretInformer    corev1informers.SecretInformer
 	ServiceInformer   corev1informers.ServiceInformer
 
-	EnvResolver func(ctx context.Context, pod *corev1.Pod, recorder record.EventRecorder, config env.ResolverConfig) error
+	EnvResolver env.ResolverFunc
 }
 
 // NewPodController creates a new pod controller with the provided config.

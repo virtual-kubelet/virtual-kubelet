@@ -60,6 +60,8 @@ type ResolverConfig struct {
 	ServiceLister   corev1listers.ServiceLister
 }
 
+type ResolverFunc func(ctx context.Context, pod *corev1.Pod, recorder record.EventRecorder, config ResolverConfig) error
+
 // Run through all containers in a pod and call f to modify each container
 func forEachContainer(pod *corev1.Pod, f func(container *corev1.Container)) {
 	for i := range pod.Spec.InitContainers {
