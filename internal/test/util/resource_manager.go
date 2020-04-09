@@ -3,18 +3,30 @@ package util
 import (
 	"time"
 
+	"github.com/virtual-kubelet/virtual-kubelet/internal/manager"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/informers"
+	corev1informers "k8s.io/client-go/informers/core/v1"
 	"k8s.io/client-go/kubernetes/fake"
 	"k8s.io/client-go/tools/cache"
-
-	"github.com/virtual-kubelet/virtual-kubelet/internal/manager"
 )
 
 // FakeResourceManager returns an instance of the resource manager that will return the specified objects when its "GetX" methods are called.
 // Objects can be any valid Kubernetes object (corev1.Pod, corev1.ConfigMap, corev1.Secret, ...).
 func FakeResourceManager(objects ...runtime.Object) *manager.ResourceManager {
+	pInformer, mInformer, sInformer, svcInformer := MakeFakeInformers(objects...)
+
+	// Create a new instance of the resource manager using the listers for pods, configmaps and secrets.
+	r, err := manager.NewResourceManager(pInformer.Lister(), sInformer.Lister(), mInformer.Lister(), svcInformer.Lister())
+	if err != nil {
+		panic(err)
+	}
+	return r
+}
+
+// MakeFakeInformers creates informers for the subset of resource types virtual kubelet nees to work with
+func MakeFakeInformers(objects ...runtime.Object) (corev1informers.PodInformer, corev1informers.ConfigMapInformer, corev1informers.SecretInformer, corev1informers.ServiceInformer) {
 	// Create a fake Kubernetes client that will list the specified objects.
 	kubeClient := fake.NewSimpleClientset(objects...)
 	// Create a shared informer factory from where we can grab informers and listers for pods, configmaps, secrets and services.
@@ -33,10 +45,5 @@ func FakeResourceManager(objects ...runtime.Object) *manager.ResourceManager {
 	if !cache.WaitForCacheSync(wait.NeverStop, pInformer.Informer().HasSynced, mInformer.Informer().HasSynced, sInformer.Informer().HasSynced, svcInformer.Informer().HasSynced) {
 		panic("failed to wait for caches to be synced")
 	}
-	// Create a new instance of the resource manager using the listers for pods, configmaps and secrets.
-	r, err := manager.NewResourceManager(pInformer.Lister(), sInformer.Lister(), mInformer.Lister(), svcInformer.Lister())
-	if err != nil {
-		panic(err)
-	}
-	return r
+	return pInformer, mInformer, sInformer, svcInformer
 }

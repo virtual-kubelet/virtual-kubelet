@@ -61,7 +61,7 @@ func (pc *PodController) createOrUpdatePod(ctx context.Context, pod *corev1.Pod)
 
 	// We do this so we don't mutate the pod from the informer cache
 	pod = pod.DeepCopy()
-	if err := populateEnvironmentVariables(ctx, pod, pc.resourceManager, pc.recorder); err != nil {
+	if err := pc.envResolver(ctx, pod, pc.recorder, pc.envResolverConfig); err != nil {
 		span.SetStatus(err)
 		return err
 	}

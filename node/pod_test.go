@@ -20,6 +20,7 @@ import (
 	"time"
 
 	testutil "github.com/virtual-kubelet/virtual-kubelet/internal/test/util"
+	"github.com/virtual-kubelet/virtual-kubelet/node/env"
 	"gotest.tools/assert"
 	is "gotest.tools/assert/cmp"
 	corev1 "k8s.io/api/core/v1"
@@ -37,20 +38,26 @@ type TestController struct {
 func newTestController() *TestController {
 	fk8s := fake.NewSimpleClientset()
 
-	rm := testutil.FakeResourceManager()
+	//rm := testutil.FakeResourceManager()
+	_, cmInformer, sInformer, svcInformer := testutil.MakeFakeInformers()
 	p := newMockProvider()
 	iFactory := kubeinformers.NewSharedInformerFactoryWithOptions(fk8s, 10*time.Minute)
 	return &TestController{
 		PodController: &PodController{
-			client:          fk8s.CoreV1(),
-			provider:        p,
-			resourceManager: rm,
-			recorder:        testutil.FakeEventRecorder(5),
-			k8sQ:            workqueue.NewRateLimitingQueue(workqueue.DefaultControllerRateLimiter()),
-			deletionQ:       workqueue.NewRateLimitingQueue(workqueue.DefaultControllerRateLimiter()),
-			done:            make(chan struct{}),
-			ready:           make(chan struct{}),
-			podsInformer:    iFactory.Core().V1().Pods(),
+			client:       fk8s.CoreV1(),
+			provider:     p,
+			recorder:     testutil.FakeEventRecorder(5),
+			k8sQ:         workqueue.NewRateLimitingQueue(workqueue.DefaultControllerRateLimiter()),
+			deletionQ:    workqueue.NewRateLimitingQueue(workqueue.DefaultControllerRateLimiter()),
+			done:         make(chan struct{}),
+			ready:        make(chan struct{}),
+			podsInformer: iFactory.Core().V1().Pods(),
+			envResolver:  env.PopulateEnvironmentVariables,
+			envResolverConfig: env.ResolverConfig{
+				ConfigMapLister: cmInformer.Lister(),
+				SecretLister:    sInformer.Lister(),
+				ServiceLister:   svcInformer.Lister(),
+			},
 		},
 		mock:   p,
 		client: fk8s,

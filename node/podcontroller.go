@@ -24,8 +24,8 @@ import (
 	"github.com/google/go-cmp/cmp"
 	pkgerrors "github.com/pkg/errors"
 	"github.com/virtual-kubelet/virtual-kubelet/errdefs"
-	"github.com/virtual-kubelet/virtual-kubelet/internal/manager"
 	"github.com/virtual-kubelet/virtual-kubelet/log"
+	"github.com/virtual-kubelet/virtual-kubelet/node/env"
 	"github.com/virtual-kubelet/virtual-kubelet/trace"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -101,8 +101,6 @@ type PodController struct {
 
 	client corev1client.PodsGetter
 
-	resourceManager *manager.ResourceManager
-
 	k8sQ workqueue.RateLimitingInterface
 
 	// deletionQ is a queue on which pods are reconciled, and we check if pods are in API server after grace period
@@ -127,6 +125,13 @@ type PodController struct {
 	// This is used since `pc.Run()` is typically called in a goroutine and managing
 	// this can be non-trivial for callers.
 	err error
+
+	// Function that gets called to resolve environment variable references in
+	// the pod.  Defaults to env.PopulateEnvironmentVariables
+	envResolver env.ResolverFunc
+
+	// Holds the listers needed to resolve environment variables
+	envResolverConfig env.ResolverConfig
 }
 
 type knownPod struct {
@@ -158,6 +163,8 @@ type PodControllerConfig struct {
 	ConfigMapInformer corev1informers.ConfigMapInformer
 	SecretInformer    corev1informers.SecretInformer
 	ServiceInformer   corev1informers.ServiceInformer
+
+	EnvResolver env.ResolverFunc
 }
 
 // NewPodController creates a new pod controller with the provided config.
@@ -183,23 +190,28 @@ func NewPodController(cfg PodControllerConfig) (*PodController, error) {
 	if cfg.Provider == nil {
 		return nil, errdefs.InvalidInput("missing provider")
 	}
+	if cfg.EnvResolver == nil {
+		cfg.EnvResolver = env.PopulateEnvironmentVariables
+	}
 
-	rm, err := manager.NewResourceManager(cfg.PodInformer.Lister(), cfg.SecretInformer.Lister(), cfg.ConfigMapInformer.Lister(), cfg.ServiceInformer.Lister())
-	if err != nil {
-		return nil, pkgerrors.Wrap(err, "could not create resource manager")
+	erc := env.ResolverConfig{
+		ConfigMapLister: cfg.ConfigMapInformer.Lister(),
+		SecretLister:    cfg.SecretInformer.Lister(),
+		ServiceLister:   cfg.ServiceInformer.Lister(),
 	}
 
 	pc := &PodController{
-		client:          cfg.PodClient,
-		podsInformer:    cfg.PodInformer,
-		podsLister:      cfg.PodInformer.Lister(),
-		provider:        cfg.Provider,
-		resourceManager: rm,
-		ready:           make(chan struct{}),
-		done:            make(chan struct{}),
-		recorder:        cfg.EventRecorder,
-		k8sQ:            workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "syncPodsFromKubernetes"),
-		deletionQ:       workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "deletePodsFromKubernetes"),
+		client:            cfg.PodClient,
+		podsInformer:      cfg.PodInformer,
+		podsLister:        cfg.PodInformer.Lister(),
+		provider:          cfg.Provider,
+		ready:             make(chan struct{}),
+		done:              make(chan struct{}),
+		recorder:          cfg.EventRecorder,
+		k8sQ:              workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "syncPodsFromKubernetes"),
+		deletionQ:         workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "deletePodsFromKubernetes"),
+		envResolver:       cfg.EnvResolver,
+		envResolverConfig: erc,
 	}
 
 	return pc, nil
