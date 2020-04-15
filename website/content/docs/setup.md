@@ -10,7 +10,7 @@ You can install Virtual Kubelet by building it [from source](#source). First, ma
 mkdir -p ${GOPATH}/src/github.com/virtual-kubelet
 cd ${GOPATH}/src/github.com/virtual-kubelet
 git clone https://github.com/virtual-kubelet/virtual-kubelet
-make build
+cd virtual-kubelet && make build
 ```
 
 This method adds a `virtual-kubelet` executable to the `bin` folder. To run it:
