@@ -16,7 +16,6 @@ package api
 
 import (
 	"context"
-	"fmt"
 	"io"
 	"net/http"
 	"net/url"
@@ -51,7 +50,7 @@ func parseLogOptions(q url.Values) (opts ContainerLogOpts, err error) {
 			return opts, errdefs.AsInvalidInput(errors.Wrap(err, "could not parse \"tailLines\""))
 		}
 		if opts.Tail < 0 {
-			return opts, errdefs.InvalidInput(fmt.Sprintf("\"tailLines\" is %d", opts.Tail))
+			return opts, errdefs.InvalidInputf("\"tailLines\" is %d", opts.Tail)
 		}
 	}
 	if follow := q.Get("follow"); follow != "" {
@@ -66,7 +65,7 @@ func parseLogOptions(q url.Values) (opts ContainerLogOpts, err error) {
 			return opts, errdefs.AsInvalidInput(errors.Wrap(err, "could not parse \"limitBytes\""))
 		}
 		if opts.LimitBytes < 1 {
-			return opts, errdefs.InvalidInput(fmt.Sprintf("\"limitBytes\" is %d", opts.LimitBytes))
+			return opts, errdefs.InvalidInputf("\"limitBytes\" is %d", opts.LimitBytes)
 		}
 	}
 	if previous := q.Get("previous"); previous != "" {
@@ -81,7 +80,7 @@ func parseLogOptions(q url.Values) (opts ContainerLogOpts, err error) {
 			return opts, errdefs.AsInvalidInput(errors.Wrap(err, "could not parse \"sinceSeconds\""))
 		}
 		if opts.SinceSeconds < 1 {
-			return opts, errdefs.InvalidInput(fmt.Sprintf("\"sinceSeconds\" is %d", opts.SinceSeconds))
+			return opts, errdefs.InvalidInputf("\"sinceSeconds\" is %d", opts.SinceSeconds)
 		}
 	}
 	if sinceTime := q.Get("sinceTime"); sinceTime != "" {
