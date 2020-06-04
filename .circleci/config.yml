@@ -25,6 +25,9 @@ jobs:
       - run:
           name: Dependencies
           command: scripts/validate/gomod.sh
+      - run:
+          name: Kubernetes dependency pinning
+          command: ./scripts/validate/check_version.sh
       - save_cache:
           key: validate-{{ checksum "go.mod" }}-{{ checksum "go.sum" }}
           paths:
