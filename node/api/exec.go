@@ -91,6 +91,14 @@ func HandleContainerExec(h ContainerExecHandlerFunc, opts ...ContainerExecHandle
 	for _, o := range opts {
 		o(&cfg)
 	}
+
+	if cfg.StreamIdleTimeout == 0 {
+		cfg.StreamIdleTimeout = 30 * time.Second
+	}
+	if cfg.StreamCreationTimeout == 0 {
+		cfg.StreamCreationTimeout = 30 * time.Second
+	}
+
 	return handleError(func(w http.ResponseWriter, req *http.Request) error {
 		vars := mux.Vars(req)
 
@@ -108,6 +116,7 @@ func HandleContainerExec(h ContainerExecHandlerFunc, opts ...ContainerExecHandle
 			return errdefs.AsInvalidInput(err)
 		}
 
+		// TODO: Why aren't we using req.Context() here?
 		ctx, cancel := context.WithCancel(context.TODO())
 		defer cancel()
 
