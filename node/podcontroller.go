@@ -270,13 +270,16 @@ func (pc *PodController) Run(ctx context.Context, podSyncWorkers int) (retErr er
 		},
 		UpdateFunc: func(oldObj, newObj interface{}) {
 			// Create a copy of the old and new pod objects so we don't mutate the cache.
+			oldPod := oldObj.(*corev1.Pod)
 			newPod := newObj.(*corev1.Pod)
 
 			// At this point we know that something in .metadata or .spec has changed, so we must proceed to sync the pod.
 			if key, err := cache.MetaNamespaceKeyFunc(newPod); err != nil {
 				log.G(ctx).Error(err)
 			} else {
-				pc.k8sQ.AddRateLimited(key)
+				if podShouldEnqueue(oldPod, newPod) {
+					pc.k8sQ.AddRateLimited(key)
+				}
 			}
 		},
 		DeleteFunc: func(pod interface{}) {

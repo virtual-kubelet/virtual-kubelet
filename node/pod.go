@@ -119,6 +119,30 @@ func podsEqual(pod1, pod2 *corev1.Pod) bool {
 
 }
 
+func deleteGraceTimeEqual(old, new *int64) bool {
+	if old == nil && new == nil {
+		return true
+	}
+	if old != nil && new != nil {
+		return *old == *new
+	}
+	return false
+}
+
+// podShouldEnqueue checks if two pods equal according according to podsEqual func and DeleteTimeStamp
+func podShouldEnqueue(oldPod, newPod *corev1.Pod) bool {
+	if !podsEqual(oldPod, newPod) {
+		return true
+	}
+	if !deleteGraceTimeEqual(oldPod.DeletionGracePeriodSeconds, newPod.DeletionGracePeriodSeconds) {
+		return true
+	}
+	if !oldPod.DeletionTimestamp.Equal(newPod.DeletionTimestamp) {
+		return true
+	}
+	return false
+}
+
 func (pc *PodController) handleProviderError(ctx context.Context, span trace.Span, origErr error, pod *corev1.Pod) {
 	podPhase := corev1.PodPending
 	if pod.Spec.RestartPolicy == corev1.RestartPolicyNever {
