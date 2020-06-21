@@ -21,6 +21,7 @@ require (
 	github.com/spf13/pflag v1.0.5
 	go.opencensus.io v0.21.0
 	golang.org/x/sys v0.0.0-20190826190057-c7b8b68b1456
+	golang.org/x/time v0.0.0-20190308202827-9d24e82272b4
 	gotest.tools v2.2.0+incompatible
 	k8s.io/api v0.0.0
 	k8s.io/apimachinery v0.0.0

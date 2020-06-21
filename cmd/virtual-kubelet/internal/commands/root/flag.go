@@ -87,6 +87,9 @@ func installFlags(flags *pflag.FlagSet, c *Opts) {
 	flags.DurationVar(&c.StreamCreationTimeout, "stream-creation-timeout", c.StreamCreationTimeout,
 		"stream-creation-timeout is the maximum time for streaming connection, default 30s.")
 
+	flags.IntVar(&c.WorkQueueRetryQPS, "workqueue-retry-qps", c.WorkQueueRetryQPS,
+		"workqueue-retry-qps is the rate limit when objects in a workqueue, default 10.")
+
 	flagset := flag.NewFlagSet("klog", flag.PanicOnError)
 	klog.InitFlags(flagset)
 	flagset.VisitAll(func(f *flag.Flag) {

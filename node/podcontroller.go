@@ -27,6 +27,7 @@ import (
 	"github.com/virtual-kubelet/virtual-kubelet/internal/manager"
 	"github.com/virtual-kubelet/virtual-kubelet/log"
 	"github.com/virtual-kubelet/virtual-kubelet/trace"
+	"golang.org/x/time/rate"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	corev1informers "k8s.io/client-go/informers/core/v1"
@@ -127,6 +128,8 @@ type PodController struct {
 	// This is used since `pc.Run()` is typically called in a goroutine and managing
 	// this can be non-trivial for callers.
 	err error
+	// qps is the default qps limit when retry
+	qps int
 }
 
 type knownPod struct {
@@ -158,10 +161,26 @@ type PodControllerConfig struct {
 	ConfigMapInformer corev1informers.ConfigMapInformer
 	SecretInformer    corev1informers.SecretInformer
 	ServiceInformer   corev1informers.ServiceInformer
+
+	// WorkQueueRetryQPS is the default qps limit when retry
+	WorkQueueRetryQPS int
+}
+
+// controllerRateLimiter has
+// both overall and per-item rate limiting.  The overall is a token bucket and the per-item is exponential
+func controllerRateLimiter(qps int) workqueue.RateLimiter {
+	return workqueue.NewMaxOfRateLimiter(
+		workqueue.NewItemExponentialFailureRateLimiter(5*time.Millisecond, 1000*time.Second),
+		// This is only for retry speed and its only the overall factor (not per item)
+		&workqueue.BucketRateLimiter{Limiter: rate.NewLimiter(rate.Limit(qps), qps*10)},
+	)
 }
 
 // NewPodController creates a new pod controller with the provided config.
 func NewPodController(cfg PodControllerConfig) (*PodController, error) {
+	if cfg.WorkQueueRetryQPS == 0 {
+		cfg.WorkQueueRetryQPS = 10
+	}
 	if cfg.PodClient == nil {
 		return nil, errdefs.InvalidInput("missing core client")
 	}
@@ -198,8 +217,9 @@ func NewPodController(cfg PodControllerConfig) (*PodController, error) {
 		ready:           make(chan struct{}),
 		done:            make(chan struct{}),
 		recorder:        cfg.EventRecorder,
-		k8sQ:            workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "syncPodsFromKubernetes"),
-		deletionQ:       workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "deletePodsFromKubernetes"),
+		k8sQ:            workqueue.NewNamedRateLimitingQueue(controllerRateLimiter(cfg.WorkQueueRetryQPS), "syncPodsFromKubernetes"),
+		deletionQ:       workqueue.NewNamedRateLimitingQueue(controllerRateLimiter(cfg.WorkQueueRetryQPS), "deletePodsFromKubernetes"),
+		qps:             cfg.WorkQueueRetryQPS,
 	}
 
 	return pc, nil
@@ -242,7 +262,7 @@ func (pc *PodController) Run(ctx context.Context, podSyncWorkers int) (retErr er
 	}
 	pc.provider = provider
 
-	podStatusQueue := workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "syncPodStatusFromProvider")
+	podStatusQueue := workqueue.NewNamedRateLimitingQueue(controllerRateLimiter(pc.qps), "syncPodStatusFromProvider")
 	provider.NotifyPods(ctx, func(pod *corev1.Pod) {
 		pc.enqueuePodStatusUpdate(ctx, podStatusQueue, pod.DeepCopy())
 	})
