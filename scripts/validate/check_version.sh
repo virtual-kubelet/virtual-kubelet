@@ -12,7 +12,8 @@ fi
 
 echo "Found kubernetes version: ${kubeversion}"
 
-readonly sha=$(curl http://api.github.com/repos/kubernetes/kubernetes/tags -L -s |jq -r --arg kubeversion "${kubeversion}" '.[] |select (.name==$kubeversion) | .commit.sha')
+# We postfix the tag to search for with ^{}, as we want the annotated tag
+readonly sha=$(git ls-remote --tags git@github.com:kubernetes/kubernetes.git "${kubeversion}^{}"|cut -f1 -d$'\t')
 
 if [[ ! "${sha}" =~ ^[0-9a-f]{40}$ ]]; then
 	echo "Kube Sha: ${sha} in unexpected format"
