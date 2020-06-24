@@ -25,7 +25,7 @@ import (
 	pkgerrors "github.com/pkg/errors"
 	"github.com/virtual-kubelet/virtual-kubelet/errdefs"
 	"github.com/virtual-kubelet/virtual-kubelet/log"
-	"github.com/virtual-kubelet/virtual-kubelet/node/env"
+	"github.com/virtual-kubelet/virtual-kubelet/podutils"
 	"github.com/virtual-kubelet/virtual-kubelet/trace"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -128,10 +128,10 @@ type PodController struct {
 
 	// Function that gets called to resolve environment variable references in
 	// the pod.  Defaults to env.PopulateEnvironmentVariables
-	envResolver env.ResolverFunc
+	envResolver podutils.ResolverFunc
 
 	// Holds the listers needed to resolve environment variables
-	envResolverConfig env.ResolverConfig
+	envResolverConfig podutils.ResolverConfig
 }
 
 type knownPod struct {
@@ -164,7 +164,7 @@ type PodControllerConfig struct {
 	SecretInformer    corev1informers.SecretInformer
 	ServiceInformer   corev1informers.ServiceInformer
 
-	EnvResolver env.ResolverFunc
+	EnvResolver podutils.ResolverFunc
 }
 
 // NewPodController creates a new pod controller with the provided config.
@@ -191,10 +191,10 @@ func NewPodController(cfg PodControllerConfig) (*PodController, error) {
 		return nil, errdefs.InvalidInput("missing provider")
 	}
 	if cfg.EnvResolver == nil {
-		cfg.EnvResolver = env.PopulateEnvironmentVariables
+		cfg.EnvResolver = podutils.PopulateEnvironmentVariables
 	}
 
-	erc := env.ResolverConfig{
+	erc := podutils.ResolverConfig{
 		ConfigMapLister: cfg.ConfigMapInformer.Lister(),
 		SecretLister:    cfg.SecretInformer.Lister(),
 		ServiceLister:   cfg.ServiceInformer.Lister(),
