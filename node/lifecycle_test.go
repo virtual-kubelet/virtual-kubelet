@@ -289,7 +289,6 @@ func wireUpSystem(ctx context.Context, provider PodLifecycleHandler, f testFunct
 			ConfigMapInformer: configMapInformer,
 			SecretInformer:    secretInformer,
 			ServiceInformer:   serviceInformer,
-			WorkQueueRetryQPS: 10,
 		},
 	}
 

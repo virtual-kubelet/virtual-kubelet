@@ -49,6 +49,7 @@ func newTestController() *TestController {
 			recorder:        testutil.FakeEventRecorder(5),
 			k8sQ:            workqueue.NewRateLimitingQueue(workqueue.DefaultControllerRateLimiter()),
 			deletionQ:       workqueue.NewRateLimitingQueue(workqueue.DefaultControllerRateLimiter()),
+			podStatusQ:      workqueue.NewRateLimitingQueue(workqueue.DefaultControllerRateLimiter()),
 			done:            make(chan struct{}),
 			ready:           make(chan struct{}),
 			podsInformer:    iFactory.Core().V1().Pods(),

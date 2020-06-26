@@ -40,7 +40,6 @@ const (
 	DefaultTaintKey              = "virtual-kubelet.io/provider"
 	DefaultStreamIdleTimeout     = 30 * time.Second
 	DefaultStreamCreationTimeout = 30 * time.Second
-	DefaultWorkQueueRetryQPS     = 10
 )
 
 // Opts stores all the options for configuring the root virtual-kubelet command.
@@ -92,9 +91,6 @@ type Opts struct {
 	StreamIdleTimeout time.Duration
 	// StreamCreationTimeout is the maximum time for streaming connection
 	StreamCreationTimeout time.Duration
-
-	// WorkQueueRetryQPS is the default qps limit when retry for k8s workqueue
-	WorkQueueRetryQPS int
 
 	Version string
 }
@@ -169,10 +165,6 @@ func SetDefaultOpts(c *Opts) error {
 
 	if c.StreamCreationTimeout == 0 {
 		c.StreamCreationTimeout = DefaultStreamCreationTimeout
-	}
-
-	if c.WorkQueueRetryQPS == 0 {
-		c.WorkQueueRetryQPS = DefaultWorkQueueRetryQPS
 	}
 
 	return nil

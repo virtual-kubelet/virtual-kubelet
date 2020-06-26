@@ -185,7 +185,6 @@ func runRootCommand(ctx context.Context, s *provider.Store, c Opts) error {
 		SecretInformer:    secretInformer,
 		ConfigMapInformer: configMapInformer,
 		ServiceInformer:   serviceInformer,
-		WorkQueueRetryQPS: c.WorkQueueRetryQPS,
 	})
 	if err != nil {
 		return errors.Wrap(err, "error setting up pod controller")
