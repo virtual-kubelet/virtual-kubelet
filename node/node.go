@@ -235,7 +235,7 @@ func (n *NodeController) ensureNode(ctx context.Context) (err error) {
 		return err
 	}
 
-	node, err := n.nodes.Create(n.n)
+	node, err := n.nodes.Create(ctx, n.n, metav1.CreateOptions{})
 	if err != nil {
 		return pkgerrors.Wrap(err, "error registering node with kubernetes")
 	}
@@ -385,18 +385,18 @@ func (n *NodeController) updateStatus(ctx context.Context, skipErrorCb bool) (er
 }
 
 func ensureLease(ctx context.Context, leases v1beta1.LeaseInterface, lease *coord.Lease) (*coord.Lease, error) {
-	l, err := leases.Create(lease)
+	l, err := leases.Create(ctx, lease, metav1.CreateOptions{})
 	if err != nil {
 		switch {
 		case errors.IsNotFound(err):
 			log.G(ctx).WithError(err).Info("Node lease not supported")
 			return nil, err
 		case errors.IsAlreadyExists(err):
-			if err := leases.Delete(lease.Name, nil); err != nil && !errors.IsNotFound(err) {
+			if err := leases.Delete(ctx, lease.Name, metav1.DeleteOptions{}); err != nil && !errors.IsNotFound(err) {
 				log.G(ctx).WithError(err).Error("could not delete old node lease")
 				return nil, pkgerrors.Wrap(err, "old lease exists but could not delete it")
 			}
-			l, err = leases.Create(lease)
+			l, err = leases.Create(ctx, lease, metav1.CreateOptions{})
 		}
 	}
 
@@ -421,7 +421,7 @@ func updateNodeLease(ctx context.Context, leases v1beta1.LeaseInterface, lease *
 		ctx = span.WithField(ctx, "lease.expiresSeconds", *lease.Spec.LeaseDurationSeconds)
 	}
 
-	l, err := leases.Update(lease)
+	l, err := leases.Update(ctx, lease, metav1.UpdateOptions{})
 	if err != nil {
 		if errors.IsNotFound(err) {
 			log.G(ctx).Debug("lease not found")
@@ -570,7 +570,7 @@ func updateNodeStatus(ctx context.Context, nodes v1.NodeInterface, nodeFromProvi
 
 	var updatedNode *corev1.Node
 	err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
-		apiServerNode, err := nodes.Get(nodeFromProvider.Name, emptyGetOptions)
+		apiServerNode, err := nodes.Get(ctx, nodeFromProvider.Name, emptyGetOptions)
 		if err != nil {
 			return err
 		}
@@ -583,7 +583,7 @@ func updateNodeStatus(ctx context.Context, nodes v1.NodeInterface, nodeFromProvi
 		}
 		log.G(ctx).WithError(err).WithField("patch", string(patchBytes)).Debug("Generated three way patch")
 
-		updatedNode, err = nodes.Patch(nodeFromProvider.Name, types.StrategicMergePatchType, patchBytes, "status")
+		updatedNode, err = nodes.Patch(ctx, nodeFromProvider.Name, types.StrategicMergePatchType, patchBytes, metav1.PatchOptions{}, "status")
 		if err != nil {
 			// We cannot wrap this error because the kubernetes error module doesn't understand wrapping
 			log.G(ctx).WithField("patch", string(patchBytes)).WithError(err).Warn("Failed to patch node status")

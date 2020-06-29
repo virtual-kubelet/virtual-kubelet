@@ -51,7 +51,7 @@ release: build goreleaser
 
 ##### =====> Utility targets <===== #####
 
-.PHONY: clean test list cover format docker check_version
+.PHONY: clean test list cover format docker
 mod:
 	@echo "Prune Dependencies..."
 	$Q go mod tidy
@@ -118,10 +118,6 @@ format: goimports
 	@echo "Formatting..."
 	$Q find . -iname \*.go | grep -v \
         -e "^$$" $(addprefix -e ,$(IGNORED_PACKAGES)) | xargs $(gobin_tool) -run $(goimports) -w
-
-check_version: mod
-	@echo "Checking kubernetes dependency version pinning"
-	./scripts/validate/check_version.sh
 
 ##### =====> Internals <===== #####
 
