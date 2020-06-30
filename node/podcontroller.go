@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"strconv"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/google/go-cmp/cmp"
@@ -29,6 +30,7 @@ import (
 	"github.com/virtual-kubelet/virtual-kubelet/trace"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/labels"
 	corev1informers "k8s.io/client-go/informers/core/v1"
 	corev1client "k8s.io/client-go/kubernetes/typed/core/v1"
 	corev1listers "k8s.io/client-go/listers/core/v1"
@@ -250,9 +252,6 @@ func (pc *PodController) Run(ctx context.Context, podSyncWorkers int) (retErr er
 	}
 	pc.provider = provider
 
-	provider.NotifyPods(ctx, func(pod *corev1.Pod) {
-		pc.enqueuePodStatusUpdate(ctx, pc.podStatusQ, pod.DeepCopy())
-	})
 	go runProvider(ctx)
 
 	defer pc.podStatusQ.ShutDown()
@@ -262,6 +261,21 @@ func (pc *PodController) Run(ctx context.Context, podSyncWorkers int) (retErr er
 		return pkgerrors.New("failed to wait for caches to sync")
 	}
 	log.G(ctx).Info("Pod cache in-sync")
+
+	pods, err := pc.podsLister.List(labels.Everything())
+	if err != nil {
+		return fmt.Errorf("failed to list pod error: %v", err)
+	}
+	var podCount int32
+	started := false
+	startCh := make(chan struct{})
+	// check if len(pods) == 0 to avoid dead lock
+	if len(pods) == 0 {
+		started = true
+		go func() {
+			startCh <- struct{}{}
+		}()
+	}
 
 	// Set up event handlers for when Pod resources change. Since the pod cache is in-sync, the informer will generate
 	// synthetic add events at this point. It again avoids the race condition of adding handlers while the cache is
@@ -273,6 +287,13 @@ func (pc *PodController) Run(ctx context.Context, podSyncWorkers int) (retErr er
 			} else {
 				pc.knownPods.Store(key, &knownPod{})
 				pc.k8sQ.AddRateLimited(key)
+				if started {
+					return
+				}
+				currentCount := atomic.AddInt32(&podCount, 1)
+				if int32(len(pods)) == currentCount {
+					startCh <- struct{}{}
+				}
 			}
 		},
 		UpdateFunc: func(oldObj, newObj interface{}) {
@@ -299,6 +320,13 @@ func (pc *PodController) Run(ctx context.Context, podSyncWorkers int) (retErr er
 				pc.deletionQ.Forget(key)
 			}
 		},
+	})
+
+	<-startCh
+	started = true
+
+	provider.NotifyPods(ctx, func(pod *corev1.Pod) {
+		pc.enqueuePodStatusUpdate(ctx, pc.podStatusQ, pod.DeepCopy())
 	})
 
 	// Perform a reconciliation step that deletes any dangling pods from the provider.
