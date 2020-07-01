@@ -185,7 +185,7 @@ func (n *NodeController) Run(ctx context.Context) error {
 		n.statusInterval = DefaultStatusUpdateInterval
 	}
 
-	n.chStatusUpdate = make(chan *corev1.Node)
+	n.chStatusUpdate = make(chan *corev1.Node, 1)
 	n.p.NotifyNodeStatus(ctx, func(node *corev1.Node) {
 		n.chStatusUpdate <- node
 	})
