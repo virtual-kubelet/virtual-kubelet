@@ -216,8 +216,14 @@ func (n *NodeController) Run(ctx context.Context) error {
 	return n.controlLoop(ctx)
 }
 
-func (n *NodeController) ensureNode(ctx context.Context) error {
-	err := n.updateStatus(ctx, true)
+func (n *NodeController) ensureNode(ctx context.Context) (err error) {
+	ctx, span := trace.StartSpan(ctx, "node.ensureNode")
+	defer span.End()
+	defer func() {
+		span.SetStatus(err)
+	}()
+
+	err = n.updateStatus(ctx, true)
 	if err == nil || !errors.IsNotFound(err) {
 		return err
 	}
@@ -258,10 +264,13 @@ func (n *NodeController) controlLoop(ctx context.Context) error {
 
 	close(n.chReady)
 
-	for {
+	loop := func() bool {
+		ctx, span := trace.StartSpan(ctx, "node.controlLoop.loop")
+		defer span.End()
+
 		select {
 		case <-ctx.Done():
-			return nil
+			return true
 		case updated := <-n.chStatusUpdate:
 			var t *time.Timer
 			if n.disableLease {
@@ -295,6 +304,13 @@ func (n *NodeController) controlLoop(ctx context.Context) error {
 			}
 			pingTimer.Reset(n.pingInterval)
 		}
+		return false
+	}
+	for {
+		shouldTerminate := loop()
+		if shouldTerminate {
+			return nil
+		}
 	}
 }
 
@@ -326,7 +342,13 @@ func (n *NodeController) updateLease(ctx context.Context) error {
 	return nil
 }
 
-func (n *NodeController) updateStatus(ctx context.Context, skipErrorCb bool) error {
+func (n *NodeController) updateStatus(ctx context.Context, skipErrorCb bool) (err error) {
+	ctx, span := trace.StartSpan(ctx, "node.updateStatus")
+	defer span.End()
+	defer func() {
+		span.SetStatus(err)
+	}()
+
 	updateNodeStatusHeartbeat(n.n)
 
 	node, err := updateNodeStatus(ctx, n.nodes, n.n)
