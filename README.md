@@ -2,7 +2,7 @@
 
 Virtual Kubelet is an open source [Kubernetes kubelet](https://kubernetes.io/docs/reference/generated/kubelet/)
 implementation that masquerades as a kubelet for the purposes of connecting Kubernetes to other APIs.
-This allows the nodes to be backed by other services like ACI, AWS Fargate, [IoT Edge](https://github.com/Azure/iot-edge-virtual-kubelet-provider) etc. The primary scenario for VK is enabling the extension of the Kubernetes API into serverless container platforms like ACI and Fargate, though we are open to others. However, it should be noted that VK is explicitly not intended to be an alternative to Kubernetes federation.
+This allows the nodes to be backed by other services like ACI, AWS Fargate, [IoT Edge](https://github.com/Azure/iot-edge-virtual-kubelet-provider), [Tensile Kube](https://github.com/virtual-kubelet/tensile-kube) etc. The primary scenario for VK is enabling the extension of the Kubernetes API into serverless container platforms like ACI and Fargate, though we are open to others. However, it should be noted that VK is explicitly not intended to be an alternative to Kubernetes federation.
 
 Virtual Kubelet features a pluggable architecture and direct use of Kubernetes primitives, making it much easier to build on.
 
@@ -24,6 +24,7 @@ The best description is "Kubernetes API on top, programmable back."
     + [Elotl Kip](#elotl-kip)
 	+ [HashiCorp Nomad](#hashicorp-nomad-provider)
     + [OpenStack Zun](#openstack-zun-provider)
+    + [Tensile Kube Provider](#tensile-kube-provider)
     + [Adding a New Provider via the Provider Interface](#adding-a-new-provider-via-the-provider-interface)
 * [Testing](#testing)
     + [Unit tests](#unit-tests)
@@ -141,6 +142,11 @@ Your pods on OpenStack have access to OpenStack tenant networks because they hav
 in your subnets. Each pod will have private IP addresses to connect to other OpenStack resources
 (i.e. VMs) within your tenant, optionally have floating IP addresses to connect to the internet,
 and bind-mount Cinder volumes into a path inside a pod's container.
+
+### Tensile Kube Provider
+
+[Tensile kube](https://github.com/virtual-kubelet/tensile-kube/blob/master/README.md) is contributed by [tencent
+ games](https://game.qq.com), which is provider for Virtual Kubelet connects your Kubernetes cluster with other Kubernetes clusters. This provider enables us extending Kubernetes to an unlimited one. By using the provider, pods that are scheduled on the virtual node registered on Kubernetes will run as jobs on other Kubernetes clusters' nodes.
 
 ```bash
 ./bin/virtual-kubelet --provider="openstack"
