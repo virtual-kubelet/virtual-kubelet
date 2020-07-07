@@ -227,8 +227,10 @@ type asyncProvider interface {
 // Once this returns, you should not re-use the controller.
 func (pc *PodController) Run(ctx context.Context, podSyncWorkers int) (retErr error) {
 	// Shutdowns are idempotent, so we can call it multiple times. This is in case we have to bail out early for some reason.
+	providerSerializingQueue := newKeySerializingQueue()
 
 	defer func() {
+		providerSerializingQueue.stop()
 		pc.k8sQ.ShutDown()
 		pc.deletionQ.ShutDown()
 		pc.mu.Lock()
@@ -251,7 +253,11 @@ func (pc *PodController) Run(ctx context.Context, podSyncWorkers int) (retErr er
 	pc.provider = provider
 
 	provider.NotifyPods(ctx, func(pod *corev1.Pod) {
-		pc.enqueuePodStatusUpdate(ctx, pc.podStatusQ, pod.DeepCopy())
+		if key, err := cache.MetaNamespaceKeyFunc(pod); err != nil {
+			log.G(ctx).WithError(err).Error("Could not generate key for pod enqueued by provider")
+		} else {
+			providerSerializingQueue.enqueue(key, pod.DeepCopy())
+		}
 	})
 	go runProvider(ctx)
 
@@ -309,6 +315,15 @@ func (pc *PodController) Run(ctx context.Context, podSyncWorkers int) (retErr er
 	log.G(ctx).Info("starting workers")
 	wg := sync.WaitGroup{}
 
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		for providerSerializingQueue.doWork(func(pod interface{}) bool {
+			return pc.enqueuePodStatusUpdate(ctx, pc.podStatusQ, pod.(*corev1.Pod))
+		}) {
+		}
+	}()
+
 	// Use the worker's "index" as its ID so we can use it for tracing.
 	for id := 0; id < podSyncWorkers; id++ {
 		wg.Add(1)
@@ -345,6 +360,7 @@ func (pc *PodController) Run(ctx context.Context, podSyncWorkers int) (retErr er
 	pc.k8sQ.ShutDown()
 	pc.podStatusQ.ShutDown()
 	pc.deletionQ.ShutDown()
+	providerSerializingQueue.stop()
 
 	wg.Wait()
 	return nil

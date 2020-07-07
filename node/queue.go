@@ -16,6 +16,7 @@ package node
 
 import (
 	"context"
+	"sync"
 
 	pkgerrors "github.com/pkg/errors"
 	"github.com/virtual-kubelet/virtual-kubelet/log"
@@ -102,4 +103,72 @@ func (pc *PodController) processPodStatusUpdate(ctx context.Context, workerID st
 	ctx = span.WithField(ctx, "workerID", workerID)
 
 	return handleQueueItem(ctx, q, pc.podStatusHandler)
+}
+
+// keySerializingQueueCallback should return false if it was unable to handle the situation, and it should retry
+type keySerializingQueueCallback func(object interface{}) bool
+type keySerializingQueue struct {
+	queue   workqueue.Interface
+	objects map[string]interface{}
+	lock    sync.Mutex
+}
+
+func newKeySerializingQueue() *keySerializingQueue {
+	return newKeySerializingQueueWithWorkqueue(workqueue.New())
+}
+
+func newKeySerializingQueueWithWorkqueue(queue workqueue.Interface) *keySerializingQueue {
+	return &keySerializingQueue{
+		queue:   queue,
+		objects: make(map[string]interface{}),
+	}
+}
+
+func (k *keySerializingQueue) enqueue(key string, obj interface{}) {
+	k.lock.Lock()
+	defer k.lock.Unlock()
+
+	k.queue.Add(key)
+	k.objects[key] = obj
+}
+
+// Return false to shut down
+func (k *keySerializingQueue) doWork(callback keySerializingQueueCallback) bool {
+	key, shuttingDown := k.queue.Get()
+	if shuttingDown {
+		return false
+	}
+
+	defer k.queue.Done(key)
+	keyString := key.(string)
+
+	k.lock.Lock()
+	item, ok := k.objects[keyString]
+	if !ok {
+		panic("Item was not in local objects")
+	}
+	delete(k.objects, keyString)
+	k.lock.Unlock()
+
+	// Process the item
+	done := callback(item)
+	if done {
+		return true
+	}
+
+	// The item was not processed successfully, we need to re-add it to the queue. The item may have been re-queued
+	// though, so we must not overwrite it
+	k.lock.Lock()
+	k.queue.Add(key)
+	_, ok = k.objects[keyString]
+	if !ok {
+		k.objects[keyString] = item
+	}
+	k.lock.Unlock()
+
+	return true
+}
+
+func (k *keySerializingQueue) stop() {
+	k.queue.ShutDown()
 }

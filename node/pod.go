@@ -233,22 +233,30 @@ func (pc *PodController) updatePodStatus(ctx context.Context, podFromKubernetes 
 
 // enqueuePodStatusUpdate updates our pod status map, and marks the pod as dirty in the workqueue. The pod must be DeepCopy'd
 // prior to enqueuePodStatusUpdate.
-func (pc *PodController) enqueuePodStatusUpdate(ctx context.Context, q workqueue.RateLimitingInterface, pod *corev1.Pod) {
+func (pc *PodController) enqueuePodStatusUpdate(ctx context.Context, q workqueue.RateLimitingInterface, pod *corev1.Pod) bool {
 	if key, err := cache.MetaNamespaceKeyFunc(pod); err != nil {
 		log.G(ctx).WithError(err).WithField("method", "enqueuePodStatusUpdate").Error("Error getting pod meta namespace key")
 	} else {
+		// There is a chance that this could be called before all of the known pod methods have been called back
 		if obj, ok := pc.knownPods.Load(key); ok {
 			kpod := obj.(*knownPod)
 			kpod.Lock()
 			if cmp.Equal(kpod.lastPodStatusReceivedFromProvider, pod) {
 				kpod.Unlock()
-				return
+				return true
 			}
 			kpod.lastPodStatusReceivedFromProvider = pod
 			kpod.Unlock()
 			q.AddRateLimited(key)
+		} else {
+			_, err = pc.podsLister.Pods(pod.Namespace).Get(pod.Name)
+			if err == nil {
+				return false
+			}
 		}
 	}
+
+	return true
 }
 
 func (pc *PodController) podStatusHandler(ctx context.Context, key string) (retErr error) {
