@@ -74,11 +74,11 @@ func testNodeRun(t *testing.T, enableLease bool) {
 		close(chErr)
 	}()
 
-	nw := makeWatch(t, nodes, testNodeCopy.Name)
+	nw := makeWatch(ctx, t, nodes, testNodeCopy.Name)
 	defer nw.Stop()
 	nr := nw.ResultChan()
 
-	lw := makeWatch(t, leases, testNodeCopy.Name)
+	lw := makeWatch(ctx, t, leases, testNodeCopy.Name)
 	defer lw.Stop()
 	lr := lw.ResultChan()
 
@@ -132,7 +132,7 @@ func testNodeRun(t *testing.T, enableLease bool) {
 	}
 
 	// trigger an async node status update
-	n, err := nodes.Get(testNode.Name, metav1.GetOptions{})
+	n, err := nodes.Get(ctx, testNode.Name, metav1.GetOptions{})
 	assert.NilError(t, err)
 	newCondition := corev1.NodeCondition{
 		Type:               corev1.NodeConditionType("UPDATED"),
@@ -140,7 +140,7 @@ func testNodeRun(t *testing.T, enableLease bool) {
 	}
 	n.Status.Conditions = append(n.Status.Conditions, newCondition)
 
-	nw = makeWatch(t, nodes, testNodeCopy.Name)
+	nw = makeWatch(ctx, t, nodes, testNodeCopy.Name)
 	defer nw.Stop()
 	nr = nw.ResultChan()
 
@@ -207,7 +207,7 @@ func TestNodeCustomUpdateStatusErrorHandler(t *testing.T) {
 	case <-node.Ready():
 	}
 
-	err = nodes.Delete(node.n.Name, nil)
+	err = nodes.Delete(ctx, node.n.Name, metav1.DeleteOptions{})
 	assert.NilError(t, err)
 
 	testP.triggerStatusUpdate(node.n.DeepCopy())
@@ -253,7 +253,7 @@ func TestUpdateNodeStatus(t *testing.T) {
 	updated, err := updateNodeStatus(ctx, nodes, n.DeepCopy())
 	assert.Equal(t, errors.IsNotFound(err), true, err)
 
-	_, err = nodes.Create(n)
+	_, err = nodes.Create(ctx, n, metav1.CreateOptions{})
 	assert.NilError(t, err)
 
 	updated, err = updateNodeStatus(ctx, nodes, n.DeepCopy())
@@ -267,10 +267,10 @@ func TestUpdateNodeStatus(t *testing.T) {
 	assert.NilError(t, err)
 	assert.Check(t, cmp.DeepEqual(n.Status, updated.Status))
 
-	err = nodes.Delete(n.Name, nil)
+	err = nodes.Delete(ctx, n.Name, metav1.DeleteOptions{})
 	assert.NilError(t, err)
 
-	_, err = nodes.Get(n.Name, metav1.GetOptions{})
+	_, err = nodes.Get(ctx, n.Name, metav1.GetOptions{})
 	assert.Equal(t, errors.IsNotFound(err), true, err)
 
 	_, err = updateNodeStatus(ctx, nodes, updated.DeepCopy())
@@ -289,7 +289,7 @@ func TestUpdateNodeLease(t *testing.T) {
 	assert.Equal(t, l.Name, lease.Name)
 	assert.Assert(t, cmp.DeepEqual(l.Spec.HolderIdentity, lease.Spec.HolderIdentity))
 
-	compare, err := leases.Get(l.Name, emptyGetOptions)
+	compare, err := leases.Get(ctx, l.Name, emptyGetOptions)
 	assert.NilError(t, err)
 	assert.Equal(t, l.Spec.RenewTime.Time.Unix(), compare.Spec.RenewTime.Time.Unix())
 	assert.Equal(t, compare.Name, lease.Name)
@@ -397,7 +397,7 @@ func TestBeforeAnnotationsPreserved(t *testing.T) {
 	testNodeCreateCopy.Annotations = map[string]string{
 		"beforeAnnotation": "value",
 	}
-	_, err := nodes.Create(testNodeCreateCopy)
+	_, err := nodes.Create(ctx, testNodeCreateCopy, metav1.CreateOptions{})
 	assert.NilError(t, err)
 
 	// We have to refer to testNodeCopy during the course of the test. testNode is modified by the node controller
@@ -417,7 +417,7 @@ func TestBeforeAnnotationsPreserved(t *testing.T) {
 		close(chErr)
 	}()
 
-	nw := makeWatch(t, nodes, testNodeCopy.Name)
+	nw := makeWatch(ctx, t, nodes, testNodeCopy.Name)
 	defer nw.Stop()
 	nr := nw.ResultChan()
 
@@ -446,7 +446,7 @@ func TestBeforeAnnotationsPreserved(t *testing.T) {
 		return ok
 	}))
 
-	newNode, err := nodes.Get(testNodeCopy.Name, emptyGetOptions)
+	newNode, err := nodes.Get(ctx, testNodeCopy.Name, emptyGetOptions)
 	assert.NilError(t, err)
 
 	assert.Assert(t, is.Contains(newNode.Annotations, "testAnnotation"))
@@ -487,7 +487,7 @@ func TestManualConditionsPreserved(t *testing.T) {
 		close(chErr)
 	}()
 
-	nw := makeWatch(t, nodes, testNodeCopy.Name)
+	nw := makeWatch(ctx, t, nodes, testNodeCopy.Name)
 	defer nw.Stop()
 	nr := nw.ResultChan()
 
@@ -503,7 +503,7 @@ func TestManualConditionsPreserved(t *testing.T) {
 		return true
 	}))
 
-	newNode, err := nodes.Get(testNodeCopy.Name, emptyGetOptions)
+	newNode, err := nodes.Get(ctx, testNodeCopy.Name, emptyGetOptions)
 	assert.NilError(t, err)
 	assert.Assert(t, is.Len(newNode.Status.Conditions, 0))
 
@@ -538,7 +538,7 @@ func TestManualConditionsPreserved(t *testing.T) {
 		return false
 	}))
 
-	newNode, err = nodes.Get(testNodeCopy.Name, emptyGetOptions)
+	newNode, err = nodes.Get(ctx, testNodeCopy.Name, emptyGetOptions)
 	assert.NilError(t, err)
 	assert.Assert(t, is.Len(newNode.Status.Conditions, 1))
 	assert.Assert(t, is.Contains(newNode.Annotations, "testAnnotation"))
@@ -551,13 +551,13 @@ func TestManualConditionsPreserved(t *testing.T) {
 		Message: "This is a manually added condition. Outside of VK. It should not be removed.",
 	}
 	assert.NilError(t, retry.RetryOnConflict(retry.DefaultRetry, func() error {
-		newNode, err = nodes.Get(testNodeCopy.Name, emptyGetOptions)
+		newNode, err = nodes.Get(ctx, testNodeCopy.Name, emptyGetOptions)
 		if err != nil {
 			return err
 		}
 		newNode.Annotations["manuallyAddedAnnotation"] = "value"
 		newNode.Status.Conditions = append(newNode.Status.Conditions, manuallyAddedCondition)
-		_, err = nodes.UpdateStatus(newNode)
+		_, err = nodes.UpdateStatus(ctx, newNode, metav1.UpdateOptions{})
 		return err
 	}))
 
@@ -608,7 +608,7 @@ func TestManualConditionsPreserved(t *testing.T) {
 	}))
 
 	// Make sure that all three conditions are there.
-	newNode, err = nodes.Get(testNodeCopy.Name, emptyGetOptions)
+	newNode, err = nodes.Get(ctx, testNodeCopy.Name, emptyGetOptions)
 	assert.NilError(t, err)
 	seenConditionTypes := make([]corev1.NodeConditionType, len(newNode.Status.Conditions))
 	for idx := range newNode.Status.Conditions {
@@ -667,13 +667,13 @@ func (tnp *testNodeProviderPing) Ping(ctx context.Context) error {
 }
 
 type watchGetter interface {
-	Watch(metav1.ListOptions) (watch.Interface, error)
+	Watch(context.Context, metav1.ListOptions) (watch.Interface, error)
 }
 
-func makeWatch(t *testing.T, wc watchGetter, name string) watch.Interface {
+func makeWatch(ctx context.Context, t *testing.T, wc watchGetter, name string) watch.Interface {
 	t.Helper()
 
-	w, err := wc.Watch(metav1.ListOptions{FieldSelector: "name=" + name})
+	w, err := wc.Watch(ctx, metav1.ListOptions{FieldSelector: "name=" + name})
 	assert.NilError(t, err)
 	return w
 }

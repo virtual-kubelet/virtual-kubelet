@@ -159,7 +159,7 @@ func (pc *PodController) handleProviderError(ctx context.Context, span trace.Spa
 		"reason":   pod.Status.Reason,
 	})
 
-	_, err := pc.client.Pods(pod.Namespace).UpdateStatus(pod)
+	_, err := pc.client.Pods(pod.Namespace).UpdateStatus(ctx, pod, metav1.UpdateOptions{})
 	if err != nil {
 		logger.WithError(err).Warn("Failed to update pod status")
 	} else {
@@ -216,7 +216,7 @@ func (pc *PodController) updatePodStatus(ctx context.Context, podFromKubernetes 
 	// the pod status, and we should be the sole writers of the pod status, we can blind overwrite it. Therefore
 	// we need to copy the pod and set ResourceVersion to 0.
 	podFromProvider.ResourceVersion = "0"
-	if _, err := pc.client.Pods(podFromKubernetes.Namespace).UpdateStatus(podFromProvider); err != nil {
+	if _, err := pc.client.Pods(podFromKubernetes.Namespace).UpdateStatus(ctx, podFromProvider, metav1.UpdateOptions{}); err != nil {
 		span.SetStatus(err)
 		return pkgerrors.Wrap(err, "error while updating pod status in kubernetes")
 	}
@@ -322,7 +322,7 @@ func (pc *PodController) deletePodHandler(ctx context.Context, key string) (retE
 
 	// We don't check with the provider before doing this delete. At this point, even if an outstanding pod status update
 	// was in progress,
-	err = pc.client.Pods(namespace).Delete(name, metav1.NewDeleteOptions(0))
+	err = pc.client.Pods(namespace).Delete(ctx, name, *metav1.NewDeleteOptions(0))
 	if errors.IsNotFound(err) {
 		return nil
 	}

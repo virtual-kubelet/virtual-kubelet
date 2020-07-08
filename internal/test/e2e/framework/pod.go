@@ -47,21 +47,21 @@ func (f *Framework) CreateDummyPodObjectWithPrefix(testName string, prefix strin
 }
 
 // CreatePod creates the specified pod in the Kubernetes API.
-func (f *Framework) CreatePod(pod *corev1.Pod) (*corev1.Pod, error) {
-	return f.KubeClient.CoreV1().Pods(f.Namespace).Create(pod)
+func (f *Framework) CreatePod(ctx context.Context, pod *corev1.Pod) (*corev1.Pod, error) {
+	return f.KubeClient.CoreV1().Pods(f.Namespace).Create(ctx, pod, metav1.CreateOptions{})
 }
 
 // DeletePod deletes the pod with the specified name and namespace in the Kubernetes API using the default grace period.
-func (f *Framework) DeletePod(namespace, name string) error {
-	return f.KubeClient.CoreV1().Pods(namespace).Delete(name, &metav1.DeleteOptions{})
+func (f *Framework) DeletePod(ctx context.Context, namespace, name string) error {
+	return f.KubeClient.CoreV1().Pods(namespace).Delete(ctx, name, metav1.DeleteOptions{})
 }
 
 // DeletePodImmediately forcibly deletes the pod with the specified name and namespace in the Kubernetes API.
 // This is equivalent to running "kubectl delete --force --grace-period 0 --namespace <namespace> pod <name>".
-func (f *Framework) DeletePodImmediately(namespace, name string) error {
+func (f *Framework) DeletePodImmediately(ctx context.Context, namespace, name string) error {
 	grace := int64(0)
 	propagation := metav1.DeletePropagationBackground
-	return f.KubeClient.CoreV1().Pods(namespace).Delete(name, &metav1.DeleteOptions{
+	return f.KubeClient.CoreV1().Pods(namespace).Delete(ctx, name, metav1.DeleteOptions{
 		GracePeriodSeconds: &grace,
 		PropagationPolicy:  &propagation,
 	})
@@ -70,22 +70,22 @@ func (f *Framework) DeletePodImmediately(namespace, name string) error {
 // WaitUntilPodCondition establishes a watch on the pod with the specified name and namespace.
 // Then, it waits for the specified condition function to be verified.
 func (f *Framework) WaitUntilPodCondition(namespace, name string, fn watch.ConditionFunc) (*corev1.Pod, error) {
+	// Watch for updates to the Pod resource until fn is satisfied, or until the timeout is reached.
+	ctx, cfn := context.WithTimeout(context.Background(), f.WatchTimeout)
+	defer cfn()
 	// Create a field selector that matches the specified Pod resource.
 	fs := fields.ParseSelectorOrDie(fmt.Sprintf("metadata.namespace==%s,metadata.name==%s", namespace, name))
 	// Create a ListWatch so we can receive events for the matched Pod resource.
 	lw := &cache.ListWatch{
 		ListFunc: func(options metav1.ListOptions) (runtime.Object, error) {
 			options.FieldSelector = fs.String()
-			return f.KubeClient.CoreV1().Pods(namespace).List(options)
+			return f.KubeClient.CoreV1().Pods(namespace).List(ctx, options)
 		},
 		WatchFunc: func(options metav1.ListOptions) (watchapi.Interface, error) {
 			options.FieldSelector = fs.String()
-			return f.KubeClient.CoreV1().Pods(namespace).Watch(options)
+			return f.KubeClient.CoreV1().Pods(namespace).Watch(ctx, options)
 		},
 	}
-	// Watch for updates to the Pod resource until fn is satisfied, or until the timeout is reached.
-	ctx, cfn := context.WithTimeout(context.Background(), f.WatchTimeout)
-	defer cfn()
 	last, err := watch.UntilWithSync(ctx, lw, &corev1.Pod{}, nil, fn)
 	if err != nil {
 		return nil, err
@@ -129,22 +129,24 @@ func (f *Framework) WaitUntilPodInPhase(namespace, name string, phases ...corev1
 // WaitUntilPodEventWithReason establishes a watch on events involving the specified pod.
 // Then, it waits for an event with the specified reason to be created/updated.
 func (f *Framework) WaitUntilPodEventWithReason(pod *corev1.Pod, reason string) error {
+	// Watch for updates to the Event resource until fn is satisfied, or until the timeout is reached.
+	ctx, cfn := context.WithTimeout(context.Background(), f.WatchTimeout)
+	defer cfn()
+
 	// Create a field selector that matches Event resources involving the specified pod.
 	fs := fields.ParseSelectorOrDie(fmt.Sprintf("involvedObject.kind==Pod,involvedObject.uid==%s", pod.UID))
 	// Create a ListWatch so we can receive events for the matched Event resource.
 	lw := &cache.ListWatch{
 		ListFunc: func(options metav1.ListOptions) (runtime.Object, error) {
 			options.FieldSelector = fs.String()
-			return f.KubeClient.CoreV1().Events(pod.Namespace).List(options)
+			return f.KubeClient.CoreV1().Events(pod.Namespace).List(ctx, options)
 		},
 		WatchFunc: func(options metav1.ListOptions) (watchapi.Interface, error) {
 			options.FieldSelector = fs.String()
-			return f.KubeClient.CoreV1().Events(pod.Namespace).Watch(options)
+			return f.KubeClient.CoreV1().Events(pod.Namespace).Watch(ctx, options)
 		},
 	}
-	// Watch for updates to the Event resource until fn is satisfied, or until the timeout is reached.
-	ctx, cfn := context.WithTimeout(context.Background(), f.WatchTimeout)
-	defer cfn()
+
 	last, err := watch.UntilWithSync(ctx, lw, &corev1.Event{}, nil, func(event watchapi.Event) (b bool, e error) {
 		switch event.Type {
 		case watchapi.Error:
@@ -165,7 +167,7 @@ func (f *Framework) WaitUntilPodEventWithReason(pod *corev1.Pod, reason string) 
 }
 
 // GetRunningPodsFromProvider gets the running pods from the provider of the virtual kubelet
-func (f *Framework) GetRunningPodsFromProvider() (*corev1.PodList, error) {
+func (f *Framework) GetRunningPodsFromProvider(ctx context.Context) (*corev1.PodList, error) {
 	result := &corev1.PodList{}
 
 	err := f.KubeClient.CoreV1().
@@ -175,14 +177,14 @@ func (f *Framework) GetRunningPodsFromProvider() (*corev1.PodList, error) {
 		Name(f.NodeName).
 		SubResource("proxy").
 		Suffix("runningpods/").
-		Do().
+		Do(ctx).
 		Into(result)
 
 	return result, err
 }
 
 // GetRunningPodsFromProvider gets the running pods from the provider of the virtual kubelet
-func (f *Framework) GetRunningPodsFromKubernetes() (*corev1.PodList, error) {
+func (f *Framework) GetRunningPodsFromKubernetes(ctx context.Context) (*corev1.PodList, error) {
 	result := &corev1.PodList{}
 
 	err := f.KubeClient.CoreV1().
@@ -192,7 +194,7 @@ func (f *Framework) GetRunningPodsFromKubernetes() (*corev1.PodList, error) {
 		Name(f.NodeName).
 		SubResource("proxy").
 		Suffix("pods").
-		Do().
+		Do(ctx).
 		Into(result)
 
 	return result, err
