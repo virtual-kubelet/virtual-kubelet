@@ -21,3 +21,5 @@
   tag: nomad
 - name: OpenStack Zun
   tag: openstack-zun
+- name: Tencent Games Tensile Kube
+  tag: tensile-kube
