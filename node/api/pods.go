@@ -27,6 +27,10 @@ import (
 type PodListerFunc func(context.Context) ([]*v1.Pod, error)
 
 func HandleRunningPods(getPods PodListerFunc) http.HandlerFunc {
+	if getPods == nil {
+		return NotImplemented
+	}
+
 	scheme := runtime.NewScheme()
 	v1.SchemeBuilder.AddToScheme(scheme) //nolint:errcheck
 	codecs := serializer.NewCodecFactory(scheme)
