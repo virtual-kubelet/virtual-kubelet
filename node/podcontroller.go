@@ -267,11 +267,12 @@ func (pc *PodController) Run(ctx context.Context, podSyncWorkers int) (retErr er
 		return fmt.Errorf("failed to list pod error: %v", err)
 	}
 	var podCount int32
-	started := false
+	// use started as int32 just for conveniently using atomic
+	var started int32
 	startCh := make(chan struct{})
 	// check if len(pods) == 0 to avoid dead lock
 	if len(pods) == 0 {
-		started = true
+		started = 1
 		go func() {
 			startCh <- struct{}{}
 		}()
@@ -287,7 +288,7 @@ func (pc *PodController) Run(ctx context.Context, podSyncWorkers int) (retErr er
 			} else {
 				pc.knownPods.Store(key, &knownPod{})
 				pc.k8sQ.AddRateLimited(key)
-				if started {
+				if atomic.LoadInt32(&started) == 1 {
 					return
 				}
 				currentCount := atomic.AddInt32(&podCount, 1)
@@ -323,7 +324,7 @@ func (pc *PodController) Run(ctx context.Context, podSyncWorkers int) (retErr er
 	})
 
 	<-startCh
-	started = true
+	atomic.StoreInt32(&started, 1)
 
 	provider.NotifyPods(ctx, func(pod *corev1.Pod) {
 		pc.enqueuePodStatusUpdate(ctx, pc.podStatusQ, pod.DeepCopy())
