@@ -22,12 +22,14 @@ import (
 
 	"gotest.tools/assert"
 	"gotest.tools/assert/cmp"
+	is "gotest.tools/assert/cmp"
 	coord "k8s.io/api/coordination/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	watch "k8s.io/apimachinery/pkg/watch"
 	testclient "k8s.io/client-go/kubernetes/fake"
+	"k8s.io/client-go/util/retry"
 )
 
 func TestNodeRun(t *testing.T) {
@@ -72,11 +74,11 @@ func testNodeRun(t *testing.T, enableLease bool) {
 		close(chErr)
 	}()
 
-	nw := makeWatch(t, nodes, testNodeCopy.Name)
+	nw := makeWatch(ctx, t, nodes, testNodeCopy.Name)
 	defer nw.Stop()
 	nr := nw.ResultChan()
 
-	lw := makeWatch(t, leases, testNodeCopy.Name)
+	lw := makeWatch(ctx, t, leases, testNodeCopy.Name)
 	defer lw.Stop()
 	lr := lw.ResultChan()
 
@@ -130,7 +132,7 @@ func testNodeRun(t *testing.T, enableLease bool) {
 	}
 
 	// trigger an async node status update
-	n, err := nodes.Get(testNode.Name, metav1.GetOptions{})
+	n, err := nodes.Get(ctx, testNode.Name, metav1.GetOptions{})
 	assert.NilError(t, err)
 	newCondition := corev1.NodeCondition{
 		Type:               corev1.NodeConditionType("UPDATED"),
@@ -138,7 +140,7 @@ func testNodeRun(t *testing.T, enableLease bool) {
 	}
 	n.Status.Conditions = append(n.Status.Conditions, newCondition)
 
-	nw = makeWatch(t, nodes, testNodeCopy.Name)
+	nw = makeWatch(ctx, t, nodes, testNodeCopy.Name)
 	defer nw.Stop()
 	nr = nw.ResultChan()
 
@@ -205,7 +207,7 @@ func TestNodeCustomUpdateStatusErrorHandler(t *testing.T) {
 	case <-node.Ready():
 	}
 
-	err = nodes.Delete(node.n.Name, nil)
+	err = nodes.Delete(ctx, node.n.Name, metav1.DeleteOptions{})
 	assert.NilError(t, err)
 
 	testP.triggerStatusUpdate(node.n.DeepCopy())
@@ -251,7 +253,7 @@ func TestUpdateNodeStatus(t *testing.T) {
 	updated, err := updateNodeStatus(ctx, nodes, n.DeepCopy())
 	assert.Equal(t, errors.IsNotFound(err), true, err)
 
-	_, err = nodes.Create(n)
+	_, err = nodes.Create(ctx, n, metav1.CreateOptions{})
 	assert.NilError(t, err)
 
 	updated, err = updateNodeStatus(ctx, nodes, n.DeepCopy())
@@ -265,10 +267,10 @@ func TestUpdateNodeStatus(t *testing.T) {
 	assert.NilError(t, err)
 	assert.Check(t, cmp.DeepEqual(n.Status, updated.Status))
 
-	err = nodes.Delete(n.Name, nil)
+	err = nodes.Delete(ctx, n.Name, metav1.DeleteOptions{})
 	assert.NilError(t, err)
 
-	_, err = nodes.Get(n.Name, metav1.GetOptions{})
+	_, err = nodes.Get(ctx, n.Name, metav1.GetOptions{})
 	assert.Equal(t, errors.IsNotFound(err), true, err)
 
 	_, err = updateNodeStatus(ctx, nodes, updated.DeepCopy())
@@ -287,7 +289,7 @@ func TestUpdateNodeLease(t *testing.T) {
 	assert.Equal(t, l.Name, lease.Name)
 	assert.Assert(t, cmp.DeepEqual(l.Spec.HolderIdentity, lease.Spec.HolderIdentity))
 
-	compare, err := leases.Get(l.Name, emptyGetOptions)
+	compare, err := leases.Get(ctx, l.Name, emptyGetOptions)
 	assert.NilError(t, err)
 	assert.Equal(t, l.Spec.RenewTime.Time.Unix(), compare.Spec.RenewTime.Time.Unix())
 	assert.Equal(t, compare.Name, lease.Name)
@@ -374,6 +376,252 @@ func TestPingAfterStatusUpdate(t *testing.T) {
 	assert.Assert(t, testP.maxPingInterval < maxAllowedInterval, "maximum time between node pings (%v) was greater than the maximum expected interval (%v)", testP.maxPingInterval, maxAllowedInterval)
 }
 
+// Are annotations that were created before the VK existed preserved?
+func TestBeforeAnnotationsPreserved(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	c := testclient.NewSimpleClientset()
+
+	testP := &testNodeProvider{NodeProvider: &NaiveNodeProvider{}}
+
+	nodes := c.CoreV1().Nodes()
+
+	interval := 10 * time.Millisecond
+	opts := []NodeControllerOpt{
+		WithNodePingInterval(interval),
+	}
+
+	testNode := testNode(t)
+	testNodeCreateCopy := testNode.DeepCopy()
+	testNodeCreateCopy.Annotations = map[string]string{
+		"beforeAnnotation": "value",
+	}
+	_, err := nodes.Create(ctx, testNodeCreateCopy, metav1.CreateOptions{})
+	assert.NilError(t, err)
+
+	// We have to refer to testNodeCopy during the course of the test. testNode is modified by the node controller
+	// so it will trigger the race detector.
+	testNodeCopy := testNode.DeepCopy()
+	node, err := NewNodeController(testP, testNode, nodes, opts...)
+	assert.NilError(t, err)
+
+	chErr := make(chan error)
+	defer func() {
+		cancel()
+		assert.NilError(t, <-chErr)
+	}()
+
+	go func() {
+		chErr <- node.Run(ctx)
+		close(chErr)
+	}()
+
+	nw := makeWatch(ctx, t, nodes, testNodeCopy.Name)
+	defer nw.Stop()
+	nr := nw.ResultChan()
+
+	t.Log("Waiting for node to exist")
+	assert.NilError(t, <-waitForEvent(ctx, nr, func(e watch.Event) bool {
+		if e.Object == nil {
+			return false
+		}
+		return true
+	}))
+
+	testP.notifyNodeStatus(&corev1.Node{
+		ObjectMeta: metav1.ObjectMeta{
+			Annotations: map[string]string{
+				"testAnnotation": "value",
+			},
+		},
+	})
+
+	assert.NilError(t, <-waitForEvent(ctx, nr, func(e watch.Event) bool {
+		if e.Object == nil {
+			return false
+		}
+		_, ok := e.Object.(*corev1.Node).Annotations["testAnnotation"]
+
+		return ok
+	}))
+
+	newNode, err := nodes.Get(ctx, testNodeCopy.Name, emptyGetOptions)
+	assert.NilError(t, err)
+
+	assert.Assert(t, is.Contains(newNode.Annotations, "testAnnotation"))
+	assert.Assert(t, is.Contains(newNode.Annotations, "beforeAnnotation"))
+}
+
+// Are conditions set by systems outside of VK preserved?
+func TestManualConditionsPreserved(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	c := testclient.NewSimpleClientset()
+
+	testP := &testNodeProvider{NodeProvider: &NaiveNodeProvider{}}
+
+	nodes := c.CoreV1().Nodes()
+
+	interval := 10 * time.Millisecond
+	opts := []NodeControllerOpt{
+		WithNodePingInterval(interval),
+	}
+
+	testNode := testNode(t)
+	// We have to refer to testNodeCopy during the course of the test. testNode is modified by the node controller
+	// so it will trigger the race detector.
+	testNodeCopy := testNode.DeepCopy()
+	node, err := NewNodeController(testP, testNode, nodes, opts...)
+	assert.NilError(t, err)
+
+	chErr := make(chan error)
+	defer func() {
+		cancel()
+		assert.NilError(t, <-chErr)
+	}()
+
+	go func() {
+		chErr <- node.Run(ctx)
+		close(chErr)
+	}()
+
+	nw := makeWatch(ctx, t, nodes, testNodeCopy.Name)
+	defer nw.Stop()
+	nr := nw.ResultChan()
+
+	t.Log("Waiting for node to exist")
+	assert.NilError(t, <-waitForEvent(ctx, nr, func(e watch.Event) bool {
+		if e.Object == nil {
+			return false
+		}
+		receivedNode := e.Object.(*corev1.Node)
+		if len(receivedNode.Status.Conditions) != 0 {
+			return false
+		}
+		return true
+	}))
+
+	newNode, err := nodes.Get(ctx, testNodeCopy.Name, emptyGetOptions)
+	assert.NilError(t, err)
+	assert.Assert(t, is.Len(newNode.Status.Conditions, 0))
+
+	baseCondition := corev1.NodeCondition{
+		Type:    "BaseCondition",
+		Status:  "Ok",
+		Reason:  "NA",
+		Message: "This is the base condition. It is set by VK, and should always be there.",
+	}
+
+	testP.notifyNodeStatus(&corev1.Node{
+		ObjectMeta: metav1.ObjectMeta{
+			Annotations: map[string]string{
+				"testAnnotation": "value",
+			},
+		},
+		Status: corev1.NodeStatus{
+			Conditions: []corev1.NodeCondition{
+				baseCondition,
+			},
+		},
+	})
+
+	// Wait for this (node with condition) to show up
+	assert.NilError(t, <-waitForEvent(ctx, nr, func(e watch.Event) bool {
+		receivedNode := e.Object.(*corev1.Node)
+		for _, condition := range receivedNode.Status.Conditions {
+			if condition.Type == baseCondition.Type {
+				return true
+			}
+		}
+		return false
+	}))
+
+	newNode, err = nodes.Get(ctx, testNodeCopy.Name, emptyGetOptions)
+	assert.NilError(t, err)
+	assert.Assert(t, is.Len(newNode.Status.Conditions, 1))
+	assert.Assert(t, is.Contains(newNode.Annotations, "testAnnotation"))
+
+	// Add a new event manually
+	manuallyAddedCondition := corev1.NodeCondition{
+		Type:    "ManuallyAddedCondition",
+		Status:  "Ok",
+		Reason:  "NA",
+		Message: "This is a manually added condition. Outside of VK. It should not be removed.",
+	}
+	assert.NilError(t, retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		newNode, err = nodes.Get(ctx, testNodeCopy.Name, emptyGetOptions)
+		if err != nil {
+			return err
+		}
+		newNode.Annotations["manuallyAddedAnnotation"] = "value"
+		newNode.Status.Conditions = append(newNode.Status.Conditions, manuallyAddedCondition)
+		_, err = nodes.UpdateStatus(ctx, newNode, metav1.UpdateOptions{})
+		return err
+	}))
+
+	assert.NilError(t, <-waitForEvent(ctx, nr, func(e watch.Event) bool {
+		receivedNode := e.Object.(*corev1.Node)
+		for _, condition := range receivedNode.Status.Conditions {
+			if condition.Type == manuallyAddedCondition.Type {
+				return true
+			}
+		}
+		assert.Assert(t, is.Contains(receivedNode.Annotations, "testAnnotation"))
+		assert.Assert(t, is.Contains(newNode.Annotations, "manuallyAddedAnnotation"))
+
+		return false
+	}))
+
+	// Let's have the VK have a new condition.
+	newCondition := corev1.NodeCondition{
+		Type:    "NewCondition",
+		Status:  "Ok",
+		Reason:  "NA",
+		Message: "This is a newly added condition. It should only show up *with* / *after* ManuallyAddedCondition. It is set by the VK.",
+	}
+
+	// Everything but node status is ignored here
+	testP.notifyNodeStatus(&corev1.Node{
+		// Annotations is left empty
+		Status: corev1.NodeStatus{
+			Conditions: []corev1.NodeCondition{
+				baseCondition,
+				newCondition,
+			},
+		},
+	})
+	i := 0
+	assert.NilError(t, <-waitForEvent(ctx, nr, func(e watch.Event) bool {
+		receivedNode := e.Object.(*corev1.Node)
+		for _, condition := range receivedNode.Status.Conditions {
+			if condition.Type == newCondition.Type {
+				// Wait for 2 updates / patches
+				if i > 2 {
+					return true
+				}
+				i++
+			}
+		}
+		return false
+	}))
+
+	// Make sure that all three conditions are there.
+	newNode, err = nodes.Get(ctx, testNodeCopy.Name, emptyGetOptions)
+	assert.NilError(t, err)
+	seenConditionTypes := make([]corev1.NodeConditionType, len(newNode.Status.Conditions))
+	for idx := range newNode.Status.Conditions {
+		seenConditionTypes[idx] = newNode.Status.Conditions[idx].Type
+	}
+	assert.Assert(t, is.Contains(seenConditionTypes, baseCondition.Type))
+	assert.Assert(t, is.Contains(seenConditionTypes, newCondition.Type))
+	assert.Assert(t, is.Contains(seenConditionTypes, manuallyAddedCondition.Type))
+	assert.Assert(t, is.Equal(newNode.Annotations["testAnnotation"], ""))
+	assert.Assert(t, is.Contains(newNode.Annotations, "manuallyAddedAnnotation"))
+
+	t.Log(newNode.Status.Conditions)
+}
 func testNode(t *testing.T) *corev1.Node {
 	n := &corev1.Node{}
 	n.Name = strings.ToLower(t.Name())
@@ -383,16 +631,19 @@ func testNode(t *testing.T) *corev1.Node {
 type testNodeProvider struct {
 	NodeProvider
 	statusHandlers []func(*corev1.Node)
+	// Callback to VK
+	notifyNodeStatus func(*corev1.Node)
 }
 
 func (p *testNodeProvider) NotifyNodeStatus(ctx context.Context, h func(*corev1.Node)) {
-	p.statusHandlers = append(p.statusHandlers, h)
+	p.notifyNodeStatus = h
 }
 
 func (p *testNodeProvider) triggerStatusUpdate(n *corev1.Node) {
 	for _, h := range p.statusHandlers {
 		h(n)
 	}
+	p.notifyNodeStatus(n)
 }
 
 // testNodeProviderPing tracks the maximum time interval between calls to Ping
@@ -416,13 +667,13 @@ func (tnp *testNodeProviderPing) Ping(ctx context.Context) error {
 }
 
 type watchGetter interface {
-	Watch(metav1.ListOptions) (watch.Interface, error)
+	Watch(context.Context, metav1.ListOptions) (watch.Interface, error)
 }
 
-func makeWatch(t *testing.T, wc watchGetter, name string) watch.Interface {
+func makeWatch(ctx context.Context, t *testing.T, wc watchGetter, name string) watch.Interface {
 	t.Helper()
 
-	w, err := wc.Watch(metav1.ListOptions{FieldSelector: "name=" + name})
+	w, err := wc.Watch(ctx, metav1.ListOptions{FieldSelector: "name=" + name})
 	assert.NilError(t, err)
 	return w
 }

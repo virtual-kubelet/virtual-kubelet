@@ -17,7 +17,6 @@ package node
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"time"
 
 	pkgerrors "github.com/pkg/errors"
@@ -31,6 +30,14 @@ import (
 	"k8s.io/apimachinery/pkg/util/strategicpatch"
 	"k8s.io/client-go/kubernetes/typed/coordination/v1beta1"
 	v1 "k8s.io/client-go/kubernetes/typed/core/v1"
+	"k8s.io/client-go/util/retry"
+)
+
+const (
+	// Annotation with the JSON-serialized last applied node conditions. Based on kube ctl apply. Used to calculate
+	// the three-way patch
+	virtualKubeletLastNodeAppliedNodeStatus = "virtual-kubelet.io/last-applied-node-status"
+	virtualKubeletLastNodeAppliedObjectMeta = "virtual-kubelet.io/last-applied-object-meta"
 )
 
 // NodeProvider is the interface used for registering a node and updating its
@@ -185,7 +192,7 @@ func (n *NodeController) Run(ctx context.Context) error {
 		n.statusInterval = DefaultStatusUpdateInterval
 	}
 
-	n.chStatusUpdate = make(chan *corev1.Node)
+	n.chStatusUpdate = make(chan *corev1.Node, 1)
 	n.p.NotifyNodeStatus(ctx, func(node *corev1.Node) {
 		n.chStatusUpdate <- node
 	})
@@ -216,13 +223,19 @@ func (n *NodeController) Run(ctx context.Context) error {
 	return n.controlLoop(ctx)
 }
 
-func (n *NodeController) ensureNode(ctx context.Context) error {
-	err := n.updateStatus(ctx, true)
+func (n *NodeController) ensureNode(ctx context.Context) (err error) {
+	ctx, span := trace.StartSpan(ctx, "node.ensureNode")
+	defer span.End()
+	defer func() {
+		span.SetStatus(err)
+	}()
+
+	err = n.updateStatus(ctx, true)
 	if err == nil || !errors.IsNotFound(err) {
 		return err
 	}
 
-	node, err := n.nodes.Create(n.n)
+	node, err := n.nodes.Create(ctx, n.n, metav1.CreateOptions{})
 	if err != nil {
 		return pkgerrors.Wrap(err, "error registering node with kubernetes")
 	}
@@ -258,10 +271,13 @@ func (n *NodeController) controlLoop(ctx context.Context) error {
 
 	close(n.chReady)
 
-	for {
+	loop := func() bool {
+		ctx, span := trace.StartSpan(ctx, "node.controlLoop.loop")
+		defer span.End()
+
 		select {
 		case <-ctx.Done():
-			return nil
+			return true
 		case updated := <-n.chStatusUpdate:
 			var t *time.Timer
 			if n.disableLease {
@@ -278,6 +294,13 @@ func (n *NodeController) controlLoop(ctx context.Context) error {
 			}
 
 			n.n.Status = updated.Status
+			n.n.ObjectMeta = metav1.ObjectMeta{
+				Annotations: updated.Annotations,
+				Labels:      updated.Labels,
+				Name:        n.n.ObjectMeta.Name,
+				Namespace:   n.n.ObjectMeta.Namespace,
+				UID:         n.n.ObjectMeta.UID,
+			}
 			if err := n.updateStatus(ctx, false); err != nil {
 				log.G(ctx).WithError(err).Error("Error handling node status update")
 			}
@@ -294,6 +317,13 @@ func (n *NodeController) controlLoop(ctx context.Context) error {
 				log.G(ctx).Debug("Successful node ping")
 			}
 			pingTimer.Reset(n.pingInterval)
+		}
+		return false
+	}
+	for {
+		shouldTerminate := loop()
+		if shouldTerminate {
+			return nil
 		}
 	}
 }
@@ -326,7 +356,13 @@ func (n *NodeController) updateLease(ctx context.Context) error {
 	return nil
 }
 
-func (n *NodeController) updateStatus(ctx context.Context, skipErrorCb bool) error {
+func (n *NodeController) updateStatus(ctx context.Context, skipErrorCb bool) (err error) {
+	ctx, span := trace.StartSpan(ctx, "node.updateStatus")
+	defer span.End()
+	defer func() {
+		span.SetStatus(err)
+	}()
+
 	updateNodeStatusHeartbeat(n.n)
 
 	node, err := updateNodeStatus(ctx, n.nodes, n.n)
@@ -349,18 +385,18 @@ func (n *NodeController) updateStatus(ctx context.Context, skipErrorCb bool) err
 }
 
 func ensureLease(ctx context.Context, leases v1beta1.LeaseInterface, lease *coord.Lease) (*coord.Lease, error) {
-	l, err := leases.Create(lease)
+	l, err := leases.Create(ctx, lease, metav1.CreateOptions{})
 	if err != nil {
 		switch {
 		case errors.IsNotFound(err):
 			log.G(ctx).WithError(err).Info("Node lease not supported")
 			return nil, err
 		case errors.IsAlreadyExists(err):
-			if err := leases.Delete(lease.Name, nil); err != nil && !errors.IsNotFound(err) {
+			if err := leases.Delete(ctx, lease.Name, metav1.DeleteOptions{}); err != nil && !errors.IsNotFound(err) {
 				log.G(ctx).WithError(err).Error("could not delete old node lease")
 				return nil, pkgerrors.Wrap(err, "old lease exists but could not delete it")
 			}
-			l, err = leases.Create(lease)
+			l, err = leases.Create(ctx, lease, metav1.CreateOptions{})
 		}
 	}
 
@@ -385,7 +421,7 @@ func updateNodeLease(ctx context.Context, leases v1beta1.LeaseInterface, lease *
 		ctx = span.WithField(ctx, "lease.expiresSeconds", *lease.Spec.LeaseDurationSeconds)
 	}
 
-	l, err := leases.Update(lease)
+	l, err := leases.Update(ctx, lease, metav1.UpdateOptions{})
 	if err != nil {
 		if errors.IsNotFound(err) {
 			log.G(ctx).Debug("lease not found")
@@ -406,42 +442,117 @@ func updateNodeLease(ctx context.Context, leases v1beta1.LeaseInterface, lease *
 // just so we don't have to allocate this on every get request
 var emptyGetOptions = metav1.GetOptions{}
 
-// patchNodeStatus patches node status.
-// Copied from github.com/kubernetes/kubernetes/pkg/util/node
-func patchNodeStatus(nodes v1.NodeInterface, nodeName types.NodeName, oldNode *corev1.Node, newNode *corev1.Node) (*corev1.Node, []byte, error) {
-	patchBytes, err := preparePatchBytesforNodeStatus(nodeName, oldNode, newNode)
-	if err != nil {
-		return nil, nil, err
+func prepareThreewayPatchBytesForNodeStatus(nodeFromProvider, apiServerNode *corev1.Node) ([]byte, error) {
+	// We use these two values to calculate a patch. We use a three-way patch in order to avoid
+	// causing state regression server side. For example, let's consider the scenario:
+	/*
+		UML Source:
+		@startuml
+		participant VK
+		participant K8s
+		participant ExternalUpdater
+		note right of VK: Updates internal node conditions to [A, B]
+		VK->K8s: Patch Upsert [A, B]
+		note left of K8s: Node conditions are [A, B]
+		ExternalUpdater->K8s: Patch Upsert [C]
+		note left of K8s: Node Conditions are [A, B, C]
+		note right of VK: Updates internal node conditions to [A]
+		VK->K8s: Patch: delete B, upsert A\nThis is where things go wrong,\nbecause the patch is written to replace all node conditions\nit overwrites (drops) [C]
+		note left of K8s: Node Conditions are [A]\nNode condition C from ExternalUpdater is no longer present
+		@enduml
+			     ,--.                                                        ,---.          ,---------------.
+		     |VK|                                                        |K8s|          |ExternalUpdater|
+		     `+-'                                                        `-+-'          `-------+-------'
+		      |  ,------------------------------------------!.             |                    |
+		      |  |Updates internal node conditions to [A, B]|_\            |                    |
+		      |  `--------------------------------------------'            |                    |
+		      |                     Patch Upsert [A, B]                    |                    |
+		      | ----------------------------------------------------------->                    |
+		      |                                                            |                    |
+		      |                              ,--------------------------!. |                    |
+		      |                              |Node conditions are [A, B]|_\|                    |
+		      |                              `----------------------------'|                    |
+		      |                                                            |  Patch Upsert [C]  |
+		      |                                                            | <-------------------
+		      |                                                            |                    |
+		      |                           ,-----------------------------!. |                    |
+		      |                           |Node Conditions are [A, B, C]|_\|                    |
+		      |                           `-------------------------------'|                    |
+		      |  ,---------------------------------------!.                |                    |
+		      |  |Updates internal node conditions to [A]|_\               |                    |
+		      |  `-----------------------------------------'               |                    |
+		      | Patch: delete B, upsert A                                  |                    |
+		      | This is where things go wrong,                             |                    |
+		      | because the patch is written to replace all node conditions|                    |
+		      | it overwrites (drops) [C]                                  |                    |
+		      | ----------------------------------------------------------->                    |
+		      |                                                            |                    |
+		     ,----------------------------------------------------------!. |                    |
+		     |Node Conditions are [A]                                   |_\|                    |
+		     |Node condition C from ExternalUpdater is no longer present  ||                    |
+		     `------------------------------------------------------------'+-.          ,-------+-------.
+		     |VK|                                                        |K8s|          |ExternalUpdater|
+		     `--'                                                        `---'          `---------------'
+	*/
+	// In order to calculate that last patch to delete B, and upsert C, we need to know that C was added by
+	// "someone else". So, we keep track of our last applied value, and our current value. We then generate
+	// our patch based on the diff of these and *not* server side state.
+	oldVKStatus, ok1 := apiServerNode.Annotations[virtualKubeletLastNodeAppliedNodeStatus]
+	oldVKObjectMeta, ok2 := apiServerNode.Annotations[virtualKubeletLastNodeAppliedObjectMeta]
+
+	oldNode := corev1.Node{}
+	// Check if there were no labels, which means someone else probably created the node, or this is an upgrade. Either way, we will consider
+	// ourselves as never having written the node object before, so oldNode will be left empty. We will overwrite values if
+	// our new node conditions / status / objectmeta have them
+	if ok1 && ok2 {
+		err := json.Unmarshal([]byte(oldVKObjectMeta), &oldNode.ObjectMeta)
+		if err != nil {
+			return nil, pkgerrors.Wrapf(err, "Cannot unmarshal old node object metadata (key: %q): %q", virtualKubeletLastNodeAppliedObjectMeta, oldVKObjectMeta)
+		}
+		err = json.Unmarshal([]byte(oldVKStatus), &oldNode.Status)
+		if err != nil {
+			return nil, pkgerrors.Wrapf(err, "Cannot unmarshal old node status (key: %q): %q", virtualKubeletLastNodeAppliedNodeStatus, oldVKStatus)
+		}
 	}
 
-	updatedNode, err := nodes.Patch(string(nodeName), types.StrategicMergePatchType, patchBytes, "status")
-	if err != nil {
-		return nil, nil, fmt.Errorf("failed to patch status %q for node %q: %v", patchBytes, nodeName, err)
-	}
-	return updatedNode, patchBytes, nil
-}
+	// newNode is the representation of the node the provider "wants"
+	newNode := corev1.Node{}
+	newNode.ObjectMeta = simplestObjectMetadata(&apiServerNode.ObjectMeta, &nodeFromProvider.ObjectMeta)
+	nodeFromProvider.Status.DeepCopyInto(&newNode.Status)
 
-func preparePatchBytesforNodeStatus(nodeName types.NodeName, oldNode *corev1.Node, newNode *corev1.Node) ([]byte, error) {
-	oldData, err := json.Marshal(oldNode)
+	// virtualKubeletLastNodeAppliedObjectMeta must always be set before virtualKubeletLastNodeAppliedNodeStatus,
+	// otherwise we capture virtualKubeletLastNodeAppliedNodeStatus in virtualKubeletLastNodeAppliedObjectMeta,
+	// which is wrong
+	virtualKubeletLastNodeAppliedObjectMetaBytes, err := json.Marshal(newNode.ObjectMeta)
 	if err != nil {
-		return nil, fmt.Errorf("failed to Marshal oldData for node %q: %v", nodeName, err)
+		return nil, pkgerrors.Wrap(err, "Cannot marshal object meta from provider")
 	}
+	newNode.Annotations[virtualKubeletLastNodeAppliedObjectMeta] = string(virtualKubeletLastNodeAppliedObjectMetaBytes)
 
-	// Reset spec to make sure only patch for Status or ObjectMeta is generated.
-	// Note that we don't reset ObjectMeta here, because:
-	// 1. This aligns with Nodes().UpdateStatus().
-	// 2. Some component does use this to update node annotations.
-	newNode.Spec = oldNode.Spec
-	newData, err := json.Marshal(newNode)
+	virtualKubeletLastNodeAppliedNodeStatusBytes, err := json.Marshal(newNode.Status)
 	if err != nil {
-		return nil, fmt.Errorf("failed to Marshal newData for node %q: %v", nodeName, err)
+		return nil, pkgerrors.Wrap(err, "Cannot marshal node status from provider")
 	}
-
-	patchBytes, err := strategicpatch.CreateTwoWayMergePatch(oldData, newData, corev1.Node{})
+	newNode.Annotations[virtualKubeletLastNodeAppliedNodeStatus] = string(virtualKubeletLastNodeAppliedNodeStatusBytes)
+	// Generate three way patch from oldNode -> newNode, without deleting the changes in api server
+	// Should we use the Kubernetes serialization / deserialization libraries here?
+	oldNodeBytes, err := json.Marshal(oldNode)
 	if err != nil {
-		return nil, fmt.Errorf("failed to CreateTwoWayMergePatch for node %q: %v", nodeName, err)
+		return nil, pkgerrors.Wrap(err, "Cannot marshal old node bytes")
 	}
-	return patchBytes, nil
+	newNodeBytes, err := json.Marshal(newNode)
+	if err != nil {
+		return nil, pkgerrors.Wrap(err, "Cannot marshal new node bytes")
+	}
+	apiServerNodeBytes, err := json.Marshal(apiServerNode)
+	if err != nil {
+		return nil, pkgerrors.Wrap(err, "Cannot marshal api server node")
+	}
+	schema, err := strategicpatch.NewPatchMetaFromStruct(&corev1.Node{})
+	if err != nil {
+		return nil, pkgerrors.Wrap(err, "Cannot get patch schema from node")
+	}
+	return strategicpatch.CreateThreeWayMergePatch(oldNodeBytes, newNodeBytes, apiServerNodeBytes, schema, true)
 }
 
 // updateNodeStatus triggers an update to the node status in Kubernetes.
@@ -450,37 +561,44 @@ func preparePatchBytesforNodeStatus(nodeName types.NodeName, oldNode *corev1.Nod
 //
 // If you use this function, it is up to you to synchronize this with other operations.
 // This reduces the time to second-level precision.
-func updateNodeStatus(ctx context.Context, nodes v1.NodeInterface, n *corev1.Node) (_ *corev1.Node, retErr error) {
+func updateNodeStatus(ctx context.Context, nodes v1.NodeInterface, nodeFromProvider *corev1.Node) (_ *corev1.Node, retErr error) {
 	ctx, span := trace.StartSpan(ctx, "UpdateNodeStatus")
 	defer func() {
 		span.End()
 		span.SetStatus(retErr)
 	}()
 
-	var node *corev1.Node
+	var updatedNode *corev1.Node
+	err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		apiServerNode, err := nodes.Get(ctx, nodeFromProvider.Name, emptyGetOptions)
+		if err != nil {
+			return err
+		}
+		ctx = addNodeAttributes(ctx, span, apiServerNode)
+		log.G(ctx).Debug("got node from api server")
 
-	oldNode, err := nodes.Get(n.Name, emptyGetOptions)
+		patchBytes, err := prepareThreewayPatchBytesForNodeStatus(nodeFromProvider, apiServerNode)
+		if err != nil {
+			return pkgerrors.Wrap(err, "Cannot generate patch")
+		}
+		log.G(ctx).WithError(err).WithField("patch", string(patchBytes)).Debug("Generated three way patch")
+
+		updatedNode, err = nodes.Patch(ctx, nodeFromProvider.Name, types.StrategicMergePatchType, patchBytes, metav1.PatchOptions{}, "status")
+		if err != nil {
+			// We cannot wrap this error because the kubernetes error module doesn't understand wrapping
+			log.G(ctx).WithField("patch", string(patchBytes)).WithError(err).Warn("Failed to patch node status")
+			return err
+		}
+		return nil
+	})
+
 	if err != nil {
 		return nil, err
 	}
-
-	log.G(ctx).Debug("got node from api server")
-	node = oldNode.DeepCopy()
-	node.ResourceVersion = ""
-	node.Status = n.Status
-
-	ctx = addNodeAttributes(ctx, span, node)
-
-	// Patch the node status to merge other changes on the node.
-	updated, _, err := patchNodeStatus(nodes, types.NodeName(n.Name), oldNode, node)
-	if err != nil {
-		return nil, err
-	}
-
-	log.G(ctx).WithField("node.resourceVersion", updated.ResourceVersion).
-		WithField("node.Status.Conditions", updated.Status.Conditions).
+	log.G(ctx).WithField("node.resourceVersion", updatedNode.ResourceVersion).
+		WithField("node.Status.Conditions", updatedNode.Status.Conditions).
 		Debug("updated node status in api server")
-	return updated, nil
+	return updatedNode, nil
 }
 
 func newLease(base *coord.Lease) *coord.Lease {
@@ -554,4 +672,32 @@ func addNodeAttributes(ctx context.Context, span trace.Span, n *corev1.Node) con
 		"node.cluster": n.ClusterName,
 		"node.taints":  taintsStringer(n.Spec.Taints),
 	})
+}
+
+// Provides the simplest object metadata to match the previous object. Name, namespace, UID. It copies labels and
+// annotations from the second object if defined. It exempts the patch metadata
+func simplestObjectMetadata(baseObjectMeta, objectMetaWithLabelsAndAnnotations *metav1.ObjectMeta) metav1.ObjectMeta {
+	ret := metav1.ObjectMeta{
+		Namespace:   baseObjectMeta.Namespace,
+		Name:        baseObjectMeta.Name,
+		UID:         baseObjectMeta.UID,
+		Annotations: make(map[string]string),
+	}
+	if objectMetaWithLabelsAndAnnotations != nil {
+		if objectMetaWithLabelsAndAnnotations.Labels != nil {
+			ret.Labels = objectMetaWithLabelsAndAnnotations.Labels
+		} else {
+			ret.Labels = make(map[string]string)
+		}
+		if objectMetaWithLabelsAndAnnotations.Annotations != nil {
+			// We want to copy over all annotations except the special embedded ones.
+			for key := range objectMetaWithLabelsAndAnnotations.Annotations {
+				if key == virtualKubeletLastNodeAppliedNodeStatus || key == virtualKubeletLastNodeAppliedObjectMeta {
+					continue
+				}
+				ret.Annotations[key] = objectMetaWithLabelsAndAnnotations.Annotations[key]
+			}
+		}
+	}
+	return ret
 }

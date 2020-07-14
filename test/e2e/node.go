@@ -19,7 +19,7 @@ func (ts *EndToEndTestSuite) TestNodeCreateAfterDelete(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	podList, err := f.KubeClient.CoreV1().Pods(f.Namespace).List(metav1.ListOptions{
+	podList, err := f.KubeClient.CoreV1().Pods(f.Namespace).List(ctx, metav1.ListOptions{
 		FieldSelector: fields.OneTermEqualSelector("spec.nodeName", f.NodeName).String(),
 	})
 
@@ -28,7 +28,7 @@ func (ts *EndToEndTestSuite) TestNodeCreateAfterDelete(t *testing.T) {
 
 	chErr := make(chan error, 1)
 
-	originalNode, err := f.GetNode()
+	originalNode, err := f.GetNode(ctx)
 	assert.NilError(t, err)
 
 	ctx, cancel = context.WithTimeout(ctx, time.Minute)
@@ -50,7 +50,7 @@ func (ts *EndToEndTestSuite) TestNodeCreateAfterDelete(t *testing.T) {
 		chErr <- f.WaitUntilNodeCondition(wait)
 	}()
 
-	assert.NilError(t, f.DeleteNode())
+	assert.NilError(t, f.DeleteNode(ctx))
 
 	select {
 	case result := <-chErr:

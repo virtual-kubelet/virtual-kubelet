@@ -161,7 +161,7 @@ func runRootCommand(ctx context.Context, s *provider.Store, c Opts) error {
 			log.G(ctx).Debug("node not found")
 			newNode := pNode.DeepCopy()
 			newNode.ResourceVersion = ""
-			_, err = client.CoreV1().Nodes().Create(newNode)
+			_, err = client.CoreV1().Nodes().Create(ctx, newNode, metav1.CreateOptions{})
 			if err != nil {
 				return err
 			}
