@@ -83,8 +83,8 @@ type PodNotifier interface {
 	// fashion. The provided pod's PodStatus should be up to date when
 	// this function is called.
 	//
-	// NotifyPods may block callers. The NotifyPods function may be called
-	// concurrently.
+	// NotifyPods must not block the caller since it is only used to register the callback.
+	// The callback passed into `NotifyPods` may block when called.
 	NotifyPods(context.Context, func(*corev1.Pod))
 }
 
