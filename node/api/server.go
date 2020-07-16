@@ -40,6 +40,7 @@ type PodHandlerConfig struct {
 	GetPods PodListerFunc
 	// GetPodsFromKubernetes is meant to enumerate the pods that the node is meant to be running
 	GetPodsFromKubernetes PodListerFunc
+	GetStatsSummary       PodStatsSummaryHandlerFunc
 	StreamIdleTimeout     time.Duration
 	StreamCreationTimeout time.Duration
 }
@@ -64,6 +65,13 @@ func PodHandler(p PodHandlerConfig, debug bool) http.Handler {
 			WithExecStreamIdleTimeout(p.StreamIdleTimeout),
 		),
 	).Methods("POST", "GET")
+
+	if p.GetStatsSummary != nil {
+		f := HandlePodStatsSummary(p.GetStatsSummary)
+		r.HandleFunc("/stats/summary", f).Methods("GET")
+		r.HandleFunc("/stats/summary/", f).Methods("GET")
+	}
+
 	r.NotFoundHandler = http.HandlerFunc(NotFound)
 	return r
 }
