@@ -31,6 +31,7 @@ import (
 	"k8s.io/client-go/kubernetes/typed/coordination/v1beta1"
 	v1 "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/client-go/util/retry"
+	"github.com/coreos/go-systemd/daemon"
 )
 
 const (
@@ -270,6 +271,8 @@ func (n *NodeController) controlLoop(ctx context.Context) error {
 	}
 
 	close(n.chReady)
+	// If systemd is used, notify it
+	go daemon.SdNotify(false, "READY=1")
 
 	loop := func() bool {
 		ctx, span := trace.StartSpan(ctx, "node.controlLoop.loop")
