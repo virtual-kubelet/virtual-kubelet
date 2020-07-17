@@ -19,6 +19,7 @@ import (
 	"encoding/json"
 	"time"
 
+	"github.com/coreos/go-systemd/daemon"
 	pkgerrors "github.com/pkg/errors"
 	"github.com/virtual-kubelet/virtual-kubelet/log"
 	"github.com/virtual-kubelet/virtual-kubelet/trace"
@@ -270,6 +271,8 @@ func (n *NodeController) controlLoop(ctx context.Context) error {
 	}
 
 	close(n.chReady)
+	// If systemd is used, notify it that we have started
+	go daemon.SdNotify(false, "READY=1")
 
 	loop := func() bool {
 		ctx, span := trace.StartSpan(ctx, "node.controlLoop.loop")
