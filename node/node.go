@@ -17,6 +17,7 @@ package node
 import (
 	"context"
 	"encoding/json"
+	"sync"
 	"time"
 
 	pkgerrors "github.com/pkg/errors"
@@ -70,7 +71,7 @@ type NodeProvider interface { //nolint:golint
 // Note: When if there are multiple NodeControllerOpts which apply against the same
 // underlying options, the last NodeControllerOpt will win.
 func NewNodeController(p NodeProvider, node *corev1.Node, nodes v1.NodeInterface, opts ...NodeControllerOpt) (*NodeController, error) {
-	n := &NodeController{p: p, n: node, nodes: nodes, chReady: make(chan struct{})}
+	n := &NodeController{cfg: &NodeControllerConfig{}, p: p, n: node, nodes: nodes, chReady: make(chan struct{}), chDone: make(chan struct{})}
 	for _, o := range opts {
 		if err := o(n); err != nil {
 			return nil, pkgerrors.Wrap(err, "error applying node option")
@@ -81,6 +82,46 @@ func NewNodeController(p NodeProvider, node *corev1.Node, nodes v1.NodeInterface
 
 // NodeControllerOpt are the functional options used for configuring a node
 type NodeControllerOpt func(*NodeController) error // nolint: golint
+
+// NodeController config stores all the configuration options for creating a node controller
+type NodeControllerConfig struct {
+	// If no leases client is provided, leases will not be used.
+	LeasesClientV1Beta1 v1beta1.LeaseInterface
+	// The base template to use for creating a lease
+	// If none is provided, the controller will create one.
+	BaseLease *coord.Lease
+
+	// PingInterval is used for checking node and updating the node status.
+	// This is when `Ping` is called on the node provider.
+	// Meanwhile, `StatusUpdateInterval` is used *only* when node leases are enabled.
+	//
+	// If node leases are enabled, instead of doing a status update the `PingInterval` determines when the node
+	// lease is updated.
+	// For compatibility with other cluster components, the node status still needs to be updated occasionally. This
+	// is where `StatusUpdateInterval` is used.
+	// `StatusUpdateInterval` should be much less frequent than `PintInterval`, the default is 1 minute.
+	//
+	// The default PingInterval is 10 seconds, which helps account for any errors or delays in actually performing the
+	// update.
+	//
+	// The ping interval is important because the cluster will treat the node as down if the status (or lease) is not
+	// updated frequently.
+	PingInterval         time.Duration
+	StatusUpdateInterval time.Duration
+
+	// StatusUpdateErrorHandler is a callback to use when there is an error updating the node status.
+	StatusUpdateErrorHandler ErrorHandler
+}
+
+// WithNodeControllerConfig sets the base node controller config
+// This should not be used with other options unless you know what you are doing, and if so should be used first as
+// it will replace whatever config already existed.
+func WithNodeControllerConfig(cfg *NodeControllerConfig) NodeControllerOpt {
+	return func(n *NodeController) error {
+		n.cfg = cfg
+		return nil
+	}
+}
 
 // WithNodeEnableLeaseV1Beta1 enables support for v1beta1 leases.
 // If client is nil, leases will not be enabled.
@@ -98,8 +139,8 @@ type NodeControllerOpt func(*NodeController) error // nolint: golint
 // To set a custom node status update interval, see WithNodeStatusUpdateInterval().
 func WithNodeEnableLeaseV1Beta1(client v1beta1.LeaseInterface, baseLease *coord.Lease) NodeControllerOpt {
 	return func(n *NodeController) error {
-		n.leases = client
-		n.lease = baseLease
+		n.cfg.LeasesClientV1Beta1 = client
+		n.cfg.BaseLease = baseLease
 		return nil
 	}
 }
@@ -109,7 +150,7 @@ func WithNodeEnableLeaseV1Beta1(client v1beta1.LeaseInterface, baseLease *coord.
 // with which the node status will be updated in Kubernetes.
 func WithNodePingInterval(d time.Duration) NodeControllerOpt {
 	return func(n *NodeController) error {
-		n.pingInterval = d
+		n.cfg.PingInterval = d
 		return nil
 	}
 }
@@ -121,7 +162,7 @@ func WithNodePingInterval(d time.Duration) NodeControllerOpt {
 // has no affect and node status is updated on the "ping" interval.
 func WithNodeStatusUpdateInterval(d time.Duration) NodeControllerOpt {
 	return func(n *NodeController) error {
-		n.statusInterval = d
+		n.cfg.StatusUpdateInterval = d
 		return nil
 	}
 }
@@ -135,7 +176,7 @@ func WithNodeStatusUpdateInterval(d time.Duration) NodeControllerOpt {
 // when updating node status.
 func WithNodeStatusUpdateErrorHandler(h ErrorHandler) NodeControllerOpt {
 	return func(n *NodeController) error {
-		n.nodeStatusUpdateErrorHandler = h
+		n.cfg.StatusUpdateErrorHandler = h
 		return nil
 	}
 }
@@ -149,21 +190,21 @@ type ErrorHandler func(context.Context, error) error
 // It can register a node with Kubernetes and periodically update its status.
 // NodeController manages a single node entity.
 type NodeController struct { // nolint: golint
-	p NodeProvider
-	n *corev1.Node
+	cfg *NodeControllerConfig
 
-	leases v1beta1.LeaseInterface
-	nodes  v1.NodeInterface
+	p            NodeProvider
+	n            *corev1.Node
+	nodes        v1.NodeInterface
+	disableLease bool
+	lease        *coord.Lease
 
-	disableLease   bool
-	pingInterval   time.Duration
-	statusInterval time.Duration
-	lease          *coord.Lease
 	chStatusUpdate chan *corev1.Node
 
-	nodeStatusUpdateErrorHandler ErrorHandler
-
 	chReady chan struct{}
+	chDone  chan struct{}
+
+	mu  sync.Mutex
+	err error
 }
 
 // The default intervals used for lease and status updates.
@@ -184,12 +225,19 @@ const (
 // node status update (because some things still expect the node to be updated
 // periodically), otherwise it will only use node status update with the configured
 // ping interval.
-func (n *NodeController) Run(ctx context.Context) error {
-	if n.pingInterval == time.Duration(0) {
-		n.pingInterval = DefaultPingInterval
+func (n *NodeController) Run(ctx context.Context) (retErr error) {
+	defer func() {
+		n.mu.Lock()
+		n.err = retErr
+		n.mu.Unlock()
+		close(n.chDone)
+	}()
+
+	if n.cfg.PingInterval == time.Duration(0) {
+		n.cfg.PingInterval = DefaultPingInterval
 	}
-	if n.statusInterval == time.Duration(0) {
-		n.statusInterval = DefaultStatusUpdateInterval
+	if n.cfg.StatusUpdateInterval == time.Duration(0) {
+		n.cfg.StatusUpdateInterval = DefaultStatusUpdateInterval
 	}
 
 	n.chStatusUpdate = make(chan *corev1.Node, 1)
@@ -201,15 +249,15 @@ func (n *NodeController) Run(ctx context.Context) error {
 		return err
 	}
 
-	if n.leases == nil {
+	if n.cfg.LeasesClientV1Beta1 == nil {
 		n.disableLease = true
 		return n.controlLoop(ctx)
 	}
 
-	n.lease = newLease(n.lease)
-	setLeaseAttrs(n.lease, n.n, n.pingInterval*5)
+	n.lease = newLease(n.cfg.BaseLease)
+	setLeaseAttrs(n.lease, n.n, n.cfg.PingInterval*4)
 
-	l, err := ensureLease(ctx, n.leases, n.lease)
+	l, err := ensureLease(ctx, n.cfg.LeasesClientV1Beta1, n.lease)
 	if err != nil {
 		if !errors.IsNotFound(err) {
 			return pkgerrors.Wrap(err, "error creating node lease")
@@ -251,17 +299,32 @@ func (n *NodeController) Ready() <-chan struct{} {
 	return n.chReady
 }
 
+// Done returns a channel that gets closed when the node is no  longer operating
+func (n *NodeController) Done() <-chan struct{} {
+	return n.chDone
+}
+
+// Err returns whatever error is returned by `Run()`.
+// It allows the caller to check on the status of the node without having to deal with setting up their own goroutines.
+// If this returns a non-nil error, the node controller is no longer operating.
+func (n *NodeController) Err() error {
+	n.mu.Lock()
+	err := n.err
+	n.mu.Unlock()
+	return err
+}
+
 func (n *NodeController) controlLoop(ctx context.Context) error {
-	pingTimer := time.NewTimer(n.pingInterval)
+	pingTimer := time.NewTimer(n.cfg.PingInterval)
 	defer pingTimer.Stop()
 
-	statusTimer := time.NewTimer(n.statusInterval)
+	statusTimer := time.NewTimer(n.cfg.StatusUpdateInterval)
 	defer statusTimer.Stop()
-	timerResetDuration := n.statusInterval
+	timerResetDuration := n.cfg.StatusUpdateInterval
 	if n.disableLease {
 		// when resetting the timer after processing a status update, reset it to the ping interval
 		// (since it will be the ping timer as n.disableLease == true)
-		timerResetDuration = n.pingInterval
+		timerResetDuration = n.cfg.PingInterval
 
 		// hack to make sure this channel always blocks since we won't be using it
 		if !statusTimer.Stop() {
@@ -309,14 +372,14 @@ func (n *NodeController) controlLoop(ctx context.Context) error {
 			if err := n.updateStatus(ctx, false); err != nil {
 				log.G(ctx).WithError(err).Error("Error handling node status update")
 			}
-			statusTimer.Reset(n.statusInterval)
+			statusTimer.Reset(n.cfg.StatusUpdateInterval)
 		case <-pingTimer.C:
 			if err := n.handlePing(ctx); err != nil {
 				log.G(ctx).WithError(err).Error("Error while handling node ping")
 			} else {
 				log.G(ctx).Debug("Successful node ping")
 			}
-			pingTimer.Reset(n.pingInterval)
+			pingTimer.Reset(n.cfg.PingInterval)
 		}
 		return false
 	}
@@ -347,7 +410,7 @@ func (n *NodeController) handlePing(ctx context.Context) (retErr error) {
 }
 
 func (n *NodeController) updateLease(ctx context.Context) error {
-	l, err := updateNodeLease(ctx, n.leases, newLease(n.lease))
+	l, err := updateNodeLease(ctx, n.cfg.LeasesClientV1Beta1, newLease(n.lease))
 	if err != nil {
 		return err
 	}
@@ -367,10 +430,10 @@ func (n *NodeController) updateStatus(ctx context.Context, skipErrorCb bool) (er
 
 	node, err := updateNodeStatus(ctx, n.nodes, n.n)
 	if err != nil {
-		if skipErrorCb || n.nodeStatusUpdateErrorHandler == nil {
+		if skipErrorCb || n.cfg.StatusUpdateErrorHandler == nil {
 			return err
 		}
-		if err := n.nodeStatusUpdateErrorHandler(ctx, err); err != nil {
+		if err := n.cfg.StatusUpdateErrorHandler(ctx, err); err != nil {
 			return err
 		}
 
@@ -581,7 +644,6 @@ func updateNodeStatus(ctx context.Context, nodes v1.NodeInterface, nodeFromProvi
 		if err != nil {
 			return pkgerrors.Wrap(err, "Cannot generate patch")
 		}
-		log.G(ctx).WithError(err).WithField("patch", string(patchBytes)).Debug("Generated three way patch")
 
 		updatedNode, err = nodes.Patch(ctx, nodeFromProvider.Name, types.StrategicMergePatchType, patchBytes, metav1.PatchOptions{}, "status")
 		if err != nil {
@@ -648,7 +710,52 @@ func (NaiveNodeProvider) Ping(ctx context.Context) error {
 //
 // This NaiveNodeProvider does not support updating node status and so this
 // function is a no-op.
-func (NaiveNodeProvider) NotifyNodeStatus(ctx context.Context, f func(*corev1.Node)) {
+func (n NaiveNodeProvider) NotifyNodeStatus(_ context.Context, _ func(*corev1.Node)) {
+}
+
+// NaiveNodeProviderV2 is like NaiveNodeProvider except it supports accepting node status updates.
+// It must be used with as a pointer and must be created with `NewNaiveNodeProvider`
+type NaiveNodeProviderV2 struct {
+	notify      func(*corev1.Node)
+	updateReady chan struct{}
+}
+
+// Ping just implements the NodeProvider interface.
+// It returns the error from the passed in context only.
+func (*NaiveNodeProviderV2) Ping(ctx context.Context) error {
+	return ctx.Err()
+}
+
+// NotifyNodeStatus implements the NodeProvider interface.
+//
+// NaiveNodeProvider does not support updating node status unless created with `NewNaiveNodeProvider`
+// Otherwise this is a no-op
+func (n *NaiveNodeProviderV2) NotifyNodeStatus(_ context.Context, f func(*corev1.Node)) {
+	n.notify = f
+	// This is a little sloppy and assumes `NotifyNodeStatus` is only called once, which is indeed currently true.
+	// The reason a channel is preferred here is so we can use a context in `UpdateStatus` to cancel waiting for this.
+	close(n.updateReady)
+}
+
+// UpdateStatus sends a node status update to the node controller
+func (n *NaiveNodeProviderV2) UpdateStatus(ctx context.Context, node *corev1.Node) error {
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case <-n.updateReady:
+	}
+
+	n.notify(node)
+	return nil
+}
+
+// NewNaiveNodeProvider creates a new NaiveNodeProvider
+// You must use this to create a NaiveNodeProvider if you want to be able to send node status updates to the node
+// controller.
+func NewNaiveNodeProvider() *NaiveNodeProviderV2 {
+	return &NaiveNodeProviderV2{
+		updateReady: make(chan struct{}),
+	}
 }
 
 type taintsStringer []corev1.Taint
