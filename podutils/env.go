@@ -67,14 +67,6 @@ const (
 
 var masterServices = sets.NewString("kubernetes")
 
-type ResolverConfig struct {
-	ConfigMapLister corev1listers.ConfigMapLister
-	SecretLister    corev1listers.SecretLister
-	ServiceLister   corev1listers.ServiceLister
-}
-
-type ResolverFunc func(ctx context.Context, pod *corev1.Pod, recorder record.EventRecorder, config ResolverConfig) error
-
 // Run through all containers in a pod and apply f each container
 func forEachContainer(pod *corev1.Pod, f func(container *corev1.Container)) {
 	for i := range pod.Spec.InitContainers {
@@ -108,17 +100,17 @@ func forEachContainerWithError(pod *corev1.Pod, f func(container *corev1.Contain
 // steps have been broken out and the order of operations is different
 // from the kubelet, the resulting environment variable values should
 // remain the same.
-func PopulateEnvironmentVariables(ctx context.Context, pod *corev1.Pod, recorder record.EventRecorder, config ResolverConfig) error {
-	err := ResolveConfigMapRefs(ctx, pod, config.ConfigMapLister, recorder)
+func PopulateEnvironmentVariables(ctx context.Context, pod *corev1.Pod, recorder record.EventRecorder, configMapLister corev1listers.ConfigMapLister, secretLister corev1listers.SecretLister, serviceLister corev1listers.ServiceLister) error {
+	err := ResolveConfigMapRefs(ctx, pod, configMapLister, recorder)
 	if err != nil {
 		return err
 	}
-	err = ResolveSecretRefs(ctx, pod, config.SecretLister, recorder)
+	err = ResolveSecretRefs(ctx, pod, secretLister, recorder)
 	if err != nil {
 		return err
 	}
 	RemoveEnvFromVars(pod)
-	err = InsertServiceEnvVars(ctx, pod, config.ServiceLister)
+	err = InsertServiceEnvVars(ctx, pod, serviceLister)
 	if err != nil {
 		return err
 	}
@@ -154,89 +146,92 @@ func ResolveConfigMapRefs(ctx context.Context, pod *corev1.Pod, configMapLister 
 func resolveContainerConfigMapRefs(ctx context.Context, pod *corev1.Pod, container *corev1.Container, configMapLister corev1listers.ConfigMapLister, recorder record.EventRecorder, configMaps map[string]*corev1.ConfigMap) error {
 	envFromVals := make([]corev1.EnvVar, 0)
 	for i := range container.EnvFrom {
-		if container.EnvFrom[i].ConfigMapRef != nil {
-			envFrom := container.EnvFrom[i]
-			cm := envFrom.ConfigMapRef
-			name := cm.Name
-			configMap, ok := configMaps[name]
-			if !ok {
-				var err error
-				optional := cm.Optional != nil && *cm.Optional
-				configMap, err = configMapLister.ConfigMaps(pod.Namespace).Get(name)
-				if err != nil {
-					if errors.IsNotFound(err) && optional {
-						recorder.Eventf(pod, corev1.EventTypeWarning, ReasonOptionalConfigMapNotFound, "configmap %q not found", name)
-						continue
-					}
-					if errors.IsNotFound(err) {
-						recorder.Eventf(pod, corev1.EventTypeWarning, ReasonMandatoryConfigMapNotFound, "configmap %q not found", name)
-						return fmt.Errorf("configmap %q not found", name)
-					}
-					recorder.Eventf(pod, corev1.EventTypeWarning, ReasonFailedToReadMandatoryConfigMap, "failed to read configmap %q", name)
-					return fmt.Errorf("failed to fetch configmap %q: %v", name, err)
-				}
-				configMaps[name] = configMap
-			}
-
-			invalidKeys := []string{}
-			for k, v := range configMap.Data {
-				if len(envFrom.Prefix) > 0 {
-					k = envFrom.Prefix + k
-				}
-				if errMsgs := apivalidation.IsEnvVarName(k); len(errMsgs) != 0 {
-					invalidKeys = append(invalidKeys, k)
+		if container.EnvFrom[i].ConfigMapRef == nil {
+			continue
+		}
+		envFrom := container.EnvFrom[i]
+		cm := envFrom.ConfigMapRef
+		name := cm.Name
+		configMap, ok := configMaps[name]
+		if !ok {
+			var err error
+			optional := cm.Optional != nil && *cm.Optional
+			configMap, err = configMapLister.ConfigMaps(pod.Namespace).Get(name)
+			if err != nil {
+				if errors.IsNotFound(err) && optional {
+					recorder.Eventf(pod, corev1.EventTypeWarning, ReasonOptionalConfigMapNotFound, "configmap %q not found", name)
 					continue
 				}
-				envFromVals = append(envFromVals, corev1.EnvVar{
-					Name:  k,
-					Value: v,
-				})
+				if errors.IsNotFound(err) {
+					recorder.Eventf(pod, corev1.EventTypeWarning, ReasonMandatoryConfigMapNotFound, "configmap %q not found", name)
+					return fmt.Errorf("configmap %q not found", name)
+				}
+				recorder.Eventf(pod, corev1.EventTypeWarning, ReasonFailedToReadMandatoryConfigMap, "failed to read configmap %q", name)
+				return fmt.Errorf("failed to fetch configmap %q: %v", name, err)
 			}
-			if len(invalidKeys) > 0 {
-				sort.Strings(invalidKeys)
-				recorder.Eventf(pod, corev1.EventTypeWarning, ReasonInvalidEnvironmentVariableNames, "Keys [%s] from the EnvFrom configMap %s/%s were skipped since they are considered invalid environment variable names.", strings.Join(invalidKeys, ", "), pod.Namespace, name)
+			configMaps[name] = configMap
+		}
+
+		invalidKeys := []string{}
+		for k, v := range configMap.Data {
+			if len(envFrom.Prefix) > 0 {
+				k = envFrom.Prefix + k
 			}
+			if errMsgs := apivalidation.IsEnvVarName(k); len(errMsgs) != 0 {
+				invalidKeys = append(invalidKeys, k)
+				continue
+			}
+			envFromVals = append(envFromVals, corev1.EnvVar{
+				Name:  k,
+				Value: v,
+			})
+		}
+		if len(invalidKeys) > 0 {
+			sort.Strings(invalidKeys)
+			recorder.Eventf(pod, corev1.EventTypeWarning, ReasonInvalidEnvironmentVariableNames, "Keys [%s] from the EnvFrom configMap %s/%s were skipped since they are considered invalid environment variable names.", strings.Join(invalidKeys, ", "), pod.Namespace, name)
 		}
 	}
 
 	for i := range container.Env {
-		if container.Env[i].ValueFrom != nil && container.Env[i].ValueFrom.ConfigMapKeyRef != nil {
-			envVar := container.Env[i]
-			cm := envVar.ValueFrom.ConfigMapKeyRef
-			name := cm.Name
-			key := cm.Key
-			optional := cm.Optional != nil && *cm.Optional
-			configMap, ok := configMaps[name]
-			if !ok {
-				var err error
-				configMap, err = configMapLister.ConfigMaps(pod.Namespace).Get(name)
-				if err != nil {
-					if errors.IsNotFound(err) && optional {
-						// ignore error when marked optional
-						recorder.Eventf(pod, corev1.EventTypeWarning, ReasonOptionalConfigMapNotFound, "skipping optional envvar %q: configmap %q not found", envVar.Name, name)
-						continue
-					}
-					if errors.IsNotFound(err) {
-						recorder.Eventf(pod, corev1.EventTypeWarning, ReasonMandatoryConfigMapNotFound, "configmap %q not found", name)
-						return fmt.Errorf("configmap %q not found", name)
-					}
-					recorder.Eventf(pod, corev1.EventTypeWarning, ReasonFailedToReadMandatoryConfigMap, "failed to read configmap %q", name)
-					return fmt.Errorf("failed to read configmap %q: %v", name, err)
-				}
-				configMaps[name] = configMap
-			}
-			runtimeVal, ok := configMap.Data[key]
-			if !ok {
-				if optional {
-					recorder.Eventf(pod, corev1.EventTypeWarning, ReasonOptionalConfigMapKeyNotFound, "skipping optional envvar %q: key %q does not exist in configmap %q", envVar.Name, key, name)
+		if container.Env[i].ValueFrom == nil ||
+			container.Env[i].ValueFrom.ConfigMapKeyRef == nil {
+			continue
+		}
+		envVar := container.Env[i]
+		cm := envVar.ValueFrom.ConfigMapKeyRef
+		name := cm.Name
+		key := cm.Key
+		optional := cm.Optional != nil && *cm.Optional
+		configMap, ok := configMaps[name]
+		if !ok {
+			var err error
+			configMap, err = configMapLister.ConfigMaps(pod.Namespace).Get(name)
+			if err != nil {
+				if errors.IsNotFound(err) && optional {
+					// ignore error when marked optional
+					recorder.Eventf(pod, corev1.EventTypeWarning, ReasonOptionalConfigMapNotFound, "skipping optional envvar %q: configmap %q not found", envVar.Name, name)
 					continue
 				}
-				recorder.Eventf(pod, corev1.EventTypeWarning, ReasonMandatoryConfigMapKeyNotFound, "key %q does not exist in configmap %q", key, name)
-				return fmt.Errorf("configmap %q doesn't contain the %q key required by pod %s", name, key, pod.Name)
+				if errors.IsNotFound(err) {
+					recorder.Eventf(pod, corev1.EventTypeWarning, ReasonMandatoryConfigMapNotFound, "configmap %q not found", name)
+					return fmt.Errorf("configmap %q not found", name)
+				}
+				recorder.Eventf(pod, corev1.EventTypeWarning, ReasonFailedToReadMandatoryConfigMap, "failed to read configmap %q", name)
+				return fmt.Errorf("failed to read configmap %q: %v", name, err)
 			}
-			container.Env[i].Value = runtimeVal
-			container.Env[i].ValueFrom = nil
+			configMaps[name] = configMap
 		}
+		runtimeVal, ok := configMap.Data[key]
+		if !ok {
+			if optional {
+				recorder.Eventf(pod, corev1.EventTypeWarning, ReasonOptionalConfigMapKeyNotFound, "skipping optional envvar %q: key %q does not exist in configmap %q", envVar.Name, key, name)
+				continue
+			}
+			recorder.Eventf(pod, corev1.EventTypeWarning, ReasonMandatoryConfigMapKeyNotFound, "key %q does not exist in configmap %q", key, name)
+			return fmt.Errorf("configmap %q doesn't contain the %q key required by pod %s", name, key, pod.Name)
+		}
+		container.Env[i].Value = runtimeVal
+		container.Env[i].ValueFrom = nil
 	}
 
 	container.Env = append(envFromVals, container.Env...)
@@ -262,90 +257,93 @@ func ResolveSecretRefs(ctx context.Context, pod *corev1.Pod, secretLister corev1
 func resolveContainerSecretRefs(ctx context.Context, pod *corev1.Pod, container *corev1.Container, secretLister corev1listers.SecretLister, recorder record.EventRecorder, secrets map[string]*corev1.Secret) error {
 	envFromVals := make([]corev1.EnvVar, 0)
 	for i := range container.EnvFrom {
-		if container.EnvFrom[i].SecretRef != nil {
-			envFrom := container.EnvFrom[i]
-			s := envFrom.SecretRef
-			name := s.Name
-			secret, ok := secrets[name]
-			if !ok {
-				var err error
-				optional := s.Optional != nil && *s.Optional
-				secret, err = secretLister.Secrets(pod.Namespace).Get(name)
-				if err != nil {
-					if errors.IsNotFound(err) && optional {
-						// ignore error when marked optional
-						recorder.Eventf(pod, corev1.EventTypeWarning, ReasonOptionalSecretNotFound, "secret %q not found", name)
-						continue
-					}
-					if errors.IsNotFound(err) {
-						recorder.Eventf(pod, corev1.EventTypeWarning, ReasonMandatorySecretNotFound, "secret %q not found", name)
-						return fmt.Errorf("secret %q not found", name)
-					}
-					recorder.Eventf(pod, corev1.EventTypeWarning, ReasonFailedToReadMandatorySecret, "failed to read secret %q", name)
-					return fmt.Errorf("failed to fetch secret %q: %v", name, err)
-				}
-				secrets[name] = secret
-			}
-
-			invalidKeys := []string{}
-			for k, v := range secret.Data {
-				if len(envFrom.Prefix) > 0 {
-					k = envFrom.Prefix + k
-				}
-				if errMsgs := apivalidation.IsEnvVarName(k); len(errMsgs) != 0 {
-					invalidKeys = append(invalidKeys, k)
+		if container.EnvFrom[i].SecretRef == nil {
+			continue
+		}
+		envFrom := container.EnvFrom[i]
+		s := envFrom.SecretRef
+		name := s.Name
+		secret, ok := secrets[name]
+		if !ok {
+			var err error
+			optional := s.Optional != nil && *s.Optional
+			secret, err = secretLister.Secrets(pod.Namespace).Get(name)
+			if err != nil {
+				if errors.IsNotFound(err) && optional {
+					// ignore error when marked optional
+					recorder.Eventf(pod, corev1.EventTypeWarning, ReasonOptionalSecretNotFound, "secret %q not found", name)
 					continue
 				}
-				envFromVals = append(envFromVals, corev1.EnvVar{
-					Name:  k,
-					Value: string(v),
-				})
+				if errors.IsNotFound(err) {
+					recorder.Eventf(pod, corev1.EventTypeWarning, ReasonMandatorySecretNotFound, "secret %q not found", name)
+					return fmt.Errorf("secret %q not found", name)
+				}
+				recorder.Eventf(pod, corev1.EventTypeWarning, ReasonFailedToReadMandatorySecret, "failed to read secret %q", name)
+				return fmt.Errorf("failed to fetch secret %q: %v", name, err)
 			}
-			if len(invalidKeys) > 0 {
-				sort.Strings(invalidKeys)
-				recorder.Eventf(pod, corev1.EventTypeWarning, ReasonInvalidEnvironmentVariableNames, "Keys [%s] from the EnvFrom secret %s/%s were skipped since they are considered invalid environment variable names.", strings.Join(invalidKeys, ", "), pod.Namespace, name)
+			secrets[name] = secret
+		}
+
+		invalidKeys := []string{}
+		for k, v := range secret.Data {
+			if len(envFrom.Prefix) > 0 {
+				k = envFrom.Prefix + k
 			}
+			if errMsgs := apivalidation.IsEnvVarName(k); len(errMsgs) != 0 {
+				invalidKeys = append(invalidKeys, k)
+				continue
+			}
+			envFromVals = append(envFromVals, corev1.EnvVar{
+				Name:  k,
+				Value: string(v),
+			})
+		}
+		if len(invalidKeys) > 0 {
+			sort.Strings(invalidKeys)
+			recorder.Eventf(pod, corev1.EventTypeWarning, ReasonInvalidEnvironmentVariableNames, "Keys [%s] from the EnvFrom secret %s/%s were skipped since they are considered invalid environment variable names.", strings.Join(invalidKeys, ", "), pod.Namespace, name)
 		}
 	}
 
 	for i := range container.Env {
-		if container.Env[i].ValueFrom != nil && container.Env[i].ValueFrom.SecretKeyRef != nil {
-			envVar := container.Env[i]
-			s := envVar.ValueFrom.SecretKeyRef
-			name := s.Name
-			key := s.Key
-			optional := s.Optional != nil && *s.Optional
-			secret, ok := secrets[name]
-			if !ok {
-				var err error
-				secret, err = secretLister.Secrets(pod.Namespace).Get(name)
-				if err != nil {
-					if errors.IsNotFound(err) && optional {
-						// ignore error when marked optional
-						recorder.Eventf(pod, corev1.EventTypeWarning, ReasonOptionalSecretNotFound, "skipping optional envvar %q: secret %q not found", envVar.Name, name)
-						continue
-					}
-					if errors.IsNotFound(err) {
-						recorder.Eventf(pod, corev1.EventTypeWarning, ReasonMandatorySecretNotFound, "secret %q not found", name)
-						return fmt.Errorf("secret %q not found", name)
-					}
-					recorder.Eventf(pod, corev1.EventTypeWarning, ReasonFailedToReadMandatorySecret, "failed to read secret %q", name)
-					return fmt.Errorf("failed to read secret %q: %v", name, err)
-				}
-				secrets[name] = secret
-			}
-			runtimeValBytes, ok := secret.Data[key]
-			if !ok {
-				if optional {
-					recorder.Eventf(pod, corev1.EventTypeWarning, ReasonOptionalSecretKeyNotFound, "skipping optional envvar %q: key %q does not exist in secret %q", envVar.Name, key, name)
+		if container.Env[i].ValueFrom == nil ||
+			container.Env[i].ValueFrom.SecretKeyRef == nil {
+			continue
+		}
+		envVar := container.Env[i]
+		s := envVar.ValueFrom.SecretKeyRef
+		name := s.Name
+		key := s.Key
+		optional := s.Optional != nil && *s.Optional
+		secret, ok := secrets[name]
+		if !ok {
+			var err error
+			secret, err = secretLister.Secrets(pod.Namespace).Get(name)
+			if err != nil {
+				if errors.IsNotFound(err) && optional {
+					// ignore error when marked optional
+					recorder.Eventf(pod, corev1.EventTypeWarning, ReasonOptionalSecretNotFound, "skipping optional envvar %q: secret %q not found", envVar.Name, name)
 					continue
 				}
-				recorder.Eventf(pod, corev1.EventTypeWarning, ReasonMandatorySecretKeyNotFound, "key %q does not exist in secret %q", key, name)
-				return fmt.Errorf("couldn't find key %v in Secret %v/%v", key, pod.Namespace, name)
+				if errors.IsNotFound(err) {
+					recorder.Eventf(pod, corev1.EventTypeWarning, ReasonMandatorySecretNotFound, "secret %q not found", name)
+					return fmt.Errorf("secret %q not found", name)
+				}
+				recorder.Eventf(pod, corev1.EventTypeWarning, ReasonFailedToReadMandatorySecret, "failed to read secret %q", name)
+				return fmt.Errorf("failed to read secret %q: %v", name, err)
 			}
-			container.Env[i].Value = string(runtimeValBytes)
-			container.Env[i].ValueFrom = nil
+			secrets[name] = secret
 		}
+		runtimeValBytes, ok := secret.Data[key]
+		if !ok {
+			if optional {
+				recorder.Eventf(pod, corev1.EventTypeWarning, ReasonOptionalSecretKeyNotFound, "skipping optional envvar %q: key %q does not exist in secret %q", envVar.Name, key, name)
+				continue
+			}
+			recorder.Eventf(pod, corev1.EventTypeWarning, ReasonMandatorySecretKeyNotFound, "key %q does not exist in secret %q", key, name)
+			return fmt.Errorf("couldn't find key %v in Secret %v/%v", key, pod.Namespace, name)
+		}
+		container.Env[i].Value = string(runtimeValBytes)
+		container.Env[i].ValueFrom = nil
 	}
 	container.Env = append(envFromVals, container.Env...)
 	return nil
@@ -440,14 +438,16 @@ func ResolveFieldRefs(pod *corev1.Pod) error {
 // Resolves the runtime value of all field selectors in a pod's envs.
 func resolveContainerFieldRefs(pod *corev1.Pod, container *corev1.Container) error {
 	for i := range container.Env {
-		if container.Env[i].ValueFrom != nil && container.Env[i].ValueFrom.FieldRef != nil {
-			val, err := podFieldSelectorRuntimeValue(container.Env[i].ValueFrom.FieldRef, pod)
-			if err != nil {
-				return err
-			}
-			container.Env[i].Value = val
-			container.Env[i].ValueFrom = nil
+		if container.Env[i].ValueFrom == nil ||
+			container.Env[i].ValueFrom.FieldRef == nil {
+			continue
 		}
+		val, err := podFieldSelectorRuntimeValue(container.Env[i].ValueFrom.FieldRef, pod)
+		if err != nil {
+			return err
+		}
+		container.Env[i].Value = val
+		container.Env[i].ValueFrom = nil
 	}
 	return nil
 }

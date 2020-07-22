@@ -27,6 +27,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	corev1listers "k8s.io/client-go/listers/core/v1"
 
 	testutil "github.com/virtual-kubelet/virtual-kubelet/internal/test/util"
 )
@@ -113,19 +114,15 @@ var (
 	})
 )
 
-func makeFakeResolverConfig(objects ...runtime.Object) ResolverConfig {
+func makeFakeEnvListers(objects ...runtime.Object) (corev1listers.ConfigMapLister, corev1listers.SecretLister, corev1listers.ServiceLister) {
 	_, cmInformer, sInformer, svcInformer := testutil.MakeFakeInformers(objects...)
-	return ResolverConfig{
-		ConfigMapLister: cmInformer.Lister(),
-		SecretLister:    sInformer.Lister(),
-		ServiceLister:   svcInformer.Lister(),
-	}
+	return cmInformer.Lister(), sInformer.Lister(), svcInformer.Lister()
 }
 
 // TestPopulatePodWithInitContainersUsingEnv populates the environment of a pod with four containers (two init containers, two containers) using ".env".
 // Then, it checks that the resulting environment for each container contains the expected environment variables.
 func TestPopulatePodWithInitContainersUsingEnv(t *testing.T) {
-	rc := makeFakeResolverConfig(configMap1, configMap2, secret1, secret2)
+	cmLister, sLister, svcLister := makeFakeEnvListers(configMap1, configMap2, secret1, secret2)
 	er := testutil.FakeEventRecorder(defaultEventRecorderBufferSize)
 
 	// Create a pod object having two init containers and two containers.
@@ -227,7 +224,7 @@ func TestPopulatePodWithInitContainersUsingEnv(t *testing.T) {
 	}
 
 	// Populate the pod's environment.
-	err := PopulateEnvironmentVariables(context.Background(), pod, er, rc)
+	err := PopulateEnvironmentVariables(context.Background(), pod, er, cmLister, sLister, svcLister)
 	assert.Check(t, err)
 
 	// Make sure that all the containers' environments contain all the expected keys and values.
@@ -276,7 +273,7 @@ func TestPopulatePodWithInitContainersUsingEnv(t *testing.T) {
 // TestPopulatePodWithInitContainersUsingEnv populates the environment of a pod with four containers (two init containers, two containers) using ".env".
 // Then, it checks that the resulting environment for each container contains the expected environment variables.
 func TestPopulatePodWithInitContainersUsingEnvWithFieldRef(t *testing.T) {
-	rc := makeFakeResolverConfig(configMap1, configMap2, secret1, secret2)
+	cmLister, sLister, svcLister := makeFakeEnvListers(configMap1, configMap2, secret1, secret2)
 	er := testutil.FakeEventRecorder(defaultEventRecorderBufferSize)
 
 	// Create a pod object having two init containers and two containers.
@@ -387,7 +384,7 @@ func TestPopulatePodWithInitContainersUsingEnvWithFieldRef(t *testing.T) {
 	}
 
 	// Populate the pod's environment.
-	err := PopulateEnvironmentVariables(context.Background(), pod, er, rc)
+	err := PopulateEnvironmentVariables(context.Background(), pod, er, cmLister, sLister, svcLister)
 	assert.NilError(t, err)
 
 	// Make sure that all the containers' environments contain all the expected keys and values.
@@ -435,7 +432,7 @@ func TestPopulatePodWithInitContainersUsingEnvWithFieldRef(t *testing.T) {
 // TestPopulatePodWithInitContainersUsingEnvFrom populates the environment of a pod with four containers (two init containers, two containers) using ".envFrom".
 // Then, it checks that the resulting environment for each container contains the expected environment variables.
 func TestPopulatePodWithInitContainersUsingEnvFrom(t *testing.T) {
-	rc := makeFakeResolverConfig(configMap1, configMap2, secret1, secret2)
+	cmLister, sLister, svcLister := makeFakeEnvListers(configMap1, configMap2, secret1, secret2)
 	er := testutil.FakeEventRecorder(defaultEventRecorderBufferSize)
 
 	// Create a pod object having two init containers and two containers.
@@ -503,7 +500,7 @@ func TestPopulatePodWithInitContainersUsingEnvFrom(t *testing.T) {
 	}
 
 	// Populate the pod's environment.
-	err := PopulateEnvironmentVariables(context.Background(), pod, er, rc)
+	err := PopulateEnvironmentVariables(context.Background(), pod, er, cmLister, sLister, svcLister)
 	assert.Check(t, err)
 
 	// Make sure that all the containers' environments contain all the expected keys and values.
@@ -536,7 +533,7 @@ func TestPopulatePodWithInitContainersUsingEnvFrom(t *testing.T) {
 // TestEnvFromTwoConfigMapsAndOneSecret populates the environment of a container from two configmaps and one secret.
 // Then, it checks that the resulting environment contains all the expected environment variables and values.
 func TestEnvFromTwoConfigMapsAndOneSecret(t *testing.T) {
-	rc := makeFakeResolverConfig(configMap1, configMap2, secret1)
+	cmLister, sLister, svcLister := makeFakeEnvListers(configMap1, configMap2, secret1)
 	er := testutil.FakeEventRecorder(defaultEventRecorderBufferSize)
 
 	// Create a pod object having a single container.
@@ -582,7 +579,7 @@ func TestEnvFromTwoConfigMapsAndOneSecret(t *testing.T) {
 	}
 
 	// Populate the container's environment.
-	err := PopulateEnvironmentVariables(context.Background(), pod, er, rc)
+	err := PopulateEnvironmentVariables(context.Background(), pod, er, cmLister, sLister, svcLister)
 	assert.Check(t, err)
 
 	// Make sure that the container's environment contains all the expected keys and values.
@@ -605,12 +602,14 @@ func TestEnvFromTwoConfigMapsAndOneSecret(t *testing.T) {
 	assert.Check(t, is.Len(er.Events, 0))
 }
 
-// TestEnvFromConfigMapAndSecretWithInvalidKeys populates the environment of a container from a configmap and a secret containing invalid keys.
-// Then, it checks that the resulting environment contains all the expected environment variables and values, and that the invalid keys have been skipped.
+// TestEnvFromConfigMapWithInvalidKeys populates the environment of a
+// container from a configmap containing invalid keys.  Then, it
+// checks that the resulting environment contains all the expected
+// environment variables and values, and that the invalid keys have
+// been skipped.
 func TestEnvFromConfigMapAndSecretWithInvalidKeys(t *testing.T) {
-	rc := makeFakeResolverConfig(invalidConfigMap1, invalidSecret1)
+	cmLister, sLister, svcLister := makeFakeEnvListers(invalidConfigMap1, invalidSecret1)
 	er := testutil.FakeEventRecorder(defaultEventRecorderBufferSize)
-
 	// Create a pod object having a single container.
 	// The container's environment is to be populated from a configmap and a secret, both of which have some invalid keys.
 	pod := &corev1.Pod{
@@ -644,9 +643,8 @@ func TestEnvFromConfigMapAndSecretWithInvalidKeys(t *testing.T) {
 	}
 
 	// Populate the pods's environment.
-	err := PopulateEnvironmentVariables(context.Background(), pod, er, rc)
+	err := PopulateEnvironmentVariables(context.Background(), pod, er, cmLister, sLister, svcLister)
 	assert.Check(t, err)
-
 	// Make sure that the container's environment has two variables (corresponding to the single valid key in both the configmap and the secret).
 	assert.Check(t, is.DeepEqual(pod.Spec.Containers[0].Env, []corev1.EnvVar{
 		{
@@ -677,7 +675,7 @@ func TestEnvFromConfigMapAndSecretWithInvalidKeys(t *testing.T) {
 // TestEnvOverridesEnvFrom populates the environment of a container from a configmap, and from another configmap's key with a "conflicting" key.
 // Then, it checks that the value of the "conflicting" key has been correctly overridden.
 func TestEnvOverridesEnvFrom(t *testing.T) {
-	rc := makeFakeResolverConfig(configMap3)
+	cmLister, sLister, svcLister := makeFakeEnvListers(configMap3)
 	er := testutil.FakeEventRecorder(defaultEventRecorderBufferSize)
 
 	// override will override the value of "keyFoo" from "configMap3".
@@ -715,7 +713,7 @@ func TestEnvOverridesEnvFrom(t *testing.T) {
 	}
 
 	// Populate the pods's environment.
-	err := PopulateEnvironmentVariables(context.Background(), pod, er, rc)
+	err := PopulateEnvironmentVariables(context.Background(), pod, er, cmLister, sLister, svcLister)
 	assert.Check(t, err)
 
 	// Make sure that the container's environment contains all the expected keys and values.
@@ -749,7 +747,7 @@ func sortEnv(in []corev1.EnvVar) []corev1.EnvVar {
 // TestEnvFromInexistentConfigMaps populates the environment of a container from two configmaps (one of them optional) that do not exist.
 // Then, it checks that the expected events have been recorded.
 func TestEnvFromInexistentConfigMaps(t *testing.T) {
-	rc := makeFakeResolverConfig()
+	cmLister, sLister, svcLister := makeFakeEnvListers()
 	er := testutil.FakeEventRecorder(defaultEventRecorderBufferSize)
 
 	missingConfigMap1Name := "missing-config-map-1"
@@ -792,7 +790,7 @@ func TestEnvFromInexistentConfigMaps(t *testing.T) {
 	}
 
 	// Populate the pods's environment.
-	err := PopulateEnvironmentVariables(context.Background(), pod, er, rc)
+	err := PopulateEnvironmentVariables(context.Background(), pod, er, cmLister, sLister, svcLister)
 	assert.Check(t, is.ErrorContains(err, ""))
 
 	// Make sure that two events have been recorded with the correct reason and message.
@@ -806,7 +804,7 @@ func TestEnvFromInexistentConfigMaps(t *testing.T) {
 }
 
 func TestEnvFromInexistentSecrets(t *testing.T) {
-	rc := makeFakeResolverConfig()
+	cmLister, sLister, svcLister := makeFakeEnvListers()
 	er := testutil.FakeEventRecorder(defaultEventRecorderBufferSize)
 
 	missingSecret1Name := "missing-secret-1"
@@ -849,7 +847,7 @@ func TestEnvFromInexistentSecrets(t *testing.T) {
 	}
 
 	// Populate the pods's environment.
-	err := PopulateEnvironmentVariables(context.Background(), pod, er, rc)
+	err := PopulateEnvironmentVariables(context.Background(), pod, er, cmLister, sLister, svcLister)
 	assert.Check(t, is.ErrorContains(err, ""))
 
 	// Make sure that two events have been recorded with the correct reason and message.
@@ -865,7 +863,7 @@ func TestEnvFromInexistentSecrets(t *testing.T) {
 // TestEnvReferencingInexistentConfigMapKey tries populates the environment of a container using a keys from a configmaps that does not exist.
 // Then, it checks that the expected event has been recorded.
 func TestEnvReferencingInexistentConfigMapKey(t *testing.T) {
-	rc := makeFakeResolverConfig()
+	cmLister, sLister, svcLister := makeFakeEnvListers()
 	er := testutil.FakeEventRecorder(defaultEventRecorderBufferSize)
 
 	missingConfigMapName := "missing-config-map"
@@ -902,7 +900,7 @@ func TestEnvReferencingInexistentConfigMapKey(t *testing.T) {
 	}
 
 	// Populate the pods's environment.
-	err := PopulateEnvironmentVariables(context.Background(), pod, er, rc)
+	err := PopulateEnvironmentVariables(context.Background(), pod, er, cmLister, sLister, svcLister)
 	assert.Check(t, is.ErrorContains(err, ""))
 
 	// Make sure that two events have been recorded with the correct reason and message.
@@ -915,7 +913,7 @@ func TestEnvReferencingInexistentConfigMapKey(t *testing.T) {
 // TestEnvReferencingInexistentSecretKey tries populates the environment of a container using a keys from a secret that does not exist.
 // Then, it checks that the expected event has been recorded.
 func TestEnvReferencingInexistentSecretKey(t *testing.T) {
-	rc := makeFakeResolverConfig()
+	cmLister, sLister, svcLister := makeFakeEnvListers()
 	er := testutil.FakeEventRecorder(defaultEventRecorderBufferSize)
 
 	missingSecretName := "missing-secret"
@@ -952,7 +950,7 @@ func TestEnvReferencingInexistentSecretKey(t *testing.T) {
 	}
 
 	// Populate the pods's environment.
-	err := PopulateEnvironmentVariables(context.Background(), pod, er, rc)
+	err := PopulateEnvironmentVariables(context.Background(), pod, er, cmLister, sLister, svcLister)
 	assert.Check(t, is.ErrorContains(err, ""))
 
 	// Make sure that two events have been recorded with the correct reason and message.
@@ -971,7 +969,7 @@ func TestServiceEnvVar(t *testing.T) {
 	// unused svc to show it isn't populated within a different namespace.
 	service3 := testutil.FakeService(namespace2, "unused", "1.2.3.4", "TCP", 8084)
 
-	rc := makeFakeResolverConfig(service1, service2, service3)
+	cmLister, sLister, svcLister := makeFakeEnvListers(service1, service2, service3)
 	er := testutil.FakeEventRecorder(defaultEventRecorderBufferSize)
 
 	pod := &corev1.Pod{
@@ -1035,7 +1033,7 @@ func TestServiceEnvVar(t *testing.T) {
 	for _, tc := range testCases {
 		pod.Spec.EnableServiceLinks = tc.enableServiceLinks
 
-		err := PopulateEnvironmentVariables(context.Background(), pod, er, rc)
+		err := PopulateEnvironmentVariables(context.Background(), pod, er, cmLister, sLister, svcLister)
 		assert.NilError(t, err, "[%s]", tc.name)
 		assert.Check(t, is.DeepEqual(pod.Spec.Containers[0].Env, tc.expectedEnvs, sortOpt))
 	}
@@ -1044,7 +1042,7 @@ func TestServiceEnvVar(t *testing.T) {
 
 // TestComposingEnv tests that env var can be composed from the existing env vars.
 func TestComposingEnv(t *testing.T) {
-	rc := makeFakeResolverConfig()
+	cmLister, sLister, svcLister := makeFakeEnvListers()
 	er := testutil.FakeEventRecorder(defaultEventRecorderBufferSize)
 
 	// Create a pod object having a single container.
@@ -1078,7 +1076,7 @@ func TestComposingEnv(t *testing.T) {
 	}
 
 	// Populate the pods's environment.
-	err := PopulateEnvironmentVariables(context.Background(), pod, er, rc)
+	err := PopulateEnvironmentVariables(context.Background(), pod, er, cmLister, sLister, svcLister)
 	assert.Check(t, err)
 
 	// Make sure that the container's environment contains all the expected keys and values.

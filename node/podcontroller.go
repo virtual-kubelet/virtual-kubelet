@@ -25,7 +25,6 @@ import (
 	pkgerrors "github.com/pkg/errors"
 	"github.com/virtual-kubelet/virtual-kubelet/errdefs"
 	"github.com/virtual-kubelet/virtual-kubelet/log"
-	"github.com/virtual-kubelet/virtual-kubelet/podutils"
 	"github.com/virtual-kubelet/virtual-kubelet/trace"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -126,12 +125,12 @@ type PodController struct {
 	// this can be non-trivial for callers.
 	err error
 
-	// Function that gets called to resolve environment variable references in
-	// the pod.  Defaults to env.PopulateEnvironmentVariables
-	envResolver podutils.ResolverFunc
-
-	// Holds the listers needed to resolve environment variables
-	envResolverConfig podutils.ResolverConfig
+	// Listers are used to resolve pod environment variables, if any
+	// of these three listers are nil, it is assumed the provider will
+	// resolve env vars.
+	configMapLister corev1listers.ConfigMapLister
+	secretLister    corev1listers.SecretLister
+	serviceLister   corev1listers.ServiceLister
 }
 
 type knownPod struct {
@@ -163,8 +162,6 @@ type PodControllerConfig struct {
 	ConfigMapInformer corev1informers.ConfigMapInformer
 	SecretInformer    corev1informers.SecretInformer
 	ServiceInformer   corev1informers.ServiceInformer
-
-	EnvResolver podutils.ResolverFunc
 }
 
 // NewPodController creates a new pod controller with the provided config.
@@ -178,40 +175,23 @@ func NewPodController(cfg PodControllerConfig) (*PodController, error) {
 	if cfg.PodInformer == nil {
 		return nil, errdefs.InvalidInput("missing pod informer")
 	}
-	if cfg.ConfigMapInformer == nil {
-		return nil, errdefs.InvalidInput("missing config map informer")
-	}
-	if cfg.SecretInformer == nil {
-		return nil, errdefs.InvalidInput("missing secret informer")
-	}
-	if cfg.ServiceInformer == nil {
-		return nil, errdefs.InvalidInput("missing service informer")
-	}
 	if cfg.Provider == nil {
 		return nil, errdefs.InvalidInput("missing provider")
 	}
-	if cfg.EnvResolver == nil {
-		cfg.EnvResolver = podutils.PopulateEnvironmentVariables
-	}
-
-	erc := podutils.ResolverConfig{
-		ConfigMapLister: cfg.ConfigMapInformer.Lister(),
-		SecretLister:    cfg.SecretInformer.Lister(),
-		ServiceLister:   cfg.ServiceInformer.Lister(),
-	}
 
 	pc := &PodController{
-		client:            cfg.PodClient,
-		podsInformer:      cfg.PodInformer,
-		podsLister:        cfg.PodInformer.Lister(),
-		provider:          cfg.Provider,
-		ready:             make(chan struct{}),
-		done:              make(chan struct{}),
-		recorder:          cfg.EventRecorder,
-		k8sQ:              workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "syncPodsFromKubernetes"),
-		deletionQ:         workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "deletePodsFromKubernetes"),
-		envResolver:       cfg.EnvResolver,
-		envResolverConfig: erc,
+		client:          cfg.PodClient,
+		podsInformer:    cfg.PodInformer,
+		podsLister:      cfg.PodInformer.Lister(),
+		provider:        cfg.Provider,
+		ready:           make(chan struct{}),
+		done:            make(chan struct{}),
+		recorder:        cfg.EventRecorder,
+		k8sQ:            workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "syncPodsFromKubernetes"),
+		deletionQ:       workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "deletePodsFromKubernetes"),
+		configMapLister: cfg.ConfigMapInformer.Lister(),
+		secretLister:    cfg.SecretInformer.Lister(),
+		serviceLister:   cfg.ServiceInformer.Lister(),
 	}
 
 	return pc, nil
