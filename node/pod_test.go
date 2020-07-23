@@ -53,6 +53,7 @@ func newTestController() *TestController {
 			done:            make(chan struct{}),
 			ready:           make(chan struct{}),
 			podsInformer:    iFactory.Core().V1().Pods(),
+			podsLister:      iFactory.Core().V1().Pods().Lister(),
 		},
 		mock:   p,
 		client: fk8s,
