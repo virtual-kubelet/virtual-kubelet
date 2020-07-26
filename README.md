@@ -143,16 +143,16 @@ in your subnets. Each pod will have private IP addresses to connect to other Ope
 (i.e. VMs) within your tenant, optionally have floating IP addresses to connect to the internet,
 and bind-mount Cinder volumes into a path inside a pod's container.
 
-### Tensile Kube Provider
-
-[Tensile kube](https://github.com/virtual-kubelet/tensile-kube/blob/master/README.md) is contributed by [tencent
- games](https://game.qq.com), which is provider for Virtual Kubelet connects your Kubernetes cluster with other Kubernetes clusters. This provider enables us extending Kubernetes to an unlimited one. By using the provider, pods that are scheduled on the virtual node registered on Kubernetes will run as jobs on other Kubernetes clusters' nodes.
-
 ```bash
 ./bin/virtual-kubelet --provider="openstack"
 ```
 
 For detailed instructions, follow the guide [here](https://github.com/virtual-kubelet/openstack-zun/blob/master/README.md).
+
+### Tensile Kube Provider
+
+[Tensile kube](https://github.com/virtual-kubelet/tensile-kube/blob/master/README.md) is contributed by [tencent
+ games](https://game.qq.com), which is provider for Virtual Kubelet connects your Kubernetes cluster with other Kubernetes clusters. This provider enables us extending Kubernetes to an unlimited one. By using the provider, pods that are scheduled on the virtual node registered on Kubernetes will run as jobs on other Kubernetes clusters' nodes.
 
 ### Adding a New Provider via the Provider Interface
 
