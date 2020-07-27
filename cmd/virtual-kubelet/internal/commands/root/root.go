@@ -144,8 +144,9 @@ func runRootCommand(ctx context.Context, s *provider.Store, c Opts) error {
 	}
 
 	pNode := NodeFromProvider(ctx, c.NodeName, taint, p, c.Version)
+	np := node.NewNaiveNodeProvider()
 	nodeRunner, err := node.NewNodeController(
-		node.NaiveNodeProvider{},
+		np,
 		pNode,
 		client.CoreV1().Nodes(),
 		node.WithNodeEnableLeaseV1Beta1(leaseClient, nil),
@@ -224,8 +225,28 @@ func runRootCommand(ctx context.Context, s *provider.Store, c Opts) error {
 		}
 	}()
 
+	setNodeReady(pNode)
+	if err := np.UpdateStatus(ctx, pNode); err != nil {
+		return errors.Wrap(err, "error marking the node as ready")
+	}
 	log.G(ctx).Info("Initialized")
 
 	<-ctx.Done()
 	return nil
+}
+
+func setNodeReady(n *corev1.Node) {
+	for i, c := range n.Status.Conditions {
+		if c.Type != "Ready" {
+			continue
+		}
+
+		c.Message = "Kubelet is ready"
+		c.Reason = "KubeletReady"
+		c.Status = corev1.ConditionTrue
+		c.LastHeartbeatTime = metav1.Now()
+		c.LastTransitionTime = metav1.Now()
+		n.Status.Conditions[i] = c
+		return
+	}
 }

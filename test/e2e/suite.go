@@ -4,6 +4,9 @@ import (
 	"testing"
 	"time"
 
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/watch"
+
 	"github.com/virtual-kubelet/virtual-kubelet/internal/test/e2e/framework"
 	"github.com/virtual-kubelet/virtual-kubelet/internal/test/suite"
 )
@@ -40,14 +43,29 @@ type EndToEndTestSuiteConfig struct {
 
 // Setup runs the setup function from the provider and other
 // procedures before running the test suite
-func (ts *EndToEndTestSuite) Setup() {
+func (ts *EndToEndTestSuite) Setup(t *testing.T) {
 	if err := ts.setup(); err != nil {
-		panic(err)
+		t.Fatal(err)
 	}
 
-	// Wait for the virtual kubelet (deployed as a pod) to become fully ready
-	if _, err := f.WaitUntilPodReady(f.Namespace, f.NodeName); err != nil {
-		panic(err)
+	// Wait for the virtual kubelet node resource to become fully ready
+	if err := f.WaitUntilNodeCondition(func(ev watch.Event) (bool, error) {
+		n := ev.Object.(*corev1.Node)
+		if n.Name != f.NodeName {
+			return false, nil
+		}
+
+		for _, c := range n.Status.Conditions {
+			if c.Type != "Ready" {
+				continue
+			}
+			t.Log(c.Status)
+			return c.Status == corev1.ConditionTrue, nil
+		}
+
+		return false, nil
+	}); err != nil {
+		t.Fatal(err)
 	}
 }
 

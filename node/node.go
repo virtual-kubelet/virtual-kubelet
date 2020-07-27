@@ -648,7 +648,52 @@ func (NaiveNodeProvider) Ping(ctx context.Context) error {
 //
 // This NaiveNodeProvider does not support updating node status and so this
 // function is a no-op.
-func (NaiveNodeProvider) NotifyNodeStatus(ctx context.Context, f func(*corev1.Node)) {
+func (n NaiveNodeProvider) NotifyNodeStatus(_ context.Context, _ func(*corev1.Node)) {
+}
+
+// NaiveNodeProviderV2 is like NaiveNodeProvider except it supports accepting node status updates.
+// It must be used with as a pointer and must be created with `NewNaiveNodeProvider`
+type NaiveNodeProviderV2 struct {
+	notify      func(*corev1.Node)
+	updateReady chan struct{}
+}
+
+// Ping just implements the NodeProvider interface.
+// It returns the error from the passed in context only.
+func (*NaiveNodeProviderV2) Ping(ctx context.Context) error {
+	return ctx.Err()
+}
+
+// NotifyNodeStatus implements the NodeProvider interface.
+//
+// NaiveNodeProvider does not support updating node status unless created with `NewNaiveNodeProvider`
+// Otherwise this is a no-op
+func (n *NaiveNodeProviderV2) NotifyNodeStatus(_ context.Context, f func(*corev1.Node)) {
+	n.notify = f
+	// This is a little sloppy and assumes `NotifyNodeStatus` is only called once, which is indeed currently true.
+	// The reason a channel is preferred here is so we can use a context in `UpdateStatus` to cancel waiting for this.
+	close(n.updateReady)
+}
+
+// UpdateStatus sends a node status update to the node controller
+func (n *NaiveNodeProviderV2) UpdateStatus(ctx context.Context, node *corev1.Node) error {
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case <-n.updateReady:
+	}
+
+	n.notify(node)
+	return nil
+}
+
+// NewNaiveNodeProvider creates a new NaiveNodeProviderV2
+// You must use this to create a NaiveNodeProviderV2 if you want to be able to send node status updates to the node
+// controller.
+func NewNaiveNodeProvider() *NaiveNodeProviderV2 {
+	return &NaiveNodeProviderV2{
+		updateReady: make(chan struct{}),
+	}
 }
 
 type taintsStringer []corev1.Taint
