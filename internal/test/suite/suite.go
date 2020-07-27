@@ -21,7 +21,7 @@ type ShouldSkipTestFunc func(string) bool
 
 // TestSuite contains methods that defines the lifecycle of a test suite
 type TestSuite interface {
-	Setup()
+	Setup(t *testing.T)
 	Teardown()
 }
 
@@ -39,7 +39,7 @@ type testCase struct {
 func Run(t *testing.T, ts TestSuite) {
 	defer failOnPanic(t)
 
-	ts.Setup()
+	ts.Setup(t)
 	defer ts.Teardown()
 
 	// The implementation below is based on https://github.com/stretchr/testify

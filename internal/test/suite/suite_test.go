@@ -20,7 +20,7 @@ type basicTestSuite struct {
 	testsRan        []string
 }
 
-func (bts *basicTestSuite) Setup() {
+func (bts *basicTestSuite) Setup(t *testing.T) {
 	bts.setupCount++
 }
 
