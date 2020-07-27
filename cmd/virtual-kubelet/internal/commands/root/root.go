@@ -26,17 +26,14 @@ import (
 	"github.com/virtual-kubelet/virtual-kubelet/internal/manager"
 	"github.com/virtual-kubelet/virtual-kubelet/log"
 	"github.com/virtual-kubelet/virtual-kubelet/node"
+	"github.com/virtual-kubelet/virtual-kubelet/node/nodeutil"
 	corev1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/fields"
 	kubeinformers "k8s.io/client-go/informers"
-	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/kubernetes/typed/coordination/v1beta1"
 	corev1client "k8s.io/client-go/kubernetes/typed/core/v1"
-	"k8s.io/client-go/rest"
-	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/tools/record"
 )
 
@@ -79,7 +76,7 @@ func runRootCommand(ctx context.Context, s *provider.Store, c Opts) error {
 		}
 	}
 
-	client, err := newClient(c.KubeConfigPath)
+	client, err := nodeutil.ClientsetFromEnv(c.KubeConfigPath)
 	if err != nil {
 		return err
 	}
@@ -89,9 +86,8 @@ func runRootCommand(ctx context.Context, s *provider.Store, c Opts) error {
 		client,
 		c.InformerResyncPeriod,
 		kubeinformers.WithNamespace(c.KubeNamespace),
-		kubeinformers.WithTweakListOptions(func(options *metav1.ListOptions) {
-			options.FieldSelector = fields.OneTermEqualSelector("spec.nodeName", c.NodeName).String()
-		}))
+		nodeutil.PodInformerFilter(c.NodeName),
+	)
 	podInformer := podInformerFactory.Core().V1().Pods()
 
 	// Create another shared informer factory for Kubernetes secrets and configmaps (not subject to any selectors).
@@ -120,7 +116,7 @@ func runRootCommand(ctx context.Context, s *provider.Store, c Opts) error {
 		NodeName:          c.NodeName,
 		OperatingSystem:   c.OperatingSystem,
 		ResourceManager:   rm,
-		DaemonPort:        int32(c.ListenPort),
+		DaemonPort:        c.ListenPort,
 		InternalIP:        os.Getenv("VKUBELET_POD_IP"),
 		KubeClusterDomain: c.KubeClusterDomain,
 	}
@@ -144,7 +140,7 @@ func runRootCommand(ctx context.Context, s *provider.Store, c Opts) error {
 
 	var leaseClient v1beta1.LeaseInterface
 	if c.EnableNodeLease {
-		leaseClient = client.CoordinationV1beta1().Leases(corev1.NamespaceNodeLease)
+		leaseClient = nodeutil.NodeLeaseV1Beta1Client(client)
 	}
 
 	pNode := NodeFromProvider(ctx, c.NodeName, taint, p, c.Version)
@@ -232,29 +228,4 @@ func runRootCommand(ctx context.Context, s *provider.Store, c Opts) error {
 
 	<-ctx.Done()
 	return nil
-}
-
-func newClient(configPath string) (*kubernetes.Clientset, error) {
-	var config *rest.Config
-
-	// Check if the kubeConfig file exists.
-	if _, err := os.Stat(configPath); !os.IsNotExist(err) {
-		// Get the kubeconfig from the filepath.
-		config, err = clientcmd.BuildConfigFromFlags("", configPath)
-		if err != nil {
-			return nil, errors.Wrap(err, "error building client config")
-		}
-	} else {
-		// Set to in-cluster config.
-		config, err = rest.InClusterConfig()
-		if err != nil {
-			return nil, errors.Wrap(err, "error building in cluster config")
-		}
-	}
-
-	if masterURI := os.Getenv("MASTER_URI"); masterURI != "" {
-		config.Host = masterURI
-	}
-
-	return kubernetes.NewForConfig(config)
 }
