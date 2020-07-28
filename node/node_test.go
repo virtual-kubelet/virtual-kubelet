@@ -17,6 +17,7 @@ package node
 import (
 	"context"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -622,6 +623,54 @@ func TestManualConditionsPreserved(t *testing.T) {
 
 	t.Log(newNode.Status.Conditions)
 }
+
+func TestNodePingSingleInflight(t *testing.T) {
+	const pingTimeout = 100 * time.Millisecond
+	c := testclient.NewSimpleClientset()
+	testP := &testNodeProviderPing{}
+
+	var calls, finished int64
+	testP.customPingFunction = func(context.Context) error {
+		atomic.AddInt64(&calls, 1)
+		time.Sleep(2 * time.Second)
+		atomic.AddInt64(&finished, 1)
+		return nil
+	}
+
+	nodes := c.CoreV1().Nodes()
+
+	testNode := testNode(t)
+
+	node, err := NewNodeController(testP, testNode, nodes, WithNodePingInterval(10*time.Millisecond), WithNodePingTimeout(pingTimeout))
+	assert.NilError(t, err)
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+
+	start := time.Now()
+	go node.pingLoop(ctx)
+	// Wait for the first ping to complete
+	<-node.firstPingCompleted
+	timeTakenToCompleteFirstPing := time.Since(start)
+	assert.Assert(t, timeTakenToCompleteFirstPing < pingTimeout*5, "Time taken to complete first ping: %v", timeTakenToCompleteFirstPing)
+
+	node.lastPingErrorLock.Lock()
+	err = node.lastPingError
+	node.lastPingErrorLock.Unlock()
+
+	assert.Assert(t, cmp.Error(err, context.DeadlineExceeded.Error()))
+	assert.Assert(t, is.Equal(int64(1), atomic.LoadInt64(&calls)))
+	assert.Assert(t, is.Equal(int64(0), atomic.LoadInt64(&finished)))
+
+	// Wait until the first sleep finishes
+	for atomic.LoadInt64(&finished) == 0 {
+		time.Sleep(10 * time.Millisecond)
+	}
+
+	// Assert we didn't stack up goroutines
+	assert.Assert(t, is.Equal(int64(1), atomic.LoadInt64(&calls)))
+}
+
 func testNode(t *testing.T) *corev1.Node {
 	n := &corev1.Node{}
 	n.Name = strings.ToLower(t.Name())
@@ -649,11 +698,16 @@ func (p *testNodeProvider) triggerStatusUpdate(n *corev1.Node) {
 // testNodeProviderPing tracks the maximum time interval between calls to Ping
 type testNodeProviderPing struct {
 	testNodeProvider
-	lastPingTime    time.Time
-	maxPingInterval time.Duration
+	customPingFunction func(context.Context) error
+	lastPingTime       time.Time
+	maxPingInterval    time.Duration
 }
 
 func (tnp *testNodeProviderPing) Ping(ctx context.Context) error {
+	if tnp.customPingFunction != nil {
+		return tnp.customPingFunction(ctx)
+	}
+
 	now := time.Now()
 	if tnp.lastPingTime.IsZero() {
 		tnp.lastPingTime = now

@@ -17,17 +17,20 @@ package node
 import (
 	"context"
 	"encoding/json"
+	"sync"
 	"time"
 
 	pkgerrors "github.com/pkg/errors"
 	"github.com/virtual-kubelet/virtual-kubelet/log"
 	"github.com/virtual-kubelet/virtual-kubelet/trace"
+	"golang.org/x/sync/singleflight"
 	coord "k8s.io/api/coordination/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/strategicpatch"
+	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes/typed/coordination/v1beta1"
 	v1 "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/client-go/util/retry"
@@ -70,7 +73,13 @@ type NodeProvider interface { //nolint:golint
 // Note: When if there are multiple NodeControllerOpts which apply against the same
 // underlying options, the last NodeControllerOpt will win.
 func NewNodeController(p NodeProvider, node *corev1.Node, nodes v1.NodeInterface, opts ...NodeControllerOpt) (*NodeController, error) {
-	n := &NodeController{p: p, n: node, nodes: nodes, chReady: make(chan struct{})}
+	n := &NodeController{
+		p:                  p,
+		n:                  node,
+		nodes:              nodes,
+		chReady:            make(chan struct{}),
+		firstPingCompleted: make(chan struct{}),
+	}
 	for _, o := range opts {
 		if err := o(n); err != nil {
 			return nil, pkgerrors.Wrap(err, "error applying node option")
@@ -104,7 +113,17 @@ func WithNodeEnableLeaseV1Beta1(client v1beta1.LeaseInterface, baseLease *coord.
 	}
 }
 
-// WithNodePingInterval sets the interval for checking node status
+// WithNodePingTimeout limits the amount of time that the virtual kubelet will wait for the node provider to
+// respond to the ping callback. If it does not return within this time, it will be considered an error
+// condition
+func WithNodePingTimeout(timeout time.Duration) NodeControllerOpt {
+	return func(n *NodeController) error {
+		n.pingTimeout = &timeout
+		return nil
+	}
+}
+
+// WithNodePingInterval sets the interval between checking for node statuses via Ping()
 // If node leases are not supported (or not enabled), this is the frequency
 // with which the node status will be updated in Kubernetes.
 func WithNodePingInterval(d time.Duration) NodeControllerOpt {
@@ -164,6 +183,12 @@ type NodeController struct { // nolint: golint
 	nodeStatusUpdateErrorHandler ErrorHandler
 
 	chReady chan struct{}
+
+	// What was the last error we got from the node upon ping
+	lastPingErrorLock  sync.Mutex
+	lastPingError      error
+	firstPingCompleted chan struct{}
+	pingTimeout        *time.Duration
 }
 
 // The default intervals used for lease and status updates.
@@ -251,6 +276,62 @@ func (n *NodeController) Ready() <-chan struct{} {
 	return n.chReady
 }
 
+// pingLoop does one thing. It pings the provider. It does this until context is cancelled.
+func (n *NodeController) pingLoop(ctx context.Context) {
+	const key = "key"
+	sf := &singleflight.Group{}
+
+	// 1. If the node is "stuck" and not responding to pings, we want to set the status
+	//    to that the node provider has timed out responding to pings
+	// 2. We want it so that the context is cancelled, and whatever the node might have
+	//    been stuck on uses context so it might be unstuck
+	// 3. We want to retry pinging the node, but we do not ever want more than one
+	//    ping in flight at a time.
+
+	mkContextFunc := context.WithCancel
+
+	if n.pingTimeout != nil {
+		mkContextFunc = func(ctx2 context.Context) (context.Context, context.CancelFunc) {
+			return context.WithTimeout(ctx2, *n.pingTimeout)
+		}
+	}
+
+	checkFunc := func(ctx context.Context) {
+		ctx, cancel := mkContextFunc(ctx)
+		defer cancel()
+		ctx, span := trace.StartSpan(ctx, "node.pingLoop")
+		defer span.End()
+		doChan := sf.DoChan(key, func() (interface{}, error) {
+			ctx, span := trace.StartSpan(ctx, "node.pingNode")
+			defer span.End()
+			err := n.p.Ping(ctx)
+			span.SetStatus(err)
+			return nil, err
+		})
+
+		var err error
+		select {
+		case <-ctx.Done():
+			err = ctx.Err()
+			log.G(ctx).WithError(err).Warn("Failed to ping node due to context cancellation")
+		case result := <-doChan:
+			err = result.Err
+		}
+
+		n.lastPingErrorLock.Lock()
+		n.lastPingError = err
+		n.lastPingErrorLock.Unlock()
+		span.SetStatus(err)
+	}
+
+	// Run the first check manually
+	checkFunc(ctx)
+
+	close(n.firstPingCompleted)
+
+	wait.UntilWithContext(ctx, checkFunc, n.pingInterval)
+}
+
 func (n *NodeController) controlLoop(ctx context.Context) error {
 	pingTimer := time.NewTimer(n.pingInterval)
 	defer pingTimer.Stop()
@@ -270,6 +351,10 @@ func (n *NodeController) controlLoop(ctx context.Context) error {
 	}
 
 	close(n.chReady)
+
+	group := &wait.Group{}
+	group.StartWithContext(ctx, n.pingLoop)
+	defer group.Wait()
 
 	loop := func() bool {
 		ctx, span := trace.StartSpan(ctx, "node.controlLoop.loop")
@@ -320,6 +405,7 @@ func (n *NodeController) controlLoop(ctx context.Context) error {
 		}
 		return false
 	}
+
 	for {
 		shouldTerminate := loop()
 		if shouldTerminate {
@@ -335,8 +421,18 @@ func (n *NodeController) handlePing(ctx context.Context) (retErr error) {
 		span.SetStatus(retErr)
 	}()
 
-	if err := n.p.Ping(ctx); err != nil {
-		return pkgerrors.Wrap(err, "error while pinging the node provider")
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case <-n.firstPingCompleted:
+	}
+
+	n.lastPingErrorLock.Lock()
+	err := n.lastPingError
+	n.lastPingErrorLock.Unlock()
+	if err != nil {
+		err = pkgerrors.Wrap(err, "error while pinging the node provider")
+		return err
 	}
 
 	if n.disableLease {
