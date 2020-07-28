@@ -90,3 +90,58 @@ func TestCompareLabels(t *testing.T) {
 	}
 	assert.Assert(t, !podsEffectivelyEqual(p1, p2))
 }
+
+// TestPodEventFilter ensure that pod filters are run for each event
+func TestPodEventFilter(t *testing.T) {
+	tc := newTestController()
+
+	wait := make(chan struct{}, 3)
+	tc.podEventFilterFunc = func(_ context.Context, pod *corev1.Pod) bool {
+		wait <- struct{}{}
+		return true
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	go tc.Run(ctx, 1)
+
+	ctxT, cancelT := context.WithTimeout(ctx, 30*time.Second)
+	defer cancelT()
+
+	select {
+	case <-ctxT.Done():
+		t.Fatal(ctxT.Err())
+	case <-tc.Done():
+		t.Fatal(tc.Err())
+	case <-tc.Ready():
+	}
+
+	pod := &corev1.Pod{}
+	pod.ObjectMeta.Namespace = "default"
+	pod.ObjectMeta.Name = "nginx"
+	pod.Spec = newPodSpec()
+
+	podC := tc.client.CoreV1().Pods(testNamespace)
+
+	_, err := podC.Create(ctx, pod, metav1.CreateOptions{})
+	assert.NilError(t, err)
+
+	pod.Annotations = map[string]string{"updated": "true"}
+	_, err = podC.Update(ctx, pod, metav1.UpdateOptions{})
+	assert.NilError(t, err)
+
+	err = podC.Delete(ctx, pod.Name, metav1.DeleteOptions{})
+	assert.NilError(t, err)
+
+	ctxT, cancelT = context.WithTimeout(ctx, 30*time.Second)
+	defer cancelT()
+	for i := 0; i < 3; i++ {
+		// check that the event filter fires
+		select {
+		case <-ctxT.Done():
+			t.Fatal(ctxT.Err())
+		case <-wait:
+		}
+	}
+}
