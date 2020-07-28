@@ -641,6 +641,64 @@ func TestManualConditionsPreserved(t *testing.T) {
 
 	t.Log(newNode.Status.Conditions)
 }
+
+func TestNodePingSingleInflight(t *testing.T) {
+	testCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	const pingTimeout = 100 * time.Millisecond
+	c := testclient.NewSimpleClientset()
+	testP := &testNodeProviderPing{}
+
+	calls := newWaitableInt()
+	finished := newWaitableInt()
+
+	ctx, cancel := context.WithTimeout(testCtx, time.Second)
+	defer cancel()
+
+	// The ping callback function is meant to block during the entire lifetime of the node ping controller.
+	// The point is to check whether or it allows callbacks to stack up.
+	testP.customPingFunction = func(context.Context) error {
+		calls.increment()
+		// This timer has to be longer than that of the context of the controller because we want to make sure
+		// that goroutines are not allowed to stack up. If this exits as soon as that timeout is up, finished
+		// will be incremented and we might miss goroutines stacking up, so we wait a tiny bit longer than
+		// the nodePingController control loop (we wait 2 seconds, the control loop only lasts 1 second)
+
+		// This is the context tied to the lifetime of the node ping controller, not the context created
+		// for the specific invocation of this ping function
+		<-ctx.Done()
+		finished.increment()
+		return nil
+	}
+
+	nodes := c.CoreV1().Nodes()
+
+	testNode := testNode(t)
+
+	node, err := NewNodeController(testP, testNode, nodes, WithNodePingInterval(10*time.Millisecond), WithNodePingTimeout(pingTimeout))
+	assert.NilError(t, err)
+
+	start := time.Now()
+	go node.nodePingController.run(ctx)
+	firstPing, err := node.nodePingController.getResult(ctx)
+	assert.NilError(t, err)
+	timeTakenToCompleteFirstPing := time.Since(start)
+	assert.Assert(t, timeTakenToCompleteFirstPing < pingTimeout*5, "Time taken to complete first ping: %v", timeTakenToCompleteFirstPing)
+
+	assert.Assert(t, cmp.Error(firstPing.error, context.DeadlineExceeded.Error()))
+	assert.Assert(t, is.Equal(1, calls.read()))
+	assert.Assert(t, is.Equal(0, finished.read()))
+
+	// Wait until the first sleep finishes (the test context is done)
+	assert.NilError(t, finished.until(testCtx, func(i int) bool { return i > 0 }))
+
+	// Assert we didn't stack up goroutines, and that the one goroutine in flight finishd
+	assert.Assert(t, is.Equal(1, calls.read()))
+	assert.Assert(t, is.Equal(1, finished.read()))
+
+}
+
 func testNode(t *testing.T) *corev1.Node {
 	n := &corev1.Node{}
 	n.Name = strings.ToLower(t.Name())
@@ -668,11 +726,16 @@ func (p *testNodeProvider) triggerStatusUpdate(n *corev1.Node) {
 // testNodeProviderPing tracks the maximum time interval between calls to Ping
 type testNodeProviderPing struct {
 	testNodeProvider
-	lastPingTime    time.Time
-	maxPingInterval time.Duration
+	customPingFunction func(context.Context) error
+	lastPingTime       time.Time
+	maxPingInterval    time.Duration
 }
 
 func (tnp *testNodeProviderPing) Ping(ctx context.Context) error {
+	if tnp.customPingFunction != nil {
+		return tnp.customPingFunction(ctx)
+	}
+
 	now := time.Now()
 	if tnp.lastPingTime.IsZero() {
 		tnp.lastPingTime = now
