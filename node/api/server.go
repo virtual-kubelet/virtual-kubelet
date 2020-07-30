@@ -36,6 +36,7 @@ type PodHandlerConfig struct {
 	RunInContainer   ContainerExecHandlerFunc
 	GetContainerLogs ContainerLogsHandlerFunc
 	GetPods          PodListerFunc
+	GetStatsSummary  PodStatsSummaryHandlerFunc
 }
 
 // PodHandler creates an http handler for interacting with pods/containers.
@@ -49,6 +50,12 @@ func PodHandler(p PodHandlerConfig, debug bool) http.Handler {
 	}
 	r.HandleFunc("/containerLogs/{namespace}/{pod}/{container}", HandleContainerLogs(p.GetContainerLogs)).Methods("GET")
 	r.HandleFunc("/exec/{namespace}/{pod}/{container}", HandleContainerExec(p.RunInContainer)).Methods("POST")
+	if p.GetStatsSummary != nil {
+		f := HandlePodStatsSummary(p.GetStatsSummary)
+		r.HandleFunc("/stats/summary", f).Methods("GET")
+		r.HandleFunc("/stats/summary/", f).Methods("GET")
+	}
+
 	r.NotFoundHandler = http.HandlerFunc(NotFound)
 	return r
 }
