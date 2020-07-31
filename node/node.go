@@ -206,8 +206,7 @@ func (n *NodeController) Run(ctx context.Context) error {
 		return n.controlLoop(ctx)
 	}
 
-	n.lease = newLease(n.lease)
-	setLeaseAttrs(n.lease, n.n, n.pingInterval*5)
+	n.lease = newLease(ctx, n.lease, n.n, n.pingInterval)
 
 	l, err := ensureLease(ctx, n.leases, n.lease)
 	if err != nil {
@@ -347,7 +346,7 @@ func (n *NodeController) handlePing(ctx context.Context) (retErr error) {
 }
 
 func (n *NodeController) updateLease(ctx context.Context) error {
-	l, err := updateNodeLease(ctx, n.leases, newLease(n.lease))
+	l, err := updateNodeLease(ctx, n.leases, newLease(ctx, n.lease, n.n, n.pingInterval))
 	if err != nil {
 		return err
 	}
@@ -601,7 +600,8 @@ func updateNodeStatus(ctx context.Context, nodes v1.NodeInterface, nodeFromProvi
 	return updatedNode, nil
 }
 
-func newLease(base *coord.Lease) *coord.Lease {
+// This will return a new lease. It will either update base lease (and the set the renewal time appropriately), or create a brand new lease
+func newLease(ctx context.Context, base *coord.Lease, node *corev1.Node, leaseRenewalInterval time.Duration) *coord.Lease {
 	var lease *coord.Lease
 	if base == nil {
 		lease = &coord.Lease{}
@@ -610,21 +610,60 @@ func newLease(base *coord.Lease) *coord.Lease {
 	}
 
 	lease.Spec.RenewTime = &metav1.MicroTime{Time: time.Now()}
+
+	if lease.Spec.LeaseDurationSeconds == nil {
+		// This is 25 due to historical reasons. It was supposed to be * 5, but...reasons
+		d := int32(leaseRenewalInterval.Seconds()) * 25
+		lease.Spec.LeaseDurationSeconds = &d
+	}
+
+	if lease.Name == "" {
+		lease.Name = node.Name
+	}
+	if lease.Spec.HolderIdentity == nil {
+		// Let's do a copy here
+		name := node.Name
+		lease.Spec.HolderIdentity = &name
+	}
+
+	// Copied and pasted from: https://github.com/kubernetes/kubernetes/blob/442a69c3bdf6fe8e525b05887e57d89db1e2f3a5/pkg/kubelet/nodelease/controller.go#L213-L216
+	// Setting owner reference needs node's UID. Note that it is different from
+	// kubelet.nodeRef.UID. When lease is initially created, it is possible that
+	// the connection between master and node is not ready yet. So try to set
+	// owner reference every time when renewing the lease, until successful.
+	//
+	// We have a special case to deal with in the node may be deleted and
+	// come back with a different UID. In this case the lease object should
+	// be deleted due to a owner reference cascading deletion, and when we renew
+	// lease again updateNodeLease will call ensureLease, and establish a new
+	// lease with the right node ID
+	if l := len(lease.OwnerReferences); l == 0 {
+		lease.OwnerReferences = []metav1.OwnerReference{
+			{
+				APIVersion: corev1.SchemeGroupVersion.WithKind("Node").Version,
+				Kind:       corev1.SchemeGroupVersion.WithKind("Node").Kind,
+				Name:       node.Name,
+				UID:        node.UID,
+			},
+		}
+	} else if l > 0 {
+		var foundThisNode, foundNode bool
+		for _, ref := range lease.OwnerReferences {
+			if ref.APIVersion == corev1.SchemeGroupVersion.WithKind("Node").Version && ref.Kind == corev1.SchemeGroupVersion.WithKind("Node").Kind {
+				foundNode = true
+				if node.UID == ref.UID && node.Name == ref.Name {
+					foundThisNode = true
+				}
+			}
+		}
+		if !foundThisNode && !foundNode {
+			log.G(ctx).Warn("Found that lease had owner references, but no nodes in owner references")
+		} else if foundNode {
+			log.G(ctx).Warn("Found that lease had owner references, but nodes in owner references that is not this node")
+		}
+	}
+
 	return lease
-}
-
-func setLeaseAttrs(l *coord.Lease, n *corev1.Node, dur time.Duration) {
-	if l.Name == "" {
-		l.Name = n.Name
-	}
-	if l.Spec.HolderIdentity == nil {
-		l.Spec.HolderIdentity = &n.Name
-	}
-
-	if l.Spec.LeaseDurationSeconds == nil {
-		d := int32(dur.Seconds()) * 5
-		l.Spec.LeaseDurationSeconds = &d
-	}
 }
 
 func updateNodeStatusHeartbeat(n *corev1.Node) {

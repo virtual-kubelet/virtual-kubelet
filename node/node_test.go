@@ -228,8 +228,7 @@ func TestEnsureLease(t *testing.T) {
 	n := testNode(t)
 	ctx := context.Background()
 
-	lease := newLease(nil)
-	setLeaseAttrs(lease, n, 1*time.Second)
+	lease := newLease(ctx, nil, n, 1*time.Second)
 
 	l1, err := ensureLease(ctx, c, lease.DeepCopy())
 	assert.NilError(t, err)
@@ -278,12 +277,13 @@ func TestUpdateNodeStatus(t *testing.T) {
 }
 
 func TestUpdateNodeLease(t *testing.T) {
-	leases := testclient.NewSimpleClientset().CoordinationV1beta1().Leases(corev1.NamespaceNodeLease)
-	lease := newLease(nil)
-	n := testNode(t)
-	setLeaseAttrs(lease, n, 0)
-
 	ctx := context.Background()
+
+	leases := testclient.NewSimpleClientset().CoordinationV1beta1().Leases(corev1.NamespaceNodeLease)
+	n := testNode(t)
+
+	lease := newLease(ctx, nil, n, time.Duration(0))
+
 	l, err := updateNodeLease(ctx, leases, lease)
 	assert.NilError(t, err)
 	assert.Equal(t, l.Name, lease.Name)
@@ -302,6 +302,25 @@ func TestUpdateNodeLease(t *testing.T) {
 	assert.Equal(t, compare.Spec.RenewTime.Time.Unix(), l.Spec.RenewTime.Time.Unix())
 	assert.Equal(t, compare.Name, lease.Name)
 	assert.Assert(t, cmp.DeepEqual(compare.Spec.HolderIdentity, lease.Spec.HolderIdentity))
+}
+
+func TestFixNodeLeaseReferences(t *testing.T) {
+	ctx := context.Background()
+	n := testNode(t)
+
+	lease1 := newLease(ctx, nil, n, time.Second)
+	// Let's break owner references
+	lease1.OwnerReferences = nil
+	time.Sleep(2 * time.Nanosecond)
+	lease2 := newLease(ctx, lease1, n, time.Second)
+
+	// Make sure that newLease actually did its jobs
+	assert.Assert(t, lease2.Spec.RenewTime.Nanosecond() > lease1.Spec.RenewTime.Nanosecond())
+
+	// Let's check if owner references got set
+	assert.Assert(t, is.Len(lease2.OwnerReferences, 1))
+	assert.Assert(t, is.Equal(lease2.OwnerReferences[0].UID, n.UID))
+	assert.Assert(t, is.Equal(lease2.OwnerReferences[0].Name, n.Name))
 }
 
 // TestPingAfterStatusUpdate checks that Ping continues to be called with the specified interval
