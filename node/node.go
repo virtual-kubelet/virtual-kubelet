@@ -43,6 +43,10 @@ const (
 	virtualKubeletLastNodeAppliedObjectMeta = "virtual-kubelet.io/last-applied-object-meta"
 )
 
+var (
+	ErrLeaseControllerAlreadyConfigured = pkgerrors.New("Lease controller already configured")
+)
+
 // NodeProvider is the interface used for registering a node and updating its
 // status in Kubernetes.
 //
@@ -64,7 +68,7 @@ type NodeProvider interface { //nolint:golint
 	NotifyNodeStatus(ctx context.Context, cb func(*corev1.Node))
 }
 
-// NewNodeController creates a new node controller.
+// NewNodeController creates a new node leaseController.
 // This does not have any side-effects on the system or kubernetes.
 //
 // Use the node's `Run` method to register and run the loops to update the node
@@ -74,11 +78,12 @@ type NodeProvider interface { //nolint:golint
 // underlying options, the last NodeControllerOpt will win.
 func NewNodeController(p NodeProvider, node *corev1.Node, nodes v1.NodeInterface, opts ...NodeControllerOpt) (*NodeController, error) {
 	n := &NodeController{
-		p:                  p,
-		n:                  node,
-		nodes:              nodes,
-		chReady:            make(chan struct{}),
-		firstPingCompleted: make(chan struct{}),
+		p:                    p,
+		n:                    node,
+		nodes:                nodes,
+		chReady:              make(chan struct{}),
+		firstPingCompleted:   make(chan struct{}),
+		lastPingErrorUpdated: make(chan struct{}),
 	}
 	for _, o := range opts {
 		if err := o(n); err != nil {
@@ -106,9 +111,34 @@ type NodeControllerOpt func(*NodeController) error // nolint: golint
 //     node status update interval option.
 // To set a custom node status update interval, see WithNodeStatusUpdateInterval().
 func WithNodeEnableLeaseV1Beta1(client v1beta1.LeaseInterface, baseLease *coord.Lease) NodeControllerOpt {
+	return WithCustomNodeEnableLeaseV1Beta1(client, baseLease, 0, 0)
+}
+
+// WithNodeEnableLeaseV1 enables support for coordinaion v1 leases.
+// If client is nil, a panic will occur
+// If baseLease is nil, a default base lease will be used.
+//
+// Specifying 0 will set the defaults
+//
+// This also affects the frequency of node status updates:
+//   - When leases are *not* enabled (or are disabled due to no support on the cluster)
+//     the node status is updated at every ping interval.
+//   - When node leases are enabled, node status updates are controlled by the
+//     node status update interval option.
+// To set a custom node status update interval, see WithNodeStatusUpdateInterval().
+//
+func WithCustomNodeEnableLeaseV1Beta1(client v1beta1.LeaseInterface, baseLease *coord.Lease, leaseDurationSeconds int32, renewIntervalFraction float32) NodeControllerOpt {
 	return func(n *NodeController) error {
-		n.leases = client
-		n.lease = baseLease
+		if n.leaseController != nil {
+			return ErrLeaseControllerAlreadyConfigured
+		}
+		n.leaseController = &leaseController{
+			leaseClient:          client,
+			leaseDurationSeconds: leaseDurationSeconds,
+			renewInterval:        time.Second * time.Duration(renewIntervalFraction*float32(leaseDurationSeconds)),
+			baseLease:            baseLease,
+			firstSyncComplete:    make(chan struct{}),
+		}
 		return nil
 	}
 }
@@ -171,13 +201,11 @@ type NodeController struct { // nolint: golint
 	p NodeProvider
 	n *corev1.Node
 
-	leases v1beta1.LeaseInterface
-	nodes  v1.NodeInterface
+	leaseController *leaseController
+	nodes           v1.NodeInterface
 
-	disableLease   bool
 	pingInterval   time.Duration
 	statusInterval time.Duration
-	lease          *coord.Lease
 	chStatusUpdate chan *corev1.Node
 
 	nodeStatusUpdateErrorHandler ErrorHandler
@@ -185,10 +213,11 @@ type NodeController struct { // nolint: golint
 	chReady chan struct{}
 
 	// What was the last error we got from the node upon ping
-	lastPingErrorLock  sync.Mutex
-	lastPingError      error
-	firstPingCompleted chan struct{}
-	pingTimeout        *time.Duration
+	lastPingErrorLock    sync.Mutex
+	lastPingError        error
+	lastPingErrorUpdated chan struct{}
+	firstPingCompleted   chan struct{}
+	pingTimeout          *time.Duration
 }
 
 // The default intervals used for lease and status updates.
@@ -226,23 +255,21 @@ func (n *NodeController) Run(ctx context.Context) error {
 		return err
 	}
 
-	if n.leases == nil {
-		n.disableLease = true
-		return n.controlLoop(ctx)
-	}
-
-	n.lease = newLease(n.lease)
-	setLeaseAttrs(n.lease, n.n, n.pingInterval*5)
-
-	l, err := ensureLease(ctx, n.leases, n.lease)
-	if err != nil {
-		if !errors.IsNotFound(err) {
-			return pkgerrors.Wrap(err, "error creating node lease")
+	if n.leaseController != nil {
+		if n.leaseController.leaseDurationSeconds == 0 {
+			n.leaseController.leaseDurationSeconds = int32(n.pingInterval) * 25
 		}
-		log.G(ctx).Info("Node leases not supported, falling back to only node status updates")
-		n.disableLease = true
+		if n.leaseController.renewInterval == 0 {
+			n.leaseController.renewInterval = n.pingInterval
+		}
+
+		n.leaseController.holderIdentity = n.n.Name
+		n.leaseController.nodesClient = n.nodes
+		n.leaseController.shouldUpdateLease = func(ctx context.Context) bool {
+			_, lastPingStatus := n.getLastPingStatus(ctx)
+			return lastPingStatus == nil
+		}
 	}
-	n.lease = l
 
 	log.G(ctx).Debug("Created node lease")
 	return n.controlLoop(ctx)
@@ -320,6 +347,8 @@ func (n *NodeController) pingLoop(ctx context.Context) {
 
 		n.lastPingErrorLock.Lock()
 		n.lastPingError = err
+		close(n.lastPingErrorUpdated)
+		n.lastPingErrorUpdated = make(chan struct{})
 		n.lastPingErrorLock.Unlock()
 		span.SetStatus(err)
 	}
@@ -332,52 +361,75 @@ func (n *NodeController) pingLoop(ctx context.Context) {
 	wait.UntilWithContext(ctx, checkFunc, n.pingInterval)
 }
 
-func (n *NodeController) controlLoop(ctx context.Context) error {
-	pingTimer := time.NewTimer(n.pingInterval)
-	defer pingTimer.Stop()
-
-	statusTimer := time.NewTimer(n.statusInterval)
-	defer statusTimer.Stop()
-	timerResetDuration := n.statusInterval
-	if n.disableLease {
-		// when resetting the timer after processing a status update, reset it to the ping interval
-		// (since it will be the ping timer as n.disableLease == true)
-		timerResetDuration = n.pingInterval
-
-		// hack to make sure this channel always blocks since we won't be using it
-		if !statusTimer.Stop() {
-			<-statusTimer.C
-		}
+// Returns the result of the last node ping, and a channel, which will be closed when the
+// status is once again updated.
+func (n *NodeController) getLastPingStatus(ctx context.Context) (chan struct{}, error) {
+	select {
+	case <-n.firstPingCompleted:
+	case <-ctx.Done():
+		return nil, ctx.Err()
 	}
 
-	close(n.chReady)
+	n.lastPingErrorLock.Lock()
+	defer n.lastPingErrorLock.Unlock()
+	return n.lastPingErrorUpdated, n.lastPingError
+}
 
-	group := &wait.Group{}
-	group.StartWithContext(ctx, n.pingLoop)
-	defer group.Wait()
+func (n *NodeController) getNodeStatusUpdateTimer(ctx context.Context) *time.Timer {
+	if n.leaseController.getLeasesWorking(ctx) {
+		log.G(ctx).WithField("statusInterval", n.statusInterval).Debug("leases are working, setting up timer")
+		return time.NewTimer(n.statusInterval)
+	}
 
-	loop := func() bool {
-		ctx, span := trace.StartSpan(ctx, "node.controlLoop.loop")
+	if n.leaseController == nil {
+		log.G(ctx).WithField("pingInterval", n.pingInterval).Debug("leases not enabled, setting up timer")
+		return time.NewTimer(n.pingInterval)
+	}
+
+	log.G(ctx).WithField("pingInterval", n.pingInterval).Debug("leases are not working, setting up timer")
+	return time.NewTimer(n.pingInterval)
+}
+
+func (n *NodeController) nodeStatusUpdateLoop(ctx context.Context) {
+	// There are three cases:
+	// 1. The provider sent us an update. We must immediately process that
+	// 2. The node provider ping is failing. We must wait for that to stop failing
+	//    before proceeding
+	// 3. Leases are disabled / not working, and we should update the status on api server
+	//    in pingInterval duration
+	// 4. Leases are working fine, and we should update the status at the node status interval
+	loop := func(ctx context.Context) {
+		ctx, span := trace.StartSpan(ctx, "node.nodeStatusUpdateLoop.loop")
 		defer span.End()
+		nextPingStatus, lastPingStatus := n.getLastPingStatus(ctx)
 
+		var c <-chan time.Time
+		if lastPingStatus == nil {
+			// if last ping status passed, we do not need to perform the nextPingStatus fallthrough check
+			nextPingStatus = nil
+			timer := n.getNodeStatusUpdateTimer(ctx)
+			defer timer.Stop()
+			c = timer.C
+		} else {
+			log.G(ctx).WithError(lastPingStatus).Debug("Last ping status failed, not scheduling node status update")
+		}
 		select {
 		case <-ctx.Done():
-			return true
-		case updated := <-n.chStatusUpdate:
-			var t *time.Timer
-			if n.disableLease {
-				t = pingTimer
+			return
+		case <-c:
+			err := n.updateStatus(ctx, false)
+			if err != nil {
+				log.G(ctx).WithError(err).Error("Error handling node status update")
+				span.SetStatus(err)
 			} else {
-				t = statusTimer
+				log.G(ctx).Debug("Performed scheduled node update")
 			}
-
+		case <-nextPingStatus:
+			// The node failed to respond to our last ping, so let's wait for it to be updated
+			log.G(ctx).Debug("Received next ping status")
+			return
+		case updated := <-n.chStatusUpdate:
 			log.G(ctx).Debug("Received node status update")
-			// Performing a status update so stop/reset the status update timer in this
-			// branch otherwise there could be an unnecessary status update.
-			if !t.Stop() {
-				<-t.C
-			}
-
 			n.n.Status = updated.Status
 			n.n.ObjectMeta = metav1.ObjectMeta{
 				Annotations: updated.Annotations,
@@ -386,69 +438,27 @@ func (n *NodeController) controlLoop(ctx context.Context) error {
 				Namespace:   n.n.ObjectMeta.Namespace,
 				UID:         n.n.ObjectMeta.UID,
 			}
-			if err := n.updateStatus(ctx, false); err != nil {
+			err := n.updateStatus(ctx, false)
+			if err != nil {
 				log.G(ctx).WithError(err).Error("Error handling node status update")
+				span.SetStatus(err)
 			}
-			t.Reset(timerResetDuration)
-		case <-statusTimer.C:
-			if err := n.updateStatus(ctx, false); err != nil {
-				log.G(ctx).WithError(err).Error("Error handling node status update")
-			}
-			statusTimer.Reset(n.statusInterval)
-		case <-pingTimer.C:
-			if err := n.handlePing(ctx); err != nil {
-				log.G(ctx).WithError(err).Error("Error while handling node ping")
-			} else {
-				log.G(ctx).Debug("Successful node ping")
-			}
-			pingTimer.Reset(n.pingInterval)
-		}
-		return false
-	}
-
-	for {
-		shouldTerminate := loop()
-		if shouldTerminate {
-			return nil
 		}
 	}
+
+	wait.UntilWithContext(ctx, loop, time.Duration(0))
 }
 
-func (n *NodeController) handlePing(ctx context.Context) (retErr error) {
-	ctx, span := trace.StartSpan(ctx, "node.handlePing")
-	defer span.End()
-	defer func() {
-		span.SetStatus(retErr)
-	}()
+func (n *NodeController) controlLoop(ctx context.Context) error {
+	close(n.chReady)
 
-	select {
-	case <-ctx.Done():
-		return ctx.Err()
-	case <-n.firstPingCompleted:
+	group := &wait.Group{}
+	group.StartWithContext(ctx, n.pingLoop)
+	group.StartWithContext(ctx, n.nodeStatusUpdateLoop)
+	if n.leaseController != nil {
+		group.StartWithContext(ctx, n.leaseController.run)
 	}
-
-	n.lastPingErrorLock.Lock()
-	err := n.lastPingError
-	n.lastPingErrorLock.Unlock()
-	if err != nil {
-		err = pkgerrors.Wrap(err, "error while pinging the node provider")
-		return err
-	}
-
-	if n.disableLease {
-		return n.updateStatus(ctx, false)
-	}
-
-	return n.updateLease(ctx)
-}
-
-func (n *NodeController) updateLease(ctx context.Context) error {
-	l, err := updateNodeLease(ctx, n.leases, newLease(n.lease))
-	if err != nil {
-		return err
-	}
-
-	n.lease = l
+	group.Wait()
 	return nil
 }
 
@@ -478,61 +488,6 @@ func (n *NodeController) updateStatus(ctx context.Context, skipErrorCb bool) (er
 
 	n.n = node
 	return nil
-}
-
-func ensureLease(ctx context.Context, leases v1beta1.LeaseInterface, lease *coord.Lease) (*coord.Lease, error) {
-	l, err := leases.Create(ctx, lease, metav1.CreateOptions{})
-	if err != nil {
-		switch {
-		case errors.IsNotFound(err):
-			log.G(ctx).WithError(err).Info("Node lease not supported")
-			return nil, err
-		case errors.IsAlreadyExists(err):
-			if err := leases.Delete(ctx, lease.Name, metav1.DeleteOptions{}); err != nil && !errors.IsNotFound(err) {
-				log.G(ctx).WithError(err).Error("could not delete old node lease")
-				return nil, pkgerrors.Wrap(err, "old lease exists but could not delete it")
-			}
-			l, err = leases.Create(ctx, lease, metav1.CreateOptions{})
-		}
-	}
-
-	return l, err
-}
-
-// updateNodeLease updates the node lease.
-//
-// If this function returns an errors.IsNotFound(err) error, this likely means
-// that node leases are not supported, if this is the case, call updateNodeStatus
-// instead.
-func updateNodeLease(ctx context.Context, leases v1beta1.LeaseInterface, lease *coord.Lease) (*coord.Lease, error) {
-	ctx, span := trace.StartSpan(ctx, "node.UpdateNodeLease")
-	defer span.End()
-
-	ctx = span.WithFields(ctx, log.Fields{
-		"lease.name": lease.Name,
-		"lease.time": lease.Spec.RenewTime,
-	})
-
-	if lease.Spec.LeaseDurationSeconds != nil {
-		ctx = span.WithField(ctx, "lease.expiresSeconds", *lease.Spec.LeaseDurationSeconds)
-	}
-
-	l, err := leases.Update(ctx, lease, metav1.UpdateOptions{})
-	if err != nil {
-		if errors.IsNotFound(err) {
-			log.G(ctx).Debug("lease not found")
-			l, err = ensureLease(ctx, leases, lease)
-		}
-		if err != nil {
-			span.SetStatus(err)
-			return nil, err
-		}
-		log.G(ctx).Debug("created new lease")
-	} else {
-		log.G(ctx).Debug("updated lease")
-	}
-
-	return l, nil
 }
 
 // just so we don't have to allocate this on every get request
@@ -695,32 +650,6 @@ func updateNodeStatus(ctx context.Context, nodes v1.NodeInterface, nodeFromProvi
 		WithField("node.Status.Conditions", updatedNode.Status.Conditions).
 		Debug("updated node status in api server")
 	return updatedNode, nil
-}
-
-func newLease(base *coord.Lease) *coord.Lease {
-	var lease *coord.Lease
-	if base == nil {
-		lease = &coord.Lease{}
-	} else {
-		lease = base.DeepCopy()
-	}
-
-	lease.Spec.RenewTime = &metav1.MicroTime{Time: time.Now()}
-	return lease
-}
-
-func setLeaseAttrs(l *coord.Lease, n *corev1.Node, dur time.Duration) {
-	if l.Name == "" {
-		l.Name = n.Name
-	}
-	if l.Spec.HolderIdentity == nil {
-		l.Spec.HolderIdentity = &n.Name
-	}
-
-	if l.Spec.LeaseDurationSeconds == nil {
-		d := int32(dur.Seconds()) * 5
-		l.Spec.LeaseDurationSeconds = &d
-	}
 }
 
 func updateNodeStatusHeartbeat(n *corev1.Node) {
