@@ -77,6 +77,70 @@ git remote add upstream git@github.com:virtual-kubelet/virtual-kubelet.git
 ```
 3. Submit a pull request.
 
+
+## Submission and Review guidelines
+
+We welcome and appreciate everyone to submit and review changes. Here are some guidelines to follow for help ensure
+a successful contribution experience.
+
+Please note these are general guidelines, and while they are a good starting point, they are not specifically rules.
+If you have a question about something, feel free to ask:
+
+- [#virtual-kubelet](https://kubernetes.slack.com/archives/C8YU1QP8W) on Kubernetes Slack
+- [virtualkubelet-dev@lists.cncf.io](mailto:virtualkubelet-dev@lists.cncf.io)
+- GitHub Issues
+
+#### Don't make breaking API changes.
+
+Since Virtual Kubelet has reached 1.0 it is a major goal of the project to keep a stable API.
+Breaking changes must only be considered if a 2.0 release is on the table, which should only come with thoughtful
+consideration of the projects users as well as maintenance burden.
+
+Also note that behavior changes in the runtime can have cascading effects that cause unintended failures. Behavior
+changes should come well documented and with ample consideration for downstream effects. If possible, they should be
+opt-in.
+
+#### Public APIs
+
+Public API's should be extendable and flexible without requiring breaking changes.
+While we can always add a new function (`Foo2()`), a new type, etc, doing so makes it harder for people to update to
+the new behavior.
+
+Build API interfaces that do not need to be changed to adopt new or improved functionality. Opinions on how a particular
+thing should work should be encoded by the user rather than implicit in the runtime. Defaults are fine, but defaults
+should be overridable.
+
+The smaller the surface area of an API, the easier it is to do more interesting things with it.
+
+#### Building blocks
+
+Don't overload functionality. If something is complicated to setup we can provide helpers or wrappers to do that, but
+don't require users to do things a certain way because this tends to diminish the usefulness, especially as it relates
+to runtimes.
+
+We also do not want the maintenance burden of every users individual edge cases.
+
+#### Use context.Context
+
+Probably if it is a public/exported API, it should take a `context.Context`. Even if it doesn't need one today, it may
+need it tomorrow, and then we have a breaking API change.
+
+We use `context.Context` for storing loggers, tracing spans, and cancellation all across the project. Better safe
+than sorry: add a `context.Context`.
+
+#### Errors
+
+Callers can't handle errors if they don't know what the error is, so make sure they can figure that out.
+We use a package `errdefs` to define the types of errors we currently look out for. We do not typically look for
+concrete error types, so check out `errdefs` and see if there is already an error type in there for your needs, or even
+create a new one.
+
+#### Testing
+
+Ideally all behavior would be tested, in practice this is not the case. Unit tests are great, and fast. There is also
+an end-to-end test suite for testing the overall behavior of the system. Please add tests. This is also a great place
+to get started if you are new to the codebase.
+
 ## Code of conduct
 
 Virtual Kubelet follows the [CNCF Code of Conduct](https://github.com/cncf/foundation/blob/master/code-of-conduct.md).
