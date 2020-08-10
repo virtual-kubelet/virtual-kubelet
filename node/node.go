@@ -28,6 +28,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/strategicpatch"
+	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes/typed/coordination/v1beta1"
 	v1 "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/client-go/util/retry"
@@ -70,12 +71,19 @@ type NodeProvider interface { //nolint:golint
 // Note: When if there are multiple NodeControllerOpts which apply against the same
 // underlying options, the last NodeControllerOpt will win.
 func NewNodeController(p NodeProvider, node *corev1.Node, nodes v1.NodeInterface, opts ...NodeControllerOpt) (*NodeController, error) {
-	n := &NodeController{p: p, n: node, nodes: nodes, chReady: make(chan struct{})}
+	n := &NodeController{
+		p:       p,
+		n:       node,
+		nodes:   nodes,
+		chReady: make(chan struct{}),
+	}
 	for _, o := range opts {
 		if err := o(n); err != nil {
 			return nil, pkgerrors.Wrap(err, "error applying node option")
 		}
 	}
+	n.nodePingController = newNodePingController(n.p, n.pingInterval, n.pingTimeout)
+
 	return n, nil
 }
 
@@ -104,7 +112,17 @@ func WithNodeEnableLeaseV1Beta1(client v1beta1.LeaseInterface, baseLease *coord.
 	}
 }
 
-// WithNodePingInterval sets the interval for checking node status
+// WithNodePingTimeout limits the amount of time that the virtual kubelet will wait for the node provider to
+// respond to the ping callback. If it does not return within this time, it will be considered an error
+// condition
+func WithNodePingTimeout(timeout time.Duration) NodeControllerOpt {
+	return func(n *NodeController) error {
+		n.pingTimeout = &timeout
+		return nil
+	}
+}
+
+// WithNodePingInterval sets the interval between checking for node statuses via Ping()
 // If node leases are not supported (or not enabled), this is the frequency
 // with which the node status will be updated in Kubernetes.
 func WithNodePingInterval(d time.Duration) NodeControllerOpt {
@@ -164,6 +182,9 @@ type NodeController struct { // nolint: golint
 	nodeStatusUpdateErrorHandler ErrorHandler
 
 	chReady chan struct{}
+
+	nodePingController *nodePingController
+	pingTimeout        *time.Duration
 }
 
 // The default intervals used for lease and status updates.
@@ -270,6 +291,10 @@ func (n *NodeController) controlLoop(ctx context.Context) error {
 
 	close(n.chReady)
 
+	group := &wait.Group{}
+	group.StartWithContext(ctx, n.nodePingController.run)
+	defer group.Wait()
+
 	loop := func() bool {
 		ctx, span := trace.StartSpan(ctx, "node.controlLoop.loop")
 		defer span.End()
@@ -319,6 +344,7 @@ func (n *NodeController) controlLoop(ctx context.Context) error {
 		}
 		return false
 	}
+
 	for {
 		shouldTerminate := loop()
 		if shouldTerminate {
@@ -334,14 +360,22 @@ func (n *NodeController) handlePing(ctx context.Context) (retErr error) {
 		span.SetStatus(retErr)
 	}()
 
-	if err := n.p.Ping(ctx); err != nil {
-		return pkgerrors.Wrap(err, "error while pinging the node provider")
+	result, err := n.nodePingController.getResult(ctx)
+	if err != nil {
+		err = pkgerrors.Wrap(err, "error while fetching result of node ping")
+		return err
+	}
+
+	if result.error != nil {
+		err = pkgerrors.Wrap(err, "node ping returned error on ping")
+		return err
 	}
 
 	if n.disableLease {
 		return n.updateStatus(ctx, false)
 	}
 
+	// TODO(Sargun): Pass down the result / timestamp so we can accurately track when the ping actually occurred
 	return n.updateLease(ctx)
 }
 
