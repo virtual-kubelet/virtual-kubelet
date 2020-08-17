@@ -424,7 +424,8 @@ func ensureLease(ctx context.Context, leases v1beta1.LeaseInterface, lease *coor
 		case errors.IsNotFound(err):
 			log.G(ctx).WithError(err).Info("Node lease not supported")
 			return nil, err
-		case errors.IsAlreadyExists(err):
+		case errors.IsAlreadyExists(err), errors.IsConflict(err):
+			log.G(ctx).WithError(err).Warn("Error creating lease, deleting and recreating")
 			if err := leases.Delete(ctx, lease.Name, metav1.DeleteOptions{}); err != nil && !errors.IsNotFound(err) {
 				log.G(ctx).WithError(err).Error("could not delete old node lease")
 				return nil, pkgerrors.Wrap(err, "old lease exists but could not delete it")
