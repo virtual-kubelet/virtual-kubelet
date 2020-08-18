@@ -28,6 +28,14 @@ type pingResult struct {
 }
 
 func newNodePingController(node NodeProvider, pingInterval time.Duration, timeout *time.Duration) *nodePingController {
+	if pingInterval == 0 {
+		panic("Node ping interval is 0")
+	}
+
+	if timeout != nil && *timeout == 0 {
+		panic("Node ping timeout is 0")
+	}
+
 	return &nodePingController{
 		nodeProvider:       node,
 		pingInterval:       pingInterval,

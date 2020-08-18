@@ -82,6 +82,14 @@ func NewNodeController(p NodeProvider, node *corev1.Node, nodes v1.NodeInterface
 			return nil, pkgerrors.Wrap(err, "error applying node option")
 		}
 	}
+
+	if n.pingInterval == time.Duration(0) {
+		n.pingInterval = DefaultPingInterval
+	}
+	if n.statusInterval == time.Duration(0) {
+		n.statusInterval = DefaultStatusUpdateInterval
+	}
+
 	n.nodePingController = newNodePingController(n.p, n.pingInterval, n.pingTimeout)
 
 	return n, nil
@@ -206,13 +214,6 @@ const (
 // periodically), otherwise it will only use node status update with the configured
 // ping interval.
 func (n *NodeController) Run(ctx context.Context) error {
-	if n.pingInterval == time.Duration(0) {
-		n.pingInterval = DefaultPingInterval
-	}
-	if n.statusInterval == time.Duration(0) {
-		n.statusInterval = DefaultStatusUpdateInterval
-	}
-
 	n.chStatusUpdate = make(chan *corev1.Node, 1)
 	n.p.NotifyNodeStatus(ctx, func(node *corev1.Node) {
 		n.chStatusUpdate <- node
