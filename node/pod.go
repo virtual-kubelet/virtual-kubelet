@@ -216,14 +216,34 @@ func (pc *PodController) updatePodStatus(ctx context.Context, podFromKubernetes 
 	kPod.Lock()
 	podFromProvider := kPod.lastPodStatusReceivedFromProvider.DeepCopy()
 	kPod.Unlock()
-	if cmp.Equal(podFromKubernetes.Status, podFromProvider.Status) {
+	if cmp.Equal(podFromKubernetes.Status, podFromProvider.Status) && podFromProvider.DeletionTimestamp == nil {
 		return nil
 	}
+	// Pod deleted by provider due some reasons. e.g. a K8s provider, pod created by deployment would be evicted when node is not ready.
+	// If we do not delete pod in K8s, deployment would not create a new one.
+	if podFromProvider.DeletionTimestamp != nil && podFromKubernetes.DeletionTimestamp == nil {
+		deleteOptions := metav1.DeleteOptions{
+			GracePeriodSeconds: podFromProvider.DeletionGracePeriodSeconds,
+		}
+		current := metav1.NewTime(time.Now())
+		if podFromProvider.DeletionTimestamp.Before(&current) {
+			deleteOptions.GracePeriodSeconds = new(int64)
+		}
+		// check status here to avoid pod re-created deleted incorrectly. e.g. delete a pod from K8s and re-create it(statefulSet and so on),
+		// pod in provider may not delete immediately. so deletionTimestamp is not nil. Then the re-created one would be deleted if we do not check pod status.
+		if cmp.Equal(podFromKubernetes.Status, podFromProvider.Status) {
+			if err := pc.client.Pods(podFromKubernetes.Namespace).Delete(ctx, podFromKubernetes.Name, deleteOptions); err != nil && !errors.IsNotFound(err) {
+				span.SetStatus(err)
+				return pkgerrors.Wrap(err, "error while delete pod in kubernetes")
+			}
+		}
+	}
+
 	// We need to do this because the other parts of the pod can be updated elsewhere. Since we're only updating
 	// the pod status, and we should be the sole writers of the pod status, we can blind overwrite it. Therefore
 	// we need to copy the pod and set ResourceVersion to 0.
 	podFromProvider.ResourceVersion = "0"
-	if _, err := pc.client.Pods(podFromKubernetes.Namespace).UpdateStatus(ctx, podFromProvider, metav1.UpdateOptions{}); err != nil {
+	if _, err := pc.client.Pods(podFromKubernetes.Namespace).UpdateStatus(ctx, podFromProvider, metav1.UpdateOptions{}); err != nil && !errors.IsNotFound(err) {
 		span.SetStatus(err)
 		return pkgerrors.Wrap(err, "error while updating pod status in kubernetes")
 	}
