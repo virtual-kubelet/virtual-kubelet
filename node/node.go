@@ -683,19 +683,25 @@ func newLease(ctx context.Context, base *coord.Lease, node *corev1.Node, leaseRe
 			},
 		}
 	} else if l > 0 {
-		var foundThisNode, foundNode bool
+		var foundAnyNode bool
 		for _, ref := range lease.OwnerReferences {
 			if ref.APIVersion == corev1.SchemeGroupVersion.WithKind("Node").Version && ref.Kind == corev1.SchemeGroupVersion.WithKind("Node").Kind {
-				foundNode = true
+				foundAnyNode = true
 				if node.UID == ref.UID && node.Name == ref.Name {
-					foundThisNode = true
+					return lease
+				} else {
+					log.G(ctx).WithFields(map[string]interface{}{
+						"node.UID":  node.UID,
+						"ref.UID":   ref.UID,
+						"node.Name": node.Name,
+						"ref.Name":  ref.Name,
+					}).Warn("Found that lease had node in owner references that is not this node")
 				}
 			}
 		}
-		if !foundThisNode && !foundNode {
+		if !foundAnyNode {
 			log.G(ctx).Warn("Found that lease had owner references, but no nodes in owner references")
-		} else if foundNode {
-			log.G(ctx).Warn("Found that lease had owner references, but nodes in owner references that is not this node")
+
 		}
 	}
 
