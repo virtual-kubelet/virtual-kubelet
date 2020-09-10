@@ -82,9 +82,16 @@ type PodNotifier interface {
 	// fashion. The provided pod's PodStatus should be up to date when
 	// this function is called.
 	//
-	// NotifyPods will not block callers.
+	// NotifyPods must not block the caller since it is only used to register the callback.
+	// The callback passed into `NotifyPods` may block when called.
 	NotifyPods(context.Context, func(*corev1.Pod))
 }
+
+// PodEventFilterFunc is used to filter pod events received from Kubernetes.
+//
+// Filters that return true means the event handler will be run
+// Filters that return false means the filter will *not* be run.
+type PodEventFilterFunc func(context.Context, *corev1.Pod) bool
 
 // PodController is the controller implementation for Pod resources.
 type PodController struct {
@@ -105,9 +112,13 @@ type PodController struct {
 	// deletionQ is a queue on which pods are reconciled, and we check if pods are in API server after grace period
 	deletionQ workqueue.RateLimitingInterface
 
+	podStatusQ workqueue.RateLimitingInterface
+
 	// From the time of creation, to termination the knownPods map will contain the pods key
 	// (derived from Kubernetes' cache library) -> a *knownPod struct.
 	knownPods sync.Map
+
+	podEventFilterFunc PodEventFilterFunc
 
 	// ready is a channel which will be closed once the pod controller is fully up and running.
 	// this channel will never be closed if there is an error on startup.
@@ -149,6 +160,8 @@ type PodControllerConfig struct {
 
 	// PodInformer is used as a local cache for pods
 	// This should be configured to only look at pods scheduled to the node which the controller will be managing
+	// If the informer does not filter based on node, then you must provide a `PodEventFilterFunc` parameter so event handlers
+	//   can filter pods not assigned to this node.
 	PodInformer corev1informers.PodInformer
 
 	EventRecorder record.EventRecorder
@@ -157,11 +170,21 @@ type PodControllerConfig struct {
 
 	// Informers used for filling details for things like downward API in pod spec.
 	//
-	// We are using informers here instead of listeners because we'll need the
+	// We are using informers here instead of listers because we'll need the
 	// informer for certain features (like notifications for updated ConfigMaps)
 	ConfigMapInformer corev1informers.ConfigMapInformer
 	SecretInformer    corev1informers.SecretInformer
 	ServiceInformer   corev1informers.ServiceInformer
+
+	// RateLimiter defines the rate limit of work queue
+	RateLimiter workqueue.RateLimiter
+
+	// Add custom filtering for pod informer event handlers
+	// Use this for cases where the pod informer handles more than pods assigned to this node
+	//
+	// For example, if the pod informer is not filtering based on pod.Spec.NodeName, you should
+	// set that filter here so the pod controller does not handle events for pods assigned to other nodes.
+	PodEventFilterFunc PodEventFilterFunc
 }
 
 // NewPodController creates a new pod controller with the provided config.
@@ -178,20 +201,25 @@ func NewPodController(cfg PodControllerConfig) (*PodController, error) {
 	if cfg.Provider == nil {
 		return nil, errdefs.InvalidInput("missing provider")
 	}
+	if cfg.RateLimiter == nil {
+		cfg.RateLimiter = workqueue.DefaultControllerRateLimiter()
+	}
 
 	pc := &PodController{
-		client:          cfg.PodClient,
-		podsInformer:    cfg.PodInformer,
-		podsLister:      cfg.PodInformer.Lister(),
-		provider:        cfg.Provider,
-		ready:           make(chan struct{}),
-		done:            make(chan struct{}),
-		recorder:        cfg.EventRecorder,
-		k8sQ:            workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "syncPodsFromKubernetes"),
-		deletionQ:       workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "deletePodsFromKubernetes"),
-		configMapLister: cfg.ConfigMapInformer.Lister(),
-		secretLister:    cfg.SecretInformer.Lister(),
-		serviceLister:   cfg.ServiceInformer.Lister(),
+		client:             cfg.PodClient,
+		podsInformer:       cfg.PodInformer,
+		podsLister:         cfg.PodInformer.Lister(),
+		provider:           cfg.Provider,
+		ready:              make(chan struct{}),
+		done:               make(chan struct{}),
+		recorder:           cfg.EventRecorder,
+		k8sQ:               workqueue.NewNamedRateLimitingQueue(cfg.RateLimiter, "syncPodsFromKubernetes"),
+		deletionQ:          workqueue.NewNamedRateLimitingQueue(cfg.RateLimiter, "deletePodsFromKubernetes"),
+		podStatusQ:         workqueue.NewNamedRateLimitingQueue(cfg.RateLimiter, "syncPodStatusFromProvider"),
+		podEventFilterFunc: cfg.PodEventFilterFunc,
+		configMapLister:    cfg.ConfigMapInformer.Lister(),
+		secretLister:       cfg.SecretInformer.Lister(),
+		serviceLister:      cfg.ServiceInformer.Lister(),
 	}
 
 	return pc, nil
@@ -234,13 +262,12 @@ func (pc *PodController) Run(ctx context.Context, podSyncWorkers int) (retErr er
 	}
 	pc.provider = provider
 
-	podStatusQueue := workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "syncPodStatusFromProvider")
 	provider.NotifyPods(ctx, func(pod *corev1.Pod) {
-		pc.enqueuePodStatusUpdate(ctx, podStatusQueue, pod.DeepCopy())
+		pc.enqueuePodStatusUpdate(ctx, pc.podStatusQ, pod.DeepCopy())
 	})
 	go runProvider(ctx)
 
-	defer podStatusQueue.ShutDown()
+	defer pc.podStatusQ.ShutDown()
 
 	// Wait for the caches to be synced *before* starting to do work.
 	if ok := cache.WaitForCacheSync(ctx.Done(), pc.podsInformer.Informer().HasSynced); !ok {
@@ -251,7 +278,8 @@ func (pc *PodController) Run(ctx context.Context, podSyncWorkers int) (retErr er
 	// Set up event handlers for when Pod resources change. Since the pod cache is in-sync, the informer will generate
 	// synthetic add events at this point. It again avoids the race condition of adding handlers while the cache is
 	// syncing.
-	pc.podsInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
+
+	var eventHandler cache.ResourceEventHandler = cache.ResourceEventHandlerFuncs{
 		AddFunc: func(pod interface{}) {
 			if key, err := cache.MetaNamespaceKeyFunc(pod); err != nil {
 				log.G(ctx).Error(err)
@@ -262,13 +290,16 @@ func (pc *PodController) Run(ctx context.Context, podSyncWorkers int) (retErr er
 		},
 		UpdateFunc: func(oldObj, newObj interface{}) {
 			// Create a copy of the old and new pod objects so we don't mutate the cache.
+			oldPod := oldObj.(*corev1.Pod)
 			newPod := newObj.(*corev1.Pod)
 
 			// At this point we know that something in .metadata or .spec has changed, so we must proceed to sync the pod.
 			if key, err := cache.MetaNamespaceKeyFunc(newPod); err != nil {
 				log.G(ctx).Error(err)
 			} else {
-				pc.k8sQ.AddRateLimited(key)
+				if podShouldEnqueue(oldPod, newPod) {
+					pc.k8sQ.AddRateLimited(key)
+				}
 			}
 		},
 		DeleteFunc: func(pod interface{}) {
@@ -281,7 +312,22 @@ func (pc *PodController) Run(ctx context.Context, podSyncWorkers int) (retErr er
 				pc.deletionQ.Forget(key)
 			}
 		},
-	})
+	}
+
+	if pc.podEventFilterFunc != nil {
+		eventHandler = cache.FilteringResourceEventHandler{
+			FilterFunc: func(obj interface{}) bool {
+				p, ok := obj.(*corev1.Pod)
+				if !ok {
+					return false
+				}
+				return pc.podEventFilterFunc(ctx, p)
+			},
+			Handler: eventHandler,
+		}
+	}
+
+	pc.podsInformer.Informer().AddEventHandler(eventHandler)
 
 	// Perform a reconciliation step that deletes any dangling pods from the provider.
 	// This happens only when the virtual-kubelet is starting, and operates on a "best-effort" basis.
@@ -297,7 +343,7 @@ func (pc *PodController) Run(ctx context.Context, podSyncWorkers int) (retErr er
 		workerID := strconv.Itoa(id)
 		go func() {
 			defer wg.Done()
-			pc.runSyncPodStatusFromProviderWorker(ctx, workerID, podStatusQueue)
+			pc.runSyncPodStatusFromProviderWorker(ctx, workerID, pc.podStatusQ)
 		}()
 	}
 
@@ -325,7 +371,7 @@ func (pc *PodController) Run(ctx context.Context, podSyncWorkers int) (retErr er
 	<-ctx.Done()
 	log.G(ctx).Info("shutting down workers")
 	pc.k8sQ.ShutDown()
-	podStatusQueue.ShutDown()
+	pc.podStatusQ.ShutDown()
 	pc.deletionQ.ShutDown()
 
 	wg.Wait()

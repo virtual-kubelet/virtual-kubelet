@@ -23,6 +23,7 @@ import (
 	"gotest.tools/assert"
 	is "gotest.tools/assert/cmp"
 	corev1 "k8s.io/api/core/v1"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kubeinformers "k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes/fake"
 	"k8s.io/client-go/util/workqueue"
@@ -46,9 +47,11 @@ func newTestController() *TestController {
 			recorder:        testutil.FakeEventRecorder(5),
 			k8sQ:            workqueue.NewRateLimitingQueue(workqueue.DefaultControllerRateLimiter()),
 			deletionQ:       workqueue.NewRateLimitingQueue(workqueue.DefaultControllerRateLimiter()),
+			podStatusQ:      workqueue.NewRateLimitingQueue(workqueue.DefaultControllerRateLimiter()),
 			done:            make(chan struct{}),
 			ready:           make(chan struct{}),
 			podsInformer:    iFactory.Core().V1().Pods(),
+			podsLister:      iFactory.Core().V1().Pods().Lister(),
 			configMapLister: cmInformer.Lister(),
 			secretLister:    sInformer.Lister(),
 			serviceLister:   svcInformer.Lister(),
@@ -107,6 +110,76 @@ func TestPodsDifferentIgnoreValue(t *testing.T) {
 	p2.Status.Phase = corev1.PodFailed
 
 	assert.Assert(t, podsEqual(p1, p2))
+}
+
+func TestPodShouldEnqueueDifferentDeleteTimeStamp(t *testing.T) {
+	p1 := &corev1.Pod{
+		Spec: newPodSpec(),
+	}
+
+	p2 := p1.DeepCopy()
+	now := v1.NewTime(time.Now())
+	p2.DeletionTimestamp = &now
+	assert.Assert(t, podShouldEnqueue(p1, p2))
+}
+
+func TestPodShouldEnqueueDifferentLabel(t *testing.T) {
+	p1 := &corev1.Pod{
+		Spec: newPodSpec(),
+	}
+
+	p2 := p1.DeepCopy()
+	p2.Labels = map[string]string{"test": "test"}
+	assert.Assert(t, podShouldEnqueue(p1, p2))
+}
+
+func TestPodShouldEnqueueDifferentAnnotation(t *testing.T) {
+	p1 := &corev1.Pod{
+		Spec: newPodSpec(),
+	}
+
+	p2 := p1.DeepCopy()
+	p2.Annotations = map[string]string{"test": "test"}
+	assert.Assert(t, podShouldEnqueue(p1, p2))
+}
+
+func TestPodShouldNotEnqueueDifferentStatus(t *testing.T) {
+	p1 := &corev1.Pod{
+		Spec: newPodSpec(),
+	}
+
+	p2 := p1.DeepCopy()
+	p2.Status.Phase = corev1.PodSucceeded
+	assert.Assert(t, !podShouldEnqueue(p1, p2))
+}
+
+func TestPodShouldEnqueueDifferentDeleteGraceTime(t *testing.T) {
+	p1 := &corev1.Pod{
+		Spec: newPodSpec(),
+	}
+
+	p2 := p1.DeepCopy()
+	oldTime := v1.NewTime(time.Now().Add(5))
+	newTime := v1.NewTime(time.Now().Add(10))
+	oldGraceTime := int64(5)
+	newGraceTime := int64(10)
+	p1.DeletionGracePeriodSeconds = &oldGraceTime
+	p2.DeletionTimestamp = &oldTime
+
+	p2.DeletionGracePeriodSeconds = &newGraceTime
+	p2.DeletionTimestamp = &newTime
+	assert.Assert(t, podShouldEnqueue(p1, p2))
+}
+
+func TestPodShouldEnqueueGraceTimeChanged(t *testing.T) {
+	p1 := &corev1.Pod{
+		Spec: newPodSpec(),
+	}
+
+	p2 := p1.DeepCopy()
+	graceTime := int64(30)
+	p2.DeletionGracePeriodSeconds = &graceTime
+	assert.Assert(t, podShouldEnqueue(p1, p2))
 }
 
 func TestPodCreateNewPod(t *testing.T) {

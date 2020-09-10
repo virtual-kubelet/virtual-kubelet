@@ -160,7 +160,7 @@ func TestPodLifecycle(t *testing.T) {
 				mp.setErrorOnDelete(errors.New("random error"))
 				assert.NilError(t, wireUpSystem(ctx, mp, func(ctx context.Context, s *system) {
 					testCreateStartDeleteScenario(ctx, t, s, deletionFunc, false)
-					pods, err := s.client.CoreV1().Pods(testNamespace).List(metav1.ListOptions{})
+					pods, err := s.client.CoreV1().Pods(testNamespace).List(ctx, metav1.ListOptions{})
 					assert.NilError(t, err)
 					assert.Assert(t, is.Len(pods.Items, 1))
 					assert.Assert(t, pods.Items[0].DeletionTimestamp != nil)
@@ -329,7 +329,7 @@ func testTerminalStatePodScenario(ctx context.Context, t *testing.T, s *system, 
 	p1 := newPod()
 	p1.Status.Phase = state
 	// Create the Pod
-	_, e := s.client.CoreV1().Pods(testNamespace).Create(p1)
+	_, e := s.client.CoreV1().Pods(testNamespace).Create(ctx, p1, metav1.CreateOptions{})
 	assert.NilError(t, e)
 
 	// Start the pod controller
@@ -339,7 +339,7 @@ func testTerminalStatePodScenario(ctx context.Context, t *testing.T, s *system, 
 		time.Sleep(10 * time.Millisecond)
 	}
 
-	p2, err := s.client.CoreV1().Pods(testNamespace).Get(p1.Name, metav1.GetOptions{})
+	p2, err := s.client.CoreV1().Pods(testNamespace).Get(ctx, p1.Name, metav1.GetOptions{})
 	assert.NilError(t, err)
 
 	// Make sure the pods have not changed
@@ -367,7 +367,7 @@ func testDanglingPodScenarioWithDeletionTimestamp(ctx context.Context, t *testin
 		FieldSelector: fields.OneTermEqualSelector("metadata.name", pod.ObjectMeta.Name).String(),
 	}
 	// Setup a watch (prior to pod creation, and pod controller startup)
-	watcher, err := s.client.CoreV1().Pods(testNamespace).Watch(listOptions)
+	watcher, err := s.client.CoreV1().Pods(testNamespace).Watch(ctx, listOptions)
 	assert.NilError(t, err)
 	defer watcher.Stop()
 
@@ -379,7 +379,7 @@ func testDanglingPodScenarioWithDeletionTimestamp(ctx context.Context, t *testin
 	podCopyWithDeletionTimestamp.DeletionGracePeriodSeconds = &deletionGracePeriod
 	deletionTimestamp := metav1.NewTime(time.Now().Add(time.Second * time.Duration(deletionGracePeriod)))
 	podCopyWithDeletionTimestamp.DeletionTimestamp = &deletionTimestamp
-	_, e := s.client.CoreV1().Pods(testNamespace).Create(podCopyWithDeletionTimestamp)
+	_, e := s.client.CoreV1().Pods(testNamespace).Create(ctx, podCopyWithDeletionTimestamp, metav1.CreateOptions{})
 	assert.NilError(t, e)
 
 	// Start the pod controller
@@ -415,7 +415,7 @@ func testCreateStartDeleteScenario(ctx context.Context, t *testing.T, s *system,
 	watchErrCh := make(chan error)
 
 	// Setup a watch (prior to pod creation, and pod controller startup)
-	watcher, err := s.client.CoreV1().Pods(testNamespace).Watch(listOptions)
+	watcher, err := s.client.CoreV1().Pods(testNamespace).Watch(ctx, listOptions)
 	assert.NilError(t, err)
 	defer watcher.Stop()
 	// This ensures that the pod is created.
@@ -432,7 +432,7 @@ func testCreateStartDeleteScenario(ctx context.Context, t *testing.T, s *system,
 	}()
 
 	// Create the Pod
-	_, e := s.client.CoreV1().Pods(testNamespace).Create(p)
+	_, e := s.client.CoreV1().Pods(testNamespace).Create(ctx, p, metav1.CreateOptions{})
 	assert.NilError(t, e)
 	log.G(ctx).Debug("Created pod")
 
@@ -446,7 +446,7 @@ func testCreateStartDeleteScenario(ctx context.Context, t *testing.T, s *system,
 	}
 
 	// Setup a watch to check if the pod is in running
-	watcher, err = s.client.CoreV1().Pods(testNamespace).Watch(listOptions)
+	watcher, err = s.client.CoreV1().Pods(testNamespace).Watch(ctx, listOptions)
 	assert.NilError(t, err)
 	defer watcher.Stop()
 	go func() {
@@ -471,7 +471,7 @@ func testCreateStartDeleteScenario(ctx context.Context, t *testing.T, s *system,
 	}
 
 	// Setup a watch to look for the pod eventually going away completely
-	watcher2, err := s.client.CoreV1().Pods(testNamespace).Watch(listOptions)
+	watcher2, err := s.client.CoreV1().Pods(testNamespace).Watch(ctx, listOptions)
 	assert.NilError(t, err)
 	defer watcher2.Stop()
 	waitDeleteCh := make(chan error)
@@ -483,7 +483,7 @@ func testCreateStartDeleteScenario(ctx context.Context, t *testing.T, s *system,
 	}()
 
 	// Setup a watch prior to pod deletion
-	watcher, err = s.client.CoreV1().Pods(testNamespace).Watch(listOptions)
+	watcher, err = s.client.CoreV1().Pods(testNamespace).Watch(ctx, listOptions)
 	assert.NilError(t, err)
 	defer watcher.Stop()
 	go func() {
@@ -493,7 +493,7 @@ func testCreateStartDeleteScenario(ctx context.Context, t *testing.T, s *system,
 	// Delete the pod via deletiontimestamp
 
 	// 1. Get the pod
-	currentPod, err := s.client.CoreV1().Pods(testNamespace).Get(p.Name, metav1.GetOptions{})
+	currentPod, err := s.client.CoreV1().Pods(testNamespace).Get(ctx, p.Name, metav1.GetOptions{})
 	assert.NilError(t, err)
 	// 2. Set the pod's deletion timestamp, version, and so on
 	var deletionGracePeriod int64 = 10
@@ -501,7 +501,7 @@ func testCreateStartDeleteScenario(ctx context.Context, t *testing.T, s *system,
 	deletionTimestamp := metav1.NewTime(time.Now().Add(time.Second * time.Duration(deletionGracePeriod)))
 	currentPod.DeletionTimestamp = &deletionTimestamp
 	// 3. Update (overwrite) the pod
-	_, err = s.client.CoreV1().Pods(testNamespace).Update(currentPod)
+	_, err = s.client.CoreV1().Pods(testNamespace).Update(ctx, currentPod, metav1.UpdateOptions{})
 	assert.NilError(t, err)
 
 	select {
@@ -535,11 +535,11 @@ func testUpdatePodWhileRunningScenario(ctx context.Context, t *testing.T, s *sys
 	watchErrCh := make(chan error)
 
 	// Create a Pod
-	_, e := s.client.CoreV1().Pods(testNamespace).Create(p)
+	_, e := s.client.CoreV1().Pods(testNamespace).Create(ctx, p, metav1.CreateOptions{})
 	assert.NilError(t, e)
 
 	// Setup a watch to check if the pod is in running
-	watcher, err := s.client.CoreV1().Pods(testNamespace).Watch(listOptions)
+	watcher, err := s.client.CoreV1().Pods(testNamespace).Watch(ctx, listOptions)
 	assert.NilError(t, err)
 	defer watcher.Stop()
 	go func() {
@@ -576,7 +576,7 @@ func testUpdatePodWhileRunningScenario(ctx context.Context, t *testing.T, s *sys
 	p.Spec.ActiveDeadlineSeconds = &activeDeadlineSeconds
 
 	log.G(ctx).WithField("pod", p).Info("Updating pod")
-	_, err = s.client.CoreV1().Pods(p.Namespace).Update(p)
+	_, err = s.client.CoreV1().Pods(p.Namespace).Update(ctx, p, metav1.UpdateOptions{})
 	assert.NilError(t, err)
 	assert.NilError(t, m.getUpdates().until(ctx, func(v int) bool { return v > 0 }))
 }
@@ -603,7 +603,7 @@ func benchmarkCreatePods(ctx context.Context, b *testing.B, s *system) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		pod := newPod(randomizeUID, randomizeName)
-		_, err := s.client.CoreV1().Pods(pod.Namespace).Create(pod)
+		_, err := s.client.CoreV1().Pods(pod.Namespace).Create(ctx, pod, metav1.CreateOptions{})
 		assert.NilError(b, err)
 		assert.NilError(b, ctx.Err())
 	}

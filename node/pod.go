@@ -16,6 +16,8 @@ package node
 
 import (
 	"context"
+	"fmt"
+	"time"
 
 	"github.com/google/go-cmp/cmp"
 	pkgerrors "github.com/pkg/errors"
@@ -25,6 +27,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/workqueue"
 )
@@ -37,6 +40,10 @@ const (
 	podEventDeleteSuccess         = "ProviderDeleteSuccess"
 	podEventUpdateFailed          = "ProviderUpdateFailed"
 	podEventUpdateSuccess         = "ProviderUpdateSuccess"
+
+	// 151 milliseconds is just chosen as a small prime number to retry between
+	// attempts to get a notification from the provider to VK
+	notificationRetryPeriod = 151 * time.Millisecond
 )
 
 func addPodAttributes(ctx context.Context, span trace.Span, pod *corev1.Pod) context.Context {
@@ -131,6 +138,30 @@ func podsEqual(pod1, pod2 *corev1.Pod) bool {
 
 }
 
+func deleteGraceTimeEqual(old, new *int64) bool {
+	if old == nil && new == nil {
+		return true
+	}
+	if old != nil && new != nil {
+		return *old == *new
+	}
+	return false
+}
+
+// podShouldEnqueue checks if two pods equal according according to podsEqual func and DeleteTimeStamp
+func podShouldEnqueue(oldPod, newPod *corev1.Pod) bool {
+	if !podsEqual(oldPod, newPod) {
+		return true
+	}
+	if !deleteGraceTimeEqual(oldPod.DeletionGracePeriodSeconds, newPod.DeletionGracePeriodSeconds) {
+		return true
+	}
+	if !oldPod.DeletionTimestamp.Equal(newPod.DeletionTimestamp) {
+		return true
+	}
+	return false
+}
+
 func (pc *PodController) handleProviderError(ctx context.Context, span trace.Span, origErr error, pod *corev1.Pod) {
 	podPhase := corev1.PodPending
 	if pod.Spec.RestartPolicy == corev1.RestartPolicyNever {
@@ -147,7 +178,7 @@ func (pc *PodController) handleProviderError(ctx context.Context, span trace.Spa
 		"reason":   pod.Status.Reason,
 	})
 
-	_, err := pc.client.Pods(pod.Namespace).UpdateStatus(pod)
+	_, err := pc.client.Pods(pod.Namespace).UpdateStatus(ctx, pod, metav1.UpdateOptions{})
 	if err != nil {
 		logger.WithError(err).Warn("Failed to update pod status")
 	} else {
@@ -197,11 +228,14 @@ func (pc *PodController) updatePodStatus(ctx context.Context, podFromKubernetes 
 	kPod.Lock()
 	podFromProvider := kPod.lastPodStatusReceivedFromProvider.DeepCopy()
 	kPod.Unlock()
+	if cmp.Equal(podFromKubernetes.Status, podFromProvider.Status) {
+		return nil
+	}
 	// We need to do this because the other parts of the pod can be updated elsewhere. Since we're only updating
 	// the pod status, and we should be the sole writers of the pod status, we can blind overwrite it. Therefore
 	// we need to copy the pod and set ResourceVersion to 0.
 	podFromProvider.ResourceVersion = "0"
-	if _, err := pc.client.Pods(podFromKubernetes.Namespace).UpdateStatus(podFromProvider); err != nil {
+	if _, err := pc.client.Pods(podFromKubernetes.Namespace).UpdateStatus(ctx, podFromProvider, metav1.UpdateOptions{}); err != nil {
 		span.SetStatus(err)
 		return pkgerrors.Wrap(err, "error while updating pod status in kubernetes")
 	}
@@ -219,17 +253,72 @@ func (pc *PodController) updatePodStatus(ctx context.Context, podFromKubernetes 
 // enqueuePodStatusUpdate updates our pod status map, and marks the pod as dirty in the workqueue. The pod must be DeepCopy'd
 // prior to enqueuePodStatusUpdate.
 func (pc *PodController) enqueuePodStatusUpdate(ctx context.Context, q workqueue.RateLimitingInterface, pod *corev1.Pod) {
-	if key, err := cache.MetaNamespaceKeyFunc(pod); err != nil {
-		log.G(ctx).WithError(err).WithField("method", "enqueuePodStatusUpdate").Error("Error getting pod meta namespace key")
-	} else {
-		if obj, ok := pc.knownPods.Load(key); ok {
-			kpod := obj.(*knownPod)
-			kpod.Lock()
-			kpod.lastPodStatusReceivedFromProvider = pod
-			kpod.Unlock()
-			q.AddRateLimited(key)
-		}
+	ctx, cancel := context.WithTimeout(ctx, notificationRetryPeriod*maxRetries)
+	defer cancel()
+
+	ctx, span := trace.StartSpan(ctx, "enqueuePodStatusUpdate")
+	defer span.End()
+	ctx = span.WithField(ctx, "method", "enqueuePodStatusUpdate")
+
+	// TODO (Sargun): Make this asynchronousish. Right now, if we are not cache synced, and we receive notifications
+	// from the provider for pods that do not exist yet in our known pods map, we can get into an awkward situation.
+	key, err := cache.MetaNamespaceKeyFunc(pod)
+	if err != nil {
+		log.G(ctx).WithError(err).Error("Error getting pod meta namespace key")
+		span.SetStatus(err)
+		return
 	}
+	ctx = span.WithField(ctx, "key", key)
+
+	var obj interface{}
+	err = wait.PollImmediateUntil(notificationRetryPeriod, func() (bool, error) {
+		var ok bool
+		obj, ok = pc.knownPods.Load(key)
+		if ok {
+			return true, nil
+		}
+
+		// Blind sync. Partial sync is better than nothing. If this returns false, the poll loop should not be invoked
+		// again as it means the context has timed out.
+		if !cache.WaitForNamedCacheSync("enqueuePodStatusUpdate", ctx.Done(), pc.podsInformer.Informer().HasSynced) {
+			log.G(ctx).Warn("enqueuePodStatusUpdate proceeding with unsynced cache")
+		}
+
+		// The only transient error that pod lister returns is not found. The only case where not found
+		// should happen, and the pod *actually* exists is the above -- where we haven't been able to finish sync
+		// before context times out.
+		// The other class of errors is non-transient
+		_, err = pc.podsLister.Pods(pod.Namespace).Get(pod.Name)
+		if err != nil {
+			return false, err
+		}
+
+		// err is nil, and therefore the pod exists in k8s, but does not exist in our known pods map. This likely means
+		// that we're in some kind of startup synchronization issue where the provider knows about a pod (as it performs
+		// recover, that we do not yet know about).
+		return false, nil
+	}, ctx.Done())
+
+	if err != nil {
+		if errors.IsNotFound(err) {
+			err = fmt.Errorf("Pod %q not found in pod lister: %w", key, err)
+			log.G(ctx).WithError(err).Debug("Not enqueuing pod status update")
+		} else {
+			log.G(ctx).WithError(err).Warn("Not enqueuing pod status update due to error from pod lister")
+		}
+		span.SetStatus(err)
+		return
+	}
+
+	kpod := obj.(*knownPod)
+	kpod.Lock()
+	if cmp.Equal(kpod.lastPodStatusReceivedFromProvider, pod) {
+		kpod.Unlock()
+		return
+	}
+	kpod.lastPodStatusReceivedFromProvider = pod
+	kpod.Unlock()
+	q.AddRateLimited(key)
 }
 
 func (pc *PodController) podStatusHandler(ctx context.Context, key string) (retErr error) {
@@ -303,7 +392,7 @@ func (pc *PodController) deletePodHandler(ctx context.Context, key string) (retE
 
 	// We don't check with the provider before doing this delete. At this point, even if an outstanding pod status update
 	// was in progress,
-	err = pc.client.Pods(namespace).Delete(name, metav1.NewDeleteOptions(0))
+	err = pc.client.Pods(namespace).Delete(ctx, name, *metav1.NewDeleteOptions(0))
 	if errors.IsNotFound(err) {
 		return nil
 	}

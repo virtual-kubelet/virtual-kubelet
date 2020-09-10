@@ -13,7 +13,7 @@ include Makefile.e2e
 # Also, we will want to lock our tool versions using go mod:
 # https://github.com/golang/go/wiki/Modules#how-can-i-track-tool-dependencies-for-a-module
 gobin_tool ?= $(shell which gobin || echo $(GOPATH)/bin/gobin)
-goimports := golang.org/x/tools/cmd/goimports@release-branch.go1.12
+goimports := golang.org/x/tools/cmd/goimports@release-branch.go1.13
 gocovmerge := github.com/wadey/gocovmerge@b5bfa59ec0adc420475f97f89b58045c721d761c
 goreleaser := github.com/goreleaser/goreleaser@v0.82.2
 gox := github.com/mitchellh/gox@v1.0.1
@@ -118,8 +118,6 @@ format: goimports
 	@echo "Formatting..."
 	$Q find . -iname \*.go | grep -v \
         -e "^$$" $(addprefix -e ,$(IGNORED_PACKAGES)) | xargs $(gobin_tool) -run $(goimports) -w
-
-
 
 ##### =====> Internals <===== #####
 

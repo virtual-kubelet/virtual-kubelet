@@ -1,6 +1,7 @@
 package framework
 
 import (
+	"context"
 	"encoding/json"
 	"strconv"
 
@@ -9,7 +10,7 @@ import (
 )
 
 // GetStatsSummary queries the /stats/summary endpoint of the virtual-kubelet and returns the Summary object obtained as a response.
-func (f *Framework) GetStatsSummary() (*stats.Summary, error) {
+func (f *Framework) GetStatsSummary(ctx context.Context) (*stats.Summary, error) {
 	// Query the /stats/summary endpoint.
 	b, err := f.KubeClient.CoreV1().
 		RESTClient().
@@ -18,7 +19,7 @@ func (f *Framework) GetStatsSummary() (*stats.Summary, error) {
 		Resource("pods").
 		SubResource("proxy").
 		Name(net.JoinSchemeNamePort("http", f.NodeName, strconv.Itoa(10255))).
-		Suffix("/stats/summary").DoRaw()
+		Suffix("/stats/summary").DoRaw(ctx)
 	if err != nil {
 		return nil, err
 	}

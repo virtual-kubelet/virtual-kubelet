@@ -1,6 +1,7 @@
 package e2e
 
 import (
+	"context"
 	"fmt"
 	"testing"
 	"time"
@@ -20,17 +21,19 @@ const (
 
 // TestGetPods tests that the /pods endpoint works, and only returns pods for our kubelet
 func (ts *EndToEndTestSuite) TestGetPods(t *testing.T) {
+	ctx := context.Background()
+
 	// Create a pod with prefix "nginx-" having a single container.
 	podSpec := f.CreateDummyPodObjectWithPrefix(t.Name(), "nginx", "foo")
 	podSpec.Spec.NodeName = f.NodeName
 
-	nginx, err := f.CreatePod(podSpec)
+	nginx, err := f.CreatePod(ctx, podSpec)
 	if err != nil {
 		t.Fatal(err)
 	}
 	// Delete the pod after the test finishes.
 	defer func() {
-		if err := f.DeletePodImmediately(nginx.Namespace, nginx.Name); err != nil && !apierrors.IsNotFound(err) {
+		if err := f.DeletePodImmediately(ctx, nginx.Namespace, nginx.Name); err != nil && !apierrors.IsNotFound(err) {
 			t.Error(err)
 		}
 	}()
@@ -42,7 +45,7 @@ func (ts *EndToEndTestSuite) TestGetPods(t *testing.T) {
 	}
 	t.Logf("Pod %s ready", nginx.Name)
 
-	k8sPods, err := f.GetRunningPodsFromKubernetes()
+	k8sPods, err := f.GetRunningPodsFromKubernetes(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -64,14 +67,16 @@ func (ts *EndToEndTestSuite) TestGetPods(t *testing.T) {
 // TestGetStatsSummary creates a pod having two containers and queries the /stats/summary endpoint of the virtual-kubelet.
 // It expects this endpoint to return stats for the current node, as well as for the aforementioned pod and each of its two containers.
 func (ts *EndToEndTestSuite) TestGetStatsSummary(t *testing.T) {
+	ctx := context.Background()
+
 	// Create a pod with prefix "nginx-" having three containers.
-	pod, err := f.CreatePod(f.CreateDummyPodObjectWithPrefix(t.Name(), "nginx", "foo", "bar", "baz"))
+	pod, err := f.CreatePod(ctx, f.CreateDummyPodObjectWithPrefix(t.Name(), "nginx", "foo", "bar", "baz"))
 	if err != nil {
 		t.Fatal(err)
 	}
 	// Delete the "nginx-0-X" pod after the test finishes.
 	defer func() {
-		if err := f.DeletePodImmediately(pod.Namespace, pod.Name); err != nil && !apierrors.IsNotFound(err) {
+		if err := f.DeletePodImmediately(ctx, pod.Namespace, pod.Name); err != nil && !apierrors.IsNotFound(err) {
 			t.Error(err)
 		}
 	}()
@@ -82,7 +87,7 @@ func (ts *EndToEndTestSuite) TestGetStatsSummary(t *testing.T) {
 	}
 
 	// Grab the stats from the provider.
-	stats, err := f.GetStatsSummary()
+	stats, err := f.GetStatsSummary(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -111,17 +116,19 @@ func (ts *EndToEndTestSuite) TestGetStatsSummary(t *testing.T) {
 // These verifications are made using the /stats/summary endpoint of the virtual-kubelet, by checking for the presence or absence of the pods.
 // Hence, the provider being tested must implement the PodMetricsProvider interface.
 func (ts *EndToEndTestSuite) TestPodLifecycleGracefulDelete(t *testing.T) {
+	ctx := context.Background()
+
 	// Create a pod with prefix "nginx-" having a single container.
 	podSpec := f.CreateDummyPodObjectWithPrefix(t.Name(), "nginx", "foo")
 	podSpec.Spec.NodeName = f.NodeName
 
-	pod, err := f.CreatePod(podSpec)
+	pod, err := f.CreatePod(ctx, podSpec)
 	if err != nil {
 		t.Fatal(err)
 	}
 	// Delete the pod after the test finishes.
 	defer func() {
-		if err := f.DeletePodImmediately(pod.Namespace, pod.Name); err != nil && !apierrors.IsNotFound(err) {
+		if err := f.DeletePodImmediately(ctx, pod.Namespace, pod.Name); err != nil && !apierrors.IsNotFound(err) {
 			t.Error(err)
 		}
 	}()
@@ -134,7 +141,7 @@ func (ts *EndToEndTestSuite) TestPodLifecycleGracefulDelete(t *testing.T) {
 	t.Logf("Pod %s ready", pod.Name)
 
 	// Grab the pods from the provider.
-	pods, err := f.GetRunningPodsFromProvider()
+	pods, err := f.GetRunningPodsFromProvider(ctx)
 	assert.NilError(t, err)
 
 	// Check if the pod exists in the slice of PodStats.
@@ -155,7 +162,7 @@ func (ts *EndToEndTestSuite) TestPodLifecycleGracefulDelete(t *testing.T) {
 	}()
 
 	// Gracefully delete the "nginx-" pod.
-	if err := f.DeletePod(pod.Namespace, pod.Name); err != nil {
+	if err := f.DeletePod(ctx, pod.Namespace, pod.Name); err != nil {
 		t.Fatal(err)
 	}
 	t.Logf("Deleted pod: %s", pod.Name)
@@ -168,7 +175,7 @@ func (ts *EndToEndTestSuite) TestPodLifecycleGracefulDelete(t *testing.T) {
 	time.Sleep(deleteGracePeriodForProvider)
 	// Give the provider some time to react to the MODIFIED/DELETED events before proceeding.
 	// Grab the pods from the provider.
-	pods, err = f.GetRunningPodsFromProvider()
+	pods, err = f.GetRunningPodsFromProvider(ctx)
 	assert.NilError(t, err)
 
 	// Make sure the pod DOES NOT exist in the provider's set of running pods
@@ -184,15 +191,17 @@ func (ts *EndToEndTestSuite) TestPodLifecycleGracefulDelete(t *testing.T) {
 // and put them in the running lifecycle. It then does a force delete on the pod, and verifies the provider
 // has deleted it.
 func (ts *EndToEndTestSuite) TestPodLifecycleForceDelete(t *testing.T) {
+	ctx := context.Background()
+
 	podSpec := f.CreateDummyPodObjectWithPrefix(t.Name(), "nginx", "foo")
 	// Create a pod with prefix having a single container.
-	pod, err := f.CreatePod(podSpec)
+	pod, err := f.CreatePod(ctx, podSpec)
 	if err != nil {
 		t.Fatal(err)
 	}
 	// Delete the pod after the test finishes.
 	defer func() {
-		if err := f.DeletePodImmediately(pod.Namespace, pod.Name); err != nil && !apierrors.IsNotFound(err) {
+		if err := f.DeletePodImmediately(ctx, pod.Namespace, pod.Name); err != nil && !apierrors.IsNotFound(err) {
 			t.Error(err)
 		}
 	}()
@@ -205,7 +214,7 @@ func (ts *EndToEndTestSuite) TestPodLifecycleForceDelete(t *testing.T) {
 	t.Logf("Pod %s ready", pod.Name)
 
 	// Grab the pods from the provider.
-	pods, err := f.GetRunningPodsFromProvider()
+	pods, err := f.GetRunningPodsFromProvider(ctx)
 	assert.NilError(t, err)
 
 	// Check if the pod exists in the slice of Pods.
@@ -231,7 +240,7 @@ func (ts *EndToEndTestSuite) TestPodLifecycleForceDelete(t *testing.T) {
 
 	time.Sleep(deleteGracePeriodForProvider)
 	// Forcibly delete the pod.
-	if err := f.DeletePodImmediately(pod.Namespace, pod.Name); err != nil {
+	if err := f.DeletePodImmediately(ctx, pod.Namespace, pod.Name); err != nil {
 		t.Logf("Last saw pod in state: %+v", podLast)
 		t.Fatal(err)
 	}
@@ -246,7 +255,7 @@ func (ts *EndToEndTestSuite) TestPodLifecycleForceDelete(t *testing.T) {
 	time.Sleep(deleteGracePeriodForProvider)
 
 	// Grab the pods from the provider.
-	pods, err = f.GetRunningPodsFromProvider()
+	pods, err = f.GetRunningPodsFromProvider(ctx)
 	assert.NilError(t, err)
 
 	// Make sure the "nginx-" pod DOES NOT exist in the slice of Pods anymore.
@@ -259,15 +268,17 @@ func (ts *EndToEndTestSuite) TestPodLifecycleForceDelete(t *testing.T) {
 // TestCreatePodWithOptionalInexistentSecrets tries to create a pod referencing optional, inexistent secrets.
 // It then verifies that the pod is created successfully.
 func (ts *EndToEndTestSuite) TestCreatePodWithOptionalInexistentSecrets(t *testing.T) {
+	ctx := context.Background()
+
 	// Create a pod with a single container referencing optional, inexistent secrets.
-	pod, err := f.CreatePod(f.CreatePodObjectWithOptionalSecretKey(t.Name()))
+	pod, err := f.CreatePod(ctx, f.CreatePodObjectWithOptionalSecretKey(t.Name()))
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// Delete the pod after the test finishes.
 	defer func() {
-		if err := f.DeletePodImmediately(pod.Namespace, pod.Name); err != nil && !apierrors.IsNotFound(err) {
+		if err := f.DeletePodImmediately(ctx, pod.Namespace, pod.Name); err != nil && !apierrors.IsNotFound(err) {
 			t.Error(err)
 		}
 	}()
@@ -283,7 +294,7 @@ func (ts *EndToEndTestSuite) TestCreatePodWithOptionalInexistentSecrets(t *testi
 	}
 
 	// Grab the pods from the provider.
-	pods, err := f.GetRunningPodsFromProvider()
+	pods, err := f.GetRunningPodsFromProvider(ctx)
 	assert.NilError(t, err)
 
 	// Check if the pod exists in the slice of Pods.
@@ -293,15 +304,17 @@ func (ts *EndToEndTestSuite) TestCreatePodWithOptionalInexistentSecrets(t *testi
 // TestCreatePodWithMandatoryInexistentSecrets tries to create a pod referencing inexistent secrets.
 // It then verifies that the pod is not created.
 func (ts *EndToEndTestSuite) TestCreatePodWithMandatoryInexistentSecrets(t *testing.T) {
+	ctx := context.Background()
+
 	// Create a pod with a single container referencing inexistent secrets.
-	pod, err := f.CreatePod(f.CreatePodObjectWithMandatorySecretKey(t.Name()))
+	pod, err := f.CreatePod(ctx, f.CreatePodObjectWithMandatorySecretKey(t.Name()))
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// Delete the pod after the test finishes.
 	defer func() {
-		if err := f.DeletePodImmediately(pod.Namespace, pod.Name); err != nil && !apierrors.IsNotFound(err) {
+		if err := f.DeletePodImmediately(ctx, pod.Namespace, pod.Name); err != nil && !apierrors.IsNotFound(err) {
 			t.Error(err)
 		}
 	}()
@@ -312,7 +325,7 @@ func (ts *EndToEndTestSuite) TestCreatePodWithMandatoryInexistentSecrets(t *test
 	}
 
 	// Grab the pods from the provider.
-	pods, err := f.GetRunningPodsFromProvider()
+	pods, err := f.GetRunningPodsFromProvider(ctx)
 	assert.NilError(t, err)
 
 	// Check if the pod exists in the slice of PodStats.
@@ -322,15 +335,17 @@ func (ts *EndToEndTestSuite) TestCreatePodWithMandatoryInexistentSecrets(t *test
 // TestCreatePodWithOptionalInexistentConfigMap tries to create a pod referencing optional, inexistent config map.
 // It then verifies that the pod is created successfully.
 func (ts *EndToEndTestSuite) TestCreatePodWithOptionalInexistentConfigMap(t *testing.T) {
+	ctx := context.Background()
+
 	// Create a pod with a single container referencing optional, inexistent config map.
-	pod, err := f.CreatePod(f.CreatePodObjectWithOptionalConfigMapKey(t.Name()))
+	pod, err := f.CreatePod(ctx, f.CreatePodObjectWithOptionalConfigMapKey(t.Name()))
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// Delete the pod after the test finishes.
 	defer func() {
-		if err := f.DeletePodImmediately(pod.Namespace, pod.Name); err != nil && !apierrors.IsNotFound(err) {
+		if err := f.DeletePodImmediately(ctx, pod.Namespace, pod.Name); err != nil && !apierrors.IsNotFound(err) {
 			t.Error(err)
 		}
 	}()
@@ -346,7 +361,7 @@ func (ts *EndToEndTestSuite) TestCreatePodWithOptionalInexistentConfigMap(t *tes
 	}
 
 	// Grab the pods from the provider.
-	pods, err := f.GetRunningPodsFromProvider()
+	pods, err := f.GetRunningPodsFromProvider(ctx)
 	assert.NilError(t, err)
 
 	// Check if the pod exists in the slice of PodStats.
@@ -356,15 +371,17 @@ func (ts *EndToEndTestSuite) TestCreatePodWithOptionalInexistentConfigMap(t *tes
 // TestCreatePodWithMandatoryInexistentConfigMap tries to create a pod referencing inexistent secrets.
 // It then verifies that the pod is not created.
 func (ts *EndToEndTestSuite) TestCreatePodWithMandatoryInexistentConfigMap(t *testing.T) {
+	ctx := context.Background()
+
 	// Create a pod with a single container referencing inexistent config map.
-	pod, err := f.CreatePod(f.CreatePodObjectWithMandatoryConfigMapKey(t.Name()))
+	pod, err := f.CreatePod(ctx, f.CreatePodObjectWithMandatoryConfigMapKey(t.Name()))
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// Delete the pod after the test finishes.
 	defer func() {
-		if err := f.DeletePodImmediately(pod.Namespace, pod.Name); err != nil && !apierrors.IsNotFound(err) {
+		if err := f.DeletePodImmediately(ctx, pod.Namespace, pod.Name); err != nil && !apierrors.IsNotFound(err) {
 			t.Error(err)
 		}
 	}()
@@ -375,7 +392,7 @@ func (ts *EndToEndTestSuite) TestCreatePodWithMandatoryInexistentConfigMap(t *te
 	}
 
 	// Grab the pods from the provider.
-	pods, err := f.GetRunningPodsFromProvider()
+	pods, err := f.GetRunningPodsFromProvider(ctx)
 	assert.NilError(t, err)
 
 	// Check if the pod exists in the slice of PodStats.

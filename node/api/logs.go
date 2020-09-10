@@ -18,6 +18,7 @@ import (
 	"context"
 	"io"
 	"net/http"
+	"net/url"
 	"strconv"
 	"time"
 
@@ -33,10 +34,71 @@ type ContainerLogsHandlerFunc func(ctx context.Context, namespace, podName, cont
 // ContainerLogOpts are used to pass along options to be set on the container
 // log stream.
 type ContainerLogOpts struct {
-	Tail       int
-	Since      time.Duration
-	LimitBytes int
-	Timestamps bool
+	Tail         int
+	LimitBytes   int
+	Timestamps   bool
+	Follow       bool
+	Previous     bool
+	SinceSeconds int
+	SinceTime    time.Time
+}
+
+func parseLogOptions(q url.Values) (opts ContainerLogOpts, err error) {
+	if tailLines := q.Get("tailLines"); tailLines != "" {
+		opts.Tail, err = strconv.Atoi(tailLines)
+		if err != nil {
+			return opts, errdefs.AsInvalidInput(errors.Wrap(err, "could not parse \"tailLines\""))
+		}
+		if opts.Tail < 0 {
+			return opts, errdefs.InvalidInputf("\"tailLines\" is %d", opts.Tail)
+		}
+	}
+	if follow := q.Get("follow"); follow != "" {
+		opts.Follow, err = strconv.ParseBool(follow)
+		if err != nil {
+			return opts, errdefs.AsInvalidInput(errors.Wrap(err, "could not parse \"follow\""))
+		}
+	}
+	if limitBytes := q.Get("limitBytes"); limitBytes != "" {
+		opts.LimitBytes, err = strconv.Atoi(limitBytes)
+		if err != nil {
+			return opts, errdefs.AsInvalidInput(errors.Wrap(err, "could not parse \"limitBytes\""))
+		}
+		if opts.LimitBytes < 1 {
+			return opts, errdefs.InvalidInputf("\"limitBytes\" is %d", opts.LimitBytes)
+		}
+	}
+	if previous := q.Get("previous"); previous != "" {
+		opts.Previous, err = strconv.ParseBool(previous)
+		if err != nil {
+			return opts, errdefs.AsInvalidInput(errors.Wrap(err, "could not parse \"previous\""))
+		}
+	}
+	if sinceSeconds := q.Get("sinceSeconds"); sinceSeconds != "" {
+		opts.SinceSeconds, err = strconv.Atoi(sinceSeconds)
+		if err != nil {
+			return opts, errdefs.AsInvalidInput(errors.Wrap(err, "could not parse \"sinceSeconds\""))
+		}
+		if opts.SinceSeconds < 1 {
+			return opts, errdefs.InvalidInputf("\"sinceSeconds\" is %d", opts.SinceSeconds)
+		}
+	}
+	if sinceTime := q.Get("sinceTime"); sinceTime != "" {
+		opts.SinceTime, err = time.Parse(time.RFC3339, sinceTime)
+		if err != nil {
+			return opts, errdefs.AsInvalidInput(errors.Wrap(err, "could not parse \"sinceTime\""))
+		}
+		if opts.SinceSeconds > 0 {
+			return opts, errdefs.InvalidInput("both \"sinceSeconds\" and \"sinceTime\" are set")
+		}
+	}
+	if timestamps := q.Get("timestamps"); timestamps != "" {
+		opts.Timestamps, err = strconv.ParseBool(timestamps)
+		if err != nil {
+			return opts, errdefs.AsInvalidInput(errors.Wrap(err, "could not parse \"timestamps\""))
+		}
+	}
+	return opts, nil
 }
 
 // HandleContainerLogs creates an http handler function from a provider to serve logs from a pod
@@ -55,22 +117,11 @@ func HandleContainerLogs(h ContainerLogsHandlerFunc) http.HandlerFunc {
 		namespace := vars["namespace"]
 		pod := vars["pod"]
 		container := vars["container"]
-		tail := 10
-		q := req.URL.Query()
 
-		if queryTail := q.Get("tailLines"); queryTail != "" {
-			t, err := strconv.Atoi(queryTail)
-			if err != nil {
-				return errdefs.AsInvalidInput(errors.Wrap(err, "could not parse \"tailLines\""))
-			}
-			tail = t
-		}
-
-		// TODO(@cpuguy83): support v1.PodLogOptions
-		// The kubelet decoding here is not straight forward, so this needs to be disected
-
-		opts := ContainerLogOpts{
-			Tail: tail,
+		query := req.URL.Query()
+		opts, err := parseLogOptions(query)
+		if err != nil {
+			return err
 		}
 
 		logs, err := h(ctx, namespace, pod, container, opts)
