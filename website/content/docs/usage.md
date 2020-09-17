@@ -1,16 +1,16 @@
 ---
 title: Usage
-description: Run a Virtual Kubelet inside or outside of your Kubernetes cluster
+description: Run a Virtual Kubelet either on or external to a Kubernetes cluster
 weight: 2
 ---
 
-You can Virtual Kubelet either [outside](#outside-k8s) or [inside](#inside-k8s) of a Kubernetes cluster using the [`virtual-kubelet`](#virtual-kubelet-cli) command-line tool. If you run Virtual Kubelet inside of a Kubernetes cluster, you can also deploy it using [Helm](#helm).
+You can Virtual Kubelet either [on](#on-k8s) or [external](#external-k8s) to a Kubernetes cluster using the [`virtual-kubelet`](#virtual-kubelet-cli) command-line tool. If you run Virtual Kubelet on a Kubernetes cluster, you can also deploy it using [Helm](#helm).
 
 > For `virtual-kubelet` installation instructions, see the [Setup](../setup) guide.
 
-## Outside of a Kubernetes cluster {#outside-k8s}
+## External to a Kubernetes cluster {#external-k8s}
 
-To run Virtual Kubelet outside of a Kubernetes cluster, run the [`virtual-kubelet`](#virtual-kubelet-cli) binary with your chosen [provider](../providers). Here's an example:
+To run Virtual Kubelet external to a Kubernetes cluster (not on the Kubernetes cluster you are connecting it to), run the [`virtual-kubelet`](#virtual-kubelet-cli) binary with your chosen [provider](../providers). Here's an example:
 
 ```bash
 virtual-kubelet --provider aws
@@ -23,9 +23,9 @@ and the YAML config in data/cli.yaml
 -->
 {{< cli >}}
 
-## Inside a Kubernetes cluster {#inside-k8s}
+## On a Kubernetes cluster {#on-k8s}
 
-It's possible to run the Virtual Kubelet as a Kubernetes Pod inside a [Minikube](https://kubernetes.io/docs/setup/minikube/) or [Docker for Desktop](https://docs.docker.com/docker-for-windows/kubernetes/) Kubernetes cluster.
+It's possible to run the Virtual Kubelet as a Kubernetes Pod in a [Minikube](https://kubernetes.io/docs/setup/minikube/) or [Docker for Desktop](https://docs.docker.com/docker-for-windows/kubernetes/) Kubernetes cluster.
 
 > At this time, automation of this deployment is supported only for the [`mock`](https://github.com/virtual-kubelet/virtual-kubelet/tree/master/cmd/virtual-kubelet/internal/provider/mock) provider.
 
