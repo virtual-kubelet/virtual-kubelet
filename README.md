@@ -297,6 +297,10 @@ Monthly Virtual Kubelet Office Hours are held at 10am PST on the last Thursday o
 
 Our google drive with design specifications and meeting notes are [here](https://drive.google.com/drive/folders/19Ndu11WBCCBDowo9CrrGUHoIfd2L8Ueg?usp=sharing).
 
-We also have a community slack channel named virtual-kubelet in the Kubernetes slack. 
+We also have a community slack channel named virtual-kubelet in the Kubernetes slack.
+
+You can also connect with the Virtual Kubelet community via the [mailing list](virtualkubelet-dev@lists.cncf.io).
+
+
 
 
