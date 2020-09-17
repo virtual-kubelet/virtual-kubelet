@@ -76,13 +76,15 @@ You can check to make sure that the repo is listed amongst your current repos us
 Now you can install Virtual Kubelet using `helm install`. Here's an example command:
 
 ```bash
-helm install virtual-kubelet/virtual-kubelet \
-  --name virtual-kubelet-azure \
+kubectl create namespace virtual-kubelet
+
+helm install virtual-kubelet-azure \
+  virtual-kubelet/virtual-kubelet \
   --namespace virtual-kubelet \
   --set provider=azure
 ```
 
-This would install the [Azure Container Instances Virtual Kubelet](https://github.com/virtual-kubelet/virtual-kubelet/tree/master/providers/azure) in the `virtual-kubelet` namespace.
+This would install the [Azure Container Instances Virtual Kubelet](https://github.com/virtual-kubelet/azure-aci#deployment-of-the-aci-provider-in-your-cluster) in the `virtual-kubelet` namespace.
 
 To verify that Virtual Kubelet has been installed, run this command, which will list the available nodes and watch for changes:
 
