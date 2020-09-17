@@ -217,9 +217,11 @@ func NewPodController(cfg PodControllerConfig) (*PodController, error) {
 		deletionQ:          workqueue.NewNamedRateLimitingQueue(cfg.RateLimiter, "deletePodsFromKubernetes"),
 		podStatusQ:         workqueue.NewNamedRateLimitingQueue(cfg.RateLimiter, "syncPodStatusFromProvider"),
 		podEventFilterFunc: cfg.PodEventFilterFunc,
-		configMapLister:    cfg.ConfigMapInformer.Lister(),
-		secretLister:       cfg.SecretInformer.Lister(),
-		serviceLister:      cfg.ServiceInformer.Lister(),
+	}
+	if cfg.ConfigMapInformer != nil && cfg.SecretInformer != nil && cfg.ServiceInformer != nil {
+		pc.configMapLister = cfg.ConfigMapInformer.Lister()
+		pc.secretLister = cfg.SecretInformer.Lister()
+		pc.serviceLister = cfg.ServiceInformer.Lister()
 	}
 
 	return pc, nil
