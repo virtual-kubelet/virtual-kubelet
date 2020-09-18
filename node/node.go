@@ -19,7 +19,10 @@ import (
 	"encoding/json"
 	"time"
 
+	"k8s.io/utils/clock"
+
 	pkgerrors "github.com/pkg/errors"
+	"github.com/virtual-kubelet/virtual-kubelet/internal/nodelease"
 	"github.com/virtual-kubelet/virtual-kubelet/log"
 	"github.com/virtual-kubelet/virtual-kubelet/trace"
 	coord "k8s.io/api/coordination/v1beta1"
@@ -29,6 +32,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/strategicpatch"
 	"k8s.io/apimachinery/pkg/util/wait"
+	coordclientset "k8s.io/client-go/kubernetes/typed/coordination/v1"
 	"k8s.io/client-go/kubernetes/typed/coordination/v1beta1"
 	v1 "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/client-go/util/retry"
@@ -83,6 +87,10 @@ func NewNodeController(p NodeProvider, node *corev1.Node, nodes v1.NodeInterface
 		}
 	}
 
+	if n.lease != nil && n.leaseControllerBuilder != nil {
+		return nil, pkgerrors.New("Only v1beta1 leases can be enabled or v1 leases, not both at the same time")
+	}
+
 	if n.pingInterval == time.Duration(0) {
 		n.pingInterval = DefaultPingInterval
 	}
@@ -116,6 +124,53 @@ func WithNodeEnableLeaseV1Beta1(client v1beta1.LeaseInterface, baseLease *coord.
 	return func(n *NodeController) error {
 		n.leases = client
 		n.lease = baseLease
+		return nil
+	}
+}
+
+type leaseConfiguration struct {
+	leaseDuration time.Duration
+}
+
+type leaseOptionFunc func(*leaseConfiguration) error
+type LeaseOption interface {
+	apply(*leaseConfiguration) error
+}
+
+func (f leaseOptionFunc) apply(cfg *leaseConfiguration) error {
+	return f(cfg)
+}
+
+func WithLeaseV1Duration(leaseDuration time.Duration) LeaseOption {
+	return leaseOptionFunc(func(configuration *leaseConfiguration) error {
+		configuration.leaseDuration = leaseDuration
+		return nil
+	})
+}
+
+// WithNodeEnableLeaseV1 enables support for v1 leases. V1 leases work slightly differently than the V1Beta1 leases,
+// in that they do not stop updating if the Provider fails to respond to ping. They are a mechanism of detecting
+// node connectivity and liveness. When this feature is enabled, node status updates are also controlled by the node
+// state update interval option.
+//
+func WithNodeEnableLeaseV1(leaseClient coordclientset.LeaseInterface, options ...LeaseOption) NodeControllerOpt {
+	// TODO(Sargun):
+	// * Add "Try to Fallback" feature where we fallback to node status updates if heartbeats fail
+	// * Add provider status as a node condition.
+	// * Maybe add mechanism to stop lease updates if provider stops.
+	return func(n *NodeController) error {
+		cfg := &leaseConfiguration{
+			leaseDuration: 40 * time.Second,
+		}
+		for _, option := range options {
+			err := option.apply(cfg)
+			if err != nil {
+				return err
+			}
+		}
+		n.leaseControllerBuilder = func(nodeClient v1.NodeInterface, holderIdentity string) nodelease.Controller {
+			return nodelease.NewController(clock.RealClock{}, nodeClient, leaseClient, holderIdentity, cfg.leaseDuration, nil)
+		}
 		return nil
 	}
 }
@@ -178,8 +233,9 @@ type NodeController struct { // nolint: golint
 	p NodeProvider
 	n *corev1.Node
 
-	leases v1beta1.LeaseInterface
-	nodes  v1.NodeInterface
+	leaseControllerBuilder func(nodeClient v1.NodeInterface, holderIdentity string) nodelease.Controller
+	leases                 v1beta1.LeaseInterface
+	nodes                  v1.NodeInterface
 
 	disableLease   bool
 	pingInterval   time.Duration
@@ -279,7 +335,7 @@ func (n *NodeController) controlLoop(ctx context.Context) error {
 	statusTimer := time.NewTimer(n.statusInterval)
 	defer statusTimer.Stop()
 	timerResetDuration := n.statusInterval
-	if n.disableLease {
+	if n.disableLease && n.leaseControllerBuilder == nil {
 		// when resetting the timer after processing a status update, reset it to the ping interval
 		// (since it will be the ping timer as n.disableLease == true)
 		timerResetDuration = n.pingInterval
@@ -294,6 +350,10 @@ func (n *NodeController) controlLoop(ctx context.Context) error {
 
 	group := &wait.Group{}
 	group.StartWithContext(ctx, n.nodePingController.run)
+	if n.leaseControllerBuilder != nil {
+		leaseController := n.leaseControllerBuilder(n.nodes, n.n.Name)
+		group.StartWithContext(ctx, leaseController.Run)
+	}
 	defer group.Wait()
 
 	loop := func() bool {
@@ -305,7 +365,7 @@ func (n *NodeController) controlLoop(ctx context.Context) error {
 			return true
 		case updated := <-n.chStatusUpdate:
 			var t *time.Timer
-			if n.disableLease {
+			if n.disableLease && n.leaseControllerBuilder == nil {
 				t = pingTimer
 			} else {
 				t = statusTimer
@@ -374,6 +434,10 @@ func (n *NodeController) handlePing(ctx context.Context) (retErr error) {
 
 	if n.disableLease {
 		return n.updateStatus(ctx, false)
+	}
+
+	if n.leaseControllerBuilder != nil {
+		return nil
 	}
 
 	// TODO(Sargun): Pass down the result / timestamp so we can accurately track when the ping actually occurred
@@ -689,14 +753,14 @@ func newLease(ctx context.Context, base *coord.Lease, node *corev1.Node, leaseRe
 				foundAnyNode = true
 				if node.UID == ref.UID && node.Name == ref.Name {
 					return lease
-				} else {
-					log.G(ctx).WithFields(map[string]interface{}{
-						"node.UID":  node.UID,
-						"ref.UID":   ref.UID,
-						"node.Name": node.Name,
-						"ref.Name":  ref.Name,
-					}).Warn("Found that lease had node in owner references that is not this node")
 				}
+				log.G(ctx).WithFields(map[string]interface{}{
+					"node.UID":  node.UID,
+					"ref.UID":   ref.UID,
+					"node.Name": node.Name,
+					"ref.Name":  ref.Name,
+				}).Warn("Found that lease had node in owner references that is not this node")
+
 			}
 		}
 		if !foundAnyNode {
