@@ -207,10 +207,10 @@ func TestNodeCustomUpdateStatusErrorHandler(t *testing.T) {
 	case <-node.Ready():
 	}
 
-	err = nodes.Delete(ctx, node.n.Name, metav1.DeleteOptions{})
+	err = nodes.Delete(ctx, node.serverNode.Name, metav1.DeleteOptions{})
 	assert.NilError(t, err)
 
-	testP.triggerStatusUpdate(node.n.DeepCopy())
+	testP.triggerStatusUpdate(node.serverNode.DeepCopy())
 
 	timer = time.NewTimer(10 * time.Second)
 	defer timer.Stop()
