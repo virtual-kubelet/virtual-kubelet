@@ -17,6 +17,7 @@ package node
 import (
 	"context"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -392,6 +393,8 @@ func TestPingAfterStatusUpdate(t *testing.T) {
 		break
 	}
 
+	testP.maxPingIntervalLock.Lock()
+	defer testP.maxPingIntervalLock.Unlock()
 	assert.Assert(t, testP.maxPingInterval < maxAllowedInterval, "maximum time between node pings (%v) was greater than the maximum expected interval (%v)", testP.maxPingInterval, maxAllowedInterval)
 }
 
@@ -726,9 +729,10 @@ func (p *testNodeProvider) triggerStatusUpdate(n *corev1.Node) {
 // testNodeProviderPing tracks the maximum time interval between calls to Ping
 type testNodeProviderPing struct {
 	testNodeProvider
-	customPingFunction func(context.Context) error
-	lastPingTime       time.Time
-	maxPingInterval    time.Duration
+	customPingFunction  func(context.Context) error
+	lastPingTime        time.Time
+	maxPingIntervalLock sync.Mutex
+	maxPingInterval     time.Duration
 }
 
 func (tnp *testNodeProviderPing) Ping(ctx context.Context) error {
@@ -741,6 +745,8 @@ func (tnp *testNodeProviderPing) Ping(ctx context.Context) error {
 		tnp.lastPingTime = now
 		return nil
 	}
+	tnp.maxPingIntervalLock.Lock()
+	defer tnp.maxPingIntervalLock.Unlock()
 	if now.Sub(tnp.lastPingTime) > tnp.maxPingInterval {
 		tnp.maxPingInterval = now.Sub(tnp.lastPingTime)
 	}

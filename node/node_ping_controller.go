@@ -19,7 +19,7 @@ type nodePingController struct {
 
 	// "Results"
 	sync.Mutex
-	result pingResult
+	result *pingResult
 }
 
 type pingResult struct {
@@ -88,8 +88,8 @@ func (npc *nodePingController) run(ctx context.Context) {
 		}
 
 		npc.Lock()
-		npc.result = pingResult
 		defer npc.Unlock()
+		npc.result = &pingResult
 		span.SetStatus(pingResult.error)
 	}
 
@@ -108,5 +108,7 @@ func (npc *nodePingController) getResult(ctx context.Context) (*pingResult, erro
 	case <-npc.firstPingCompleted:
 	}
 
-	return &npc.result, nil
+	npc.Lock()
+	defer npc.Unlock()
+	return npc.result, nil
 }
