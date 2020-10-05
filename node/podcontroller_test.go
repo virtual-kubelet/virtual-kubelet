@@ -104,7 +104,10 @@ func TestPodEventFilter(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	go tc.Run(ctx, 1)
+	errCh := make(chan error)
+	go func() {
+		errCh <- tc.Run(ctx, 1)
+	}()
 
 	ctxT, cancelT := context.WithTimeout(ctx, 30*time.Second)
 	defer cancelT()
@@ -115,6 +118,8 @@ func TestPodEventFilter(t *testing.T) {
 	case <-tc.Done():
 		t.Fatal(tc.Err())
 	case <-tc.Ready():
+	case err := <-errCh:
+		t.Fatal(err.Error())
 	}
 
 	pod := &corev1.Pod{}
@@ -142,6 +147,8 @@ func TestPodEventFilter(t *testing.T) {
 		case <-ctxT.Done():
 			t.Fatal(ctxT.Err())
 		case <-wait:
+		case err := <-errCh:
+			t.Fatal(err.Error())
 		}
 	}
 }
