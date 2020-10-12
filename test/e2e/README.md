@@ -92,6 +92,9 @@ You will need an `EndToEndTestSuiteConfig` to create an `EndToEndTestSuite` usin
 package e2e
 
 import (
+	"flag"
+	"fmt"
+	"testing"
 	"time"
 
 	vke2e "github.com/virtual-kubelet/virtual-kubelet/test/e2e"
@@ -99,9 +102,12 @@ import (
 
 var (
 	kubeconfig string
-	namespace string
-	nodeName string
+	namespace  string
+	nodeName   string
 )
+
+var defaultNamespace = "default"
+var defaultNodeName = "default-node"
 
 // Read the following variables from command-line flags
 func init() {
@@ -126,6 +132,7 @@ func shouldSkipTest(testName string) bool {
 	return testName == "TestGetStatsSummary"
 }
 
+// TestEndToEnd runs the e2e tests against a previously configured cluster
 func TestEndToEnd(t *testing.T) {
 	config := vke2e.EndToEndTestSuiteConfig{
 		Kubeconfig:     kubeconfig,
@@ -134,7 +141,7 @@ func TestEndToEnd(t *testing.T) {
 		Setup:          setup,
 		Teardown:       teardown,
 		ShouldSkipTest: shouldSkipTest,
-		WaitTimeout:    5 * time.Minute,
+		WatchTimeout:   5 * time.Minute,
 	}
 	ts := vke2e.NewEndToEndTestSuite(config)
 	ts.Run(t)
