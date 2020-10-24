@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/virtual-kubelet/virtual-kubelet/node"
+	"github.com/virtual-kubelet/virtual-kubelet/internal/podutils"
 	"gotest.tools/assert"
 	v1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -289,7 +289,7 @@ func (ts *EndToEndTestSuite) TestCreatePodWithOptionalInexistentSecrets(t *testi
 	}
 
 	// Wait for an event concerning the missing secret to be reported on the pod.
-	if err := f.WaitUntilPodEventWithReason(pod, node.ReasonOptionalSecretNotFound); err != nil {
+	if err := f.WaitUntilPodEventWithReason(pod, podutils.ReasonOptionalSecretNotFound); err != nil {
 		t.Fatal(err)
 	}
 
@@ -320,7 +320,7 @@ func (ts *EndToEndTestSuite) TestCreatePodWithMandatoryInexistentSecrets(t *test
 	}()
 
 	// Wait for an event concerning the missing secret to be reported on the pod.
-	if err := f.WaitUntilPodEventWithReason(pod, node.ReasonMandatorySecretNotFound); err != nil {
+	if err := f.WaitUntilPodEventWithReason(pod, podutils.ReasonMandatorySecretNotFound); err != nil {
 		t.Fatal(err)
 	}
 
@@ -356,7 +356,7 @@ func (ts *EndToEndTestSuite) TestCreatePodWithOptionalInexistentConfigMap(t *tes
 	}
 
 	// Wait for an event concerning the missing config map to be reported on the pod.
-	if err := f.WaitUntilPodEventWithReason(pod, node.ReasonOptionalConfigMapNotFound); err != nil {
+	if err := f.WaitUntilPodEventWithReason(pod, podutils.ReasonOptionalConfigMapNotFound); err != nil {
 		t.Fatal(err)
 	}
 
@@ -387,7 +387,7 @@ func (ts *EndToEndTestSuite) TestCreatePodWithMandatoryInexistentConfigMap(t *te
 	}()
 
 	// Wait for an event concerning the missing config map to be reported on the pod.
-	if err := f.WaitUntilPodEventWithReason(pod, node.ReasonMandatoryConfigMapNotFound); err != nil {
+	if err := f.WaitUntilPodEventWithReason(pod, podutils.ReasonMandatoryConfigMapNotFound); err != nil {
 		t.Fatal(err)
 	}
 
