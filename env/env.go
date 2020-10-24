@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package node
+package env
 
 import (
 	"context"
@@ -71,9 +71,8 @@ const (
 
 var masterServices = sets.NewString("kubernetes")
 
-// populateEnvironmentVariables populates the environment of each container (and init container) in the specified pod.
-// TODO Make this the single exported function of a "pkg/environment" package in the future.
-func populateEnvironmentVariables(ctx context.Context, pod *corev1.Pod, rm *manager.ResourceManager, recorder record.EventRecorder) error {
+// PopulateEnvironmentVariables populates the environment of each container (and init container) in the specified pod.
+func PopulateEnvironmentVariables(ctx context.Context, pod *corev1.Pod, rm *manager.ResourceManager, recorder record.EventRecorder) error {
 
 	// Populate each init container's environment.
 	for idx := range pod.Spec.InitContainers {
