@@ -29,7 +29,7 @@ func ClientsetFromEnv(kubeConfigPath string) (*kubernetes.Clientset, error) {
 		} else {
 			config, err = clientcmd.NewNonInteractiveDeferredLoadingClientConfig(
 				&clientcmd.ClientConfigLoadingRules{ExplicitPath: kubeConfigPath},
-				nil,
+				&clientcmd.ConfigOverrides{},
 			).ClientConfig()
 		}
 	} else {
