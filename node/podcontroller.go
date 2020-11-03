@@ -24,7 +24,6 @@ import (
 	"github.com/google/go-cmp/cmp"
 	pkgerrors "github.com/pkg/errors"
 	"github.com/virtual-kubelet/virtual-kubelet/errdefs"
-	"github.com/virtual-kubelet/virtual-kubelet/internal/manager"
 	"github.com/virtual-kubelet/virtual-kubelet/log"
 	"github.com/virtual-kubelet/virtual-kubelet/trace"
 	corev1 "k8s.io/api/core/v1"
@@ -108,8 +107,6 @@ type PodController struct {
 
 	client corev1client.PodsGetter
 
-	resourceManager *manager.ResourceManager
-
 	k8sQ workqueue.RateLimitingInterface
 
 	// deletionQ is a queue on which pods are reconciled, and we check if pods are in API server after grace period
@@ -138,6 +135,13 @@ type PodController struct {
 	// This is used since `pc.Run()` is typically called in a goroutine and managing
 	// this can be non-trivial for callers.
 	err error
+
+	// Listers are used to resolve pod environment variables, if any
+	// of these three listers are nil, it is assumed the provider will
+	// resolve env vars.
+	configMapLister corev1listers.ConfigMapLister
+	secretLister    corev1listers.SecretLister
+	serviceLister   corev1listers.ServiceLister
 }
 
 type knownPod struct {
@@ -194,24 +198,11 @@ func NewPodController(cfg PodControllerConfig) (*PodController, error) {
 	if cfg.PodInformer == nil {
 		return nil, errdefs.InvalidInput("missing pod informer")
 	}
-	if cfg.ConfigMapInformer == nil {
-		return nil, errdefs.InvalidInput("missing config map informer")
-	}
-	if cfg.SecretInformer == nil {
-		return nil, errdefs.InvalidInput("missing secret informer")
-	}
-	if cfg.ServiceInformer == nil {
-		return nil, errdefs.InvalidInput("missing service informer")
-	}
 	if cfg.Provider == nil {
 		return nil, errdefs.InvalidInput("missing provider")
 	}
 	if cfg.RateLimiter == nil {
 		cfg.RateLimiter = workqueue.DefaultControllerRateLimiter()
-	}
-	rm, err := manager.NewResourceManager(cfg.PodInformer.Lister(), cfg.SecretInformer.Lister(), cfg.ConfigMapInformer.Lister(), cfg.ServiceInformer.Lister())
-	if err != nil {
-		return nil, pkgerrors.Wrap(err, "could not create resource manager")
 	}
 
 	pc := &PodController{
@@ -219,7 +210,6 @@ func NewPodController(cfg PodControllerConfig) (*PodController, error) {
 		podsInformer:       cfg.PodInformer,
 		podsLister:         cfg.PodInformer.Lister(),
 		provider:           cfg.Provider,
-		resourceManager:    rm,
 		ready:              make(chan struct{}),
 		done:               make(chan struct{}),
 		recorder:           cfg.EventRecorder,
@@ -227,6 +217,11 @@ func NewPodController(cfg PodControllerConfig) (*PodController, error) {
 		deletionQ:          workqueue.NewNamedRateLimitingQueue(cfg.RateLimiter, "deletePodsFromKubernetes"),
 		podStatusQ:         workqueue.NewNamedRateLimitingQueue(cfg.RateLimiter, "syncPodStatusFromProvider"),
 		podEventFilterFunc: cfg.PodEventFilterFunc,
+	}
+	if cfg.ConfigMapInformer != nil && cfg.SecretInformer != nil && cfg.ServiceInformer != nil {
+		pc.configMapLister = cfg.ConfigMapInformer.Lister()
+		pc.secretLister = cfg.SecretInformer.Lister()
+		pc.serviceLister = cfg.ServiceInformer.Lister()
 	}
 
 	return pc, nil

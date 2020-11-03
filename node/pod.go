@@ -22,6 +22,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	pkgerrors "github.com/pkg/errors"
 	"github.com/virtual-kubelet/virtual-kubelet/log"
+	"github.com/virtual-kubelet/virtual-kubelet/podutils"
 	"github.com/virtual-kubelet/virtual-kubelet/trace"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -68,9 +69,12 @@ func (pc *PodController) createOrUpdatePod(ctx context.Context, pod *corev1.Pod)
 
 	// We do this so we don't mutate the pod from the informer cache
 	pod = pod.DeepCopy()
-	if err := populateEnvironmentVariables(ctx, pod, pc.resourceManager, pc.recorder); err != nil {
-		span.SetStatus(err)
-		return err
+	if pc.canResolveEnvVars() {
+		err := podutils.PopulateEnvironmentVariables(ctx, pod, pc.recorder, pc.configMapLister, pc.secretLister, pc.serviceLister)
+		if err != nil {
+			span.SetStatus(err)
+			return err
+		}
 	}
 
 	// We have to use a  different pod that we pass to the provider than the one that gets used in handleProviderError
@@ -103,6 +107,14 @@ func (pc *PodController) createOrUpdatePod(ctx context.Context, pod *corev1.Pod)
 		pc.recorder.Event(pod, corev1.EventTypeNormal, podEventCreateSuccess, "Create pod in provider successfully")
 	}
 	return nil
+}
+
+// If any of the listers used for resolving environment variables are
+// nil, we assume that the user wants to resolve env vars.
+func (pc *PodController) canResolveEnvVars() bool {
+	return pc.configMapLister != nil &&
+		pc.secretLister != nil &&
+		pc.serviceLister != nil
 }
 
 // podsEqual checks if two pods are equal according to the fields we know that are allowed
