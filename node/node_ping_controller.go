@@ -2,9 +2,10 @@ package node
 
 import (
 	"context"
-	"sync"
+	"fmt"
 	"time"
 
+	"github.com/virtual-kubelet/virtual-kubelet/lock"
 	"github.com/virtual-kubelet/virtual-kubelet/log"
 	"github.com/virtual-kubelet/virtual-kubelet/trace"
 	"golang.org/x/sync/singleflight"
@@ -12,13 +13,12 @@ import (
 )
 
 type nodePingController struct {
-	nodeProvider       NodeProvider
-	pingInterval       time.Duration
-	firstPingCompleted chan struct{}
-	pingTimeout        *time.Duration
+	nodeProvider NodeProvider
+	pingInterval time.Duration
+	pingTimeout  *time.Duration
+	cond         lock.Cond
 
 	// "Results"
-	sync.Mutex
 	result *pingResult
 }
 
@@ -37,10 +37,10 @@ func newNodePingController(node NodeProvider, pingInterval time.Duration, timeou
 	}
 
 	return &nodePingController{
-		nodeProvider:       node,
-		pingInterval:       pingInterval,
-		firstPingCompleted: make(chan struct{}),
-		pingTimeout:        timeout,
+		nodeProvider: node,
+		pingInterval: pingInterval,
+		pingTimeout:  timeout,
+		cond:         lock.NewCond(),
 	}
 }
 
@@ -87,28 +87,40 @@ func (npc *nodePingController) run(ctx context.Context) {
 			pingResult.pingTime = result.Val.(time.Time)
 		}
 
-		npc.Lock()
-		defer npc.Unlock()
+		ticket, err := npc.cond.Acquire(ctx)
+		if err != nil {
+			err = fmt.Errorf("Unable to acquire condition variable to update node ping controller: %w", err)
+			log.G(ctx).WithError(err).Error()
+			span.SetStatus(err)
+			return
+		}
+
+		defer ticket.Release()
 		npc.result = &pingResult
 		span.SetStatus(pingResult.error)
+		npc.cond.Broadcast()
 	}
 
 	// Run the first check manually
 	checkFunc(ctx)
 
-	close(npc.firstPingCompleted)
-
 	wait.UntilWithContext(ctx, checkFunc, npc.pingInterval)
 }
 
+// getResult returns the current ping result in a non-blocking fashion.
 func (npc *nodePingController) getResult(ctx context.Context) (*pingResult, error) {
-	select {
-	case <-ctx.Done():
-		return nil, ctx.Err()
-	case <-npc.firstPingCompleted:
+	ticket, err := npc.cond.Acquire(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer ticket.Release()
+	if npc.result != nil {
+		return npc.result, nil
 	}
 
-	npc.Lock()
-	defer npc.Unlock()
+	err = ticket.Wait(ctx)
+	if err != nil {
+		return nil, err
+	}
 	return npc.result, nil
 }
