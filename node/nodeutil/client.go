@@ -24,13 +24,16 @@ func ClientsetFromEnv(kubeConfigPath string) (*kubernetes.Clientset, error) {
 	)
 
 	if kubeConfigPath != "" {
-		if _, err := os.Stat(kubeConfigPath); err != nil {
-			config, err = rest.InClusterConfig()
-		} else {
+		_, err = os.Stat(kubeConfigPath)
+		if err == nil {
 			config, err = clientcmd.NewNonInteractiveDeferredLoadingClientConfig(
 				&clientcmd.ClientConfigLoadingRules{ExplicitPath: kubeConfigPath},
 				&clientcmd.ConfigOverrides{},
 			).ClientConfig()
+		} else if os.IsNotExist(err) {
+			config, err = rest.InClusterConfig()
+		} else {
+			return nil, err
 		}
 	} else {
 		config, err = rest.InClusterConfig()
