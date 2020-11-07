@@ -12,8 +12,6 @@ else
   echo "go mod tidy passed."
 fi
 
-git diff --exit-code go.mod go.sum || exit_code=$?
-
 if [ ${exit_code} -eq 0 ]; then
 	exit 0
 fi

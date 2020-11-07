@@ -24,6 +24,10 @@ gox := github.com/mitchellh/gox@v1.0.1
 # Space separated patterns of packages to skip in list, test, format.
 IGNORED_PACKAGES := /vendor/
 
+TEST_OS := $(shell go env GOOS)
+TEST_ARCH := $(shell go env GOARCH)
+export KUBEBUILDER_ASSETS := $(PWD)/kubebuilder_2.3.1_${TEST_OS}_${TEST_ARCH}/bin
+
 .PHONY: all
 all: test build
 
@@ -173,3 +177,17 @@ authors:
 	$Q mv NEWAUTHORS AUTHORS
 	$Q rm -f NEWAUTHORS
 	$Q rm -f GITAUTHORS
+
+checksums_2.3.1.txt:
+	curl -o checksums_2.3.1.txt -L https://github.com/kubernetes-sigs/kubebuilder/releases/download/v2.3.1/checksums.txt
+kubebuilder_2.3.1_${TEST_OS}_${TEST_ARCH}.tar.gz:
+	curl -C - -O -L https://github.com/kubernetes-sigs/kubebuilder/releases/download/v2.3.1/kubebuilder_2.3.1_${TEST_OS}_${TEST_ARCH}.tar.gz
+kubebuilder_2.3.1_${TEST_OS}_${TEST_ARCH}: kubebuilder_2.3.1_${TEST_OS}_${TEST_ARCH}.tar.gz checksums_2.3.1.txt
+	sha256sum -c --ignore-missing checksums_2.3.1.txt
+	tar -xvf kubebuilder_2.3.1_${TEST_OS}_${TEST_ARCH}.tar.gz
+
+.PHONY: envtest
+envtest: kubebuilder_2.3.1_${TEST_OS}_${TEST_ARCH}
+	# You can add klog flags for debugging, like: -klog.v=10 -klog.logtostderr
+	# klogv2 flags just wraps our existing logrus.
+	go test -v ./internal/test/vk_envtest -envtest=true
