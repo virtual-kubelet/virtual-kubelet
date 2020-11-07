@@ -334,13 +334,23 @@ func makeEnvironmentMap(ctx context.Context, pod *corev1.Pod, container *corev1.
 }
 
 func getEnvironmentVariableValue(ctx context.Context, env *corev1.EnvVar, mappingFunc func(string) string, pod *corev1.Pod, container *corev1.Container, rm *manager.ResourceManager, recorder record.EventRecorder) (*string, error) {
-	switch {
 	// Handle values that have been directly provided.
-	case env.Value != "":
+	if env.Value != "" {
 		// Expand variable references
 		return pointer.StringPtr(expansion.Expand(env.Value, mappingFunc)), nil
+	}
+
+	if env.ValueFrom != nil {
+		return getEnvironmentVariableValueWithValueFrom(ctx, env, mappingFunc, pod, container, rm, recorder)
+	}
+
+	log.G(ctx).WithField("env", env).Error("Unhandled environment variable, do not know how to populate")
+	return nil, nil
+}
+
+func getEnvironmentVariableValueWithValueFrom(ctx context.Context, env *corev1.EnvVar, mappingFunc func(string) string, pod *corev1.Pod, container *corev1.Container, rm *manager.ResourceManager, recorder record.EventRecorder) (*string, error) {
 	// Handle population from a configmap key.
-	case env.ValueFrom != nil && env.ValueFrom.ConfigMapKeyRef != nil:
+	if env.ValueFrom.ConfigMapKeyRef != nil {
 		// The environment variable must be set from a configmap.
 		vf := env.ValueFrom.ConfigMapKeyRef
 		// Check whether the key reference is optional.
@@ -391,8 +401,9 @@ func getEnvironmentVariableValue(ctx context.Context, env *corev1.EnvVar, mappin
 		}
 		// Populate the environment variable and continue on to the next reference.
 		return pointer.StringPtr(keyValue), nil
+	}
 	// Handle population from a secret key.
-	case env.ValueFrom != nil && env.ValueFrom.SecretKeyRef != nil:
+	if env.ValueFrom.SecretKeyRef != nil {
 		vf := env.ValueFrom.SecretKeyRef
 		// Check whether the key reference is optional.
 		// This will control whether we fail when unable to read the requested key.
@@ -442,8 +453,9 @@ func getEnvironmentVariableValue(ctx context.Context, env *corev1.EnvVar, mappin
 		}
 		// Populate the environment variable and continue on to the next reference.
 		return pointer.StringPtr(string(keyValue)), nil
+	}
 	// Handle population from a field (downward API).
-	case env.ValueFrom != nil && env.ValueFrom.FieldRef != nil:
+	if env.ValueFrom.FieldRef != nil {
 		// https://github.com/virtual-kubelet/virtual-kubelet/issues/123
 		vf := env.ValueFrom.FieldRef
 
@@ -453,15 +465,14 @@ func getEnvironmentVariableValue(ctx context.Context, env *corev1.EnvVar, mappin
 		}
 
 		return pointer.StringPtr(runtimeVal), nil
-	// Handle population from a resource request/limit.
-	case env.ValueFrom != nil && env.ValueFrom.ResourceFieldRef != nil:
+	}
+	if env.ValueFrom.ResourceFieldRef != nil {
 		// TODO Implement populating resource requests.
 		return nil, nil
-	default:
-		// TODO: Should we throw an error here?
-		log.G(ctx).WithField("env", env).Error("Unhandled environment variable, do not know how to populate")
-		return nil, nil
 	}
+
+	log.G(ctx).WithField("env", env).Error("Unhandled environment variable with non-nil env.ValueFrom, do not know how to populate")
+	return nil, nil
 }
 
 // podFieldSelectorRuntimeValue returns the runtime value of the given
