@@ -351,120 +351,17 @@ func getEnvironmentVariableValue(ctx context.Context, env *corev1.EnvVar, mappin
 func getEnvironmentVariableValueWithValueFrom(ctx context.Context, env *corev1.EnvVar, mappingFunc func(string) string, pod *corev1.Pod, container *corev1.Container, rm *manager.ResourceManager, recorder record.EventRecorder) (*string, error) {
 	// Handle population from a configmap key.
 	if env.ValueFrom.ConfigMapKeyRef != nil {
-		// The environment variable must be set from a configmap.
-		vf := env.ValueFrom.ConfigMapKeyRef
-		// Check whether the key reference is optional.
-		// This will control whether we fail when unable to read the requested key.
-		optional := vf != nil && vf.Optional != nil && *vf.Optional
-		// Try to grab the referenced configmap.
-		m, err := rm.GetConfigMap(vf.Name, pod.Namespace)
-		if err != nil {
-			// We couldn't fetch the configmap.
-			// However, if the key reference is optional we should not fail.
-			if optional {
-				if errors.IsNotFound(err) {
-					recorder.Eventf(pod, corev1.EventTypeWarning, ReasonOptionalConfigMapNotFound, "skipping optional envvar %q: configmap %q not found", env.Name, vf.Name)
-				} else {
-					log.G(ctx).Warnf("failed to read configmap %q: %v", vf.Name, err)
-					recorder.Eventf(pod, corev1.EventTypeWarning, ReasonFailedToReadOptionalConfigMap, "skipping optional envvar %q: failed to read configmap %q", env.Name, vf.Name)
-				}
-				// Continue on to the next reference.
-				return nil, nil
-			}
-			// At this point we know the key reference is mandatory.
-			// Hence, we should return a meaningful error.
-			if errors.IsNotFound(err) {
-				recorder.Eventf(pod, corev1.EventTypeWarning, ReasonMandatoryConfigMapNotFound, "configmap %q not found", vf.Name)
-				return nil, fmt.Errorf("configmap %q not found", vf.Name)
-			}
-			recorder.Eventf(pod, corev1.EventTypeWarning, ReasonFailedToReadMandatoryConfigMap, "failed to read configmap %q", vf.Name)
-			return nil, fmt.Errorf("failed to read configmap %q: %v", vf.Name, err)
-		}
-		// At this point we have successfully fetched the target configmap.
-		// We must now try to grab the requested key.
-		var (
-			keyExists bool
-			keyValue  string
-		)
-		if keyValue, keyExists = m.Data[vf.Key]; !keyExists {
-			// The requested key does not exist.
-			// However, we should not fail if the key reference is optional.
-			if optional {
-				// Continue on to the next reference.
-				recorder.Eventf(pod, corev1.EventTypeWarning, ReasonOptionalConfigMapKeyNotFound, "skipping optional envvar %q: key %q does not exist in configmap %q", env.Name, vf.Key, vf.Name)
-				return nil, nil
-			}
-			// At this point we know the key reference is mandatory.
-			// Hence, we should fail.
-			recorder.Eventf(pod, corev1.EventTypeWarning, ReasonMandatoryConfigMapKeyNotFound, "key %q does not exist in configmap %q", vf.Key, vf.Name)
-			return nil, fmt.Errorf("configmap %q doesn't contain the %q key required by pod %s", vf.Name, vf.Key, pod.Name)
-		}
-		// Populate the environment variable and continue on to the next reference.
-		return pointer.StringPtr(keyValue), nil
+		return getEnvironmentVariableValueWithValueFromConfigMapKeyRef(ctx, env, mappingFunc, pod, container, rm, recorder)
 	}
+
 	// Handle population from a secret key.
 	if env.ValueFrom.SecretKeyRef != nil {
-		vf := env.ValueFrom.SecretKeyRef
-		// Check whether the key reference is optional.
-		// This will control whether we fail when unable to read the requested key.
-		optional := vf != nil && vf.Optional != nil && *vf.Optional
-		// Try to grab the referenced secret.
-		s, err := rm.GetSecret(vf.Name, pod.Namespace)
-		if err != nil {
-			// We couldn't fetch the secret.
-			// However, if the key reference is optional we should not fail.
-			if optional {
-				if errors.IsNotFound(err) {
-					recorder.Eventf(pod, corev1.EventTypeWarning, ReasonOptionalSecretNotFound, "skipping optional envvar %q: secret %q not found", env.Name, vf.Name)
-				} else {
-					log.G(ctx).Warnf("failed to read secret %q: %v", vf.Name, err)
-					recorder.Eventf(pod, corev1.EventTypeWarning, ReasonFailedToReadOptionalSecret, "skipping optional envvar %q: failed to read secret %q", env.Name, vf.Name)
-				}
-				// Continue on to the next reference.
-				return nil, nil
-			}
-			// At this point we know the key reference is mandatory.
-			// Hence, we should return a meaningful error.
-			if errors.IsNotFound(err) {
-				recorder.Eventf(pod, corev1.EventTypeWarning, ReasonMandatorySecretNotFound, "secret %q not found", vf.Name)
-				return nil, fmt.Errorf("secret %q not found", vf.Name)
-			}
-			recorder.Eventf(pod, corev1.EventTypeWarning, ReasonFailedToReadMandatorySecret, "failed to read secret %q", vf.Name)
-			return nil, fmt.Errorf("failed to read secret %q: %v", vf.Name, err)
-		}
-		// At this point we have successfully fetched the target secret.
-		// We must now try to grab the requested key.
-		var (
-			keyExists bool
-			keyValue  []byte
-		)
-		if keyValue, keyExists = s.Data[vf.Key]; !keyExists {
-			// The requested key does not exist.
-			// However, we should not fail if the key reference is optional.
-			if optional {
-				// Continue on to the next reference.
-				recorder.Eventf(pod, corev1.EventTypeWarning, ReasonOptionalSecretKeyNotFound, "skipping optional envvar %q: key %q does not exist in secret %q", env.Name, vf.Key, vf.Name)
-				return nil, nil
-			}
-			// At this point we know the key reference is mandatory.
-			// Hence, we should fail.
-			recorder.Eventf(pod, corev1.EventTypeWarning, ReasonMandatorySecretKeyNotFound, "key %q does not exist in secret %q", vf.Key, vf.Name)
-			return nil, fmt.Errorf("secret %q doesn't contain the %q key required by pod %s", vf.Name, vf.Key, pod.Name)
-		}
-		// Populate the environment variable and continue on to the next reference.
-		return pointer.StringPtr(string(keyValue)), nil
+		return getEnvironmentVariableValueWithValueFromSecretKeyRef(ctx, env, mappingFunc, pod, container, rm, recorder)
 	}
+
 	// Handle population from a field (downward API).
 	if env.ValueFrom.FieldRef != nil {
-		// https://github.com/virtual-kubelet/virtual-kubelet/issues/123
-		vf := env.ValueFrom.FieldRef
-
-		runtimeVal, err := podFieldSelectorRuntimeValue(vf, pod)
-		if err != nil {
-			return nil, err
-		}
-
-		return pointer.StringPtr(runtimeVal), nil
+		return getEnvironmentVariableValueWithValueFromFieldRef(ctx, env, mappingFunc, pod, container, rm, recorder)
 	}
 	if env.ValueFrom.ResourceFieldRef != nil {
 		// TODO Implement populating resource requests.
@@ -473,6 +370,124 @@ func getEnvironmentVariableValueWithValueFrom(ctx context.Context, env *corev1.E
 
 	log.G(ctx).WithField("env", env).Error("Unhandled environment variable with non-nil env.ValueFrom, do not know how to populate")
 	return nil, nil
+}
+
+func getEnvironmentVariableValueWithValueFromConfigMapKeyRef(ctx context.Context, env *corev1.EnvVar, mappingFunc func(string) string, pod *corev1.Pod, container *corev1.Container, rm *manager.ResourceManager, recorder record.EventRecorder) (*string, error) {
+	// The environment variable must be set from a configmap.
+	vf := env.ValueFrom.ConfigMapKeyRef
+	// Check whether the key reference is optional.
+	// This will control whether we fail when unable to read the requested key.
+	optional := vf != nil && vf.Optional != nil && *vf.Optional
+	// Try to grab the referenced configmap.
+	m, err := rm.GetConfigMap(vf.Name, pod.Namespace)
+	if err != nil {
+		// We couldn't fetch the configmap.
+		// However, if the key reference is optional we should not fail.
+		if optional {
+			if errors.IsNotFound(err) {
+				recorder.Eventf(pod, corev1.EventTypeWarning, ReasonOptionalConfigMapNotFound, "skipping optional envvar %q: configmap %q not found", env.Name, vf.Name)
+			} else {
+				log.G(ctx).Warnf("failed to read configmap %q: %v", vf.Name, err)
+				recorder.Eventf(pod, corev1.EventTypeWarning, ReasonFailedToReadOptionalConfigMap, "skipping optional envvar %q: failed to read configmap %q", env.Name, vf.Name)
+			}
+			// Continue on to the next reference.
+			return nil, nil
+		}
+		// At this point we know the key reference is mandatory.
+		// Hence, we should return a meaningful error.
+		if errors.IsNotFound(err) {
+			recorder.Eventf(pod, corev1.EventTypeWarning, ReasonMandatoryConfigMapNotFound, "configmap %q not found", vf.Name)
+			return nil, fmt.Errorf("configmap %q not found", vf.Name)
+		}
+		recorder.Eventf(pod, corev1.EventTypeWarning, ReasonFailedToReadMandatoryConfigMap, "failed to read configmap %q", vf.Name)
+		return nil, fmt.Errorf("failed to read configmap %q: %v", vf.Name, err)
+	}
+	// At this point we have successfully fetched the target configmap.
+	// We must now try to grab the requested key.
+	var (
+		keyExists bool
+		keyValue  string
+	)
+	if keyValue, keyExists = m.Data[vf.Key]; !keyExists {
+		// The requested key does not exist.
+		// However, we should not fail if the key reference is optional.
+		if optional {
+			// Continue on to the next reference.
+			recorder.Eventf(pod, corev1.EventTypeWarning, ReasonOptionalConfigMapKeyNotFound, "skipping optional envvar %q: key %q does not exist in configmap %q", env.Name, vf.Key, vf.Name)
+			return nil, nil
+		}
+		// At this point we know the key reference is mandatory.
+		// Hence, we should fail.
+		recorder.Eventf(pod, corev1.EventTypeWarning, ReasonMandatoryConfigMapKeyNotFound, "key %q does not exist in configmap %q", vf.Key, vf.Name)
+		return nil, fmt.Errorf("configmap %q doesn't contain the %q key required by pod %s", vf.Name, vf.Key, pod.Name)
+	}
+	// Populate the environment variable and continue on to the next reference.
+	return pointer.StringPtr(keyValue), nil
+}
+
+func getEnvironmentVariableValueWithValueFromSecretKeyRef(ctx context.Context, env *corev1.EnvVar, mappingFunc func(string) string, pod *corev1.Pod, container *corev1.Container, rm *manager.ResourceManager, recorder record.EventRecorder) (*string, error) {
+	vf := env.ValueFrom.SecretKeyRef
+	// Check whether the key reference is optional.
+	// This will control whether we fail when unable to read the requested key.
+	optional := vf != nil && vf.Optional != nil && *vf.Optional
+	// Try to grab the referenced secret.
+	s, err := rm.GetSecret(vf.Name, pod.Namespace)
+	if err != nil {
+		// We couldn't fetch the secret.
+		// However, if the key reference is optional we should not fail.
+		if optional {
+			if errors.IsNotFound(err) {
+				recorder.Eventf(pod, corev1.EventTypeWarning, ReasonOptionalSecretNotFound, "skipping optional envvar %q: secret %q not found", env.Name, vf.Name)
+			} else {
+				log.G(ctx).Warnf("failed to read secret %q: %v", vf.Name, err)
+				recorder.Eventf(pod, corev1.EventTypeWarning, ReasonFailedToReadOptionalSecret, "skipping optional envvar %q: failed to read secret %q", env.Name, vf.Name)
+			}
+			// Continue on to the next reference.
+			return nil, nil
+		}
+		// At this point we know the key reference is mandatory.
+		// Hence, we should return a meaningful error.
+		if errors.IsNotFound(err) {
+			recorder.Eventf(pod, corev1.EventTypeWarning, ReasonMandatorySecretNotFound, "secret %q not found", vf.Name)
+			return nil, fmt.Errorf("secret %q not found", vf.Name)
+		}
+		recorder.Eventf(pod, corev1.EventTypeWarning, ReasonFailedToReadMandatorySecret, "failed to read secret %q", vf.Name)
+		return nil, fmt.Errorf("failed to read secret %q: %v", vf.Name, err)
+	}
+	// At this point we have successfully fetched the target secret.
+	// We must now try to grab the requested key.
+	var (
+		keyExists bool
+		keyValue  []byte
+	)
+	if keyValue, keyExists = s.Data[vf.Key]; !keyExists {
+		// The requested key does not exist.
+		// However, we should not fail if the key reference is optional.
+		if optional {
+			// Continue on to the next reference.
+			recorder.Eventf(pod, corev1.EventTypeWarning, ReasonOptionalSecretKeyNotFound, "skipping optional envvar %q: key %q does not exist in secret %q", env.Name, vf.Key, vf.Name)
+			return nil, nil
+		}
+		// At this point we know the key reference is mandatory.
+		// Hence, we should fail.
+		recorder.Eventf(pod, corev1.EventTypeWarning, ReasonMandatorySecretKeyNotFound, "key %q does not exist in secret %q", vf.Key, vf.Name)
+		return nil, fmt.Errorf("secret %q doesn't contain the %q key required by pod %s", vf.Name, vf.Key, pod.Name)
+	}
+	// Populate the environment variable and continue on to the next reference.
+	return pointer.StringPtr(string(keyValue)), nil
+}
+
+// Handle population from a field (downward API).
+func getEnvironmentVariableValueWithValueFromFieldRef(ctx context.Context, env *corev1.EnvVar, mappingFunc func(string) string, pod *corev1.Pod, container *corev1.Container, rm *manager.ResourceManager, recorder record.EventRecorder) (*string, error) {
+	// https://github.com/virtual-kubelet/virtual-kubelet/issues/123
+	vf := env.ValueFrom.FieldRef
+
+	runtimeVal, err := podFieldSelectorRuntimeValue(vf, pod)
+	if err != nil {
+		return nil, err
+	}
+
+	return pointer.StringPtr(runtimeVal), nil
 }
 
 // podFieldSelectorRuntimeValue returns the runtime value of the given
