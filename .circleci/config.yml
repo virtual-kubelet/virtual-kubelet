@@ -47,7 +47,7 @@ jobs:
           command: V=1 make build
       - run:
           name: Tests
-          command: V=1 CI=1 make test
+          command: V=1 CI=1 make test envtest
       - save_cache:
           key: test-{{ checksum "go.mod" }}-{{ checksum "go.sum" }}
           paths:
