@@ -364,10 +364,15 @@ func (pc *PodController) Run(ctx context.Context, podSyncWorkers int) (retErr er
 			if key, err := cache.DeletionHandlingMetaNamespaceKeyFunc(pod); err != nil {
 				log.G(ctx).Error(err)
 			} else {
+				k8sPod, ok := pod.(*corev1.Pod)
+				if !ok {
+					return
+				}
 				ctx = span.WithField(ctx, "key", key)
 				pc.knownPods.Delete(key)
 				pc.syncPodsFromKubernetes.Enqueue(ctx, key)
 				// If this pod was in the deletion queue, forget about it
+				key = fmt.Sprintf("%v/%v", key, k8sPod.UID)
 				pc.deletePodsFromKubernetes.Forget(ctx, key)
 			}
 		},
@@ -501,6 +506,8 @@ func (pc *PodController) syncPodInProvider(ctx context.Context, pod *corev1.Pod,
 	if pod.DeletionTimestamp != nil && !running(&pod.Status) {
 		log.G(ctx).Debug("Force deleting pod from API Server as it is no longer running")
 		pc.deletePodsFromKubernetes.EnqueueWithoutRateLimit(ctx, key)
+		key = fmt.Sprintf("%v/%v", key, pod.UID)
+		pc.deletePodsFromKubernetes.EnqueueWithoutRateLimit(ctx, key)
 		return nil
 	}
 	obj, ok := pc.knownPods.Load(key)
@@ -536,6 +543,7 @@ func (pc *PodController) syncPodInProvider(ctx context.Context, pod *corev1.Pod,
 			return err
 		}
 
+		key = fmt.Sprintf("%v/%v", key, pod.UID)
 		pc.deletePodsFromKubernetes.EnqueueWithoutRateLimitWithDelay(ctx, key, time.Second*time.Duration(*pod.DeletionGracePeriodSeconds))
 		return nil
 	}

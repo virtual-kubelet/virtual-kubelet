@@ -17,6 +17,7 @@ package node
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/google/go-cmp/cmp"
@@ -367,7 +368,8 @@ func (pc *PodController) deletePodsFromKubernetesHandler(ctx context.Context, ke
 	ctx, span := trace.StartSpan(ctx, "deletePodsFromKubernetesHandler")
 	defer span.End()
 
-	namespace, name, err := cache.SplitMetaNamespaceKey(key)
+	uid, metaKey := getUIDAndMetaNamespaceKey(key)
+	namespace, name, err := cache.SplitMetaNamespaceKey(metaKey)
 	ctx = span.WithFields(ctx, log.Fields{
 		"namespace": namespace,
 		"name":      name,
@@ -397,15 +399,25 @@ func (pc *PodController) deletePodsFromKubernetesHandler(ctx context.Context, ke
 		span.SetStatus(err)
 		return err
 	}
-
+	if string(k8sPod.UID) != uid {
+		log.G(ctx).WithField("k8sPodUID", k8sPod.UID).WithField("uid", uid).Warn("Not deleting pod because remote pod has different UID")
+		return nil
+	}
 	if running(&k8sPod.Status) {
 		log.G(ctx).Error("Force deleting pod in running state")
 	}
 
 	// We don't check with the provider before doing this delete. At this point, even if an outstanding pod status update
 	// was in progress,
-	err = pc.client.Pods(namespace).Delete(ctx, name, *metav1.NewDeleteOptions(0))
+	deleteOptions := metav1.NewDeleteOptions(0)
+	deleteOptions.Preconditions = metav1.NewUIDPreconditions(uid)
+	err = pc.client.Pods(namespace).Delete(ctx, name, *deleteOptions)
 	if errors.IsNotFound(err) {
+		log.G(ctx).Warnf("Not deleting pod because %v", err)
+		return nil
+	}
+	if errors.IsConflict(err) {
+		log.G(ctx).Warnf("There was a conflict, maybe trying to delete a Pod that has been recreated: %v", err)
 		return nil
 	}
 	if err != nil {
@@ -413,4 +425,11 @@ func (pc *PodController) deletePodsFromKubernetesHandler(ctx context.Context, ke
 		return err
 	}
 	return nil
+}
+
+func getUIDAndMetaNamespaceKey(key string) (string, string) {
+	idx := strings.LastIndex(key, "/")
+	uid := key[idx+1:]
+	metaKey := key[:idx]
+	return uid, metaKey
 }
