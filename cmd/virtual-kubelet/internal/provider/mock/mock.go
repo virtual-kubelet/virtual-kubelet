@@ -344,6 +344,7 @@ func (p *MockProvider) ConfigureNode(ctx context.Context, n *v1.Node) {
 	n.Status.NodeInfo.OperatingSystem = os
 	n.Status.NodeInfo.Architecture = "amd64"
 	n.ObjectMeta.Labels["alpha.service-controller.kubernetes.io/exclude-balancer"] = "true"
+	n.ObjectMeta.Labels["node.kubernetes.io/exclude-from-external-load-balancers"] = "true"
 }
 
 // Capacity returns a resource list containing the capacity limits.
