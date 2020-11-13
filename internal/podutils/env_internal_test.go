@@ -1090,3 +1090,45 @@ func TestComposingEnv(t *testing.T) {
 	// Make sure that no events have been recorded.
 	assert.Check(t, is.Len(er.Events, 0))
 }
+
+// TestEmptyEnvVar tests that env var can be have the value ""
+func TestEmptyEnvVar(t *testing.T) {
+	rm := testutil.FakeResourceManager()
+	er := testutil.FakeEventRecorder(defaultEventRecorderBufferSize)
+
+	// Create a pod object having a single container.
+	// The container's third environment variable is composed of the previous two.
+	pod := &corev1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: namespace,
+			Name:      "pod-0",
+		},
+		Spec: corev1.PodSpec{
+			Containers: []corev1.Container{
+				{
+					Env: []corev1.EnvVar{
+						{
+							Name: envVarName1,
+						},
+					},
+				},
+			},
+		},
+	}
+
+	// Populate the pods's environment.
+	err := PopulateEnvironmentVariables(context.Background(), pod, rm, er)
+	assert.Check(t, err)
+
+	// Make sure that the container's environment contains all the expected keys and values.
+	assert.Check(t, is.DeepEqual(pod.Spec.Containers[0].Env, []corev1.EnvVar{
+		{
+			Name: envVarName1,
+		},
+	},
+		sortOpt,
+	))
+
+	// Make sure that no events have been recorded.
+	assert.Check(t, is.Len(er.Events, 0))
+}

@@ -334,18 +334,11 @@ func makeEnvironmentMap(ctx context.Context, pod *corev1.Pod, container *corev1.
 }
 
 func getEnvironmentVariableValue(ctx context.Context, env *corev1.EnvVar, mappingFunc func(string) string, pod *corev1.Pod, container *corev1.Container, rm *manager.ResourceManager, recorder record.EventRecorder) (*string, error) {
-	// Handle values that have been directly provided.
-	if env.Value != "" {
-		// Expand variable references
-		return pointer.StringPtr(expansion.Expand(env.Value, mappingFunc)), nil
-	}
-
 	if env.ValueFrom != nil {
 		return getEnvironmentVariableValueWithValueFrom(ctx, env, mappingFunc, pod, container, rm, recorder)
 	}
-
-	log.G(ctx).WithField("env", env).Error("Unhandled environment variable, do not know how to populate")
-	return nil, nil
+	// Handle values that have been directly provided after expanding variable references.
+	return pointer.StringPtr(expansion.Expand(env.Value, mappingFunc)), nil
 }
 
 func getEnvironmentVariableValueWithValueFrom(ctx context.Context, env *corev1.EnvVar, mappingFunc func(string) string, pod *corev1.Pod, container *corev1.Container, rm *manager.ResourceManager, recorder record.EventRecorder) (*string, error) {
