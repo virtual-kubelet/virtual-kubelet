@@ -191,3 +191,7 @@ envtest: kubebuilder_2.3.1_${TEST_OS}_${TEST_ARCH}
 	# You can add klog flags for debugging, like: -klog.v=10 -klog.logtostderr
 	# klogv2 flags just wraps our existing logrus.
 	go test -v ./internal/test/vk_envtest -envtest=true
+
+.PHONY: fmt
+fmt:
+	goimports -w $(shell go list -f '{{.Dir}}' ./...)
