@@ -34,9 +34,11 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/strategicpatch"
 	"k8s.io/apimachinery/pkg/util/wait"
+	coordclientset "k8s.io/client-go/kubernetes/typed/coordination/v1"
 	"k8s.io/client-go/kubernetes/typed/coordination/v1beta1"
 	v1 "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/client-go/util/retry"
+	"k8s.io/utils/clock"
 )
 
 const (
@@ -82,6 +84,7 @@ func NewNodeController(p vktypes.NodeProvider, node *corev1.Node, nodes v1.NodeI
 
 	n.nodePingController = nodepingcontroller.NewNodePingController(n.p, n.pingInterval, n.pingTimeout)
 	if n.leaseControllerProvider != nil {
+
 		n.leaseController = n.leaseControllerProvider(n.pingInterval)
 	}
 
@@ -111,11 +114,61 @@ func WithNodeEnableLeaseV1Beta1(client v1beta1.LeaseInterface, baseLease *coord.
 			return ErrConflictingLeaseControllerConfiguration
 		}
 
+		if client == nil {
+			return nil
+		}
+
 		n.leaseControllerProvider = func(leaseRenewalInterval time.Duration) leasecontroller.LeaseController {
 			return leasecontroller.NewV1BetaV1LeaseController(
 				client,
 				baseLease,
 				leaseRenewalInterval,
+				n.nodePingController.GetResult,
+				n.getServerNode)
+		}
+
+		return nil
+	}
+}
+
+// WithNodeEnableLeaseV1 enables support for v1 leases.
+// V1 Leases share all the same properties as v1beta1 leases, except they do not fallback like
+// the v1beta1 lease controller does if the API server does not support it.
+func WithNodeEnableLeaseV1(client coordclientset.LeaseInterface, leaseDurationSeconds int32) NodeControllerOpt {
+	return func(n *NodeController) error {
+		if n.leaseControllerProvider != nil {
+			return ErrConflictingLeaseControllerConfiguration
+		}
+
+		if client == nil {
+			return nil
+		}
+
+		n.leaseControllerProvider = func(leaseRenewalInterval time.Duration) leasecontroller.LeaseController {
+			return leasecontroller.NewController(
+				&clock.RealClock{},
+				client,
+				leaseDurationSeconds,
+				n.nodePingController.GetResult,
+				n.getServerNode)
+		}
+
+		return nil
+	}
+}
+
+func WithNodeEnableLeaseV1WithRenewInterval(client coordclientset.LeaseInterface, leaseDurationSeconds int32, interval time.Duration) NodeControllerOpt {
+	return func(n *NodeController) error {
+		if n.leaseControllerProvider != nil {
+			return ErrConflictingLeaseControllerConfiguration
+		}
+
+		n.leaseControllerProvider = func(leaseRenewalInterval time.Duration) leasecontroller.LeaseController {
+			return leasecontroller.NewControllerWithRenewInterval(
+				&clock.RealClock{},
+				client,
+				leaseDurationSeconds,
+				interval,
 				n.nodePingController.GetResult,
 				n.getServerNode)
 		}
@@ -240,6 +293,7 @@ func (n *NodeController) Run(ctx context.Context) error {
 	}
 
 	if n.leaseController != nil {
+		log.G(ctx).WithField("leaseController", n.leaseController).Debug("Starting leasecontroller")
 		n.group.StartWithContext(ctx, n.leaseController.Run)
 	}
 

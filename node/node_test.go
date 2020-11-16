@@ -22,6 +22,8 @@ import (
 	"testing"
 	"time"
 
+	coordinationv1 "k8s.io/api/coordination/v1"
+
 	"gotest.tools/assert"
 	"gotest.tools/assert/cmp"
 	is "gotest.tools/assert/cmp"
@@ -37,12 +39,22 @@ import (
 	"k8s.io/client-go/util/retry"
 )
 
+type withLease int
+
+const (
+	leasenone = iota
+	leasev1beta1
+	leasev1
+)
+
 func TestNodeRun(t *testing.T) {
-	t.Run("WithoutLease", func(t *testing.T) { testNodeRun(t, false) })
-	t.Run("WithLease", func(t *testing.T) { testNodeRun(t, true) })
+	t.Run("WithoutLease", func(t *testing.T) { testNodeRun(t, leasenone) })
+	t.Run("WithLease", func(t *testing.T) { testNodeRun(t, leasev1beta1) })
+	t.Run("WithLeaseV1", func(t *testing.T) { testNodeRun(t, leasev1) })
+
 }
 
-func testNodeRun(t *testing.T, enableLease bool) {
+func testNodeRun(t *testing.T, enableLease withLease) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -52,6 +64,8 @@ func testNodeRun(t *testing.T, enableLease bool) {
 		obj := updateAction.GetObject()
 		switch lease := obj.(type) {
 		case *coord.Lease:
+			lease.UID = uuid.NewUUID()
+		case *coordinationv1.Lease:
 			lease.UID = uuid.NewUUID()
 		default:
 			panic(fmt.Sprintf("Unknown object type: %T", lease))
@@ -63,14 +77,18 @@ func testNodeRun(t *testing.T, enableLease bool) {
 
 	nodes := c.CoreV1().Nodes()
 	leases := c.CoordinationV1beta1().Leases(corev1.NamespaceNodeLease)
+	leasesv1 := c.CoordinationV1().Leases(corev1.NamespaceNodeLease)
 
 	interval := 1 * time.Millisecond
 	opts := []NodeControllerOpt{
 		WithNodePingInterval(interval),
 		WithNodeStatusUpdateInterval(interval),
 	}
-	if enableLease {
+	if enableLease == leasev1beta1 {
 		opts = append(opts, WithNodeEnableLeaseV1Beta1(leases, nil))
+	}
+	if enableLease == leasev1 {
+		opts = append(opts, WithNodeEnableLeaseV1WithRenewInterval(leasesv1, 1, time.Millisecond))
 	}
 	testNode := testNode(t)
 	// We have to refer to testNodeCopy during the course of the test. testNode is modified by the node controller
@@ -98,8 +116,13 @@ func testNodeRun(t *testing.T, enableLease bool) {
 	defer lw.Stop()
 	lr := lw.ResultChan()
 
+	lwV1 := makeWatch(ctx, t, leasesv1, testNodeCopy.Name)
+	defer lwV1.Stop()
+	lrV1 := lwV1.ResultChan()
+
 	var (
 		lBefore      *coord.Lease
+		lv1Before    *coordinationv1.Lease
 		nodeUpdates  int
 		leaseUpdates int
 
@@ -110,6 +133,7 @@ func testNodeRun(t *testing.T, enableLease bool) {
 	timeout := time.After(30 * time.Second)
 	for i := 0; i < iters; i++ {
 		var l *coord.Lease
+		var lv1 *coordinationv1.Lease
 
 		select {
 		case <-timeout:
@@ -134,6 +158,15 @@ func testNodeRun(t *testing.T, enableLease bool) {
 			}
 
 			lBefore = l
+		case le := <-lrV1:
+			lv1 = le.Object.(*coordinationv1.Lease)
+			leaseUpdates++
+			assert.Assert(t, cmp.Equal(lv1.Spec.HolderIdentity != nil, true))
+			assert.NilError(t, err)
+			assert.Check(t, cmp.Equal(*lv1.Spec.HolderIdentity, testNodeCopy.Name))
+			if lv1Before != nil {
+				assert.Check(t, before(lBefore.Spec.RenewTime.Time, lv1.Spec.RenewTime.Time))
+			}
 		}
 	}
 
@@ -141,10 +174,10 @@ func testNodeRun(t *testing.T, enableLease bool) {
 	nw.Stop()
 
 	assert.Check(t, atLeast(nodeUpdates, expectAtLeast))
-	if enableLease {
-		assert.Check(t, atLeast(leaseUpdates, expectAtLeast))
-	} else {
+	if enableLease == leasenone {
 		assert.Check(t, cmp.Equal(leaseUpdates, 0))
+	} else {
+		assert.Check(t, atLeast(leaseUpdates, expectAtLeast))
 	}
 
 	// trigger an async node status update
