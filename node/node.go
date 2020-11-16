@@ -22,6 +22,7 @@ import (
 	pkgerrors "github.com/pkg/errors"
 	"github.com/virtual-kubelet/virtual-kubelet/log"
 	"github.com/virtual-kubelet/virtual-kubelet/trace"
+	vktypes "github.com/virtual-kubelet/virtual-kubelet/types"
 	coord "k8s.io/api/coordination/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -41,26 +42,7 @@ const (
 	virtualKubeletLastNodeAppliedObjectMeta = "virtual-kubelet.io/last-applied-object-meta"
 )
 
-// NodeProvider is the interface used for registering a node and updating its
-// status in Kubernetes.
-//
-// Note: Implementers can choose to manage a node themselves, in which case
-// it is not needed to provide an implementation for this interface.
-type NodeProvider interface { //nolint:golint
-	// Ping checks if the node is still active.
-	// This is intended to be lightweight as it will be called periodically as a
-	// heartbeat to keep the node marked as ready in Kubernetes.
-	Ping(context.Context) error
-
-	// NotifyNodeStatus is used to asynchronously monitor the node.
-	// The passed in callback should be called any time there is a change to the
-	// node's status.
-	// This will generally trigger a call to the Kubernetes API server to update
-	// the status.
-	//
-	// NotifyNodeStatus should not block callers.
-	NotifyNodeStatus(ctx context.Context, cb func(*corev1.Node))
-}
+type NodeProvider = vktypes.NodeProvider //nolint:golint
 
 // NewNodeController creates a new node controller.
 // This does not have any side-effects on the system or kubernetes.
@@ -70,7 +52,7 @@ type NodeProvider interface { //nolint:golint
 //
 // Note: When if there are multiple NodeControllerOpts which apply against the same
 // underlying options, the last NodeControllerOpt will win.
-func NewNodeController(p NodeProvider, node *corev1.Node, nodes v1.NodeInterface, opts ...NodeControllerOpt) (*NodeController, error) {
+func NewNodeController(p vktypes.NodeProvider, node *corev1.Node, nodes v1.NodeInterface, opts ...NodeControllerOpt) (*NodeController, error) {
 	n := &NodeController{
 		p:          p,
 		serverNode: node,
@@ -175,7 +157,7 @@ type ErrorHandler func(context.Context, error) error
 // It can register a node with Kubernetes and periodically update its status.
 // NodeController manages a single node entity.
 type NodeController struct { // nolint: golint
-	p NodeProvider
+	p vktypes.NodeProvider
 
 	// serverNode should only be written to on initialization, or as the result of node creation.
 	serverNode *corev1.Node
