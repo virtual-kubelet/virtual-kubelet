@@ -1,4 +1,4 @@
-package node
+package nodepingcontroller
 
 import (
 	"context"
@@ -7,23 +7,36 @@ import (
 	"github.com/virtual-kubelet/virtual-kubelet/internal/lock"
 	"github.com/virtual-kubelet/virtual-kubelet/log"
 	"github.com/virtual-kubelet/virtual-kubelet/trace"
+	vktypes "github.com/virtual-kubelet/virtual-kubelet/types"
 	"golang.org/x/sync/singleflight"
 	"k8s.io/apimachinery/pkg/util/wait"
 )
 
+// Controller is the interface used to control pinging the provider and checking whether or not it's
+// healty
+type Controller interface {
+	Run(ctx context.Context)
+	GetResult(ctx context.Context) (*PingResult, error)
+}
+
 type nodePingController struct {
-	nodeProvider NodeProvider
+	nodeProvider vktypes.NodeProvider
 	pingInterval time.Duration
 	pingTimeout  *time.Duration
 	cond         lock.MonitorVariable
 }
 
-type pingResult struct {
-	pingTime time.Time
-	error    error
+// PingResult includes the last received result from the ping. The time that this ping result was received
+// is included (indicating its relative age).
+type PingResult struct {
+	PingTime time.Time
+	Error    error
 }
 
-func newNodePingController(node NodeProvider, pingInterval time.Duration, timeout *time.Duration) *nodePingController {
+// New creates a new node ping controller. It will not run until the Run method is called. pingInterval indicates
+// the time spent sleeping between pings, and timeout can be optionally specified to limit the amount of time
+// that the ping controller will wait for the provider to return.
+func New(node vktypes.NodeProvider, pingInterval time.Duration, timeout *time.Duration) Controller {
 	if pingInterval == 0 {
 		panic("Node ping interval is 0")
 	}
@@ -40,7 +53,7 @@ func newNodePingController(node NodeProvider, pingInterval time.Duration, timeou
 	}
 }
 
-func (npc *nodePingController) run(ctx context.Context) {
+func (npc *nodePingController) Run(ctx context.Context) {
 	const key = "key"
 	sf := &singleflight.Group{}
 
@@ -73,18 +86,18 @@ func (npc *nodePingController) run(ctx context.Context) {
 			return now, err
 		})
 
-		var pingResult pingResult
+		var pingResult PingResult
 		select {
 		case <-ctx.Done():
-			pingResult.error = ctx.Err()
-			log.G(ctx).WithError(pingResult.error).Warn("Failed to ping node due to context cancellation")
+			pingResult.Error = ctx.Err()
+			log.G(ctx).WithError(pingResult.Error).Warn("Failed to ping node due to context cancellation")
 		case result := <-doChan:
-			pingResult.error = result.Err
-			pingResult.pingTime = result.Val.(time.Time)
+			pingResult.Error = result.Err
+			pingResult.PingTime = result.Val.(time.Time)
 		}
 
 		npc.cond.Set(&pingResult)
-		span.SetStatus(pingResult.error)
+		span.SetStatus(pingResult.Error)
 	}
 
 	// Run the first check manually
@@ -96,7 +109,7 @@ func (npc *nodePingController) run(ctx context.Context) {
 // getResult returns the current ping result in a non-blocking fashion except for the first ping. It waits for the
 // first ping to be successful before returning. If the context is cancelled while waiting for that value, it will
 // return immediately.
-func (npc *nodePingController) getResult(ctx context.Context) (*pingResult, error) {
+func (npc *nodePingController) GetResult(ctx context.Context) (*PingResult, error) {
 	sub := npc.cond.Subscribe()
 	select {
 	case <-ctx.Done():
@@ -104,5 +117,5 @@ func (npc *nodePingController) getResult(ctx context.Context) (*pingResult, erro
 	case <-sub.NewValueReady():
 	}
 
-	return sub.Value().Value.(*pingResult), nil
+	return sub.Value().Value.(*PingResult), nil
 }

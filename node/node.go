@@ -19,6 +19,8 @@ import (
 	"encoding/json"
 	"time"
 
+	"github.com/virtual-kubelet/virtual-kubelet/internal/nodepingcontroller"
+
 	pkgerrors "github.com/pkg/errors"
 	"github.com/virtual-kubelet/virtual-kubelet/log"
 	"github.com/virtual-kubelet/virtual-kubelet/trace"
@@ -72,7 +74,7 @@ func NewNodeController(p vktypes.NodeProvider, node *corev1.Node, nodes v1.NodeI
 		n.statusInterval = DefaultStatusUpdateInterval
 	}
 
-	n.nodePingController = newNodePingController(n.p, n.pingInterval, n.pingTimeout)
+	n.nodePingController = nodepingcontroller.New(n.p, n.pingInterval, n.pingTimeout)
 
 	return n, nil
 }
@@ -175,7 +177,7 @@ type NodeController struct { // nolint: golint
 
 	chReady chan struct{}
 
-	nodePingController *nodePingController
+	nodePingController nodepingcontroller.Controller
 	pingTimeout        *time.Duration
 }
 
@@ -285,7 +287,7 @@ func (n *NodeController) controlLoop(ctx context.Context, providerNode *corev1.N
 	close(n.chReady)
 
 	group := &wait.Group{}
-	group.StartWithContext(ctx, n.nodePingController.run)
+	group.StartWithContext(ctx, n.nodePingController.Run)
 	defer group.Wait()
 
 	loop := func() bool {
@@ -348,13 +350,13 @@ func (n *NodeController) handlePing(ctx context.Context, providerNode *corev1.No
 		span.SetStatus(retErr)
 	}()
 
-	result, err := n.nodePingController.getResult(ctx)
+	result, err := n.nodePingController.GetResult(ctx)
 	if err != nil {
 		err = pkgerrors.Wrap(err, "error while fetching result of node ping")
 		return err
 	}
 
-	if result.error != nil {
+	if result.Error != nil {
 		err = pkgerrors.Wrap(err, "node ping returned error on ping")
 		return err
 	}
