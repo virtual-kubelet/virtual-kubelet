@@ -19,7 +19,7 @@ goreleaser := github.com/goreleaser/goreleaser@v0.82.2
 gox := github.com/mitchellh/gox@v1.0.1
 
 # comment this line out for quieter things
-# V := 1 # When V is set, print commands and build progress.
+# V := 1 # When V is set, try to enable extra logging for debugging
 
 # Space separated patterns of packages to skip in list, test, format.
 IGNORED_PACKAGES := /vendor/
@@ -35,19 +35,19 @@ all: test build
 # safebuild builds inside a docker container with no clingons from your $GOPATH
 safebuild:
 	@echo "Building..."
-	$Q docker build --build-arg BUILD_TAGS="$(VK_BUILD_TAGS)" -t $(DOCKER_IMAGE):$(VERSION) .
+	docker build --build-arg BUILD_TAGS="$(VK_BUILD_TAGS)" -t $(DOCKER_IMAGE):$(VERSION) .
 
 .PHONY: build
 build: build_tags := netgo osusergo
 build: OUTPUT_DIR ?= bin
 build: authors
 	@echo "Building..."
-	$Q CGO_ENABLED=0 go build -ldflags '-extldflags "-static"' -o $(OUTPUT_DIR)/$(binary) $(if $V,-v) $(VERSION_FLAGS) ./cmd/$(binary)
+	CGO_ENABLED=0 go build -ldflags '-extldflags "-static"' -o $(OUTPUT_DIR)/$(binary) $(if $V,-v) $(VERSION_FLAGS) ./cmd/$(binary)
 
 .PHONY: tags
 tags:
 	@echo "Listing tags..."
-	$Q @git tag
+	@git tag
 
 .PHONY: release
 release: build goreleaser
@@ -58,36 +58,36 @@ release: build goreleaser
 .PHONY: clean test list cover format docker
 mod:
 	@echo "Prune Dependencies..."
-	$Q go mod tidy
+	go mod tidy
 
 docker:
 	@echo "Docker Build..."
-	$Q docker build --build-arg BUILD_TAGS="$(VK_BUILD_TAGS)" -t $(DOCKER_IMAGE) .
+	docker build --build-arg BUILD_TAGS="$(VK_BUILD_TAGS)" -t $(DOCKER_IMAGE) .
 
 clean:
 	@echo "Clean..."
-	$Q rm -rf bin
+	rm -rf bin
 
 vet:
 	@echo "go vet'ing..."
 ifndef CI
 	@echo "go vet'ing Outside CI..."
-	$Q go vet $(allpackages)
+	go vet $(allpackages)
 else
 	@echo "go vet'ing in CI..."
-	$Q mkdir -p test
-	$Q ( go vet $(allpackages); echo $$? ) | \
+	mkdir -p test
+	( go vet $(allpackages); echo $$? ) | \
        tee test/vet.txt | sed '$$ d'; exit $$(tail -1 test/vet.txt)
 endif
 
 test:
 ifndef CI
 	@echo "Testing..."
-	$Q go test  $(if $V,-v) $(allpackages)
+	go test  $(if $V,-v) $(allpackages)
 else
 	@echo "Testing in CI..."
-	$Q mkdir -p test
-	$Q ( GODEBUG=cgocheck=2 go test -timeout=9m -v $(allpackages); echo $$? ) | \
+	mkdir -p test
+	( GODEBUG=cgocheck=2 go test -timeout=9m -v $(allpackages); echo $$? ) | \
        tee test/output.txt | sed '$$ d'; exit $$(tail -1 test/output.txt)
 endif
 
@@ -98,29 +98,29 @@ list:
 cover: gocovmerge
 	@echo "Coverage Report..."
 	@echo "NOTE: make cover does not exit 1 on failure, don't use it to check for tests success!"
-	$Q rm -f .GOPATH/cover/*.out cover/all.merged
+	rm -f .GOPATH/cover/*.out cover/all.merged
 	$(if $V,@echo "-- go test -coverpkg=./... -coverprofile=cover/... ./...")
 	@for MOD in $(allpackages); do \
         go test -coverpkg=`echo $(allpackages)|tr " " ","` \
             -coverprofile=cover/unit-`echo $$MOD|tr "/" "_"`.out \
             $$MOD 2>&1 | grep -v "no packages being tested depend on"; \
     done
-	$Q $(gobin_tool) -run $(gocovmerge) cover/*.out > cover/all.merged
+	$(gobin_tool) -run $(gocovmerge) cover/*.out > cover/all.merged
 ifndef CI
 	@echo "Coverage Report..."
-	$Q go tool cover -html .GOPATH/cover/all.merged
+	go tool cover -html .GOPATH/cover/all.merged
 else
 	@echo "Coverage Report In CI..."
-	$Q go tool cover -html .GOPATH/cover/all.merged -o .GOPATH/cover/all.html
+	go tool cover -html .GOPATH/cover/all.merged -o .GOPATH/cover/all.html
 endif
 	@echo ""
 	@echo "=====> Total test coverage: <====="
 	@echo ""
-	$Q go tool cover -func .GOPATH/cover/all.merged
+	go tool cover -func .GOPATH/cover/all.merged
 
 format: goimports
 	@echo "Formatting..."
-	$Q find . -iname \*.go | grep -v \
+	find . -iname \*.go | grep -v \
         -e "^$$" $(addprefix -e ,$(IGNORED_PACKAGES)) | xargs $(gobin_tool) -run $(goimports) -w
 
 ##### =====> Internals <===== #####
@@ -166,17 +166,15 @@ gox: $(gobin_tool)
 	# We make gox globally available, for people to use by hand
 	$(gobin_tool) $(gox)
 
-Q := $(if $V,,@)
-
 $(gobin_tool):
 	GO111MODULE=off go get -u github.com/myitcv/gobin
 
 authors:
-	$Q git log --all --format='%aN <%cE>' | sort -u  | sed -n '/github/!p' > GITAUTHORS
-	$Q cat AUTHORS GITAUTHORS  | sort -u > NEWAUTHORS
-	$Q mv NEWAUTHORS AUTHORS
-	$Q rm -f NEWAUTHORS
-	$Q rm -f GITAUTHORS
+	git log --all --format='%aN <%cE>' | sort -u  | sed -n '/github/!p' > GITAUTHORS
+	cat AUTHORS GITAUTHORS  | sort -u > NEWAUTHORS
+	mv NEWAUTHORS AUTHORS
+	rm -f NEWAUTHORS
+	rm -f GITAUTHORS
 
 checksums_2.3.1.txt:
 	curl -o checksums_2.3.1.txt -L https://github.com/kubernetes-sigs/kubebuilder/releases/download/v2.3.1/checksums.txt
