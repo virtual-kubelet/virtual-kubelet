@@ -195,8 +195,7 @@ func (pc *PodController) deletePod(ctx context.Context, pod *corev1.Pod) error {
 
 func shouldSkipPodStatusUpdate(pod *corev1.Pod) bool {
 	return pod.Status.Phase == corev1.PodSucceeded ||
-		pod.Status.Phase == corev1.PodFailed ||
-		pod.Status.Reason == podStatusReasonProviderFailed
+		pod.Status.Phase == corev1.PodFailed
 }
 
 func (pc *PodController) updatePodStatus(ctx context.Context, podFromKubernetes *corev1.Pod, key string) error {
