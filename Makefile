@@ -26,7 +26,6 @@ IGNORED_PACKAGES := /vendor/
 
 TEST_OS := $(shell go env GOOS)
 TEST_ARCH := $(shell go env GOARCH)
-export KUBEBUILDER_ASSETS := $(PWD)/kubebuilder_2.3.1_${TEST_OS}_${TEST_ARCH}/bin
 
 .PHONY: all
 all: test build
@@ -188,7 +187,7 @@ kubebuilder_2.3.1_${TEST_OS}_${TEST_ARCH}: kubebuilder_2.3.1_${TEST_OS}_${TEST_A
 envtest: kubebuilder_2.3.1_${TEST_OS}_${TEST_ARCH}
 	# You can add klog flags for debugging, like: -klog.v=10 -klog.logtostderr
 	# klogv2 flags just wraps our existing logrus.
-	go test -v ./internal/test/vk_envtest -envtest=true
+	KUBEBUILDER_ASSETS=$(PWD)/kubebuilder_2.3.1_${TEST_OS}_${TEST_ARCH}/bin go test -v ./internal/test/vk_envtest -envtest=true
 
 .PHONY: fmt
 fmt:
