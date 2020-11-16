@@ -683,13 +683,13 @@ func TestNodePingSingleInflight(t *testing.T) {
 	assert.NilError(t, err)
 
 	start := time.Now()
-	go node.nodePingController.run(ctx)
-	firstPing, err := node.nodePingController.getResult(ctx)
+	go node.nodePingController.Run(ctx)
+	firstPing, err := node.nodePingController.GetResult(ctx)
 	assert.NilError(t, err)
 	timeTakenToCompleteFirstPing := time.Since(start)
 	assert.Assert(t, timeTakenToCompleteFirstPing < pingTimeout*5, "Time taken to complete first ping: %v", timeTakenToCompleteFirstPing)
 
-	assert.Assert(t, cmp.Error(firstPing.error, context.DeadlineExceeded.Error()))
+	assert.Assert(t, cmp.Error(firstPing.Error, context.DeadlineExceeded.Error()))
 	assert.Assert(t, is.Equal(1, calls.read()))
 	assert.Assert(t, is.Equal(0, finished.read()))
 

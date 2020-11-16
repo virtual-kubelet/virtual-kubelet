@@ -1,4 +1,4 @@
-package node
+package nodepingcontroller
 
 import (
 	"context"
@@ -8,26 +8,32 @@ import (
 	"github.com/virtual-kubelet/virtual-kubelet/lock"
 	"github.com/virtual-kubelet/virtual-kubelet/log"
 	"github.com/virtual-kubelet/virtual-kubelet/trace"
+	vktypes "github.com/virtual-kubelet/virtual-kubelet/types"
 	"golang.org/x/sync/singleflight"
 	"k8s.io/apimachinery/pkg/util/wait"
 )
 
+type NodePingController interface {
+	Run(ctx context.Context)
+	GetResult(ctx context.Context) (*PingResult, error)
+}
+
 type nodePingController struct {
-	nodeProvider NodeProvider
+	nodeProvider vktypes.NodeProvider
 	pingInterval time.Duration
 	pingTimeout  *time.Duration
 	cond         lock.Cond
 
 	// "Results"
-	result *pingResult
+	result *PingResult
 }
 
-type pingResult struct {
-	pingTime time.Time
-	error    error
+type PingResult struct {
+	PingTime time.Time
+	Error    error
 }
 
-func newNodePingController(node NodeProvider, pingInterval time.Duration, timeout *time.Duration) *nodePingController {
+func NewNodePingController(node vktypes.NodeProvider, pingInterval time.Duration, timeout *time.Duration) NodePingController {
 	if pingInterval == 0 {
 		panic("Node ping interval is 0")
 	}
@@ -44,7 +50,7 @@ func newNodePingController(node NodeProvider, pingInterval time.Duration, timeou
 	}
 }
 
-func (npc *nodePingController) run(ctx context.Context) {
+func (npc *nodePingController) Run(ctx context.Context) {
 	const key = "key"
 	sf := &singleflight.Group{}
 
@@ -77,14 +83,14 @@ func (npc *nodePingController) run(ctx context.Context) {
 			return now, err
 		})
 
-		var pingResult pingResult
+		var pingResult PingResult
 		select {
 		case <-ctx.Done():
-			pingResult.error = ctx.Err()
-			log.G(ctx).WithError(pingResult.error).Warn("Failed to ping node due to context cancellation")
+			pingResult.Error = ctx.Err()
+			log.G(ctx).WithError(pingResult.Error).Warn("Failed to ping node due to context cancellation")
 		case result := <-doChan:
-			pingResult.error = result.Err
-			pingResult.pingTime = result.Val.(time.Time)
+			pingResult.Error = result.Err
+			pingResult.PingTime = result.Val.(time.Time)
 		}
 
 		ticket, err := npc.cond.Acquire(ctx)
@@ -97,7 +103,7 @@ func (npc *nodePingController) run(ctx context.Context) {
 
 		defer ticket.Release()
 		npc.result = &pingResult
-		span.SetStatus(pingResult.error)
+		span.SetStatus(pingResult.Error)
 		npc.cond.Broadcast()
 	}
 
@@ -107,8 +113,8 @@ func (npc *nodePingController) run(ctx context.Context) {
 	wait.UntilWithContext(ctx, checkFunc, npc.pingInterval)
 }
 
-// getResult returns the current ping result in a non-blocking fashion.
-func (npc *nodePingController) getResult(ctx context.Context) (*pingResult, error) {
+// GetResult returns the current ping result in a non-blocking fashion.
+func (npc *nodePingController) GetResult(ctx context.Context) (*PingResult, error) {
 	ticket, err := npc.cond.Acquire(ctx)
 	if err != nil {
 		return nil, err
