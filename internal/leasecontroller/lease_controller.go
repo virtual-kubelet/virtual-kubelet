@@ -211,6 +211,7 @@ func (lc *v1Betav1LeaseController) poll(ctx context.Context) (retErr error) {
 				}
 				goto retry
 			}
+			return err
 		}
 		lc.lease = l
 		return nil
