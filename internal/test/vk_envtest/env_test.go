@@ -70,9 +70,10 @@ func testNodeE2ERun(t *testing.T, env *envtest.Environment, withLeases bool) {
 
 	sl := logrus.StandardLogger()
 	sl.SetLevel(logrus.DebugLevel)
+	logger := logruslogger.FromLogrus(sl.WithField("test", t.Name()))
+	ctx = log.WithLogger(ctx, logger)
+	log.L = logger
 	klogv2.SetLogger(logrusr.NewLogger(sl))
-	newLogger := logruslogger.FromLogrus(logrus.NewEntry(sl))
-	ctx = log.WithLogger(ctx, newLogger)
 
 	clientset, err := kubernetes.NewForConfig(env.Config)
 	assert.NilError(t, err)
