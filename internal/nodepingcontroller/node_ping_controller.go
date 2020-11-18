@@ -63,10 +63,14 @@ func (npc *nodePingController) Run(ctx context.Context) {
 
 	mkContextFunc := context.WithCancel
 
+	l := log.G(ctx).WithField("pingInterval", npc.pingInterval)
 	if npc.pingTimeout != nil {
+		l.WithField("pingTimeout", *npc.pingTimeout).Info("Starting node ping controller with ping timeout")
 		mkContextFunc = func(ctx2 context.Context) (context.Context, context.CancelFunc) {
 			return context.WithTimeout(ctx2, *npc.pingTimeout)
 		}
+	} else {
+		l.Info("Starting node ping controller with no ping timeout")
 	}
 
 	checkFunc := func(ctx context.Context) {

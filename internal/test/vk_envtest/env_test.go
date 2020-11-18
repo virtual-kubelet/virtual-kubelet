@@ -8,6 +8,8 @@ import (
 	"testing"
 	"time"
 
+	is "gotest.tools/assert/cmp"
+
 	"github.com/bombsimon/logrusr"
 	"github.com/sirupsen/logrus"
 	"github.com/virtual-kubelet/virtual-kubelet/log"

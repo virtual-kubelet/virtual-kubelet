@@ -16,6 +16,7 @@ package node
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"sync"
 	"testing"
@@ -28,8 +29,11 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/util/uuid"
 	watch "k8s.io/apimachinery/pkg/watch"
 	testclient "k8s.io/client-go/kubernetes/fake"
+	ktesting "k8s.io/client-go/testing"
 	"k8s.io/client-go/util/retry"
 )
 
@@ -43,7 +47,18 @@ func testNodeRun(t *testing.T, enableLease bool) {
 	defer cancel()
 
 	c := testclient.NewSimpleClientset()
+	c.PrependReactor("create", "leases", func(action ktesting.Action) (handled bool, ret runtime.Object, err error) {
+		updateAction := action.(ktesting.CreateAction)
+		obj := updateAction.GetObject()
+		switch lease := obj.(type) {
+		case *coord.Lease:
+			lease.UID = uuid.NewUUID()
+		default:
+			panic(fmt.Sprintf("Unknown object type: %T", lease))
+		}
 
+		return false, nil, nil
+	})
 	testP := &testNodeProvider{NodeProvider: &NaiveNodeProvider{}}
 
 	nodes := c.CoreV1().Nodes()
@@ -224,23 +239,6 @@ func TestNodeCustomUpdateStatusErrorHandler(t *testing.T) {
 	}
 }
 
-func TestEnsureLease(t *testing.T) {
-	c := testclient.NewSimpleClientset().CoordinationV1beta1().Leases(corev1.NamespaceNodeLease)
-	n := testNode(t)
-	ctx := context.Background()
-
-	lease := newLease(ctx, nil, n, 1*time.Second)
-
-	l1, err := ensureLease(ctx, c, lease.DeepCopy())
-	assert.NilError(t, err)
-	assert.Check(t, timeEqual(l1.Spec.RenewTime.Time, lease.Spec.RenewTime.Time))
-
-	l1.Spec.RenewTime.Time = time.Now().Add(1 * time.Second)
-	l2, err := ensureLease(ctx, c, l1.DeepCopy())
-	assert.NilError(t, err)
-	assert.Check(t, timeEqual(l2.Spec.RenewTime.Time, l1.Spec.RenewTime.Time))
-}
-
 func TestUpdateNodeStatus(t *testing.T) {
 	n := testNode(t)
 	n.Status.Conditions = append(n.Status.Conditions, corev1.NodeCondition{
@@ -275,53 +273,6 @@ func TestUpdateNodeStatus(t *testing.T) {
 
 	_, err = updateNodeStatus(ctx, nodes, updated.DeepCopy())
 	assert.Equal(t, errors.IsNotFound(err), true, err)
-}
-
-func TestUpdateNodeLease(t *testing.T) {
-	ctx := context.Background()
-
-	leases := testclient.NewSimpleClientset().CoordinationV1beta1().Leases(corev1.NamespaceNodeLease)
-	n := testNode(t)
-
-	lease := newLease(ctx, nil, n, time.Duration(0))
-
-	l, err := updateNodeLease(ctx, leases, lease)
-	assert.NilError(t, err)
-	assert.Equal(t, l.Name, lease.Name)
-	assert.Assert(t, cmp.DeepEqual(l.Spec.HolderIdentity, lease.Spec.HolderIdentity))
-
-	compare, err := leases.Get(ctx, l.Name, emptyGetOptions)
-	assert.NilError(t, err)
-	assert.Equal(t, l.Spec.RenewTime.Time.Unix(), compare.Spec.RenewTime.Time.Unix())
-	assert.Equal(t, compare.Name, lease.Name)
-	assert.Assert(t, cmp.DeepEqual(compare.Spec.HolderIdentity, lease.Spec.HolderIdentity))
-
-	l.Spec.RenewTime.Time = time.Now().Add(10 * time.Second)
-
-	compare, err = updateNodeLease(ctx, leases, l.DeepCopy())
-	assert.NilError(t, err)
-	assert.Equal(t, compare.Spec.RenewTime.Time.Unix(), l.Spec.RenewTime.Time.Unix())
-	assert.Equal(t, compare.Name, lease.Name)
-	assert.Assert(t, cmp.DeepEqual(compare.Spec.HolderIdentity, lease.Spec.HolderIdentity))
-}
-
-func TestFixNodeLeaseReferences(t *testing.T) {
-	ctx := context.Background()
-	n := testNode(t)
-
-	lease1 := newLease(ctx, nil, n, time.Second)
-	// Let's break owner references
-	lease1.OwnerReferences = nil
-	time.Sleep(2 * time.Nanosecond)
-	lease2 := newLease(ctx, lease1, n, time.Second)
-
-	// Make sure that newLease actually did its jobs
-	assert.Assert(t, lease2.Spec.RenewTime.Nanosecond() > lease1.Spec.RenewTime.Nanosecond())
-
-	// Let's check if owner references got set
-	assert.Assert(t, is.Len(lease2.OwnerReferences, 1))
-	assert.Assert(t, is.Equal(lease2.OwnerReferences[0].UID, n.UID))
-	assert.Assert(t, is.Equal(lease2.OwnerReferences[0].Name, n.Name))
 }
 
 // TestPingAfterStatusUpdate checks that Ping continues to be called with the specified interval
@@ -781,15 +732,6 @@ func before(x, y time.Time) cmp.Comparison {
 			return cmp.ResultSuccess
 		}
 		return cmp.ResultFailureTemplate(failTemplate(">="), map[string]interface{}{"x": x, "y": y})
-	}
-}
-
-func timeEqual(x, y time.Time) cmp.Comparison {
-	return func() cmp.Result {
-		if x.Equal(y) {
-			return cmp.ResultSuccess
-		}
-		return cmp.ResultFailureTemplate(failTemplate("!="), map[string]interface{}{"x": x, "y": y})
 	}
 }
 
