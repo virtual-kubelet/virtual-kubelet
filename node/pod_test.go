@@ -16,6 +16,8 @@ package node
 
 import (
 	"context"
+	"fmt"
+	"sync"
 	"testing"
 	"time"
 
@@ -23,6 +25,7 @@ import (
 	"gotest.tools/assert"
 	is "gotest.tools/assert/cmp"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kubeinformers "k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes/fake"
@@ -52,6 +55,7 @@ func newTestController() *TestController {
 			podStatusQ:      workqueue.NewRateLimitingQueue(workqueue.DefaultControllerRateLimiter()),
 			done:            make(chan struct{}),
 			ready:           make(chan struct{}),
+			knownPods:       sync.Map{},
 			podsInformer:    iFactory.Core().V1().Pods(),
 			podsLister:      iFactory.Core().V1().Pods().Lister(),
 		},
@@ -240,6 +244,71 @@ func TestPodNoSpecChange(t *testing.T) {
 	// createOrUpdate didn't call CreatePod or UpdatePod, spec didn't change
 	assert.Check(t, is.Equal(svr.mock.creates.read(), 1))
 	assert.Check(t, is.Equal(svr.mock.updates.read(), 0))
+}
+
+func TestPodStatusDelete(t *testing.T) {
+	ctx := context.Background()
+	c := newTestController()
+	pod := &corev1.Pod{}
+	pod.ObjectMeta.Namespace = "default"
+	pod.ObjectMeta.Name = "nginx"
+	pod.Spec = newPodSpec()
+	fk8s := fake.NewSimpleClientset(pod)
+	c.client = fk8s
+	c.PodController.client = fk8s.CoreV1()
+	podCopy := pod.DeepCopy()
+	deleteTime := v1.Time{Time: time.Now().Add(30 * time.Second)}
+	podCopy.DeletionTimestamp = &deleteTime
+	key := fmt.Sprintf("%s/%s", pod.Namespace, pod.Name)
+	c.knownPods.Store(key, &knownPod{lastPodStatusReceivedFromProvider: podCopy})
+
+	// test pod in provider delete
+	err := c.updatePodStatus(ctx, pod, key)
+	if err != nil {
+		t.Fatal("pod updated failed")
+	}
+	newPod, err := c.client.CoreV1().Pods(pod.Namespace).Get(ctx, pod.Name, v1.GetOptions{})
+	if err != nil && !errors.IsNotFound(err) {
+		t.Fatalf("Get pod %v failed", key)
+	}
+	if newPod != nil && newPod.DeletionTimestamp == nil {
+		t.Fatalf("Pod %v delete failed", key)
+	}
+	t.Logf("pod delete success")
+
+	// test pod in provider delete
+	pod.DeletionTimestamp = &deleteTime
+	if _, err = c.client.CoreV1().Pods(pod.Namespace).Create(ctx, pod, v1.CreateOptions{}); err != nil {
+		t.Fatal("Parepare pod in k8s failed")
+	}
+	podCopy.Status.ContainerStatuses = []corev1.ContainerStatus{
+		{
+			State: corev1.ContainerState{
+				Waiting: nil,
+				Running: nil,
+				Terminated: &corev1.ContainerStateTerminated{
+					ExitCode: 1,
+					Message:  "Exit",
+				},
+			},
+		},
+	}
+	c.knownPods.Store(key, &knownPod{lastPodStatusReceivedFromProvider: podCopy})
+	err = c.updatePodStatus(ctx, pod, key)
+	if err != nil {
+		t.Fatalf("pod updated failed %v", err)
+	}
+	newPod, err = c.client.CoreV1().Pods(pod.Namespace).Get(ctx, pod.Name, v1.GetOptions{})
+	if err != nil && !errors.IsNotFound(err) {
+		t.Fatalf("Get pod %v failed", key)
+	}
+	if newPod.DeletionTimestamp == nil {
+		t.Fatalf("Pod %v delete failed", key)
+	}
+	if newPod.Status.ContainerStatuses[0].State.Terminated == nil {
+		t.Fatalf("Pod status %v update failed", key)
+	}
+	t.Logf("pod updated, container status: %+v, pod delete Time: %v", newPod.Status.ContainerStatuses[0].State.Terminated, newPod.DeletionTimestamp)
 }
 
 func newPodSpec() corev1.PodSpec {
