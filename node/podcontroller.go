@@ -629,7 +629,6 @@ func (pc *PodController) deleteDanglingPods(ctx context.Context, threadiness int
 
 	// Wait for all pods to be deleted.
 	wg.Wait()
-	return
 }
 
 // loggablePodName returns the "namespace/name" key for the specified pod.

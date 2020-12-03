@@ -47,7 +47,6 @@ func NewCommand(s *provider.Store) *cobra.Command {
 				}
 				fmt.Fprintln(cmd.OutOrStdout(), args[0])
 			}
-			return
 		},
 	}
 }

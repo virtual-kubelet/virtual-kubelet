@@ -108,7 +108,7 @@ func populateContainerEnvironment(ctx context.Context, pod *corev1.Pod, containe
 	// https://github.com/kubernetes/kubernetes/blob/v1.13.1/pkg/kubelet/kubelet_pods.go#L557-L558
 	container.EnvFrom = []corev1.EnvFromSource{}
 
-	res := make([]corev1.EnvVar, 0)
+	res := make([]corev1.EnvVar, 0, len(tmpEnv))
 
 	for key, val := range tmpEnv {
 		res = append(res, corev1.EnvVar{
@@ -171,7 +171,7 @@ func getServiceEnvVarMap(rm *manager.ResourceManager, ns string, enableServiceLi
 // makeEnvironmentMapBasedOnEnvFrom returns a map representing the resolved environment of the specified container after being populated from the entries in the ".envFrom" field.
 func makeEnvironmentMapBasedOnEnvFrom(ctx context.Context, pod *corev1.Pod, container *corev1.Container, rm *manager.ResourceManager, recorder record.EventRecorder) (map[string]string, error) {
 	// Create a map to hold the resulting environment.
-	res := make(map[string]string, 0)
+	res := make(map[string]string)
 	// Iterate over "envFrom" references in order to populate the environment.
 loop:
 	for _, envFrom := range container.EnvFrom {

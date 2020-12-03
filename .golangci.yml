@@ -3,7 +3,6 @@ linter-settings:
     line-length: 200
 
 linters:
-  disable-all: true
   enable:
     - errcheck
     - govet
