@@ -72,16 +72,14 @@ func TestMonitorMultipleVersions(t *testing.T) {
 		defer lock.Unlock()
 		subscription := mv.Subscribe()
 		for {
-			select {
-			case <-subscription.NewValueReady():
-				val := subscription.Value()
-				triggers = append(triggers, val.Value.(int))
-				ch <- struct{}{}
-				if val.Value == 9 {
-					return
-				}
+			// Lint is wrong, we need to call the function each time to get a fresh channel.
+			<-subscription.NewValueReady()
+			val := subscription.Value()
+			triggers = append(triggers, val.Value.(int))
+			ch <- struct{}{}
+			if val.Value == 9 {
+				return
 			}
-
 		}
 	}()
 
