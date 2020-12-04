@@ -2,9 +2,9 @@ package node
 
 import (
 	"context"
-	"sync"
 	"time"
 
+	"github.com/virtual-kubelet/virtual-kubelet/internal/lock"
 	"github.com/virtual-kubelet/virtual-kubelet/log"
 	"github.com/virtual-kubelet/virtual-kubelet/trace"
 	"golang.org/x/sync/singleflight"
@@ -12,14 +12,10 @@ import (
 )
 
 type nodePingController struct {
-	nodeProvider       NodeProvider
-	pingInterval       time.Duration
-	firstPingCompleted chan struct{}
-	pingTimeout        *time.Duration
-
-	// "Results"
-	sync.Mutex
-	result *pingResult
+	nodeProvider NodeProvider
+	pingInterval time.Duration
+	pingTimeout  *time.Duration
+	cond         lock.MonitorVariable
 }
 
 type pingResult struct {
@@ -37,10 +33,10 @@ func newNodePingController(node NodeProvider, pingInterval time.Duration, timeou
 	}
 
 	return &nodePingController{
-		nodeProvider:       node,
-		pingInterval:       pingInterval,
-		firstPingCompleted: make(chan struct{}),
-		pingTimeout:        timeout,
+		nodeProvider: node,
+		pingInterval: pingInterval,
+		pingTimeout:  timeout,
+		cond:         lock.NewMonitorVariable(),
 	}
 }
 
@@ -87,28 +83,26 @@ func (npc *nodePingController) run(ctx context.Context) {
 			pingResult.pingTime = result.Val.(time.Time)
 		}
 
-		npc.Lock()
-		defer npc.Unlock()
-		npc.result = &pingResult
+		npc.cond.Set(&pingResult)
 		span.SetStatus(pingResult.error)
 	}
 
 	// Run the first check manually
 	checkFunc(ctx)
 
-	close(npc.firstPingCompleted)
-
 	wait.UntilWithContext(ctx, checkFunc, npc.pingInterval)
 }
 
+// getResult returns the current ping result in a non-blocking fashion except for the first ping. It waits for the
+// first ping to be successful before returning. If the context is cancelled while waiting for that value, it will
+// return immediately.
 func (npc *nodePingController) getResult(ctx context.Context) (*pingResult, error) {
+	sub := npc.cond.Subscribe()
 	select {
 	case <-ctx.Done():
 		return nil, ctx.Err()
-	case <-npc.firstPingCompleted:
+	case <-sub.NewValueReady():
 	}
 
-	npc.Lock()
-	defer npc.Unlock()
-	return npc.result, nil
+	return sub.Value().Value.(*pingResult), nil
 }
