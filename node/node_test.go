@@ -250,13 +250,13 @@ func TestUpdateNodeStatus(t *testing.T) {
 	nodes := testclient.NewSimpleClientset().CoreV1().Nodes()
 
 	ctx := context.Background()
-	updated, err := updateNodeStatus(ctx, nodes, n.DeepCopy())
+	_, err := updateNodeStatus(ctx, nodes, n.DeepCopy())
 	assert.Equal(t, errors.IsNotFound(err), true, err)
 
 	_, err = nodes.Create(ctx, n, metav1.CreateOptions{})
 	assert.NilError(t, err)
 
-	updated, err = updateNodeStatus(ctx, nodes, n.DeepCopy())
+	updated, err := updateNodeStatus(ctx, nodes, n.DeepCopy())
 	assert.NilError(t, err)
 
 	assert.NilError(t, err)
@@ -382,16 +382,11 @@ func TestPingAfterStatusUpdate(t *testing.T) {
 	}
 
 	notifyTimer := time.After(interval * time.Duration(10))
-	select {
-	case <-notifyTimer:
-		testP.triggerStatusUpdate(testNodeCopy)
-	}
+	<-notifyTimer
+	testP.triggerStatusUpdate(testNodeCopy)
 
 	endTimer := time.After(interval * time.Duration(10))
-	select {
-	case <-endTimer:
-		break
-	}
+	<-endTimer
 
 	testP.maxPingIntervalLock.Lock()
 	defer testP.maxPingIntervalLock.Unlock()
@@ -445,10 +440,7 @@ func TestBeforeAnnotationsPreserved(t *testing.T) {
 
 	t.Log("Waiting for node to exist")
 	assert.NilError(t, <-waitForEvent(ctx, nr, func(e watch.Event) bool {
-		if e.Object == nil {
-			return false
-		}
-		return true
+		return e.Object != nil
 	}))
 
 	testP.notifyNodeStatus(&corev1.Node{
@@ -519,10 +511,7 @@ func TestManualConditionsPreserved(t *testing.T) {
 			return false
 		}
 		receivedNode := e.Object.(*corev1.Node)
-		if len(receivedNode.Status.Conditions) != 0 {
-			return false
-		}
-		return true
+		return len(receivedNode.Status.Conditions) == 0
 	}))
 
 	newNode, err := nodes.Get(ctx, testNodeCopy.Name, emptyGetOptions)

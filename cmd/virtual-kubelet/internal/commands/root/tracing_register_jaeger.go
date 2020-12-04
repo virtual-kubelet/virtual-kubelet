@@ -40,7 +40,7 @@ func NewJaegerExporter(opts TracingExporterOptions) (trace.Exporter, error) {
 		},
 	}
 
-	if jOpts.Endpoint == "" && jOpts.AgentEndpoint == "" {
+	if jOpts.Endpoint == "" && jOpts.AgentEndpoint == "" { // nolint:staticcheck
 		return nil, errors.New("Must specify either JAEGER_ENDPOINT or JAEGER_AGENT_ENDPOINT")
 	}
 

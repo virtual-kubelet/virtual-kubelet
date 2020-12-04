@@ -329,7 +329,7 @@ func (p *MockProvider) GetPods(ctx context.Context) ([]*v1.Pod, error) {
 }
 
 func (p *MockProvider) ConfigureNode(ctx context.Context, n *v1.Node) {
-	ctx, span := trace.StartSpan(ctx, "mock.ConfigureNode") //nolint:ineffassign
+	ctx, span := trace.StartSpan(ctx, "mock.ConfigureNode") // nolint:staticcheck,ineffassign
 	defer span.End()
 
 	n.Status.Capacity = p.capacity()
@@ -429,7 +429,7 @@ func (p *MockProvider) nodeDaemonEndpoints() v1.NodeDaemonEndpoints {
 // GetStatsSummary returns dummy stats for all pods known by this provider.
 func (p *MockProvider) GetStatsSummary(ctx context.Context) (*stats.Summary, error) {
 	var span trace.Span
-	ctx, span = trace.StartSpan(ctx, "GetStatsSummary") //nolint: ineffassign
+	ctx, span = trace.StartSpan(ctx, "GetStatsSummary") //nolint: ineffassign,staticcheck
 	defer span.End()
 
 	// Grab the current timestamp so we can report it as the time the stats were generated.
