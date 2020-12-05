@@ -49,9 +49,6 @@ type TermSize struct {
 	Height uint16
 }
 
-// HandleContainerExec makes an http handler func from a Provider which execs a command in a pod's container
-// Note that this handler currently depends on gorrilla/mux to get url parts as variables.
-// TODO(@cpuguy83): don't force gorilla/mux on consumers of this function
 // ContainerExecHandlerConfig is used to pass options to options to the container exec handler.
 type ContainerExecHandlerConfig struct {
 	// StreamIdleTimeout is the maximum time a streaming connection
@@ -72,7 +69,7 @@ func WithExecStreamIdleTimeout(dur time.Duration) ContainerExecHandlerOption {
 	}
 }
 
-// WithExecStreamIdleTimeout sets the idle timeout for a container exec stream
+// WithExecStreamCreationTimeout sets the creation timeout for a container exec stream
 func WithExecStreamCreationTimeout(dur time.Duration) ContainerExecHandlerOption {
 	return func(cfg *ContainerExecHandlerConfig) {
 		cfg.StreamCreationTimeout = dur

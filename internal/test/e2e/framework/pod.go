@@ -183,7 +183,7 @@ func (f *Framework) GetRunningPodsFromProvider(ctx context.Context) (*corev1.Pod
 	return result, err
 }
 
-// GetRunningPodsFromProvider gets the running pods from the provider of the virtual kubelet
+// GetRunningPodsFromKubernetes gets the running pods from the provider of the virtual kubelet
 func (f *Framework) GetRunningPodsFromKubernetes(ctx context.Context) (*corev1.PodList, error) {
 	result := &corev1.PodList{}
 

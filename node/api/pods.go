@@ -24,9 +24,9 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 )
 
-type PodListerFunc func(context.Context) ([]*v1.Pod, error)
+type PodListerFunc func(context.Context) ([]*v1.Pod, error) // nolint:golint
 
-func HandleRunningPods(getPods PodListerFunc) http.HandlerFunc {
+func HandleRunningPods(getPods PodListerFunc) http.HandlerFunc { // nolint:golint
 	if getPods == nil {
 		return NotImplemented
 	}

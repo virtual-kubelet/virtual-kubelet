@@ -19,7 +19,7 @@ import (
 	"go.opencensus.io/trace"
 )
 
-type TracingExporterOptions struct {
+type TracingExporterOptions struct { // nolint: golint
 	Tags        map[string]string
 	ServiceName string
 }
