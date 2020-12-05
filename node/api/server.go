@@ -33,7 +33,7 @@ type ServeMux interface {
 	Handle(path string, h http.Handler)
 }
 
-type PodHandlerConfig struct {
+type PodHandlerConfig struct { // nolint:golint
 	RunInContainer   ContainerExecHandlerFunc
 	GetContainerLogs ContainerLogsHandlerFunc
 	// GetPods is meant to enumerate the pods that the provider knows about

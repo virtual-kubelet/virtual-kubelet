@@ -31,6 +31,8 @@ type Subscription interface {
 	Value() Value
 }
 
+// Value contains the last set value from Set(). If the value is unset the version will be 0, and the value will be
+// nil.
 type Value struct {
 	Value   interface{}
 	Version int64

@@ -328,7 +328,7 @@ func (p *MockProvider) GetPods(ctx context.Context) ([]*v1.Pod, error) {
 	return pods, nil
 }
 
-func (p *MockProvider) ConfigureNode(ctx context.Context, n *v1.Node) {
+func (p *MockProvider) ConfigureNode(ctx context.Context, n *v1.Node) { // nolint:golint
 	ctx, span := trace.StartSpan(ctx, "mock.ConfigureNode") // nolint:staticcheck,ineffassign
 	defer span.End()
 
