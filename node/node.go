@@ -96,7 +96,7 @@ func NewNodeController(p NodeProvider, node *corev1.Node, nodes v1.NodeInterface
 }
 
 // NodeControllerOpt are the functional options used for configuring a node
-type NodeControllerOpt func(*NodeController) error // nolint: golint
+type NodeControllerOpt func(*NodeController) error
 
 // WithNodeEnableLeaseV1Beta1 enables support for v1beta1 leases.
 // If client is nil, leases will not be enabled.
@@ -174,7 +174,7 @@ type ErrorHandler func(context.Context, error) error
 // NodeController deals with creating and managing a node object in Kubernetes.
 // It can register a node with Kubernetes and periodically update its status.
 // NodeController manages a single node entity.
-type NodeController struct { // nolint: golint
+type NodeController struct {
 	p NodeProvider
 
 	// serverNode should only be written to on initialization, or as the result of node creation.
