@@ -15,8 +15,69 @@
 package opencensus
 
 import (
+	"context"
+	"errors"
+	"sync"
+	"testing"
+
+	"github.com/virtual-kubelet/virtual-kubelet/log"
 	"github.com/virtual-kubelet/virtual-kubelet/trace"
+	octrace "go.opencensus.io/trace"
+	"gotest.tools/assert"
+	is "gotest.tools/assert/cmp"
 )
 
 // ensure that Adapter implements trace.Tracer
 var _ trace.Tracer = (*Adapter)(nil)
+
+type fakeExporter struct {
+	sync.Mutex
+	spans []*octrace.SpanData
+}
+
+func (f *fakeExporter) ExportSpan(s *octrace.SpanData) {
+	f.Lock()
+	defer f.Unlock()
+	f.spans = append(f.spans, s)
+}
+
+func TestOpencensus(t *testing.T) {
+	t.Run("addField", setupTest(testAddField))
+}
+
+func setupTest(f func(t *testing.T, exporter *fakeExporter, l *logger, span *octrace.Span)) func(t *testing.T) {
+	return func(t *testing.T) {
+		fe := &fakeExporter{}
+		octrace.RegisterExporter(fe)
+		defer octrace.UnregisterExporter(fe)
+		ctx := context.Background()
+		_, span := octrace.StartSpan(ctx, t.Name(), octrace.WithSampler(octrace.AlwaysSample()))
+		l := &logger{
+			s: span,
+			l: log.L,
+			a: []octrace.Attribute{},
+		}
+		f(t, fe, l, span)
+	}
+}
+
+func testAddField(t *testing.T, exporter *fakeExporter, l *logger, span *octrace.Span) {
+	assert.Assert(t, l.s.IsRecordingEvents())
+	tmpErr := errors.New("test")
+	assert.Assert(t, l.s.IsRecordingEvents())
+	l.WithField("key", "value").
+		WithError(tmpErr).
+		WithFields(map[string]interface{}{"test1": "value1", "test2": "value2"}).
+		Info()
+	span.End()
+
+	assert.Assert(t,
+		is.DeepEqual(exporter.spans[0].Annotations[0].Attributes,
+			map[string]interface{}{
+				"key":   "value",
+				"test1": "value1",
+				"test2": "value2",
+				"err":   "test",
+				"level": "INFO",
+			}))
+}
