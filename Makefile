@@ -192,3 +192,7 @@ envtest: kubebuilder_2.3.1_${TEST_OS}_${TEST_ARCH}
 .PHONY: fmt
 fmt:
 	goimports -w $(shell go list -f '{{.Dir}}' ./...)
+
+.PHONY: lint
+lint: $(gobin_tool)
+	gobin -run github.com/golangci/golangci-lint/cmd/golangci-lint@v1.33.0 run ./...
