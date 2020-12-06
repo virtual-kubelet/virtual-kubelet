@@ -24,17 +24,7 @@ func ClientsetFromEnv(kubeConfigPath string) (*kubernetes.Clientset, error) {
 	)
 
 	if kubeConfigPath != "" {
-		_, err = os.Stat(kubeConfigPath)
-		if err == nil {
-			config, err = clientcmd.NewNonInteractiveDeferredLoadingClientConfig(
-				&clientcmd.ClientConfigLoadingRules{ExplicitPath: kubeConfigPath},
-				&clientcmd.ConfigOverrides{},
-			).ClientConfig()
-		} else if os.IsNotExist(err) {
-			config, err = rest.InClusterConfig()
-		} else {
-			return nil, err
-		}
+		config, err = clientsetFromEnvKubeConfigPath(kubeConfigPath)
 	} else {
 		config, err = rest.InClusterConfig()
 	}
@@ -44,6 +34,20 @@ func ClientsetFromEnv(kubeConfigPath string) (*kubernetes.Clientset, error) {
 	}
 
 	return kubernetes.NewForConfig(config)
+}
+
+func clientsetFromEnvKubeConfigPath(kubeConfigPath string) (*rest.Config, error) {
+	_, err := os.Stat(kubeConfigPath)
+	if os.IsNotExist(err) {
+		return rest.InClusterConfig()
+	}
+	if err != nil {
+		return nil, err
+	}
+	return clientcmd.NewNonInteractiveDeferredLoadingClientConfig(
+		&clientcmd.ClientConfigLoadingRules{ExplicitPath: kubeConfigPath},
+		&clientcmd.ConfigOverrides{},
+	).ClientConfig()
 }
 
 // PodInformerFilter is a filter that you should use when creating a pod informer for use with the pod controller.

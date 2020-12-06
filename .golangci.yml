@@ -15,6 +15,7 @@ linters:
     - deadcode
     - misspell
     - nolintlint
+    - gocritic
 
 issues:
   exclude-use-default: false

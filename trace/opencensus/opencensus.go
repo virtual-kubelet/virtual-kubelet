@@ -213,9 +213,9 @@ func (l *logger) WithError(err error) log.Logger {
 
 	var a []octrace.Attribute
 	if l.s.IsRecordingEvents() {
-		a = make([]octrace.Attribute, len(l.a), len(l.a)+1)
+		a = make([]octrace.Attribute, len(l.a)+1)
 		copy(a, l.a)
-		a = append(l.a, makeAttribute("err", err))
+		a[len(a)-1] = makeAttribute("err", err)
 	}
 
 	return &logger{s: l.s, l: log, a: a}
@@ -227,9 +227,9 @@ func (l *logger) WithField(k string, value interface{}) log.Logger {
 	var a []octrace.Attribute
 
 	if l.s.IsRecordingEvents() {
-		a = make([]octrace.Attribute, len(l.a), len(l.a)+1)
+		a = make([]octrace.Attribute, len(l.a)+1)
 		copy(a, l.a)
-		a = append(a, makeAttribute(k, value))
+		a[len(a)-1] = makeAttribute(k, value)
 	}
 
 	return &logger{s: l.s, a: a, l: log}
