@@ -42,7 +42,7 @@ var (
 */
 
 // MockProvider implements the virtual-kubelet provider interface and stores pods in memory.
-type MockProvider struct {
+type MockProvider struct { // nolint:golint
 	nodeName           string
 	operatingSystem    string
 	internalIP         string
@@ -54,7 +54,7 @@ type MockProvider struct {
 }
 
 // MockConfig contains a mock virtual-kubelet's configurable parameters.
-type MockConfig struct {
+type MockConfig struct { // nolint:golint
 	CPU    string `json:"cpu,omitempty"`
 	Memory string `json:"memory,omitempty"`
 	Pods   string `json:"pods,omitempty"`
