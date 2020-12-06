@@ -10,15 +10,15 @@ import (
 	is "gotest.tools/assert/cmp"
 )
 
-//func parseLogOptions(q url.Values) (opts ContainerLogOpts, err error)
+// func parseLogOptions(q url.Values) (opts ContainerLogOpts, err error)
 func TestParseLogOptions(t *testing.T) {
-	//tailLines
-	//follow
-	//limitBytes
-	//previous
-	//sinceSeconds
-	//sinceTime
-	//timestamps
+	// tailLines
+	// follow
+	// limitBytes
+	// previous
+	// sinceSeconds
+	// sinceTime
+	// timestamps
 	sinceTime, _ := time.Parse(time.RFC3339, "2020-03-20T21:07:34Z")
 	fmt.Printf("%+v\n", sinceTime)
 	testCases := []struct {

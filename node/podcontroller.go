@@ -303,10 +303,9 @@ func (pc *PodController) Run(ctx context.Context, podSyncWorkers int) (retErr er
 			// At this point we know that something in .metadata or .spec has changed, so we must proceed to sync the pod.
 			if key, err := cache.MetaNamespaceKeyFunc(newPod); err != nil {
 				log.G(ctx).Error(err)
-			} else {
-				if podShouldEnqueue(oldPod, newPod) {
-					pc.k8sQ.AddRateLimited(key)
-				}
+			} else if podShouldEnqueue(oldPod, newPod) {
+				pc.k8sQ.AddRateLimited(key)
+
 			}
 		},
 		DeleteFunc: func(pod interface{}) {
