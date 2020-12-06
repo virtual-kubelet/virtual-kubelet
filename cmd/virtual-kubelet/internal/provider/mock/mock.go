@@ -54,7 +54,7 @@ type MockProvider struct {
 }
 
 // MockConfig contains a mock virtual-kubelet's configurable parameters.
-type MockConfig struct { //nolint:golint
+type MockConfig struct {
 	CPU    string `json:"cpu,omitempty"`
 	Memory string `json:"memory,omitempty"`
 	Pods   string `json:"pods,omitempty"`
@@ -62,7 +62,7 @@ type MockConfig struct { //nolint:golint
 
 // NewMockProviderMockConfig creates a new MockV0Provider. Mock legacy provider does not implement the new asynchronous podnotifier interface
 func NewMockProviderMockConfig(config MockConfig, nodeName, operatingSystem string, internalIP string, daemonEndpointPort int32) (*MockProvider, error) {
-	//set defaults
+	// set defaults
 	if config.CPU == "" {
 		config.CPU = defaultCPUCapacity
 	}
