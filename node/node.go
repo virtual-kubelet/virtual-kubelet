@@ -21,6 +21,9 @@ import (
 	"sync"
 	"time"
 
+	coordclientset "k8s.io/client-go/kubernetes/typed/coordination/v1"
+	"k8s.io/utils/clock"
+
 	pkgerrors "github.com/pkg/errors"
 	"github.com/virtual-kubelet/virtual-kubelet/log"
 	"github.com/virtual-kubelet/virtual-kubelet/trace"
@@ -124,6 +127,10 @@ type NodeControllerOpt func(*NodeController) error // nolint:golint
 // To set a custom node status update interval, see WithNodeStatusUpdateInterval().
 func WithNodeEnableLeaseV1Beta1(client v1beta1.LeaseInterface, baseLease *coord.Lease) NodeControllerOpt {
 	return func(n *NodeController) error {
+		if client == nil {
+			return nil
+		}
+
 		if n.leaseControllerProvider != nil {
 			return ErrConflictingLeaseControllerConfiguration
 		}
@@ -133,6 +140,57 @@ func WithNodeEnableLeaseV1Beta1(client v1beta1.LeaseInterface, baseLease *coord.
 				client,
 				baseLease,
 				leaseRenewalInterval,
+				n.nodePingController.getResult,
+				n.getServerNode)
+		}
+
+		return nil
+	}
+}
+
+// WithNodeEnableLeaseV1 enables support for v1 leases.
+// V1 Leases share all the same properties as v1beta1 leases, except they do not fallback like
+// the v1beta1 lease controller does if the API server does not support it.
+// If client is nil, leases will not be enabled.
+func WithNodeEnableLeaseV1(client coordclientset.LeaseInterface, leaseDurationSeconds int32) NodeControllerOpt {
+	return func(n *NodeController) error {
+		if client == nil {
+			return nil
+		}
+
+		if n.leaseControllerProvider != nil {
+			return ErrConflictingLeaseControllerConfiguration
+		}
+
+		n.leaseControllerProvider = func(leaseRenewalInterval time.Duration) leaseController {
+			return newController(
+				&clock.RealClock{},
+				client,
+				leaseDurationSeconds,
+				n.nodePingController.getResult,
+				n.getServerNode)
+		}
+
+		return nil
+	}
+}
+
+// WithNodeEnableLeaseV1WithRenewInterval enabled support for v1 leases, and sets a specific renew interval as
+// opposed to the standard 0.25 * leaseDurationSeconds
+//
+// Otherwise,
+func WithNodeEnableLeaseV1WithRenewInterval(client coordclientset.LeaseInterface, leaseDurationSeconds int32, interval time.Duration) NodeControllerOpt {
+	return func(n *NodeController) error {
+		if n.leaseControllerProvider != nil {
+			return ErrConflictingLeaseControllerConfiguration
+		}
+
+		n.leaseControllerProvider = func(leaseRenewalInterval time.Duration) leaseController {
+			return newControllerWithRenewInterval(
+				&clock.RealClock{},
+				client,
+				leaseDurationSeconds,
+				interval,
 				n.nodePingController.getResult,
 				n.getServerNode)
 		}
@@ -257,6 +315,7 @@ func (n *NodeController) Run(ctx context.Context) error {
 	}
 
 	if n.leaseController != nil {
+		log.G(ctx).WithField("leaseController", n.leaseController).Debug("Starting leasecontroller")
 		n.group.StartWithContext(ctx, n.leaseController.run)
 	}
 
