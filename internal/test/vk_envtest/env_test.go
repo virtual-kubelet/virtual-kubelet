@@ -24,6 +24,14 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 )
 
+type withLease int
+
+const (
+	leasenone = iota
+	leasev1beta1
+	leasev1
+)
+
 var enableEnvTest = flag.Bool("envtest", false, "Enable envtest based tests")
 
 func TestMain(m *testing.M) {
@@ -49,10 +57,13 @@ func TestEnvtest(t *testing.T) {
 
 	t.Log("Env test environment ready")
 	t.Run("E2ERunWithoutLeases", func(t *testing.T) {
-		testNodeE2ERun(t, env, false)
+		testNodeE2ERun(t, env, leasenone)
 	})
 	t.Run("E2ERunWithLeases", func(t *testing.T) {
-		testNodeE2ERun(t, env, true)
+		testNodeE2ERun(t, env, leasev1beta1)
+	})
+	t.Run("E2ERunWithV1Leases", func(t *testing.T) {
+		testNodeE2ERun(t, env, leasev1)
 	})
 }
 
@@ -64,7 +75,7 @@ func nodeNameForTest(t *testing.T) string {
 	return name
 }
 
-func testNodeE2ERun(t *testing.T, env *envtest.Environment, withLeases bool) {
+func testNodeE2ERun(t *testing.T, env *envtest.Environment, leaseType withLease) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -93,9 +104,14 @@ func testNodeE2ERun(t *testing.T, env *envtest.Environment, withLeases bool) {
 
 	opts := []node.NodeControllerOpt{}
 	leasesClient := clientset.CoordinationV1beta1().Leases(corev1.NamespaceNodeLease)
-	if withLeases {
+	if leaseType == leasev1beta1 {
 		opts = append(opts, node.WithNodeEnableLeaseV1Beta1(leasesClient, nil))
 	}
+	leasesClientV1 := clientset.CoordinationV1().Leases(corev1.NamespaceNodeLease)
+	if leaseType == leasev1 {
+		opts = append(opts, node.WithNodeEnableLeaseV1(leasesClientV1, 1))
+	}
+
 	node, err := node.NewNodeController(testProvider, testNode, nodes, opts...)
 	assert.NilError(t, err)
 
@@ -129,9 +145,9 @@ func testNodeE2ERun(t *testing.T, env *envtest.Environment, withLeases bool) {
 	t.Fatal("Node never found")
 
 node_found:
-	if withLeases {
+	if leaseType == leasev1 || leaseType == leasev1beta1 {
 		for time.Since(now) < time.Minute*5 {
-			l, err := leasesClient.Get(ctx, testNodeCopy.Name, metav1.GetOptions{})
+			l, err := leasesClientV1.Get(ctx, testNodeCopy.Name, metav1.GetOptions{})
 			if errors.IsNotFound(err) {
 				continue
 			}
