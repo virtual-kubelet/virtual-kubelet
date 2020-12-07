@@ -187,7 +187,7 @@ kubebuilder_2.3.1_${TEST_OS}_${TEST_ARCH}: kubebuilder_2.3.1_${TEST_OS}_${TEST_A
 envtest: kubebuilder_2.3.1_${TEST_OS}_${TEST_ARCH}
 	# You can add klog flags for debugging, like: -klog.v=10 -klog.logtostderr
 	# klogv2 flags just wraps our existing logrus.
-	KUBEBUILDER_ASSETS=$(PWD)/kubebuilder_2.3.1_${TEST_OS}_${TEST_ARCH}/bin go test -v ./internal/test/vk_envtest -envtest=true
+	KUBEBUILDER_ASSETS=$(PWD)/kubebuilder_2.3.1_${TEST_OS}_${TEST_ARCH}/bin go test -v -run=TestEnvtest ./node -envtest=true
 
 .PHONY: fmt
 fmt:

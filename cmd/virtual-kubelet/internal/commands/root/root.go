@@ -32,7 +32,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kubeinformers "k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes/scheme"
-	"k8s.io/client-go/kubernetes/typed/coordination/v1beta1"
 	corev1client "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/client-go/tools/record"
 )
@@ -138,18 +137,9 @@ func runRootCommand(ctx context.Context, s *provider.Store, c Opts) error {
 		"watchedNamespace": c.KubeNamespace,
 	}))
 
-	var leaseClient v1beta1.LeaseInterface
-	if c.EnableNodeLease {
-		leaseClient = nodeutil.NodeLeaseV1Beta1Client(client)
-	}
-
 	pNode := NodeFromProvider(ctx, c.NodeName, taint, p, c.Version)
 	np := node.NewNaiveNodeProvider()
-	nodeRunner, err := node.NewNodeController(
-		np,
-		pNode,
-		client.CoreV1().Nodes(),
-		node.WithNodeEnableLeaseV1Beta1(leaseClient, nil),
+	additionalOptions := []node.NodeControllerOpt{
 		node.WithNodeStatusUpdateErrorHandler(func(ctx context.Context, err error) error {
 			if !k8serrors.IsNotFound(err) {
 				return err
@@ -165,6 +155,17 @@ func runRootCommand(ctx context.Context, s *provider.Store, c Opts) error {
 			log.G(ctx).Debug("created new node")
 			return nil
 		}),
+	}
+	if c.EnableNodeLease {
+		leaseClient := nodeutil.NodeLeaseV1Client(client)
+		// 40 seconds is the default lease time in upstream kubelet
+		additionalOptions = append(additionalOptions, node.WithNodeEnableLeaseV1(leaseClient, 40))
+	}
+	nodeRunner, err := node.NewNodeController(
+		np,
+		pNode,
+		client.CoreV1().Nodes(),
+		additionalOptions...,
 	)
 	if err != nil {
 		log.G(ctx).Fatal(err)

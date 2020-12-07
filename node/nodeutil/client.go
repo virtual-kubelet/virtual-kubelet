@@ -9,7 +9,7 @@ import (
 	"k8s.io/apimachinery/pkg/fields"
 	kubeinformers "k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/kubernetes/typed/coordination/v1beta1"
+	coordclientset "k8s.io/client-go/kubernetes/typed/coordination/v1"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 )
@@ -57,9 +57,9 @@ func PodInformerFilter(node string) kubeinformers.SharedInformerOption {
 	})
 }
 
-// NodeLeaseV1Beta1Client creates a v1beta1 Lease client for use with node leases from the passed in client.
+// NodeLeaseV1Client creates a V1 Lease client for use with node leases from the passed in client.
 //
 // Use this with node.WithNodeEnableLeaseV1Beta1 when creating a node controller.
-func NodeLeaseV1Beta1Client(client kubernetes.Interface) v1beta1.LeaseInterface {
-	return client.CoordinationV1beta1().Leases(corev1.NamespaceNodeLease)
+func NodeLeaseV1Client(client kubernetes.Interface) coordclientset.LeaseInterface {
+	return client.CoordinationV1().Leases(corev1.NamespaceNodeLease)
 }

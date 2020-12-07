@@ -11,6 +11,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 )
 
+// nodePingController is responsible for node pinging behaviour
 type nodePingController struct {
 	nodeProvider NodeProvider
 	pingInterval time.Duration
@@ -18,11 +19,15 @@ type nodePingController struct {
 	cond         lock.MonitorVariable
 }
 
+// pingResult encapsulates the result of the last ping. It is the time the ping was started, and the error.
+// If there is a timeout, the error will be context.DeadlineExceeded
 type pingResult struct {
-	pingTime time.Time
-	error    error
+	time  time.Time
+	error error
 }
 
+// newNodePingController creates a new node ping controller. pingInterval must be non-zero. Optionally, a timeout may be specfied on
+// how long to wait for the provider to respond
 func newNodePingController(node NodeProvider, pingInterval time.Duration, timeout *time.Duration) *nodePingController {
 	if pingInterval == 0 {
 		panic("Node ping interval is 0")
@@ -40,7 +45,8 @@ func newNodePingController(node NodeProvider, pingInterval time.Duration, timeou
 	}
 }
 
-func (npc *nodePingController) run(ctx context.Context) {
+// Run runs the controller until context is cancelled
+func (npc *nodePingController) Run(ctx context.Context) {
 	const key = "key"
 	sf := &singleflight.Group{}
 
@@ -80,7 +86,7 @@ func (npc *nodePingController) run(ctx context.Context) {
 			log.G(ctx).WithError(pingResult.error).Warn("Failed to ping node due to context cancellation")
 		case result := <-doChan:
 			pingResult.error = result.Err
-			pingResult.pingTime = result.Val.(time.Time)
+			pingResult.time = result.Val.(time.Time)
 		}
 
 		npc.cond.Set(&pingResult)
@@ -93,7 +99,7 @@ func (npc *nodePingController) run(ctx context.Context) {
 	wait.UntilWithContext(ctx, checkFunc, npc.pingInterval)
 }
 
-// getResult returns the current ping result in a non-blocking fashion except for the first ping. It waits for the
+// GetResult returns the current ping result in a non-blocking fashion except for the first ping. It waits for the
 // first ping to be successful before returning. If the context is cancelled while waiting for that value, it will
 // return immediately.
 func (npc *nodePingController) getResult(ctx context.Context) (*pingResult, error) {

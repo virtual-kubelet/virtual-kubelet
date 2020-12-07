@@ -1,8 +1,7 @@
-package e2e_test
+package node
 
 import (
 	"context"
-	"flag"
 	"os"
 	"strings"
 	"testing"
@@ -12,29 +11,15 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/virtual-kubelet/virtual-kubelet/log"
 	logruslogger "github.com/virtual-kubelet/virtual-kubelet/log/logrus"
-	"github.com/virtual-kubelet/virtual-kubelet/node"
 	"gotest.tools/assert"
 	is "gotest.tools/assert/cmp"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
-	klogv1 "k8s.io/klog"
 	klogv2 "k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 )
-
-var enableEnvTest = flag.Bool("envtest", false, "Enable envtest based tests")
-
-func TestMain(m *testing.M) {
-	flagset := flag.NewFlagSet("klog", flag.PanicOnError)
-	klogv1.InitFlags(flagset)
-	flagset.VisitAll(func(f *flag.Flag) {
-		flag.Var(f.Value, "klog."+f.Name, f.Usage)
-	})
-	flag.Parse()
-	os.Exit(m.Run())
-}
 
 func TestEnvtest(t *testing.T) {
 	if !*enableEnvTest || os.Getenv("VK_ENVTEST") != "" {
@@ -81,7 +66,7 @@ func testNodeE2ERun(t *testing.T, env *envtest.Environment, withLeases bool) {
 	_, err = clientset.CoreV1().Nodes().List(ctx, metav1.ListOptions{})
 	assert.NilError(t, err)
 
-	testProvider := node.NewNaiveNodeProvider()
+	testProvider := NewNaiveNodeProvider()
 
 	testNode := &corev1.Node{
 		ObjectMeta: metav1.ObjectMeta{
@@ -91,12 +76,12 @@ func testNodeE2ERun(t *testing.T, env *envtest.Environment, withLeases bool) {
 
 	testNodeCopy := testNode.DeepCopy()
 
-	opts := []node.NodeControllerOpt{}
-	leasesClient := clientset.CoordinationV1beta1().Leases(corev1.NamespaceNodeLease)
+	opts := []NodeControllerOpt{}
+	leasesClient := clientset.CoordinationV1().Leases(corev1.NamespaceNodeLease)
 	if withLeases {
-		opts = append(opts, node.WithNodeEnableLeaseV1Beta1(leasesClient, nil))
+		opts = append(opts, WithNodeEnableLeaseV1(leasesClient, 0))
 	}
-	node, err := node.NewNodeController(testProvider, testNode, nodes, opts...)
+	node, err := NewNodeController(testProvider, testNode, nodes, opts...)
 	assert.NilError(t, err)
 
 	chErr := make(chan error, 1)
