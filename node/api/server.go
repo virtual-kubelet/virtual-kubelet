@@ -43,6 +43,7 @@ type PodHandlerConfig struct { // nolint:golint
 	GetStatsSummary       PodStatsSummaryHandlerFunc
 	StreamIdleTimeout     time.Duration
 	StreamCreationTimeout time.Duration
+	Middlewares           []Middleware
 }
 
 // PodHandler creates an http handler for interacting with pods/containers.
@@ -52,22 +53,24 @@ func PodHandler(p PodHandlerConfig, debug bool) http.Handler {
 	// This matches the behaviour in the reference kubelet
 	r.StrictSlash(true)
 	if debug {
-		r.HandleFunc("/runningpods/", HandleRunningPods(p.GetPods)).Methods("GET")
+		r.HandleFunc("/runningpods/", Middlewares(HandleRunningPods(p.GetPods), p.Middlewares...)).Methods("GET")
 	}
 
-	r.HandleFunc("/pods", HandleRunningPods(p.GetPodsFromKubernetes)).Methods("GET")
-	r.HandleFunc("/containerLogs/{namespace}/{pod}/{container}", HandleContainerLogs(p.GetContainerLogs)).Methods("GET")
+	r.HandleFunc("/pods", Middlewares(HandleRunningPods(p.GetPodsFromKubernetes), p.Middlewares...)).Methods("GET")
+	r.HandleFunc("/containerLogs/{namespace}/{pod}/{container}", Middlewares(HandleContainerLogs(p.GetContainerLogs), p.Middlewares...)).Methods("GET")
 	r.HandleFunc(
 		"/exec/{namespace}/{pod}/{container}",
-		HandleContainerExec(
-			p.RunInContainer,
-			WithExecStreamCreationTimeout(p.StreamCreationTimeout),
-			WithExecStreamIdleTimeout(p.StreamIdleTimeout),
-		),
+		Middlewares(
+			HandleContainerExec(
+				p.RunInContainer,
+				WithExecStreamCreationTimeout(p.StreamCreationTimeout),
+				WithExecStreamIdleTimeout(p.StreamIdleTimeout),
+			),
+			p.Middlewares...),
 	).Methods("POST", "GET")
 
 	if p.GetStatsSummary != nil {
-		f := HandlePodStatsSummary(p.GetStatsSummary)
+		f := Middlewares(HandlePodStatsSummary(p.GetStatsSummary), p.Middlewares...)
 		r.HandleFunc("/stats/summary", f).Methods("GET")
 		r.HandleFunc("/stats/summary/", f).Methods("GET")
 	}
