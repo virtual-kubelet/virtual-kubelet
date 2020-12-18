@@ -22,6 +22,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	pkgerrors "github.com/pkg/errors"
 	"github.com/virtual-kubelet/virtual-kubelet/internal/podutils"
+	"github.com/virtual-kubelet/virtual-kubelet/internal/queue"
 	"github.com/virtual-kubelet/virtual-kubelet/log"
 	"github.com/virtual-kubelet/virtual-kubelet/trace"
 	corev1 "k8s.io/api/core/v1"
@@ -29,7 +30,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/tools/cache"
-	"k8s.io/client-go/util/workqueue"
 )
 
 const (
@@ -264,8 +264,8 @@ func (pc *PodController) updatePodStatus(ctx context.Context, podFromKubernetes 
 
 // enqueuePodStatusUpdate updates our pod status map, and marks the pod as dirty in the workqueue. The pod must be DeepCopy'd
 // prior to enqueuePodStatusUpdate.
-func (pc *PodController) enqueuePodStatusUpdate(ctx context.Context, q workqueue.RateLimitingInterface, pod *corev1.Pod) {
-	ctx, cancel := context.WithTimeout(ctx, notificationRetryPeriod*maxRetries)
+func (pc *PodController) enqueuePodStatusUpdate(ctx context.Context, pod *corev1.Pod) {
+	ctx, cancel := context.WithTimeout(ctx, notificationRetryPeriod*queue.MaxRetries)
 	defer cancel()
 
 	ctx, span := trace.StartSpan(ctx, "enqueuePodStatusUpdate")
@@ -330,11 +330,11 @@ func (pc *PodController) enqueuePodStatusUpdate(ctx context.Context, q workqueue
 	}
 	kpod.lastPodStatusReceivedFromProvider = pod
 	kpod.Unlock()
-	q.AddRateLimited(key)
+	pc.syncPodStatusFromProvider.Enqueue(key)
 }
 
-func (pc *PodController) podStatusHandler(ctx context.Context, key string) (retErr error) {
-	ctx, span := trace.StartSpan(ctx, "podStatusHandler")
+func (pc *PodController) syncPodStatusFromProviderHandler(ctx context.Context, key string) (retErr error) {
+	ctx, span := trace.StartSpan(ctx, "syncPodStatusFromProviderHandler")
 	defer span.End()
 
 	ctx = span.WithField(ctx, "key", key)
@@ -363,8 +363,8 @@ func (pc *PodController) podStatusHandler(ctx context.Context, key string) (retE
 	return pc.updatePodStatus(ctx, pod, key)
 }
 
-func (pc *PodController) deletePodHandler(ctx context.Context, key string) (retErr error) {
-	ctx, span := trace.StartSpan(ctx, "processDeletionReconcilationWorkItem")
+func (pc *PodController) deletePodsFromKubernetesHandler(ctx context.Context, key string) (retErr error) {
+	ctx, span := trace.StartSpan(ctx, "deletePodsFromKubernetesHandler")
 	defer span.End()
 
 	namespace, name, err := cache.SplitMetaNamespaceKey(key)

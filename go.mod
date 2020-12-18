@@ -18,8 +18,10 @@ require (
 	github.com/spf13/cobra v0.0.5
 	github.com/spf13/pflag v1.0.5
 	go.opencensus.io v0.21.0
+	go.uber.org/goleak v1.1.10
 	golang.org/x/sync v0.0.0-20190911185100-cd5d95a43a6e
 	golang.org/x/sys v0.0.0-20200323222414-85ca7c5b95cd
+	golang.org/x/time v0.0.0-20190308202827-9d24e82272b4
 	gotest.tools v2.2.0+incompatible
 	k8s.io/api v0.18.6
 	k8s.io/apimachinery v0.18.6
