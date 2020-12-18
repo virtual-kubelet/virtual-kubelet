@@ -17,9 +17,10 @@ package node
 import (
 	"context"
 	"fmt"
-	"strconv"
 	"sync"
 	"time"
+
+	"github.com/virtual-kubelet/virtual-kubelet/internal/queue"
 
 	"github.com/google/go-cmp/cmp"
 	pkgerrors "github.com/pkg/errors"
@@ -29,6 +30,7 @@ import (
 	"github.com/virtual-kubelet/virtual-kubelet/trace"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/util/wait"
 	corev1informers "k8s.io/client-go/informers/core/v1"
 	corev1client "k8s.io/client-go/kubernetes/typed/core/v1"
 	corev1listers "k8s.io/client-go/listers/core/v1"
@@ -110,12 +112,13 @@ type PodController struct {
 
 	resourceManager *manager.ResourceManager
 
-	k8sQ workqueue.RateLimitingInterface
+	syncPodsFromKubernetes *queue.Queue
 
-	// deletionQ is a queue on which pods are reconciled, and we check if pods are in API server after grace period
-	deletionQ workqueue.RateLimitingInterface
+	// deletePodsFromKubernetes is a queue on which pods are reconciled, and we check if pods are in API server after
+	// the grace period
+	deletePodsFromKubernetes *queue.Queue
 
-	podStatusQ workqueue.RateLimitingInterface
+	syncPodStatusFromProvider *queue.Queue
 
 	// From the time of creation, to termination the knownPods map will contain the pods key
 	// (derived from Kubernetes' cache library) -> a *knownPod struct.
@@ -224,11 +227,12 @@ func NewPodController(cfg PodControllerConfig) (*PodController, error) {
 		ready:              make(chan struct{}),
 		done:               make(chan struct{}),
 		recorder:           cfg.EventRecorder,
-		k8sQ:               workqueue.NewNamedRateLimitingQueue(cfg.RateLimiter, "syncPodsFromKubernetes"),
-		deletionQ:          workqueue.NewNamedRateLimitingQueue(cfg.RateLimiter, "deletePodsFromKubernetes"),
-		podStatusQ:         workqueue.NewNamedRateLimitingQueue(cfg.RateLimiter, "syncPodStatusFromProvider"),
 		podEventFilterFunc: cfg.PodEventFilterFunc,
 	}
+
+	pc.syncPodsFromKubernetes = queue.New(cfg.RateLimiter, "syncPodsFromKubernetes", pc.syncPodFromKubernetesHandler)
+	pc.deletePodsFromKubernetes = queue.New(cfg.RateLimiter, "deletePodsFromKubernetes", pc.deletePodsFromKubernetesHandler)
+	pc.syncPodStatusFromProvider = queue.New(cfg.RateLimiter, "syncPodStatusFromProvider", pc.syncPodStatusFromProviderHandler)
 
 	return pc, nil
 }
@@ -247,10 +251,11 @@ type asyncProvider interface {
 // Once this returns, you should not re-use the controller.
 func (pc *PodController) Run(ctx context.Context, podSyncWorkers int) (retErr error) {
 	// Shutdowns are idempotent, so we can call it multiple times. This is in case we have to bail out early for some reason.
+	// This is to make extra sure that any workers we started are terminated on exit
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
 
 	defer func() {
-		pc.k8sQ.ShutDown()
-		pc.deletionQ.ShutDown()
 		pc.mu.Lock()
 		pc.err = retErr
 		close(pc.done)
@@ -271,11 +276,9 @@ func (pc *PodController) Run(ctx context.Context, podSyncWorkers int) (retErr er
 	pc.provider = provider
 
 	provider.NotifyPods(ctx, func(pod *corev1.Pod) {
-		pc.enqueuePodStatusUpdate(ctx, pc.podStatusQ, pod.DeepCopy())
+		pc.enqueuePodStatusUpdate(ctx, pod.DeepCopy())
 	})
 	go runProvider(ctx)
-
-	defer pc.podStatusQ.ShutDown()
 
 	// Wait for the caches to be synced *before* starting to do work.
 	if ok := cache.WaitForCacheSync(ctx.Done(), pc.podsInformer.Informer().HasSynced); !ok {
@@ -293,7 +296,7 @@ func (pc *PodController) Run(ctx context.Context, podSyncWorkers int) (retErr er
 				log.G(ctx).Error(err)
 			} else {
 				pc.knownPods.Store(key, &knownPod{})
-				pc.k8sQ.AddRateLimited(key)
+				pc.syncPodsFromKubernetes.Enqueue(key)
 			}
 		},
 		UpdateFunc: func(oldObj, newObj interface{}) {
@@ -319,14 +322,14 @@ func (pc *PodController) Run(ctx context.Context, podSyncWorkers int) (retErr er
 					// This means that the pod in API server was changed by someone else [this can be okay], but we skipped
 					// a status update on our side because we compared the status received from the provider to the status
 					// received from the k8s api server based on outdated information.
-					pc.podStatusQ.AddRateLimited(key)
+					pc.syncPodStatusFromProvider.Enqueue(key)
 					// Reset this to avoid re-adding it continuously
 					kPod.lastPodStatusUpdateSkipped = false
 				}
 				kPod.Unlock()
 
 				if podShouldEnqueue(oldPod, newPod) {
-					pc.k8sQ.AddRateLimited(key)
+					pc.syncPodsFromKubernetes.Enqueue(key)
 				}
 			}
 		},
@@ -335,9 +338,9 @@ func (pc *PodController) Run(ctx context.Context, podSyncWorkers int) (retErr er
 				log.G(ctx).Error(err)
 			} else {
 				pc.knownPods.Delete(key)
-				pc.k8sQ.AddRateLimited(key)
+				pc.syncPodsFromKubernetes.Enqueue(key)
 				// If this pod was in the deletion queue, forget about it
-				pc.deletionQ.Forget(key)
+				pc.deletePodsFromKubernetes.Forget(key)
 			}
 		},
 	}
@@ -363,46 +366,23 @@ func (pc *PodController) Run(ctx context.Context, podSyncWorkers int) (retErr er
 	pc.deleteDanglingPods(ctx, podSyncWorkers)
 
 	log.G(ctx).Info("starting workers")
-	wg := sync.WaitGroup{}
-
-	// Use the worker's "index" as its ID so we can use it for tracing.
-	for id := 0; id < podSyncWorkers; id++ {
-		wg.Add(1)
-		workerID := strconv.Itoa(id)
-		go func() {
-			defer wg.Done()
-			pc.runSyncPodStatusFromProviderWorker(ctx, workerID, pc.podStatusQ)
-		}()
-	}
-
-	for id := 0; id < podSyncWorkers; id++ {
-		wg.Add(1)
-		workerID := strconv.Itoa(id)
-		go func() {
-			defer wg.Done()
-			pc.runSyncPodsFromKubernetesWorker(ctx, workerID, pc.k8sQ)
-		}()
-	}
-
-	for id := 0; id < podSyncWorkers; id++ {
-		wg.Add(1)
-		workerID := strconv.Itoa(id)
-		go func() {
-			defer wg.Done()
-			pc.runDeletionReconcilationWorker(ctx, workerID, pc.deletionQ)
-		}()
-	}
-
+	group := &wait.Group{}
+	group.StartWithContext(ctx, func(ctx context.Context) {
+		pc.syncPodsFromKubernetes.Run(ctx, podSyncWorkers)
+	})
+	group.StartWithContext(ctx, func(ctx context.Context) {
+		pc.deletePodsFromKubernetes.Run(ctx, podSyncWorkers)
+	})
+	group.StartWithContext(ctx, func(ctx context.Context) {
+		pc.syncPodStatusFromProvider.Run(ctx, podSyncWorkers)
+	})
+	defer group.Wait()
+	log.G(ctx).Info("started workers")
 	close(pc.ready)
 
-	log.G(ctx).Info("started workers")
 	<-ctx.Done()
 	log.G(ctx).Info("shutting down workers")
-	pc.k8sQ.ShutDown()
-	pc.podStatusQ.ShutDown()
-	pc.deletionQ.ShutDown()
 
-	wg.Wait()
 	return nil
 }
 
@@ -426,28 +406,9 @@ func (pc *PodController) Err() error {
 	return pc.err
 }
 
-// runSyncPodsFromKubernetesWorker is a long-running function that will continually call the processNextWorkItem function
-// in order to read and process an item on the work queue that is generated by the pod informer.
-func (pc *PodController) runSyncPodsFromKubernetesWorker(ctx context.Context, workerID string, q workqueue.RateLimitingInterface) {
-	for pc.processNextWorkItem(ctx, workerID, q) {
-	}
-}
-
-// processNextWorkItem will read a single work item off the work queue and attempt to process it,by calling the syncHandler.
-func (pc *PodController) processNextWorkItem(ctx context.Context, workerID string, q workqueue.RateLimitingInterface) bool {
-
-	// We create a span only after popping from the queue so that we can get an adequate picture of how long it took to process the item.
-	ctx, span := trace.StartSpan(ctx, "processNextWorkItem")
-	defer span.End()
-
-	// Add the ID of the current worker as an attribute to the current span.
-	ctx = span.WithField(ctx, "workerId", workerID)
-	return handleQueueItem(ctx, q, pc.syncHandler)
-}
-
-// syncHandler compares the actual state with the desired, and attempts to converge the two.
-func (pc *PodController) syncHandler(ctx context.Context, key string) error {
-	ctx, span := trace.StartSpan(ctx, "syncHandler")
+// syncPodFromKubernetesHandler compares the actual state with the desired, and attempts to converge the two.
+func (pc *PodController) syncPodFromKubernetesHandler(ctx context.Context, key string) error {
+	ctx, span := trace.StartSpan(ctx, "syncPodFromKubernetesHandler")
 	defer span.End()
 
 	// Add the current key as an attribute to the current span.
@@ -511,7 +472,7 @@ func (pc *PodController) syncPodInProvider(ctx context.Context, pod *corev1.Pod,
 	// more context is here: https://github.com/virtual-kubelet/virtual-kubelet/pull/760
 	if pod.DeletionTimestamp != nil && !running(&pod.Status) {
 		log.G(ctx).Debug("Force deleting pod from API Server as it is no longer running")
-		pc.deletionQ.Add(key)
+		pc.deletePodsFromKubernetes.EnqueueWithoutRateLimit(key)
 		return nil
 	}
 	obj, ok := pc.knownPods.Load(key)
@@ -547,7 +508,7 @@ func (pc *PodController) syncPodInProvider(ctx context.Context, pod *corev1.Pod,
 			return err
 		}
 
-		pc.deletionQ.AddAfter(key, time.Second*time.Duration(*pod.DeletionGracePeriodSeconds))
+		pc.deletePodsFromKubernetes.EnqueueAfter(key, time.Second*time.Duration(*pod.DeletionGracePeriodSeconds))
 		return nil
 	}
 
@@ -564,25 +525,6 @@ func (pc *PodController) syncPodInProvider(ctx context.Context, pod *corev1.Pod,
 		return err
 	}
 	return nil
-}
-
-// runDeletionReconcilationWorker is a long-running function that will continually call the processDeletionReconcilationWorkItem
-// function in order to read and process an item on the work queue that is generated by the pod informer.
-func (pc *PodController) runDeletionReconcilationWorker(ctx context.Context, workerID string, q workqueue.RateLimitingInterface) {
-	for pc.processDeletionReconcilationWorkItem(ctx, workerID, q) {
-	}
-}
-
-// processDeletionReconcilationWorkItem  will read a single work item off the work queue and attempt to process it,by calling the deletionReconcilation.
-func (pc *PodController) processDeletionReconcilationWorkItem(ctx context.Context, workerID string, q workqueue.RateLimitingInterface) bool {
-
-	// We create a span only after popping from the queue so that we can get an adequate picture of how long it took to process the item.
-	ctx, span := trace.StartSpan(ctx, "processDeletionReconcilationWorkItem")
-	defer span.End()
-
-	// Add the ID of the current worker as an attribute to the current span.
-	ctx = span.WithField(ctx, "workerId", workerID)
-	return handleQueueItem(ctx, q, pc.deletePodHandler)
 }
 
 // deleteDanglingPods checks whether the provider knows about any pods which Kubernetes doesn't know about, and deletes them.

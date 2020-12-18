@@ -335,7 +335,7 @@ func testTerminalStatePodScenario(ctx context.Context, t *testing.T, s *system, 
 	// Start the pod controller
 	assert.NilError(t, s.start(ctx))
 
-	for s.pc.k8sQ.Len() > 0 {
+	for !s.pc.syncPodsFromKubernetes.Empty() {
 		time.Sleep(10 * time.Millisecond)
 	}
 
