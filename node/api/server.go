@@ -53,24 +53,22 @@ func PodHandler(p PodHandlerConfig, debug bool) http.Handler {
 	// This matches the behaviour in the reference kubelet
 	r.StrictSlash(true)
 	if debug {
-		r.HandleFunc("/runningpods/", Middlewares(HandleRunningPods(p.GetPods), p.Middlewares...)).Methods("GET")
+		r.HandleFunc("/runningpods/", HandleRunningPods(p.GetPods)).Methods("GET")
 	}
 
-	r.HandleFunc("/pods", Middlewares(HandleRunningPods(p.GetPodsFromKubernetes), p.Middlewares...)).Methods("GET")
-	r.HandleFunc("/containerLogs/{namespace}/{pod}/{container}", Middlewares(HandleContainerLogs(p.GetContainerLogs), p.Middlewares...)).Methods("GET")
+	r.HandleFunc("/pods", HandleRunningPods(p.GetPodsFromKubernetes)).Methods("GET")
+	r.HandleFunc("/containerLogs/{namespace}/{pod}/{container}", HandleContainerLogs(p.GetContainerLogs)).Methods("GET")
 	r.HandleFunc(
 		"/exec/{namespace}/{pod}/{container}",
-		Middlewares(
-			HandleContainerExec(
-				p.RunInContainer,
-				WithExecStreamCreationTimeout(p.StreamCreationTimeout),
-				WithExecStreamIdleTimeout(p.StreamIdleTimeout),
-			),
-			p.Middlewares...),
+		HandleContainerExec(
+			p.RunInContainer,
+			WithExecStreamCreationTimeout(p.StreamCreationTimeout),
+			WithExecStreamIdleTimeout(p.StreamIdleTimeout),
+		),
 	).Methods("POST", "GET")
 
 	if p.GetStatsSummary != nil {
-		f := Middlewares(HandlePodStatsSummary(p.GetStatsSummary), p.Middlewares...)
+		f := HandlePodStatsSummary(p.GetStatsSummary)
 		r.HandleFunc("/stats/summary", f).Methods("GET")
 		r.HandleFunc("/stats/summary/", f).Methods("GET")
 	}
@@ -105,7 +103,11 @@ func PodStatsSummaryHandler(f PodStatsSummaryHandlerFunc) http.Handler {
 // Callers should take care to namespace the serve mux as they see fit, however
 // these routes get called by the Kubernetes API server.
 func AttachPodRoutes(p PodHandlerConfig, mux ServeMux, debug bool) {
-	mux.Handle("/", InstrumentHandler(PodHandler(p, debug)))
+	middlewares := []Middleware{InstrumentHandler}
+	for _, m := range p.Middlewares {
+		middlewares = append(middlewares, m)
+	}
+	mux.Handle("/", Middlewares(PodHandler(p, debug), middlewares...))
 }
 
 // PodMetricsConfig stores the handlers for pod metrics routes

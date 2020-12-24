@@ -19,11 +19,11 @@ import (
 )
 
 // Middleware defines a middleware that is to
-// take one HandlerFunc and wrap it within another HandlerFunc
-type Middleware func(http.HandlerFunc) http.HandlerFunc
+// take one Handler and wrap it within another Handler
+type Middleware func(http.Handler) http.Handler
 
 // Middlewares is a function to inject multiple middlewares (in orders)
-func Middlewares(hf http.HandlerFunc, ms ...Middleware) http.HandlerFunc {
+func Middlewares(hf http.Handler, ms ...Middleware) http.Handler {
 	if len(ms) == 0 {
 		return hf
 	}
