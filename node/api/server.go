@@ -104,9 +104,7 @@ func PodStatsSummaryHandler(f PodStatsSummaryHandlerFunc) http.Handler {
 // these routes get called by the Kubernetes API server.
 func AttachPodRoutes(p PodHandlerConfig, mux ServeMux, debug bool) {
 	middlewares := []Middleware{InstrumentHandler}
-	for _, m := range p.Middlewares {
-		middlewares = append(middlewares, m)
-	}
+	middlewares = append(middlewares, p.Middlewares...)
 	mux.Handle("/", Middlewares(PodHandler(p, debug), middlewares...))
 }
 
