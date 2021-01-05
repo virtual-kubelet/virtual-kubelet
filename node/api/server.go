@@ -43,7 +43,7 @@ type PodHandlerConfig struct { // nolint:golint
 	GetStatsSummary       PodStatsSummaryHandlerFunc
 	StreamIdleTimeout     time.Duration
 	StreamCreationTimeout time.Duration
-	AuthFilter            func(http.Handler) http.Handler
+	AuthHandler           func(http.Handler) http.Handler
 }
 
 // PodHandler creates an http handler for interacting with pods/containers.
@@ -103,10 +103,10 @@ func PodStatsSummaryHandler(f PodStatsSummaryHandlerFunc) http.Handler {
 // Callers should take care to namespace the serve mux as they see fit, however
 // these routes get called by the Kubernetes API server.
 func AttachPodRoutes(p PodHandlerConfig, mux ServeMux, debug bool) {
-	if p.AuthFilter == nil {
+	if p.AuthHandler == nil {
 		mux.Handle("/", InstrumentHandler(PodHandler(p, debug)))
 	} else {
-		mux.Handle("/", p.AuthFilter(InstrumentHandler(PodHandler(p, debug))))
+		mux.Handle("/", p.AuthHandler(InstrumentHandler(PodHandler(p, debug))))
 	}
 }
 
