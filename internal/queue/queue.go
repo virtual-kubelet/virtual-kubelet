@@ -124,7 +124,7 @@ func (q *Queue) Run(ctx context.Context, workers int) {
 func (q *Queue) worker(ctx context.Context, i int) {
 	ctx = log.WithLogger(ctx, log.G(ctx).WithFields(map[string]interface{}{
 		"workerId": i,
-		"Queue":    q.name,
+		"queue":    q.name,
 	}))
 	for q.handleQueueItem(ctx) {
 	}
