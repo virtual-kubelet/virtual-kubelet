@@ -1,4 +1,4 @@
-FROM golang:1.13 as builder
+FROM golang:1.15 as builder
 ENV PATH /go/bin:/usr/local/go/bin:$PATH
 ENV GOPATH /go
 COPY . /go/src/github.com/virtual-kubelet/virtual-kubelet

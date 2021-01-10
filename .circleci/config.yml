@@ -3,7 +3,7 @@ jobs:
   validate:
     resource_class: xlarge
     docker:
-      - image: circleci/golang:1.13
+      - image: circleci/golang:1.15
         environment:
           GO111MODULE: "on"
           GOPROXY: https://proxy.golang.org
@@ -30,7 +30,7 @@ jobs:
   test:
     resource_class: xlarge
     docker:
-      - image: circleci/golang:1.13
+      - image: circleci/golang:1.15
         environment:
           GO111MODULE: "on"
     working_directory: /go/src/github.com/virtual-kubelet/virtual-kubelet
@@ -114,7 +114,7 @@ jobs:
           command: |
             mkdir $HOME/.go
             export PATH=$HOME/.go/bin:${PATH}
-            curl -fsSL -o "/tmp/go.tar.gz" "https://dl.google.com/go/go1.13.12.linux-amd64.tar.gz"
+            curl -fsSL -o "/tmp/go.tar.gz" "https://dl.google.com/go/go1.15.6.linux-amd64.tar.gz"
             tar -C $HOME/.go --strip-components=1 -xzf "/tmp/go.tar.gz"
             go version
             make e2e
