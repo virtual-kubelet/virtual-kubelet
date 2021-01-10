@@ -1,4 +1,4 @@
-version: 2
+version: 2.0
 jobs:
   validate:
     resource_class: xlarge
@@ -52,18 +52,18 @@ jobs:
 
   e2e:
     machine:
-      image: circleci/classic:201808-01
+      image: ubuntu-1604:202010-01
     working_directory: /home/circleci/go/src/github.com/virtual-kubelet/virtual-kubelet
     environment:
       CHANGE_MINIKUBE_NONE_USER: true
       GOPATH: /home/circleci/go
       KUBECONFIG: /home/circleci/.kube/config
-      KUBERNETES_VERSION: v1.17.6
+      KUBERNETES_VERSION: v1.20.1
       MINIKUBE_HOME: /home/circleci
-      MINIKUBE_VERSION: v1.2.0
+      MINIKUBE_VERSION: v1.16.0
       MINIKUBE_WANTUPDATENOTIFICATION: false
       MINIKUBE_WANTREPORTERRORPROMPT: false
-      SKAFFOLD_VERSION: v0.33.0
+      SKAFFOLD_VERSION: v1.17.2
       GO111MODULE: "on"
     steps:
       - checkout
@@ -81,6 +81,16 @@ jobs:
             curl -Lo skaffold https://storage.googleapis.com/skaffold/releases/${SKAFFOLD_VERSION}/skaffold-linux-amd64
             chmod +x skaffold
             sudo mv skaffold /usr/local/bin/
+      - run:
+          name: Install Minikube dependencies
+          command: |
+            sudo apt-get update && sudo apt-get install -y apt-transport-https curl
+            curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add -
+            cat <<EOF | sudo tee /etc/apt/sources.list.d/kubernetes.list
+            deb https://apt.kubernetes.io/ kubernetes-xenial main
+            EOF
+            sudo apt-get update
+            sudo apt-get install -y kubelet # systemd unit is disabled
       - run:
           name: Install Minikube
           command: |
