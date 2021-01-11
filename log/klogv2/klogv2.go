@@ -26,6 +26,9 @@ import (
 	"k8s.io/klog/v2"
 )
 
+// Ensure log.Logger is fully implemented during compile time.
+var _ log.Logger = (*adapter)(nil)
+
 // adapter implements the `log.Logger` interface for klogv2
 type adapter struct {
 	fields map[string]interface{}

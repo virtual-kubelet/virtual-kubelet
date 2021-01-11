@@ -22,6 +22,9 @@ import (
 	"github.com/virtual-kubelet/virtual-kubelet/log"
 )
 
+// Ensure log.Logger is fully implemented during compile time.
+var _ log.Logger = (*adapter)(nil)
+
 // adapter implements the `log.Logger` interface for logrus
 type adapter struct {
 	*logrus.Entry
