@@ -1,6 +1,6 @@
 module github.com/virtual-kubelet/virtual-kubelet
 
-go 1.13
+go 1.15
 
 require (
 	contrib.go.opencensus.io/exporter/jaeger v0.1.0

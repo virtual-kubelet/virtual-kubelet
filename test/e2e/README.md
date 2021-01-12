@@ -169,30 +169,39 @@ You can see from the console output whether the tests in the test suite pass or 
 ```console
 ...
 === RUN   TestEndToEnd
+Setting up end-to-end test suite for mock provider...
+    suite.go:62: True
 === RUN   TestEndToEnd/TestCreatePodWithMandatoryInexistentConfigMap
 === RUN   TestEndToEnd/TestCreatePodWithMandatoryInexistentSecrets
 === RUN   TestEndToEnd/TestCreatePodWithOptionalInexistentConfigMap
 === RUN   TestEndToEnd/TestCreatePodWithOptionalInexistentSecrets
+=== RUN   TestEndToEnd/TestGetPods
+    basic.go:40: Created pod: nginx-testgetpods-g9s42
+    basic.go:46: Pod nginx-testgetpods-g9s42 ready
 === RUN   TestEndToEnd/TestGetStatsSummary
 === RUN   TestEndToEnd/TestNodeCreateAfterDelete
 === RUN   TestEndToEnd/TestPodLifecycleForceDelete
+    basic.go:208: Created pod: nginx-testpodlifecycleforcedelete-wrjgk
+    basic.go:214: Pod nginx-testpodlifecycleforcedelete-wrjgk ready
+    basic.go:247: Force deleted pod:  nginx-testpodlifecycleforcedelete-wrjgk
+    basic.go:264: Pod ended as phase: Running
 === RUN   TestEndToEnd/TestPodLifecycleGracefulDelete
---- PASS: TestEndToEnd (21.93s)
-    --- PASS: TestEndToEnd/TestCreatePodWithMandatoryInexistentConfigMap (0.03s)
+    basic.go:135: Created pod: nginx-testpodlifecyclegracefuldelete-tp49x
+    basic.go:141: Pod nginx-testpodlifecyclegracefuldelete-tp49x ready
+    basic.go:168: Deleted pod: nginx-testpodlifecyclegracefuldelete-tp49x
+Tearing down end-to-end test suite for mock provider...
+--- PASS: TestEndToEnd (11.75s)
+    --- PASS: TestEndToEnd/TestCreatePodWithMandatoryInexistentConfigMap (0.04s)
     --- PASS: TestEndToEnd/TestCreatePodWithMandatoryInexistentSecrets (0.03s)
-    --- PASS: TestEndToEnd/TestCreatePodWithOptionalInexistentConfigMap (0.55s)
-    --- PASS: TestEndToEnd/TestCreatePodWithOptionalInexistentSecrets (0.99s)
+    --- PASS: TestEndToEnd/TestCreatePodWithOptionalInexistentConfigMap (0.73s)
+    --- PASS: TestEndToEnd/TestCreatePodWithOptionalInexistentSecrets (1.00s)
+    --- PASS: TestEndToEnd/TestGetPods (0.80s)
     --- PASS: TestEndToEnd/TestGetStatsSummary (0.80s)
-    --- PASS: TestEndToEnd/TestNodeCreateAfterDelete (9.63s)
+    --- PASS: TestEndToEnd/TestNodeCreateAfterDelete (5.25s)
     --- PASS: TestEndToEnd/TestPodLifecycleForceDelete (2.05s)
-        basic.go:158: Created pod: nginx-testpodlifecycleforcedelete-jz84g
-        basic.go:164: Pod nginx-testpodlifecycleforcedelete-jz84g ready
-        basic.go:197: Force deleted pod:  nginx-testpodlifecycleforcedelete-jz84g
-        basic.go:214: Pod ended as phase: Running
-    --- PASS: TestEndToEnd/TestPodLifecycleGracefulDelete (1.04s)
-        basic.go:87: Created pod: nginx-testpodlifecyclegracefuldelete-r84v7
-        basic.go:93: Pod nginx-testpodlifecyclegracefuldelete-r84v7 ready
-        basic.go:120: Deleted pod: nginx-testpodlifecyclegracefuldelete-r84v7
+    --- PASS: TestEndToEnd/TestPodLifecycleGracefulDelete (1.05s)
 PASS
+ok      github.com/virtual-kubelet/virtual-kubelet/internal/test/e2e    12.298s
+?       github.com/virtual-kubelet/virtual-kubelet/internal/test/e2e/framework  [no test files]
 ...
 ```
