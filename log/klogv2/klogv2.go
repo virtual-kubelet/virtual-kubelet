@@ -24,6 +24,7 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+	"sync"
 
 	"github.com/virtual-kubelet/virtual-kubelet/log"
 	"k8s.io/klog/v2"
@@ -32,17 +33,36 @@ import (
 // Ensure log.Logger is fully implemented during compile time.
 var _ log.Logger = (*adapter)(nil)
 
+type fieldMap struct {
+	log.Fields
+	processedFields string
+	sync.Once
+}
+
+func (f *fieldMap) String() string {
+	// Process if not processed before.
+	f.Do(func() {
+		// Only process if any fields have been set.
+		if len(f.Fields) > 0 && len(f.processedFields) == 0 {
+			f.processedFields = processFields(f.Fields)
+		}
+	})
+
+	return f.processedFields
+}
+
 // adapter implements the `log.Logger` interface for klogv2
 type adapter struct {
-	rawFields map[string]interface{}
-	fields    string
+	fields fieldMap
 }
 
 // New creates a new `log.Logger` from the provided entry
-func New(fields map[string]interface{}) log.Logger {
+func New(fields log.Fields) log.Logger {
+	if fields == nil {
+		fields = make(log.Fields)
+	}
 	return &adapter{
-		rawFields: fields,
-		fields:    processFields(fields),
+		fields: fieldMap{Fields: fields},
 	}
 }
 
@@ -59,43 +79,43 @@ func (l *adapter) Debugf(format string, args ...interface{}) {
 }
 
 func (l *adapter) Info(args ...interface{}) {
-	args = append(args, l.fields)
+	args = append(args, l.fields.String())
 	klog.InfoDepth(1, args...)
 }
 
 func (l *adapter) Infof(format string, args ...interface{}) {
 	formattedArgs := fmt.Sprintf(format, args...)
-	klog.InfoDepth(1, formattedArgs, l.fields)
+	klog.InfoDepth(1, formattedArgs, l.fields.String())
 }
 
 func (l *adapter) Warn(args ...interface{}) {
-	args = append(args, l.fields)
+	args = append(args, l.fields.String())
 	klog.WarningDepth(1, args...)
 }
 
 func (l *adapter) Warnf(format string, args ...interface{}) {
 	formattedArgs := fmt.Sprintf(format, args...)
-	klog.WarningDepth(1, formattedArgs, l.fields)
+	klog.WarningDepth(1, formattedArgs, l.fields.String())
 }
 
 func (l *adapter) Error(args ...interface{}) {
-	args = append(args, l.fields)
+	args = append(args, l.fields.String())
 	klog.ErrorDepth(1, args...)
 }
 
 func (l *adapter) Errorf(format string, args ...interface{}) {
 	formattedArgs := fmt.Sprintf(format, args...)
-	klog.ErrorDepth(1, formattedArgs, l.fields)
+	klog.ErrorDepth(1, formattedArgs, l.fields.String())
 }
 
 func (l *adapter) Fatal(args ...interface{}) {
-	args = append(args, l.fields)
+	args = append(args, l.fields.String())
 	klog.FatalDepth(1, args...)
 }
 
 func (l *adapter) Fatalf(format string, args ...interface{}) {
 	formattedArgs := fmt.Sprintf(format, args...)
-	klog.FatalDepth(1, formattedArgs, l.fields)
+	klog.FatalDepth(1, formattedArgs, l.fields.String())
 }
 
 // WithField adds a field to the log entry.
@@ -106,8 +126,8 @@ func (l *adapter) WithField(key string, val interface{}) log.Logger {
 // WithFields adds multiple fields to a log entry.
 func (l *adapter) WithFields(fields log.Fields) log.Logger {
 	// Clone existing fields.
-	newFields := make(map[string]interface{})
-	for k, v := range l.rawFields {
+	newFields := make(log.Fields)
+	for k, v := range l.fields.Fields {
 		newFields[k] = v
 	}
 	// Append new fields.
