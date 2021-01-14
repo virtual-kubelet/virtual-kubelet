@@ -22,6 +22,10 @@
 package klogv2
 
 import (
+	"fmt"
+	"sort"
+	"strings"
+
 	"github.com/virtual-kubelet/virtual-kubelet/log"
 	"k8s.io/klog/v2"
 )
@@ -31,52 +35,64 @@ var _ log.Logger = (*adapter)(nil)
 
 // adapter implements the `log.Logger` interface for klogv2
 type adapter struct {
-	fields map[string]interface{}
+	fields string
 }
 
 // FromKlogv2 creates a new `log.Logger` from the provided entry
 func FromKlogv2(fields map[string]interface{}) log.Logger {
-	return &adapter{fields}
+	return &adapter{fields: processFields(fields)}
 }
 
 func (l *adapter) Debug(args ...interface{}) {
-	klog.V(4).Info(args, l.fields)
+	if klog.V(4).Enabled() {
+		l.Info(args...)
+	}
 }
 
 func (l *adapter) Debugf(format string, args ...interface{}) {
-	klog.V(4).Infof(format, args, l.fields)
+	if klog.V(4).Enabled() {
+		l.Infof(format, args...)
+	}
 }
 
 func (l *adapter) Info(args ...interface{}) {
-	klog.Info(args, l.fields)
+	args = append(args, l.fields)
+	klog.InfoDepth(1, args...)
 }
 
 func (l *adapter) Infof(format string, args ...interface{}) {
-	klog.Infof(format, args, l.fields)
+	formattedArgs := fmt.Sprintf(format, args...)
+	klog.InfoDepth(1, formattedArgs, l.fields)
 }
 
 func (l *adapter) Warn(args ...interface{}) {
-	klog.Warning(args, l.fields)
+	args = append(args, l.fields)
+	klog.WarningDepth(1, args...)
 }
 
 func (l *adapter) Warnf(format string, args ...interface{}) {
-	klog.Warningf(format, args, l.fields)
+	formattedArgs := fmt.Sprintf(format, args...)
+	klog.WarningDepth(1, formattedArgs, l.fields)
 }
 
 func (l *adapter) Error(args ...interface{}) {
-	klog.Error(args, l.fields)
+	args = append(args, l.fields)
+	klog.ErrorDepth(1, args...)
 }
 
 func (l *adapter) Errorf(format string, args ...interface{}) {
-	klog.Errorf(format, args, l.fields)
+	formattedArgs := fmt.Sprintf(format, args...)
+	klog.ErrorDepth(1, formattedArgs, l.fields)
 }
 
 func (l *adapter) Fatal(args ...interface{}) {
-	klog.Fatal(args, l.fields)
+	args = append(args, l.fields)
+	klog.FatalDepth(1, args...)
 }
 
 func (l *adapter) Fatalf(format string, args ...interface{}) {
-	klog.Fatalf(format, args, l.fields)
+	formattedArgs := fmt.Sprintf(format, args...)
+	klog.FatalDepth(1, formattedArgs, l.fields)
 }
 
 // WithField adds a field to the log entry.
@@ -95,4 +111,18 @@ func (l *adapter) WithFields(fields log.Fields) log.Logger {
 // WithError adds an error to the log entry
 func (l *adapter) WithError(err error) log.Logger {
 	return l.WithField("err", err)
+}
+
+// processFields prepares a string to be appended to every log call.
+// This is called once to avoid costly log operations.
+func processFields(fields map[string]interface{}) string {
+	processedFields := make([]string, 0, len(fields))
+	for k, v := range fields {
+		processedFields = append(processedFields, fmt.Sprintf("%s=%+v", k, v))
+	}
+	// Order fields lexically for easier reading.
+	sort.Strings(processedFields)
+
+	// Resulting string forcibly starts with an empty space.
+	return fmt.Sprintf(" [%s]", strings.Join(processedFields, " "))
 }
