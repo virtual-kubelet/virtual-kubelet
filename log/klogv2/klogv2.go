@@ -14,8 +14,7 @@
 
 // Package klogv2 implements a virtual-kubelet/log.Logger using klogv2 as a backend
 //
-// You can use this by creating a klogv2 logger and calling `FromKlogv2(fields)`.
-// If you want this to be the default logger for virtual-kubelet, set `log.L` to the value returned by `FromKlogv2`
+// If you want this to be the default logger for virtual-kubelet, set `log.L` to the value returned by `New(fields)`
 //
 // We recommend reading the klog conventions to build a better understanding of levels and when they should apply
 // https://github.com/kubernetes/community/blob/master/contributors/devel/sig-instrumentation/logging.md
@@ -35,12 +34,16 @@ var _ log.Logger = (*adapter)(nil)
 
 // adapter implements the `log.Logger` interface for klogv2
 type adapter struct {
-	fields string
+	rawFields map[string]interface{}
+	fields    string
 }
 
-// FromKlogv2 creates a new `log.Logger` from the provided entry
-func FromKlogv2(fields map[string]interface{}) log.Logger {
-	return &adapter{fields: processFields(fields)}
+// New creates a new `log.Logger` from the provided entry
+func New(fields map[string]interface{}) log.Logger {
+	return &adapter{
+		rawFields: fields,
+		fields:    processFields(fields),
+	}
 }
 
 func (l *adapter) Debug(args ...interface{}) {
@@ -97,20 +100,28 @@ func (l *adapter) Fatalf(format string, args ...interface{}) {
 
 // WithField adds a field to the log entry.
 func (l *adapter) WithField(key string, val interface{}) log.Logger {
-	fields := map[string]interface{}{
-		key: val,
-	}
-	return FromKlogv2(fields)
+	return l.WithFields(map[string]interface{}{key: val})
 }
 
 // WithFields adds multiple fields to a log entry.
 func (l *adapter) WithFields(fields log.Fields) log.Logger {
-	return FromKlogv2(fields)
+	// Clone existing fields.
+	newFields := make(map[string]interface{})
+	for k, v := range l.rawFields {
+		newFields[k] = v
+	}
+	// Append new fields.
+	// Existing keys will be overwritten.
+	for k, v := range fields {
+		newFields[k] = v
+	}
+
+	return New(fields)
 }
 
 // WithError adds an error to the log entry
 func (l *adapter) WithError(err error) log.Logger {
-	return l.WithField("err", err)
+	return l.WithFields(map[string]interface{}{"err": err})
 }
 
 // processFields prepares a string to be appended to every log call.
