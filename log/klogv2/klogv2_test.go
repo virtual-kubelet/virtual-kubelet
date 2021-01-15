@@ -21,40 +21,47 @@ import (
 
 func TestFieldMap_String(t *testing.T) {
 	var tests = []struct {
-		fields   fieldMap
+		desc     string
+		fields   *fieldMap
 		expected string
 	}{
 		{
-			fieldMap{Fields: nil},
-			"",
+			desc:     "fieldMap with nil fields",
+			fields:   &fieldMap{Fields: nil},
+			expected: "",
 		},
 		{
-			fieldMap{Fields: make(log.Fields)},
-			"",
+			desc:     "fieldMap with empty fields",
+			fields:   &fieldMap{Fields: make(log.Fields)},
+			expected: "",
 		},
 		{
-			fieldMap{Fields: map[string]interface{}{"one": 1}},
-			" [one=1]",
+			desc:     "fieldMap with single field",
+			fields:   &fieldMap{Fields: map[string]interface{}{"one": 1}},
+			expected: " [one=1]",
 		},
 		{
-			fieldMap{Fields: map[string]interface{}{"one": 1, "two": 2}},
-			" [one=1 two=2]",
+			desc:     "fieldMap with two fields",
+			fields:   &fieldMap{Fields: map[string]interface{}{"one": 1, "two": 2}},
+			expected: " [one=1 two=2]",
 		},
 	}
 
 	for _, tt := range tests {
-		// Assert fields haven't been processed yet.
-		if len(tt.fields.processedFields) > 0 {
-			t.Fatal("fields shouldn't have been processed yet")
-		}
-		// Assert fields have been processed, if any.
-		actual := tt.fields.String()
-		if len(tt.fields.Fields) > 0 && len(tt.fields.processedFields) == 0 {
-			t.Fatal("fields should have been processed by now")
-		}
-		// Assert processFields yields desired results.
-		if actual != tt.expected {
-			t.Fatalf("expected: %s, got: %s", actual, tt.expected)
-		}
+		t.Run(tt.desc, func(t *testing.T) {
+			// Assert fields haven't been processed yet.
+			if len(tt.fields.processedFields) > 0 {
+				t.Fatal("fields shouldn't have been processed yet")
+			}
+			// Assert fields have been processed, if any.
+			actual := tt.fields.String()
+			if len(tt.fields.Fields) > 0 && len(tt.fields.processedFields) == 0 {
+				t.Fatal("fields should have been processed by now")
+			}
+			// Assert processFields yields desired results.
+			if actual != tt.expected {
+				t.Fatalf("expected: %s, got: %s", actual, tt.expected)
+			}
+		})
 	}
 }
