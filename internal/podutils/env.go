@@ -21,6 +21,9 @@ import (
 	"strings"
 
 	"github.com/virtual-kubelet/virtual-kubelet/internal/expansion"
+	fieldpath "github.com/virtual-kubelet/virtual-kubelet/internal/kubernetes/fieldpath"
+	podshelper "github.com/virtual-kubelet/virtual-kubelet/internal/kubernetes/pods"
+	v1helper "github.com/virtual-kubelet/virtual-kubelet/internal/kubernetes/v1/helper"
 	"github.com/virtual-kubelet/virtual-kubelet/internal/manager"
 	"github.com/virtual-kubelet/virtual-kubelet/log"
 	corev1 "k8s.io/api/core/v1"
@@ -29,9 +32,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 	apivalidation "k8s.io/apimachinery/pkg/util/validation"
 	"k8s.io/client-go/tools/record"
-	podshelper "k8s.io/kubernetes/pkg/apis/core/pods"
-	v1helper "k8s.io/kubernetes/pkg/apis/core/v1/helper"
-	fieldpath "k8s.io/kubernetes/pkg/fieldpath"
 	"k8s.io/kubernetes/pkg/kubelet/envvars"
 	"k8s.io/utils/pointer"
 )
