@@ -20,6 +20,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/virtual-kubelet/virtual-kubelet/internal/expansion"
 	"github.com/virtual-kubelet/virtual-kubelet/internal/manager"
 	"github.com/virtual-kubelet/virtual-kubelet/log"
 	corev1 "k8s.io/api/core/v1"
@@ -32,7 +33,6 @@ import (
 	v1helper "k8s.io/kubernetes/pkg/apis/core/v1/helper"
 	fieldpath "k8s.io/kubernetes/pkg/fieldpath"
 	"k8s.io/kubernetes/pkg/kubelet/envvars"
-	"k8s.io/kubernetes/third_party/forked/golang/expansion"
 	"k8s.io/utils/pointer"
 )
 
