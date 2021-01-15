@@ -2,6 +2,11 @@ linter-settings:
   lll:
     line-length: 200
 
+run:
+  skip-dirs:
+    # This directory contains copy code from upstream kubernetes/kubernetes, skip it.
+    - internal/kubernetes
+
 linters:
   enable:
     - errcheck
