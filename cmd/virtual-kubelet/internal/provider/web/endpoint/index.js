@@ -30,10 +30,10 @@ let demoLogger = (req, res, next) => {
       };
 app.use(demoLogger);
 
-app.post("/", (req, res) => {
-  console.log("Ping from : ", req.body.host);
-  res.send(`Server: Pong from ${os.hostname()}!`);
-});
+// app.post("/", (req, res) => {
+//   console.log("Ping from : ", req.body.host);
+//   res.send(`Server: Pong from ${os.hostname()}!`);
+// });
 
 app.get("/capacity", (req, res) => {
   res.send({ cpu: "8", memory: "5Gi", pods: "20" });
@@ -47,12 +47,80 @@ app.get("/nodeConditions", (req, res) => {
     message: "kubelet is ready",
     lastHeartbeatTime: (new Date()).toISOString(),
     lastTransitionTime: (new Date()).toISOString(),
+  },
+  {
+    type: "OutOfDisk",
+    status: "False",
+    reason: "KubeletHasSufficientDisk",
+    message: "kubelet has sufficient disk space available",
+    lastHeartbeatTime: (new Date()).toISOString(),
+    lastTransitionTime: (new Date()).toISOString(),
+  },
+  {
+    type: "MemoryPressure",
+    status: "False",
+    reason: "KubeletHasSufficientMemory",
+    message: "kkubelet has sufficient memory available",
+    lastHeartbeatTime: (new Date()).toISOString(),
+    lastTransitionTime: (new Date()).toISOString(),
+  },
+  {
+    type: "DiskPressure",
+    status: "False",
+    reason: "KubeletHasNoDiskPressure",
+    message: "kubelet has no disk pressure",
+    lastHeartbeatTime: (new Date()).toISOString(),
+    lastTransitionTime: (new Date()).toISOString(),
+  },
+  {
+    type: "NetworkUnavailable",
+    status: "False",
+    reason: "RouteCreated",
+    message: "RouteController created a route",
+    lastHeartbeatTime: (new Date()).toISOString(),
+    lastTransitionTime: (new Date()).toISOString(),
   }]);
 });
 
 app.get("/nodeAddresses", (req, res) => {
-        res.send([{Type: "InternalIP", Address: "127.0.0.1"}]);
+        res.send([]);
 });
+
+app.get("/getPods", (req, res) => {
+  res.send([]);
+});
+
+
+app.get("/getPod", (req, res) => {
+  res.send(null);
+});
+
+app.post("/createPod", (req, res) => {
+  res.send({})
+});
+
+app.put("/updatePod", (req, res) => {
+  res.send({})
+})
+
+app.delete("/deletePod", (req, res) => {
+  res.send({})
+})
+
+app.get("/pod", (req, res) => {
+  res.send([])
+})
+
+app.get("/getContainerLogs", (req, res) => {
+  res.send({})
+})
+
+app.get("/getPodStatus", (req, res) => {
+  res.send({})
+})
+
+
+
 
 const port = 3000;
 app.listen(port, () => console.log(`listening on port ${port}`));

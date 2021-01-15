@@ -6,7 +6,7 @@
 //  - PUT /updatePod
 //  - DELETE /deletePod
 //  - GET /getPod?namespace=[namespace]&name=[pod name]
-//  - GE /getContainerLogs?namespace=[namespace]&podName=[pod name]&containerName=[container name]&tail=[tail value]
+//  - GET /getContainerLogs?namespace=[namespace]&podName=[pod name]&containerName=[container name]&tail=[tail value]
 //  - GET /getPodStatus?namespace=[namespace]&name=[pod name]
 //  - GET /getPods
 //  - GET /capacity
@@ -71,19 +71,19 @@ func (p *BrokerProvider) ConfigureNode(ctx context.Context, n *v1.Node) { // nol
 	// ctx, span := trace.StartSpan(ctx, "mock.ConfigureNode") // nolint:staticcheck,ineffassign
 	// defer span.End()
 
-	// n.Status.Capacity = p.capacity()
-	// n.Status.Allocatable = p.capacity()
-	// n.Status.Conditions = p.nodeConditions()
-	// n.Status.Addresses = p.nodeAddresses()
-	// n.Status.DaemonEndpoints = p.nodeDaemonEndpoints()
-	// os := p.operatingSystem
-	// if os == "" {
-	// 	os = "Linux"
-	// }
-	// n.Status.NodeInfo.OperatingSystem = os
-	// n.Status.NodeInfo.Architecture = "amd64"
-	// n.ObjectMeta.Labels["alpha.service-controller.kubernetes.io/exclude-balancer"] = "true"
-	// n.ObjectMeta.Labels["node.kubernetes.io/exclude-from-external-load-balancers"] = "true"
+	n.Status.Capacity = p.capacity()
+	n.Status.Allocatable = p.capacity()
+	n.Status.Conditions = p.nodeConditions()
+	n.Status.Addresses = p.nodeAddresses()
+	n.Status.DaemonEndpoints = p.nodeDaemonEndpoints()
+	os := p.operatingSystem
+	if os == "" {
+		os = "Linux"
+	}
+	n.Status.NodeInfo.OperatingSystem = os
+	n.Status.NodeInfo.Architecture = "amd64"
+	n.ObjectMeta.Labels["alpha.service-controller.kubernetes.io/exclude-balancer"] = "true"
+	n.ObjectMeta.Labels["node.kubernetes.io/exclude-from-external-load-balancers"] = "true"
 }
 
 // CreatePod accepts a Pod definition and forwards the call to the web endpoint
@@ -191,6 +191,17 @@ func (p *BrokerProvider) GetPods(ctx context.Context) ([]*v1.Pod, error) {
 
 // Capacity returns a resource list containing the capacity limits
 func (p *BrokerProvider) Capacity(ctx context.Context) v1.ResourceList {
+	return p.capacity()
+}
+
+// Capacity returns a resource list containing the capacity limits.
+func (p *BrokerProvider) capacity() v1.ResourceList {
+	// return v1.ResourceList{
+	// 	"cpu":    resource.MustParse(p.config.CPU),
+	// 	"memory": resource.MustParse(p.config.Memory),
+	// 	"pods":   resource.MustParse(p.config.Pods),
+	// }
+
 	var resourceList v1.ResourceList
 	err := p.doGetRequest("/capacity", &resourceList)
 
@@ -204,6 +215,10 @@ func (p *BrokerProvider) Capacity(ctx context.Context) v1.ResourceList {
 
 // NodeConditions returns a list of conditions (Ready, OutOfDisk, etc), for updates to the node status
 func (p *BrokerProvider) NodeConditions(ctx context.Context) []v1.NodeCondition {
+	return p.nodeConditions()
+}
+
+func (p *BrokerProvider) nodeConditions() []v1.NodeCondition {
 	var nodeConditions []v1.NodeCondition
 	err := p.doGetRequest("/nodeConditions", &nodeConditions)
 
@@ -218,6 +233,10 @@ func (p *BrokerProvider) NodeConditions(ctx context.Context) []v1.NodeCondition 
 // NodeAddresses returns a list of addresses for the node status
 // within Kubernetes.
 func (p *BrokerProvider) NodeAddresses(ctx context.Context) []v1.NodeAddress {
+	return p.nodeAddresses()
+}
+
+func (p *BrokerProvider) nodeAddresses() []v1.NodeAddress {
 	var nodeAddresses []v1.NodeAddress
 	err := p.doGetRequest("/nodeAddresses", &nodeAddresses)
 
@@ -231,8 +250,14 @@ func (p *BrokerProvider) NodeAddresses(ctx context.Context) []v1.NodeAddress {
 
 // NodeDaemonEndpoints returns NodeDaemonEndpoints for the node status
 // within Kubernetes.
-func (p *BrokerProvider) NodeDaemonEndpoints(ctx context.Context) *v1.NodeDaemonEndpoints {
-	return &v1.NodeDaemonEndpoints{
+// func (p *BrokerProvider) NodeDaemonEndpoints(ctx context.Context) *v1.NodeDaemonEndpoints {
+// 	return p.nodeDaemonEndpoints()
+// }
+
+// NodeDaemonEndpoints returns NodeDaemonEndpoints for the node status
+// within Kubernetes.
+func (p *BrokerProvider) nodeDaemonEndpoints() v1.NodeDaemonEndpoints {
+	return v1.NodeDaemonEndpoints{
 		KubeletEndpoint: v1.DaemonEndpoint{
 			Port: p.daemonEndpointPort,
 		},
