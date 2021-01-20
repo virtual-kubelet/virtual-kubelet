@@ -136,7 +136,7 @@ func (l *adapter) WithFields(fields log.Fields) log.Logger {
 		newFields[k] = v
 	}
 
-	return New(fields)
+	return New(newFields)
 }
 
 // WithError adds an error to the log entry
