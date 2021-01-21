@@ -12,6 +12,7 @@ require (
 	github.com/elazarl/goproxy/ext v0.0.0-20190711103511-473e67f1d7d2 // indirect
 	github.com/google/go-cmp v0.4.0
 	github.com/gorilla/mux v1.7.0
+	github.com/joho/godotenv v1.3.0
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/pkg/errors v0.8.1
 	github.com/prometheus/client_golang v1.0.0

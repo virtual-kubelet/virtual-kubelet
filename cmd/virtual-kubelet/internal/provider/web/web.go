@@ -26,9 +26,12 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"path"
 	"time"
 
 	"github.com/cenkalti/backoff"
+	"github.com/joho/godotenv"
+
 	"github.com/virtual-kubelet/virtual-kubelet/errdefs"
 	"github.com/virtual-kubelet/virtual-kubelet/node/api"
 	v1 "k8s.io/api/core/v1"
@@ -67,6 +70,7 @@ func NewBrokerProvider(nodeName, operatingSystem string, daemonEndpointPort int3
 	return &provider, nil
 }
 
+// ConfigureNode Method
 func (p *BrokerProvider) ConfigureNode(ctx context.Context, n *v1.Node) { // nolint:golint
 	// ctx, span := trace.StartSpan(ctx, "mock.ConfigureNode") // nolint:staticcheck,ineffassign
 	// defer span.End()
@@ -93,6 +97,25 @@ func (p *BrokerProvider) CreatePod(ctx context.Context, pod *v1.Pod) error {
 
 // UpdatePod accepts a Pod definition and forwards the call to the web endpoint
 func (p *BrokerProvider) UpdatePod(ctx context.Context, pod *v1.Pod) error {
+	var spec v1.PodSpec = pod.Spec
+	var container []v1.Container = spec.Containers
+	err := godotenv.Load(path.Join(GetScriptPath(), "/cmd/virtual-kubelet/internal/provider/web/.env"))
+
+  	if err != nil {
+    	log.Fatalf("Error loading .env file")
+	}
+	  
+	if len(container) > 0 {
+		var imageSourcePath string  = pod.Spec.Containers[0].Image
+		var imageDestPath string  = os.Getenv("IMAGE_DESTINATION")
+		response := CopyImageFromDockerRepository(imageSourcePath, imageDestPath)
+		fmt.Println(response)
+		if response == "1" {
+			return errors.New("Unable to copy image");
+		}
+	} else {
+		return errors.New("Source of image not found");
+	}
 	return p.createUpdatePod(pod, "PUT", "/updatePod")
 }
 
@@ -184,6 +207,7 @@ func (p *BrokerProvider) GetPodStatus(ctx context.Context, namespace, name strin
 // GetPods retrieves a list of all pods scheduled to run.
 func (p *BrokerProvider) GetPods(ctx context.Context) ([]*v1.Pod, error) {
 	var pods []*v1.Pod
+	
 	err := p.doGetRequest("/getPods", &pods)
 
 	return pods, err
