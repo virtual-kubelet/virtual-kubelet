@@ -518,7 +518,7 @@ func (pc *PodController) syncPodInProvider(ctx context.Context, pod *corev1.Pod,
 			return err
 		}
 
-		pc.deletePodsFromKubernetes.EnqueueAfter(key, time.Second*time.Duration(*pod.DeletionGracePeriodSeconds))
+		pc.deletePodsFromKubernetes.EnqueueWithoutRateLimitWithDelay(key, time.Second*time.Duration(*pod.DeletionGracePeriodSeconds))
 		return nil
 	}
 
