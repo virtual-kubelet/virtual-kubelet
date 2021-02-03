@@ -302,14 +302,25 @@ func (pc *PodController) Run(ctx context.Context, podSyncWorkers int) (retErr er
 
 	var eventHandler cache.ResourceEventHandler = cache.ResourceEventHandlerFuncs{
 		AddFunc: func(pod interface{}) {
+			ctx, cancel := context.WithCancel(ctx)
+			defer cancel()
+			ctx, span := trace.StartSpan(ctx, "AddFunc")
+			defer span.End()
+
 			if key, err := cache.MetaNamespaceKeyFunc(pod); err != nil {
 				log.G(ctx).Error(err)
 			} else {
+				ctx = span.WithField(ctx, "key", key)
 				pc.knownPods.Store(key, &knownPod{})
-				pc.syncPodsFromKubernetes.Enqueue(key)
+				pc.syncPodsFromKubernetes.Enqueue(ctx, key)
 			}
 		},
 		UpdateFunc: func(oldObj, newObj interface{}) {
+			ctx, cancel := context.WithCancel(ctx)
+			defer cancel()
+			ctx, span := trace.StartSpan(ctx, "UpdateFunc")
+			defer span.End()
+
 			// Create a copy of the old and new pod objects so we don't mutate the cache.
 			oldPod := oldObj.(*corev1.Pod)
 			newPod := newObj.(*corev1.Pod)
@@ -318,6 +329,7 @@ func (pc *PodController) Run(ctx context.Context, podSyncWorkers int) (retErr er
 			if key, err := cache.MetaNamespaceKeyFunc(newPod); err != nil {
 				log.G(ctx).Error(err)
 			} else {
+				ctx = span.WithField(ctx, "key", key)
 				obj, ok := pc.knownPods.Load(key)
 				if !ok {
 					// Pods are only ever *added* to knownPods in the above AddFunc, and removed
@@ -332,25 +344,31 @@ func (pc *PodController) Run(ctx context.Context, podSyncWorkers int) (retErr er
 					// This means that the pod in API server was changed by someone else [this can be okay], but we skipped
 					// a status update on our side because we compared the status received from the provider to the status
 					// received from the k8s api server based on outdated information.
-					pc.syncPodStatusFromProvider.Enqueue(key)
+					pc.syncPodStatusFromProvider.Enqueue(ctx, key)
 					// Reset this to avoid re-adding it continuously
 					kPod.lastPodStatusUpdateSkipped = false
 				}
 				kPod.Unlock()
 
 				if podShouldEnqueue(oldPod, newPod) {
-					pc.syncPodsFromKubernetes.Enqueue(key)
+					pc.syncPodsFromKubernetes.Enqueue(ctx, key)
 				}
 			}
 		},
 		DeleteFunc: func(pod interface{}) {
+			ctx, cancel := context.WithCancel(ctx)
+			defer cancel()
+			ctx, span := trace.StartSpan(ctx, "DeleteFunc")
+			defer span.End()
+
 			if key, err := cache.DeletionHandlingMetaNamespaceKeyFunc(pod); err != nil {
 				log.G(ctx).Error(err)
 			} else {
+				ctx = span.WithField(ctx, "key", key)
 				pc.knownPods.Delete(key)
-				pc.syncPodsFromKubernetes.Enqueue(key)
+				pc.syncPodsFromKubernetes.Enqueue(ctx, key)
 				// If this pod was in the deletion queue, forget about it
-				pc.deletePodsFromKubernetes.Forget(key)
+				pc.deletePodsFromKubernetes.Forget(ctx, key)
 			}
 		},
 	}
@@ -482,7 +500,7 @@ func (pc *PodController) syncPodInProvider(ctx context.Context, pod *corev1.Pod,
 	// more context is here: https://github.com/virtual-kubelet/virtual-kubelet/pull/760
 	if pod.DeletionTimestamp != nil && !running(&pod.Status) {
 		log.G(ctx).Debug("Force deleting pod from API Server as it is no longer running")
-		pc.deletePodsFromKubernetes.EnqueueWithoutRateLimit(key)
+		pc.deletePodsFromKubernetes.EnqueueWithoutRateLimit(ctx, key)
 		return nil
 	}
 	obj, ok := pc.knownPods.Load(key)
@@ -518,7 +536,7 @@ func (pc *PodController) syncPodInProvider(ctx context.Context, pod *corev1.Pod,
 			return err
 		}
 
-		pc.deletePodsFromKubernetes.EnqueueWithoutRateLimitWithDelay(key, time.Second*time.Duration(*pod.DeletionGracePeriodSeconds))
+		pc.deletePodsFromKubernetes.EnqueueWithoutRateLimitWithDelay(ctx, key, time.Second*time.Duration(*pod.DeletionGracePeriodSeconds))
 		return nil
 	}
 

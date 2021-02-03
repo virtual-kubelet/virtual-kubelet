@@ -100,39 +100,63 @@ func New(ratelimiter workqueue.RateLimiter, name string, handler ItemHandler) *Q
 }
 
 // Enqueue enqueues the key in a rate limited fashion
-func (q *Queue) Enqueue(key string) {
+func (q *Queue) Enqueue(ctx context.Context, key string) {
 	q.lock.Lock()
 	defer q.lock.Unlock()
 
-	q.insert(key, true, 0)
+	q.insert(ctx, key, true, 0)
 }
 
 // EnqueueWithoutRateLimit enqueues the key without a rate limit
-func (q *Queue) EnqueueWithoutRateLimit(key string) {
+func (q *Queue) EnqueueWithoutRateLimit(ctx context.Context, key string) {
 	q.lock.Lock()
 	defer q.lock.Unlock()
 
-	q.insert(key, false, 0)
+	q.insert(ctx, key, false, 0)
 }
 
 // Forget forgets the key
-func (q *Queue) Forget(key string) {
+func (q *Queue) Forget(ctx context.Context, key string) {
 	q.lock.Lock()
 	defer q.lock.Unlock()
+	ctx, span := trace.StartSpan(ctx, "Forget")
+	defer span.End()
+
+	ctx = span.WithFields(ctx, map[string]interface{}{
+		"queue": q.name,
+		"key":   key,
+	})
 
 	if item, ok := q.itemsInQueue[key]; ok {
+		span.WithField(ctx, "status", "itemInQueue")
 		delete(q.itemsInQueue, key)
 		q.items.Remove(item)
+		return
 	}
 
 	if qi, ok := q.itemsBeingProcessed[key]; ok {
+		span.WithField(ctx, "status", "itemBeingProcessed")
 		qi.forget = true
+		return
 	}
+	span.WithField(ctx, "status", "notfound")
 }
 
 // insert inserts a new item to be processed at time time. It will not further delay items if when is later than the
 // original time the item was scheduled to be processed. If when is earlier, it will "bring it forward"
-func (q *Queue) insert(key string, ratelimit bool, delay time.Duration) *queueItem {
+func (q *Queue) insert(ctx context.Context, key string, ratelimit bool, delay time.Duration) *queueItem {
+	ctx, span := trace.StartSpan(ctx, "insert")
+	defer span.End()
+
+	ctx = span.WithFields(ctx, map[string]interface{}{
+		"queue":     q.name,
+		"key":       key,
+		"ratelimit": ratelimit,
+	})
+	if delay > 0 {
+		ctx = span.WithField(ctx, "delay", delay.String())
+	}
+
 	defer func() {
 		select {
 		case q.wakeupCh <- struct{}{}:
@@ -142,6 +166,7 @@ func (q *Queue) insert(key string, ratelimit bool, delay time.Duration) *queueIt
 
 	// First see if the item is already being processed
 	if item, ok := q.itemsBeingProcessed[key]; ok {
+		span.WithField(ctx, "status", "itemsBeingProcessed")
 		when := q.clock.Now().Add(delay)
 		// Is the item already been redirtied?
 		if item.redirtiedAt.IsZero() {
@@ -157,12 +182,14 @@ func (q *Queue) insert(key string, ratelimit bool, delay time.Duration) *queueIt
 
 	// Is the item already in the queue?
 	if item, ok := q.itemsInQueue[key]; ok {
+		span.WithField(ctx, "status", "itemsInQueue")
 		qi := item.Value.(*queueItem)
 		when := q.clock.Now().Add(delay)
 		q.adjustPosition(qi, item, when)
 		return qi
 	}
 
+	span.WithField(ctx, "status", "added")
 	now := q.clock.Now()
 	val := &queueItem{
 		key:                  key,
@@ -175,6 +202,7 @@ func (q *Queue) insert(key string, ratelimit bool, delay time.Duration) *queueIt
 			panic("Non-zero delay with rate limiting not supported")
 		}
 		ratelimitDelay := q.ratelimiter.When(key)
+		span.WithField(ctx, "delay", ratelimitDelay.String())
 		val.plannedToStartWorkAt = val.plannedToStartWorkAt.Add(ratelimitDelay)
 		val.delayedViaRateLimit = &ratelimitDelay
 	} else {
@@ -213,10 +241,10 @@ func (q *Queue) adjustPosition(qi *queueItem, element *list.Element, when time.T
 }
 
 // EnqueueWithoutRateLimitWithDelay enqueues without rate limiting, but work will not start for this given delay period
-func (q *Queue) EnqueueWithoutRateLimitWithDelay(key string, after time.Duration) {
+func (q *Queue) EnqueueWithoutRateLimitWithDelay(ctx context.Context, key string, after time.Duration) {
 	q.lock.Lock()
 	defer q.lock.Unlock()
-	q.insert(key, false, after)
+	q.insert(ctx, key, false, after)
 }
 
 // Empty returns if the queue has no items in it
@@ -398,7 +426,7 @@ func (q *Queue) handleQueueItemObject(ctx context.Context, qi *queueItem) error 
 		if qi.requeues+1 < MaxRetries {
 			// Put the item back on the work Queue to handle any transient errors.
 			log.G(ctx).WithError(err).Warnf("requeuing %q due to failed sync", qi.key)
-			newQI := q.insert(qi.key, true, 0)
+			newQI := q.insert(ctx, qi.key, true, 0)
 			newQI.requeues = qi.requeues + 1
 			newQI.originallyAdded = qi.originallyAdded
 
@@ -410,7 +438,7 @@ func (q *Queue) handleQueueItemObject(ctx context.Context, qi *queueItem) error 
 	// We've exceeded the maximum retries or we were successful.
 	q.ratelimiter.Forget(qi.key)
 	if !qi.redirtiedAt.IsZero() {
-		newQI := q.insert(qi.key, qi.redirtiedWithRatelimit, time.Until(qi.redirtiedAt))
+		newQI := q.insert(ctx, qi.key, qi.redirtiedWithRatelimit, time.Until(qi.redirtiedAt))
 		newQI.addedViaRedirty = true
 	}
 

@@ -36,7 +36,7 @@ func TestQueueMaxRetries(t *testing.T) {
 		workqueue.NewItemExponentialFailureRateLimiter(5*time.Millisecond, 10*time.Millisecond),
 		&workqueue.BucketRateLimiter{Limiter: rate.NewLimiter(rate.Limit(10), 100)},
 	), t.Name(), handler)
-	wq.Enqueue("test")
+	wq.Enqueue(context.TODO(), "test")
 
 	for n < MaxRetries {
 		assert.Assert(t, wq.handleQueueItem(ctx))
@@ -53,11 +53,11 @@ func TestForget(t *testing.T) {
 	}
 	wq := New(workqueue.DefaultItemBasedRateLimiter(), t.Name(), handler)
 
-	wq.Forget("val")
+	wq.Forget(context.TODO(), "val")
 	assert.Assert(t, is.Equal(0, wq.Len()))
 
 	v := "test"
-	wq.EnqueueWithoutRateLimit(v)
+	wq.EnqueueWithoutRateLimit(context.TODO(), v)
 	assert.Assert(t, is.Equal(1, wq.Len()))
 }
 
@@ -86,8 +86,8 @@ func TestQueueItemNoSleep(t *testing.T) {
 	})
 
 	q.lock.Lock()
-	q.insert("foo", false, -1*time.Hour)
-	q.insert("bar", false, -1*time.Hour)
+	q.insert(ctx, "foo", false, -1*time.Hour)
+	q.insert(ctx, "bar", false, -1*time.Hour)
 	q.lock.Unlock()
 
 	item, err := q.getNextItem(ctx)
@@ -109,8 +109,8 @@ func TestQueueItemSleep(t *testing.T) {
 		return nil
 	})
 	q.lock.Lock()
-	q.insert("foo", false, 100*time.Millisecond)
-	q.insert("bar", false, 100*time.Millisecond)
+	q.insert(ctx, "foo", false, 100*time.Millisecond)
+	q.insert(ctx, "bar", false, 100*time.Millisecond)
 	q.lock.Unlock()
 
 	item, err := q.getNextItem(ctx)
@@ -131,7 +131,7 @@ func TestQueueBackgroundAdd(t *testing.T) {
 	time.AfterFunc(100*time.Millisecond, func() {
 		q.lock.Lock()
 		defer q.lock.Unlock()
-		q.insert("foo", false, 0)
+		q.insert(ctx, "foo", false, 0)
 	})
 
 	item, err := q.getNextItem(ctx)
@@ -151,13 +151,13 @@ func TestQueueBackgroundAdvance(t *testing.T) {
 	})
 	start := time.Now()
 	q.lock.Lock()
-	q.insert("foo", false, 10*time.Second)
+	q.insert(ctx, "foo", false, 10*time.Second)
 	q.lock.Unlock()
 
 	time.AfterFunc(200*time.Millisecond, func() {
 		q.lock.Lock()
 		defer q.lock.Unlock()
-		q.insert("foo", false, 0)
+		q.insert(ctx, "foo", false, 0)
 	})
 
 	item, err := q.getNextItem(ctx)
@@ -178,14 +178,14 @@ func TestQueueRedirty(t *testing.T) {
 	q = New(workqueue.DefaultItemBasedRateLimiter(), t.Name(), func(ctx context.Context, key string) error {
 		assert.Assert(t, is.Equal(key, "foo"))
 		if atomic.AddInt64(&times, 1) == 1 {
-			q.EnqueueWithoutRateLimit("foo")
+			q.EnqueueWithoutRateLimit(context.TODO(), "foo")
 		} else {
 			cancel()
 		}
 		return nil
 	})
 
-	q.EnqueueWithoutRateLimit("foo")
+	q.EnqueueWithoutRateLimit(context.TODO(), "foo")
 	q.Run(ctx, 1)
 	for !q.Empty() {
 		time.Sleep(100 * time.Millisecond)
@@ -207,7 +207,7 @@ func TestHeapConcurrency(t *testing.T) {
 		return nil
 	})
 	for i := 0; i < 20; i++ {
-		q.EnqueueWithoutRateLimit(strconv.Itoa(i))
+		q.EnqueueWithoutRateLimit(context.TODO(), strconv.Itoa(i))
 	}
 
 	assert.Assert(t, q.Len() == 20)
@@ -241,20 +241,20 @@ func TestHeapOrder(t *testing.T) {
 	})
 	q.clock = nonmovingClock{}
 
-	q.EnqueueWithoutRateLimitWithDelay("a", 1000)
-	q.EnqueueWithoutRateLimitWithDelay("b", 2000)
-	q.EnqueueWithoutRateLimitWithDelay("c", 3000)
-	q.EnqueueWithoutRateLimitWithDelay("d", 4000)
-	q.EnqueueWithoutRateLimitWithDelay("e", 5000)
+	q.EnqueueWithoutRateLimitWithDelay(context.TODO(), "a", 1000)
+	q.EnqueueWithoutRateLimitWithDelay(context.TODO(), "b", 2000)
+	q.EnqueueWithoutRateLimitWithDelay(context.TODO(), "c", 3000)
+	q.EnqueueWithoutRateLimitWithDelay(context.TODO(), "d", 4000)
+	q.EnqueueWithoutRateLimitWithDelay(context.TODO(), "e", 5000)
 	checkConsistency(t, q)
 	t.Logf("%v", q)
-	q.EnqueueWithoutRateLimitWithDelay("d", 1000)
+	q.EnqueueWithoutRateLimitWithDelay(context.TODO(), "d", 1000)
 	checkConsistency(t, q)
 	t.Logf("%v", q)
-	q.EnqueueWithoutRateLimitWithDelay("c", 1001)
+	q.EnqueueWithoutRateLimitWithDelay(context.TODO(), "c", 1001)
 	checkConsistency(t, q)
 	t.Logf("%v", q)
-	q.EnqueueWithoutRateLimitWithDelay("e", 999)
+	q.EnqueueWithoutRateLimitWithDelay(context.TODO(), "e", 999)
 	checkConsistency(t, q)
 	t.Logf("%v", q)
 }
@@ -316,7 +316,7 @@ func TestRateLimiter(t *testing.T) {
 	enqueued := 0
 	syncMap.Range(func(key, value interface{}) bool {
 		enqueued++
-		q.Enqueue(key.(string))
+		q.Enqueue(context.TODO(), key.(string))
 		return true
 	})
 
@@ -369,11 +369,11 @@ func TestQueueForgetInProgress(t *testing.T) {
 	q = New(workqueue.DefaultItemBasedRateLimiter(), t.Name(), func(ctx context.Context, key string) error {
 		assert.Assert(t, is.Equal(key, "foo"))
 		atomic.AddInt64(&times, 1)
-		q.Forget(key)
+		q.Forget(context.TODO(), key)
 		return errors.New("test")
 	})
 
-	q.EnqueueWithoutRateLimit("foo")
+	q.EnqueueWithoutRateLimit(context.TODO(), "foo")
 	go q.Run(ctx, 1)
 	for !q.Empty() {
 		time.Sleep(100 * time.Millisecond)
@@ -390,8 +390,8 @@ func TestQueueForgetBeforeStart(t *testing.T) {
 		panic("shouldn't be called")
 	})
 
-	q.EnqueueWithoutRateLimit("foo")
-	q.Forget("foo")
+	q.EnqueueWithoutRateLimit(context.TODO(), "foo")
+	q.Forget(context.TODO(), "foo")
 	go q.Run(ctx, 1)
 	for !q.Empty() {
 		time.Sleep(100 * time.Millisecond)
@@ -401,26 +401,28 @@ func TestQueueForgetBeforeStart(t *testing.T) {
 func TestQueueMoveItem(t *testing.T) {
 	t.Parallel()
 
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 	q := New(workqueue.DefaultItemBasedRateLimiter(), t.Name(), func(ctx context.Context, key string) error {
 		panic("shouldn't be called")
 	})
 	q.clock = nonmovingClock{}
 
-	q.insert("foo", false, 3000)
-	q.insert("bar", false, 2000)
-	q.insert("baz", false, 1000)
+	q.insert(ctx, "foo", false, 3000)
+	q.insert(ctx, "bar", false, 2000)
+	q.insert(ctx, "baz", false, 1000)
 	checkConsistency(t, q)
 	t.Log(q)
 
-	q.insert("foo", false, 2000)
+	q.insert(ctx, "foo", false, 2000)
 	checkConsistency(t, q)
 	t.Log(q)
 
-	q.insert("foo", false, 1999)
+	q.insert(ctx, "foo", false, 1999)
 	checkConsistency(t, q)
 	t.Log(q)
 
-	q.insert("foo", false, 999)
+	q.insert(ctx, "foo", false, 999)
 	checkConsistency(t, q)
 	t.Log(q)
 }
