@@ -44,11 +44,6 @@ func newTestController() *TestController {
 	rm := testutil.FakeResourceManager()
 	p := newMockProvider()
 	iFactory := kubeinformers.NewSharedInformerFactoryWithOptions(fk8s, 10*time.Minute)
-	rateLimiter := workqueue.NewMaxOfRateLimiter(
-		// The default upper bound is 1000 seconds. Let's not use that.
-		workqueue.NewItemExponentialFailureRateLimiter(5*time.Millisecond, 10*time.Millisecond),
-		&workqueue.BucketRateLimiter{Limiter: rate.NewLimiter(rate.Limit(10), 100)},
-	)
 	podController, err := NewPodController(PodControllerConfig{
 		PodClient:         fk8s.CoreV1(),
 		PodInformer:       iFactory.Core().V1().Pods(),
@@ -57,7 +52,21 @@ func newTestController() *TestController {
 		ConfigMapInformer: iFactory.Core().V1().ConfigMaps(),
 		SecretInformer:    iFactory.Core().V1().Secrets(),
 		ServiceInformer:   iFactory.Core().V1().Services(),
-		RateLimiter:       rateLimiter,
+		SyncPodsFromKubernetesRateLimiter: workqueue.NewMaxOfRateLimiter(
+			// The default upper bound is 1000 seconds. Let's not use that.
+			workqueue.NewItemExponentialFailureRateLimiter(5*time.Millisecond, 10*time.Millisecond),
+			&workqueue.BucketRateLimiter{Limiter: rate.NewLimiter(rate.Limit(10), 100)},
+		),
+		SyncPodStatusFromProviderRateLimiter: workqueue.NewMaxOfRateLimiter(
+			// The default upper bound is 1000 seconds. Let's not use that.
+			workqueue.NewItemExponentialFailureRateLimiter(5*time.Millisecond, 10*time.Millisecond),
+			&workqueue.BucketRateLimiter{Limiter: rate.NewLimiter(rate.Limit(10), 100)},
+		),
+		DeletePodsFromKubernetesRateLimiter: workqueue.NewMaxOfRateLimiter(
+			// The default upper bound is 1000 seconds. Let's not use that.
+			workqueue.NewItemExponentialFailureRateLimiter(5*time.Millisecond, 10*time.Millisecond),
+			&workqueue.BucketRateLimiter{Limiter: rate.NewLimiter(rate.Limit(10), 100)},
+		),
 	})
 
 	if err != nil {

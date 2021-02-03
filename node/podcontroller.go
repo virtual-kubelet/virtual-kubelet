@@ -176,8 +176,12 @@ type PodControllerConfig struct {
 	SecretInformer    corev1informers.SecretInformer
 	ServiceInformer   corev1informers.ServiceInformer
 
-	// RateLimiter defines the rate limit of work queue
-	RateLimiter workqueue.RateLimiter
+	// SyncPodsFromKubernetesRateLimiter defines the rate limit for the SyncPodsFromKubernetes queue
+	SyncPodsFromKubernetesRateLimiter workqueue.RateLimiter
+	// DeletePodsFromKubernetesRateLimiter defines the rate limit for the DeletePodsFromKubernetesRateLimiter queue
+	DeletePodsFromKubernetesRateLimiter workqueue.RateLimiter
+	// SyncPodStatusFromProviderRateLimiter defines the rate limit for the SyncPodStatusFromProviderRateLimiter queue
+	SyncPodStatusFromProviderRateLimiter workqueue.RateLimiter
 
 	// Add custom filtering for pod informer event handlers
 	// Use this for cases where the pod informer handles more than pods assigned to this node
@@ -210,8 +214,14 @@ func NewPodController(cfg PodControllerConfig) (*PodController, error) {
 	if cfg.Provider == nil {
 		return nil, errdefs.InvalidInput("missing provider")
 	}
-	if cfg.RateLimiter == nil {
-		cfg.RateLimiter = workqueue.DefaultControllerRateLimiter()
+	if cfg.SyncPodsFromKubernetesRateLimiter == nil {
+		cfg.SyncPodsFromKubernetesRateLimiter = workqueue.DefaultControllerRateLimiter()
+	}
+	if cfg.DeletePodsFromKubernetesRateLimiter == nil {
+		cfg.DeletePodsFromKubernetesRateLimiter = workqueue.DefaultControllerRateLimiter()
+	}
+	if cfg.SyncPodStatusFromProviderRateLimiter == nil {
+		cfg.SyncPodStatusFromProviderRateLimiter = workqueue.DefaultControllerRateLimiter()
 	}
 	rm, err := manager.NewResourceManager(cfg.PodInformer.Lister(), cfg.SecretInformer.Lister(), cfg.ConfigMapInformer.Lister(), cfg.ServiceInformer.Lister())
 	if err != nil {
@@ -230,9 +240,9 @@ func NewPodController(cfg PodControllerConfig) (*PodController, error) {
 		podEventFilterFunc: cfg.PodEventFilterFunc,
 	}
 
-	pc.syncPodsFromKubernetes = queue.New(cfg.RateLimiter, "syncPodsFromKubernetes", pc.syncPodFromKubernetesHandler)
-	pc.deletePodsFromKubernetes = queue.New(cfg.RateLimiter, "deletePodsFromKubernetes", pc.deletePodsFromKubernetesHandler)
-	pc.syncPodStatusFromProvider = queue.New(cfg.RateLimiter, "syncPodStatusFromProvider", pc.syncPodStatusFromProviderHandler)
+	pc.syncPodsFromKubernetes = queue.New(cfg.SyncPodsFromKubernetesRateLimiter, "syncPodsFromKubernetes", pc.syncPodFromKubernetesHandler)
+	pc.deletePodsFromKubernetes = queue.New(cfg.DeletePodsFromKubernetesRateLimiter, "deletePodsFromKubernetes", pc.deletePodsFromKubernetesHandler)
+	pc.syncPodStatusFromProvider = queue.New(cfg.SyncPodStatusFromProviderRateLimiter, "syncPodStatusFromProvider", pc.syncPodStatusFromProviderHandler)
 
 	return pc, nil
 }
