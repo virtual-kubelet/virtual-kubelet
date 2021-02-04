@@ -19,11 +19,11 @@ We truncate at 24 chars because some Kubernetes name fields are limited to this 
 Standard labels for helm resources
 */}}
 {{- define "vk.labels" -}}
-labels:
-  heritage: "{{ .Release.Service }}"
-  release: "{{ .Release.Name }}"
-  revision: "{{ .Release.Revision }}"
-  chart: "{{ .Chart.Name }}"
-  chartVersion: "{{ .Chart.Version }}"
-  app: {{ template "vk.name" . }}
+heritage: "{{ .Release.Service }}"
+release: "{{ .Release.Name }}"
+revision: "{{ .Release.Revision }}"
+chart: "{{ .Chart.Name }}"
+chartVersion: "{{ .Chart.Version }}"
+app: {{ template "vk.name" . }}
+component: kubelet
 {{- end -}}

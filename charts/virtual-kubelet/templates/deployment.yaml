@@ -1,15 +1,18 @@
-apiVersion: extensions/v1beta1
+apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: {{ template "vk.fullname" . }}
-{{ include "vk.labels" . | indent 2 }}
-    component: kubelet
+  labels:
+{{ include "vk.labels" . | indent 4 }}
 spec:
   replicas: 1
+  selector:
+      matchLabels:
+{{ include "vk.labels" . | indent 8 }}
   template:
     metadata:
-{{ include "vk.labels" . | indent 6 }}
-        component: kubelet
+      labels:
+{{ include "vk.labels" . | indent 8 }}
       annotations:
         checksum/secret: {{ include (print $.Template.BasePath "/secret.yaml") . | sha256sum }}
     spec:

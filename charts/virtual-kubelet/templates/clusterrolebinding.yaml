@@ -3,7 +3,8 @@ apiVersion: "rbac.authorization.k8s.io/{{ .Values.rbac.apiVersion }}"
 kind: ClusterRoleBinding
 metadata:
   name: {{ template "vk.fullname" . }}
-{{ include "vk.labels" . | indent 2 }}
+  labels:
+{{ include "vk.labels" . | indent 4 }}
 subjects:
 - kind: ServiceAccount
   name: {{ template "vk.fullname" . }}
