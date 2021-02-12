@@ -330,7 +330,7 @@ func (pc *PodController) enqueuePodStatusUpdate(ctx context.Context, pod *corev1
 	}
 	kpod.lastPodStatusReceivedFromProvider = pod
 	kpod.Unlock()
-	pc.syncPodStatusFromProvider.Enqueue(key)
+	pc.syncPodStatusFromProvider.Enqueue(ctx, key)
 }
 
 func (pc *PodController) syncPodStatusFromProviderHandler(ctx context.Context, key string) (retErr error) {
