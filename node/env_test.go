@@ -25,6 +25,9 @@ func TestEnvtest(t *testing.T) {
 	if !*enableEnvTest || os.Getenv("VK_ENVTEST") != "" {
 		t.Skip("test only runs when -envtest is passed or if VK_ENVTEST is set to a non-empty value")
 	}
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
 	env := &envtest.Environment{}
 	_, err := env.Start()
 	assert.NilError(t, err)
@@ -33,12 +36,12 @@ func TestEnvtest(t *testing.T) {
 	}()
 
 	t.Log("Env test environment ready")
-	t.Run("E2ERunWithoutLeases", func(t *testing.T) {
+	t.Run("E2ERunWithoutLeases", wrapE2ETest(ctx, env, func(ctx context.Context, t *testing.T, environment *envtest.Environment) {
 		testNodeE2ERun(t, env, false)
-	})
-	t.Run("E2ERunWithLeases", func(t *testing.T) {
+	}))
+	t.Run("E2ERunWithLeases", wrapE2ETest(ctx, env, func(ctx context.Context, t *testing.T, environment *envtest.Environment) {
 		testNodeE2ERun(t, env, true)
-	})
+	}))
 }
 
 func nodeNameForTest(t *testing.T) string {
@@ -49,16 +52,24 @@ func nodeNameForTest(t *testing.T) string {
 	return name
 }
 
+func wrapE2ETest(ctx context.Context, env *envtest.Environment, f func(context.Context, *testing.T, *envtest.Environment)) func(*testing.T) {
+	return func(t *testing.T) {
+		log.G(ctx)
+		sl := logrus.StandardLogger()
+		sl.SetLevel(logrus.DebugLevel)
+		logger := logruslogger.FromLogrus(sl.WithField("test", t.Name()))
+		ctx = log.WithLogger(ctx, logger)
+
+		// The following requires that E2E tests are performed *sequentially*
+		log.L = logger
+		klogv2.SetLogger(logrusr.NewLogger(sl))
+		f(ctx, t, env)
+	}
+}
+
 func testNodeE2ERun(t *testing.T, env *envtest.Environment, withLeases bool) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-
-	sl := logrus.StandardLogger()
-	sl.SetLevel(logrus.DebugLevel)
-	logger := logruslogger.FromLogrus(sl.WithField("test", t.Name()))
-	ctx = log.WithLogger(ctx, logger)
-	log.L = logger
-	klogv2.SetLogger(logrusr.NewLogger(sl))
 
 	clientset, err := kubernetes.NewForConfig(env.Config)
 	assert.NilError(t, err)
