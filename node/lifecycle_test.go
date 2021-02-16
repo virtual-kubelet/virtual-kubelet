@@ -628,6 +628,17 @@ func randomizeName(pod *corev1.Pod) {
 	pod.Name = name
 }
 
+func forRealAPIServer(pod *corev1.Pod) {
+	pod.ResourceVersion = ""
+	pod.ObjectMeta.UID = ""
+}
+
+func nameBasedOnTest(t *testing.T) podModifier {
+	return func(pod *corev1.Pod) {
+		pod.Name = kubernetesNameForTest(t)
+	}
+}
+
 func newPod(podmodifiers ...podModifier) *corev1.Pod {
 	var terminationGracePeriodSeconds int64 = 30
 	pod := &corev1.Pod{
