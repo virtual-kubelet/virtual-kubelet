@@ -16,6 +16,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/client-go/kubernetes"
 	klogv2 "k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
@@ -25,6 +26,9 @@ func TestEnvtest(t *testing.T) {
 	if !*enableEnvTest || os.Getenv("VK_ENVTEST") != "" {
 		t.Skip("test only runs when -envtest is passed or if VK_ENVTEST is set to a non-empty value")
 	}
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
 	env := &envtest.Environment{}
 	_, err := env.Start()
 	assert.NilError(t, err)
@@ -33,15 +37,17 @@ func TestEnvtest(t *testing.T) {
 	}()
 
 	t.Log("Env test environment ready")
-	t.Run("E2ERunWithoutLeases", func(t *testing.T) {
+	t.Run("E2ERunWithoutLeases", wrapE2ETest(ctx, env, func(ctx context.Context, t *testing.T, environment *envtest.Environment) {
 		testNodeE2ERun(t, env, false)
-	})
-	t.Run("E2ERunWithLeases", func(t *testing.T) {
+	}))
+	t.Run("E2ERunWithLeases", wrapE2ETest(ctx, env, func(ctx context.Context, t *testing.T, environment *envtest.Environment) {
 		testNodeE2ERun(t, env, true)
-	})
+	}))
+
+	t.Run("E2EPodStatusUpdate", wrapE2ETest(ctx, env, testPodStatusUpdate))
 }
 
-func nodeNameForTest(t *testing.T) string {
+func kubernetesNameForTest(t *testing.T) string {
 	name := t.Name()
 	name = strings.ToLower(name)
 	name = strings.ReplaceAll(name, "/", "-")
@@ -49,16 +55,90 @@ func nodeNameForTest(t *testing.T) string {
 	return name
 }
 
+func wrapE2ETest(ctx context.Context, env *envtest.Environment, f func(context.Context, *testing.T, *envtest.Environment)) func(*testing.T) {
+	return func(t *testing.T) {
+		log.G(ctx)
+		sl := logrus.StandardLogger()
+		sl.SetLevel(logrus.DebugLevel)
+		logger := logruslogger.FromLogrus(sl.WithField("test", t.Name()))
+		ctx = log.WithLogger(ctx, logger)
+
+		// The following requires that E2E tests are performed *sequentially*
+		log.L = logger
+		klogv2.SetLogger(logrusr.NewLogger(sl))
+		f(ctx, t, env)
+	}
+}
+
+func testPodStatusUpdate(ctx context.Context, t *testing.T, env *envtest.Environment) {
+	provider := newMockProvider()
+
+	clientset, err := kubernetes.NewForConfig(env.Config)
+	assert.NilError(t, err)
+	pods := clientset.CoreV1().Pods(testNamespace)
+
+	assert.NilError(t, wireUpSystemWithClient(ctx, provider, clientset, func(ctx context.Context, s *system) {
+		p := newPod(forRealAPIServer, nameBasedOnTest(t))
+		// In real API server, we don't set the resource version
+		p.ResourceVersion = ""
+		newPod, err := pods.Create(ctx, p, metav1.CreateOptions{})
+		assert.NilError(t, err)
+
+		key, err := buildKey(newPod)
+		assert.NilError(t, err)
+
+		listOptions := metav1.ListOptions{
+			FieldSelector: fields.OneTermEqualSelector("metadata.name", p.ObjectMeta.Name).String(),
+		}
+
+		// Setup a watch to check if the pod is in running
+		watcher, err := s.client.CoreV1().Pods(testNamespace).Watch(ctx, listOptions)
+		assert.NilError(t, err)
+		defer watcher.Stop()
+		// Start the pod controller
+		assert.NilError(t, s.start(ctx))
+		var serverPod *corev1.Pod
+		for {
+			select {
+			case <-ctx.Done():
+				t.Fatalf("Context ended early: %s", ctx.Err().Error())
+			case ev := <-watcher.ResultChan():
+				serverPod = ev.Object.(*corev1.Pod)
+				if serverPod.Status.Phase == corev1.PodRunning {
+					goto running
+				}
+			}
+		}
+	running:
+		t.Log("Observed pod in running state")
+
+		providerPod, ok := provider.pods.Load(key)
+		assert.Assert(t, ok)
+		providerPodCopy := providerPod.(*corev1.Pod).DeepCopy()
+		providerPodCopy.Status = serverPod.Status
+		if providerPodCopy.Annotations == nil {
+			providerPodCopy.Annotations = make(map[string]string, 1)
+		}
+		providerPodCopy.Annotations["testannotation"] = "testvalue"
+		provider.notifier(providerPodCopy)
+
+		for {
+			select {
+			case <-ctx.Done():
+				t.Fatalf("Context ended early: %s", ctx.Err().Error())
+			case ev := <-watcher.ResultChan():
+				annotations := ev.Object.(*corev1.Pod).Annotations
+				if annotations != nil && annotations["testannotation"] == "testvalue" {
+					return
+				}
+			}
+		}
+	}))
+}
+
 func testNodeE2ERun(t *testing.T, env *envtest.Environment, withLeases bool) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-
-	sl := logrus.StandardLogger()
-	sl.SetLevel(logrus.DebugLevel)
-	logger := logruslogger.FromLogrus(sl.WithField("test", t.Name()))
-	ctx = log.WithLogger(ctx, logger)
-	log.L = logger
-	klogv2.SetLogger(logrusr.NewLogger(sl))
 
 	clientset, err := kubernetes.NewForConfig(env.Config)
 	assert.NilError(t, err)
@@ -70,7 +150,7 @@ func testNodeE2ERun(t *testing.T, env *envtest.Environment, withLeases bool) {
 
 	testNode := &corev1.Node{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: nodeNameForTest(t),
+			Name: kubernetesNameForTest(t),
 		},
 	}
 

@@ -21,6 +21,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/uuid"
 	"k8s.io/apimachinery/pkg/watch"
 	kubeinformers "k8s.io/client-go/informers"
+	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/fake"
 	corev1client "k8s.io/client-go/kubernetes/typed/core/v1"
 	ktesting "k8s.io/client-go/testing"
@@ -226,7 +227,7 @@ func TestPodLifecycle(t *testing.T) {
 type testFunction func(ctx context.Context, s *system)
 type system struct {
 	pc                  *PodController
-	client              *fake.Clientset
+	client              kubernetes.Interface
 	podControllerConfig PodControllerConfig
 }
 
@@ -261,6 +262,13 @@ func wireUpSystem(ctx context.Context, provider PodLifecycleHandler, f testFunct
 		pod.ResourceVersion = strconv.Itoa(resourceVersion + 1)
 		return false, nil, nil
 	})
+
+	return wireUpSystemWithClient(ctx, provider, client, f)
+}
+
+func wireUpSystemWithClient(ctx context.Context, provider PodLifecycleHandler, client kubernetes.Interface, f testFunction) error {
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
 
 	// This is largely copy and pasted code from the root command
 	sharedInformerFactory := kubeinformers.NewSharedInformerFactoryWithOptions(
@@ -618,6 +626,17 @@ func randomizeUID(pod *corev1.Pod) {
 func randomizeName(pod *corev1.Pod) {
 	name := fmt.Sprintf("pod-%s", uuid.NewUUID())
 	pod.Name = name
+}
+
+func forRealAPIServer(pod *corev1.Pod) {
+	pod.ResourceVersion = ""
+	pod.ObjectMeta.UID = ""
+}
+
+func nameBasedOnTest(t *testing.T) podModifier {
+	return func(pod *corev1.Pod) {
+		pod.Name = kubernetesNameForTest(t)
+	}
 }
 
 func newPod(podmodifiers ...podModifier) *corev1.Pod {

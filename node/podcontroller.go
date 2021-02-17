@@ -339,7 +339,11 @@ func (pc *PodController) Run(ctx context.Context, podSyncWorkers int) (retErr er
 
 				kPod := obj.(*knownPod)
 				kPod.Lock()
-				if kPod.lastPodStatusUpdateSkipped && !cmp.Equal(newPod.Status, kPod.lastPodStatusReceivedFromProvider.Status) {
+				if kPod.lastPodStatusUpdateSkipped &&
+					(!cmp.Equal(newPod.Status, kPod.lastPodStatusReceivedFromProvider.Status) ||
+						!cmp.Equal(newPod.Annotations, kPod.lastPodStatusReceivedFromProvider.Annotations) ||
+						!cmp.Equal(newPod.Labels, kPod.lastPodStatusReceivedFromProvider.Labels) ||
+						!cmp.Equal(newPod.Finalizers, kPod.lastPodStatusReceivedFromProvider.Finalizers)) {
 					// The last pod from the provider -> kube api server was skipped, but we see they no longer match.
 					// This means that the pod in API server was changed by someone else [this can be okay], but we skipped
 					// a status update on our side because we compared the status received from the provider to the status

@@ -215,14 +215,7 @@ func (pc *PodController) updatePodStatus(ctx context.Context, podFromKubernetes 
 	}
 	kPod := obj.(*knownPod)
 	kPod.Lock()
-
 	podFromProvider := kPod.lastPodStatusReceivedFromProvider.DeepCopy()
-	if cmp.Equal(podFromKubernetes.Status, podFromProvider.Status) && podFromProvider.DeletionTimestamp == nil {
-		kPod.lastPodStatusUpdateSkipped = true
-		kPod.Unlock()
-		return nil
-	}
-	kPod.lastPodStatusUpdateSkipped = false
 	kPod.Unlock()
 	// Pod deleted by provider due some reasons. e.g. a K8s provider, pod created by deployment would be evicted when node is not ready.
 	// If we do not delete pod in K8s, deployment would not create a new one.
@@ -326,9 +319,11 @@ func (pc *PodController) enqueuePodStatusUpdate(ctx context.Context, pod *corev1
 	kpod := obj.(*knownPod)
 	kpod.Lock()
 	if cmp.Equal(kpod.lastPodStatusReceivedFromProvider, pod) {
+		kpod.lastPodStatusUpdateSkipped = true
 		kpod.Unlock()
 		return
 	}
+	kpod.lastPodStatusUpdateSkipped = false
 	kpod.lastPodStatusReceivedFromProvider = pod
 	kpod.Unlock()
 	pc.syncPodStatusFromProvider.Enqueue(ctx, key)
