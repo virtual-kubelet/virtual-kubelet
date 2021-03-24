@@ -509,7 +509,6 @@ func (pc *PodController) syncPodInProvider(ctx context.Context, pod *corev1.Pod,
 	// more context is here: https://github.com/virtual-kubelet/virtual-kubelet/pull/760
 	if pod.DeletionTimestamp != nil && !running(&pod.Status) {
 		log.G(ctx).Debug("Force deleting pod from API Server as it is no longer running")
-		pc.deletePodsFromKubernetes.EnqueueWithoutRateLimit(ctx, key)
 		key = fmt.Sprintf("%v/%v", key, pod.UID)
 		pc.deletePodsFromKubernetes.EnqueueWithoutRateLimit(ctx, key)
 		return nil
