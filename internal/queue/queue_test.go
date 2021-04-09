@@ -19,6 +19,10 @@ import (
 	"k8s.io/utils/clock"
 )
 
+func durationPtr(d time.Duration) *time.Duration {
+	return &d
+}
+
 func TestQueueMaxRetries(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -35,7 +39,7 @@ func TestQueueMaxRetries(t *testing.T) {
 		// The default upper bound is 1000 seconds. Let's not use that.
 		workqueue.NewItemExponentialFailureRateLimiter(5*time.Millisecond, 10*time.Millisecond),
 		&workqueue.BucketRateLimiter{Limiter: rate.NewLimiter(rate.Limit(10), 100)},
-	), t.Name(), handler)
+	), t.Name(), handler, nil)
 	wq.Enqueue(context.TODO(), "test")
 
 	for n < MaxRetries {
@@ -46,12 +50,63 @@ func TestQueueMaxRetries(t *testing.T) {
 	assert.Assert(t, is.Equal(0, wq.Len()))
 }
 
+func TestQueueCustomRetries(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	logger := logrus.New()
+	logger.SetLevel(logrus.DebugLevel)
+	ctx = log.WithLogger(ctx, logruslogger.FromLogrus(logrus.NewEntry(logger)))
+	n := 0
+	errorSeen := 0
+	retryTestError := errors.New("Error should be retried every 10 milliseconds")
+	handler := func(ctx context.Context, key string) error {
+		if key == "retrytest" {
+			n++
+			return retryTestError
+		}
+		return errors.New("Unknown error")
+	}
+
+	shouldRetryFunc := func(ctx context.Context, key string, timesTried int, originallyAdded time.Time, err error) (*time.Duration, error) {
+		var sleepTime *time.Duration
+		if errors.Is(err, retryTestError) {
+			errorSeen++
+			sleepTime = durationPtr(10 * time.Millisecond)
+		}
+		_, retErr := DefaultRetryFunc(ctx, key, timesTried, originallyAdded, err)
+		return sleepTime, retErr
+	}
+
+	wq := New(&workqueue.BucketRateLimiter{Limiter: rate.NewLimiter(rate.Limit(1000), 1000)}, t.Name(), handler, shouldRetryFunc)
+
+	timeTaken := func(key string) time.Duration {
+		start := time.Now()
+		wq.Enqueue(context.TODO(), key)
+		for i := 0; i < MaxRetries; i++ {
+			assert.Assert(t, wq.handleQueueItem(ctx))
+		}
+		return time.Since(start)
+	}
+
+	unknownTime := timeTaken("unknown")
+	assert.Assert(t, n == 0)
+	assert.Assert(t, unknownTime < 10*time.Millisecond)
+
+	retrytestTime := timeTaken("retrytest")
+	assert.Assert(t, is.Equal(n, MaxRetries))
+	assert.Assert(t, is.Equal(errorSeen, MaxRetries))
+
+	assert.Assert(t, is.Equal(0, wq.Len()))
+	assert.Assert(t, retrytestTime > 10*time.Millisecond*time.Duration(n-1))
+	assert.Assert(t, retrytestTime < 2*10*time.Millisecond*time.Duration(n-1))
+}
+
 func TestForget(t *testing.T) {
 	t.Parallel()
 	handler := func(ctx context.Context, key string) error {
 		panic("Should never be called")
 	}
-	wq := New(workqueue.DefaultItemBasedRateLimiter(), t.Name(), handler)
+	wq := New(workqueue.DefaultItemBasedRateLimiter(), t.Name(), handler, nil)
 
 	wq.Forget(context.TODO(), "val")
 	assert.Assert(t, is.Equal(0, wq.Len()))
@@ -68,7 +123,7 @@ func TestQueueEmpty(t *testing.T) {
 
 	q := New(workqueue.DefaultItemBasedRateLimiter(), t.Name(), func(ctx context.Context, key string) error {
 		return nil
-	})
+	}, nil)
 
 	item, err := q.getNextItem(ctx)
 	assert.Error(t, err, context.DeadlineExceeded.Error())
@@ -83,11 +138,11 @@ func TestQueueItemNoSleep(t *testing.T) {
 
 	q := New(workqueue.DefaultItemBasedRateLimiter(), t.Name(), func(ctx context.Context, key string) error {
 		return nil
-	})
+	}, nil)
 
 	q.lock.Lock()
-	q.insert(ctx, "foo", false, -1*time.Hour)
-	q.insert(ctx, "bar", false, -1*time.Hour)
+	q.insert(ctx, "foo", false, durationPtr(-1*time.Hour))
+	q.insert(ctx, "bar", false, durationPtr(-1*time.Hour))
 	q.lock.Unlock()
 
 	item, err := q.getNextItem(ctx)
@@ -107,10 +162,10 @@ func TestQueueItemSleep(t *testing.T) {
 
 	q := New(workqueue.DefaultItemBasedRateLimiter(), t.Name(), func(ctx context.Context, key string) error {
 		return nil
-	})
+	}, nil)
 	q.lock.Lock()
-	q.insert(ctx, "foo", false, 100*time.Millisecond)
-	q.insert(ctx, "bar", false, 100*time.Millisecond)
+	q.insert(ctx, "foo", false, durationPtr(100*time.Millisecond))
+	q.insert(ctx, "bar", false, durationPtr(100*time.Millisecond))
 	q.lock.Unlock()
 
 	item, err := q.getNextItem(ctx)
@@ -126,12 +181,12 @@ func TestQueueBackgroundAdd(t *testing.T) {
 
 	q := New(workqueue.DefaultItemBasedRateLimiter(), t.Name(), func(ctx context.Context, key string) error {
 		return nil
-	})
+	}, nil)
 	start := time.Now()
 	time.AfterFunc(100*time.Millisecond, func() {
 		q.lock.Lock()
 		defer q.lock.Unlock()
-		q.insert(ctx, "foo", false, 0)
+		q.insert(ctx, "foo", false, nil)
 	})
 
 	item, err := q.getNextItem(ctx)
@@ -148,16 +203,16 @@ func TestQueueBackgroundAdvance(t *testing.T) {
 
 	q := New(workqueue.DefaultItemBasedRateLimiter(), t.Name(), func(ctx context.Context, key string) error {
 		return nil
-	})
+	}, nil)
 	start := time.Now()
 	q.lock.Lock()
-	q.insert(ctx, "foo", false, 10*time.Second)
+	q.insert(ctx, "foo", false, durationPtr(10*time.Second))
 	q.lock.Unlock()
 
 	time.AfterFunc(200*time.Millisecond, func() {
 		q.lock.Lock()
 		defer q.lock.Unlock()
-		q.insert(ctx, "foo", false, 0)
+		q.insert(ctx, "foo", false, nil)
 	})
 
 	item, err := q.getNextItem(ctx)
@@ -183,7 +238,7 @@ func TestQueueRedirty(t *testing.T) {
 			cancel()
 		}
 		return nil
-	})
+	}, nil)
 
 	q.EnqueueWithoutRateLimit(context.TODO(), "foo")
 	q.Run(ctx, 1)
@@ -205,7 +260,7 @@ func TestHeapConcurrency(t *testing.T) {
 		seen.Store(key, struct{}{})
 		time.Sleep(time.Second)
 		return nil
-	})
+	}, nil)
 	for i := 0; i < 20; i++ {
 		q.EnqueueWithoutRateLimit(context.TODO(), strconv.Itoa(i))
 	}
@@ -238,7 +293,7 @@ func checkConsistency(t *testing.T, q *Queue) {
 func TestHeapOrder(t *testing.T) {
 	q := New(workqueue.DefaultItemBasedRateLimiter(), t.Name(), func(ctx context.Context, key string) error {
 		return nil
-	})
+	}, nil)
 	q.clock = nonmovingClock{}
 
 	q.EnqueueWithoutRateLimitWithDelay(context.TODO(), "a", 1000)
@@ -311,7 +366,7 @@ func TestRateLimiter(t *testing.T) {
 			return errors.New("test")
 		}
 		return nil
-	})
+	}, nil)
 
 	enqueued := 0
 	syncMap.Range(func(key, value interface{}) bool {
@@ -371,7 +426,7 @@ func TestQueueForgetInProgress(t *testing.T) {
 		atomic.AddInt64(&times, 1)
 		q.Forget(context.TODO(), key)
 		return errors.New("test")
-	})
+	}, nil)
 
 	q.EnqueueWithoutRateLimit(context.TODO(), "foo")
 	go q.Run(ctx, 1)
@@ -388,7 +443,7 @@ func TestQueueForgetBeforeStart(t *testing.T) {
 
 	q := New(workqueue.DefaultItemBasedRateLimiter(), t.Name(), func(ctx context.Context, key string) error {
 		panic("shouldn't be called")
-	})
+	}, nil)
 
 	q.EnqueueWithoutRateLimit(context.TODO(), "foo")
 	q.Forget(context.TODO(), "foo")
@@ -405,24 +460,24 @@ func TestQueueMoveItem(t *testing.T) {
 	defer cancel()
 	q := New(workqueue.DefaultItemBasedRateLimiter(), t.Name(), func(ctx context.Context, key string) error {
 		panic("shouldn't be called")
-	})
+	}, nil)
 	q.clock = nonmovingClock{}
 
-	q.insert(ctx, "foo", false, 3000)
-	q.insert(ctx, "bar", false, 2000)
-	q.insert(ctx, "baz", false, 1000)
+	q.insert(ctx, "foo", false, durationPtr(3000))
+	q.insert(ctx, "bar", false, durationPtr(2000))
+	q.insert(ctx, "baz", false, durationPtr(1000))
 	checkConsistency(t, q)
 	t.Log(q)
 
-	q.insert(ctx, "foo", false, 2000)
+	q.insert(ctx, "foo", false, durationPtr(2000))
 	checkConsistency(t, q)
 	t.Log(q)
 
-	q.insert(ctx, "foo", false, 1999)
+	q.insert(ctx, "foo", false, durationPtr(1999))
 	checkConsistency(t, q)
 	t.Log(q)
 
-	q.insert(ctx, "foo", false, 999)
+	q.insert(ctx, "foo", false, durationPtr(999))
 	checkConsistency(t, q)
 	t.Log(q)
 }
