@@ -390,10 +390,7 @@ func testDanglingPodScenarioWithDeletionTimestamp(ctx context.Context, t *testin
 	_, e := s.client.CoreV1().Pods(testNamespace).Create(ctx, podCopyWithDeletionTimestamp, metav1.CreateOptions{})
 	assert.NilError(t, e)
 
-	// Start the pod controller
-	assert.NilError(t, s.start(ctx))
 	watchErrCh := make(chan error)
-
 	go func() {
 		_, watchErr := watchutils.UntilWithoutRetry(ctx, watcher,
 			func(ev watch.Event) (bool, error) {
@@ -401,6 +398,9 @@ func testDanglingPodScenarioWithDeletionTimestamp(ctx context.Context, t *testin
 			})
 		watchErrCh <- watchErr
 	}()
+
+	// Start the pod controller
+	assert.NilError(t, s.start(ctx))
 
 	select {
 	case <-ctx.Done():
