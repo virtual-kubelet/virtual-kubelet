@@ -35,6 +35,9 @@ const (
 	MaxRetries = 20
 )
 
+// ShouldRetryFunc is a mechanism to have a custom retry policy
+type ShouldRetryFunc func(ctx context.Context, key string, timesTried int, originallyAdded time.Time, err error) (*time.Duration, error)
+
 // ItemHandler is a callback that handles a single key on the Queue
 type ItemHandler func(ctx context.Context, key string) error
 
@@ -61,6 +64,8 @@ type Queue struct {
 
 	// wakeup
 	wakeupCh chan struct{}
+
+	retryFunc ShouldRetryFunc
 }
 
 type queueItem struct {
@@ -83,9 +88,12 @@ func (item *queueItem) String() string {
 
 // New creates a queue
 //
-// It expects to get a item rate limiter, and a friendly name which is used in logs, and
-// in the internal kubernetes metrics.
-func New(ratelimiter workqueue.RateLimiter, name string, handler ItemHandler) *Queue {
+// It expects to get a item rate limiter, and a friendly name which is used in logs, and in the internal kubernetes
+// metrics. If retryFunc is nil, the default retry function.
+func New(ratelimiter workqueue.RateLimiter, name string, handler ItemHandler, retryFunc ShouldRetryFunc) *Queue {
+	if retryFunc == nil {
+		retryFunc = DefaultRetryFunc
+	}
 	return &Queue{
 		clock:                    clock.RealClock{},
 		name:                     name,
@@ -96,6 +104,7 @@ func New(ratelimiter workqueue.RateLimiter, name string, handler ItemHandler) *Q
 		handler:                  handler,
 		wakeupCh:                 make(chan struct{}, 1),
 		waitForNextItemSemaphore: semaphore.NewWeighted(1),
+		retryFunc:                retryFunc,
 	}
 }
 
@@ -104,7 +113,7 @@ func (q *Queue) Enqueue(ctx context.Context, key string) {
 	q.lock.Lock()
 	defer q.lock.Unlock()
 
-	q.insert(ctx, key, true, 0)
+	q.insert(ctx, key, true, nil)
 }
 
 // EnqueueWithoutRateLimit enqueues the key without a rate limit
@@ -112,7 +121,7 @@ func (q *Queue) EnqueueWithoutRateLimit(ctx context.Context, key string) {
 	q.lock.Lock()
 	defer q.lock.Unlock()
 
-	q.insert(ctx, key, false, 0)
+	q.insert(ctx, key, false, nil)
 }
 
 // Forget forgets the key
@@ -142,9 +151,20 @@ func (q *Queue) Forget(ctx context.Context, key string) {
 	span.WithField(ctx, "status", "notfound")
 }
 
+func durationDeref(duration *time.Duration, def time.Duration) time.Duration {
+	if duration == nil {
+		return def
+	}
+
+	return *duration
+}
+
 // insert inserts a new item to be processed at time time. It will not further delay items if when is later than the
 // original time the item was scheduled to be processed. If when is earlier, it will "bring it forward"
-func (q *Queue) insert(ctx context.Context, key string, ratelimit bool, delay time.Duration) *queueItem {
+// If ratelimit is specified, and delay is nil, then the ratelimiter's delay (return from When function) will be used
+// If ratelimit is specified, and the delay is non-nil, then the delay value will be used
+// If ratelimit is false, then only delay is used to schedule the work. If delay is nil, it will be considered 0.
+func (q *Queue) insert(ctx context.Context, key string, ratelimit bool, delay *time.Duration) *queueItem {
 	ctx, span := trace.StartSpan(ctx, "insert")
 	defer span.End()
 
@@ -153,7 +173,9 @@ func (q *Queue) insert(ctx context.Context, key string, ratelimit bool, delay ti
 		"key":       key,
 		"ratelimit": ratelimit,
 	})
-	if delay > 0 {
+	if delay == nil {
+		ctx = span.WithField(ctx, "delay", "nil")
+	} else {
 		ctx = span.WithField(ctx, "delay", delay.String())
 	}
 
@@ -167,7 +189,7 @@ func (q *Queue) insert(ctx context.Context, key string, ratelimit bool, delay ti
 	// First see if the item is already being processed
 	if item, ok := q.itemsBeingProcessed[key]; ok {
 		span.WithField(ctx, "status", "itemsBeingProcessed")
-		when := q.clock.Now().Add(delay)
+		when := q.clock.Now().Add(durationDeref(delay, 0))
 		// Is the item already been redirtied?
 		if item.redirtiedAt.IsZero() {
 			item.redirtiedAt = when
@@ -184,7 +206,7 @@ func (q *Queue) insert(ctx context.Context, key string, ratelimit bool, delay ti
 	if item, ok := q.itemsInQueue[key]; ok {
 		span.WithField(ctx, "status", "itemsInQueue")
 		qi := item.Value.(*queueItem)
-		when := q.clock.Now().Add(delay)
+		when := q.clock.Now().Add(durationDeref(delay, 0))
 		q.adjustPosition(qi, item, when)
 		return qi
 	}
@@ -198,15 +220,16 @@ func (q *Queue) insert(ctx context.Context, key string, ratelimit bool, delay ti
 	}
 
 	if ratelimit {
-		if delay > 0 {
-			panic("Non-zero delay with rate limiting not supported")
+		actualDelay := q.ratelimiter.When(key)
+		// Check if delay is overridden
+		if delay != nil {
+			actualDelay = *delay
 		}
-		ratelimitDelay := q.ratelimiter.When(key)
-		span.WithField(ctx, "delay", ratelimitDelay.String())
-		val.plannedToStartWorkAt = val.plannedToStartWorkAt.Add(ratelimitDelay)
-		val.delayedViaRateLimit = &ratelimitDelay
+		span.WithField(ctx, "delay", actualDelay.String())
+		val.plannedToStartWorkAt = val.plannedToStartWorkAt.Add(actualDelay)
+		val.delayedViaRateLimit = &actualDelay
 	} else {
-		val.plannedToStartWorkAt = val.plannedToStartWorkAt.Add(delay)
+		val.plannedToStartWorkAt = val.plannedToStartWorkAt.Add(durationDeref(delay, 0))
 	}
 
 	for item := q.items.Back(); item != nil; item = item.Prev() {
@@ -244,7 +267,7 @@ func (q *Queue) adjustPosition(qi *queueItem, element *list.Element, when time.T
 func (q *Queue) EnqueueWithoutRateLimitWithDelay(ctx context.Context, key string, after time.Duration) {
 	q.lock.Lock()
 	defer q.lock.Unlock()
-	q.insert(ctx, key, false, after)
+	q.insert(ctx, key, false, &after)
 }
 
 // Empty returns if the queue has no items in it
@@ -423,25 +446,37 @@ func (q *Queue) handleQueueItemObject(ctx context.Context, qi *queueItem) error 
 	}
 
 	if err != nil {
-		if qi.requeues+1 < MaxRetries {
+		ctx = span.WithField(ctx, "error", err.Error())
+		var delay *time.Duration
+
+		// Stash the original error for logging below
+		originalError := err
+		delay, err = q.retryFunc(ctx, qi.key, qi.requeues+1, qi.originallyAdded, err)
+		if err == nil {
 			// Put the item back on the work Queue to handle any transient errors.
-			log.G(ctx).WithError(err).Warnf("requeuing %q due to failed sync", qi.key)
-			newQI := q.insert(ctx, qi.key, true, 0)
+			log.G(ctx).WithError(originalError).Warnf("requeuing %q due to failed sync", qi.key)
+			newQI := q.insert(ctx, qi.key, true, delay)
 			newQI.requeues = qi.requeues + 1
 			newQI.originallyAdded = qi.originallyAdded
 
 			return nil
 		}
-		err = pkgerrors.Wrapf(err, "forgetting %q due to maximum retries reached", qi.key)
+		if !qi.redirtiedAt.IsZero() {
+			err = fmt.Errorf("temporarily (requeued) forgetting %q due to: %w", qi.key, err)
+		} else {
+			err = fmt.Errorf("forgetting %q due to: %w", qi.key, err)
+		}
 	}
 
 	// We've exceeded the maximum retries or we were successful.
 	q.ratelimiter.Forget(qi.key)
 	if !qi.redirtiedAt.IsZero() {
-		newQI := q.insert(ctx, qi.key, qi.redirtiedWithRatelimit, time.Until(qi.redirtiedAt))
+		delay := time.Until(qi.redirtiedAt)
+		newQI := q.insert(ctx, qi.key, qi.redirtiedWithRatelimit, &delay)
 		newQI.addedViaRedirty = true
 	}
 
+	span.SetStatus(err)
 	return err
 }
 
@@ -455,4 +490,13 @@ func (q *Queue) String() string {
 		items = append(items, next.Value.(*queueItem).String())
 	}
 	return fmt.Sprintf("<items:%s>", items)
+}
+
+// DefaultRetryFunc is the default function used for retries by the queue subsystem.
+func DefaultRetryFunc(ctx context.Context, key string, timesTried int, originallyAdded time.Time, err error) (*time.Duration, error) {
+	if timesTried < MaxRetries {
+		return nil, nil
+	}
+
+	return nil, pkgerrors.Wrapf(err, "maximum retries (%d) reached", MaxRetries)
 }
