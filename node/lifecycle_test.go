@@ -232,7 +232,12 @@ type system struct {
 }
 
 func (s *system) start(ctx context.Context) error {
-	go s.pc.Run(ctx, podSyncWorkers) // nolint:errcheck
+	go func() {
+		err := s.pc.Run(ctx, podSyncWorkers)
+		if err != nil {
+			panic(err)
+		}
+	}()
 	select {
 	case <-s.pc.Ready():
 	case <-s.pc.Done():
