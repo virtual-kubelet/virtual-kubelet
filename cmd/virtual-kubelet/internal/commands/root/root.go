@@ -199,32 +199,19 @@ func runRootCommand(ctx context.Context, s *provider.Store, c Opts) error {
 	}
 	defer cancelHTTP()
 
-	go func() {
-		if err := pc.Run(ctx, c.PodSyncWorkers); err != nil && errors.Cause(err) != context.Canceled {
-			log.G(ctx).Fatal(err)
-		}
-	}()
+	cm := nodeutil.NewControllerManager(nodeRunner, pc)
+	go cm.Run(ctx, c.PodSyncWorkers) // nolint:errcheck
 
-	if c.StartupTimeout > 0 {
-		ctx, cancel := context.WithTimeout(ctx, c.StartupTimeout)
-		log.G(ctx).Info("Waiting for pod controller / VK to be ready")
-		select {
-		case <-ctx.Done():
-			cancel()
-			return ctx.Err()
-		case <-pc.Ready():
-		}
+	defer func() {
+		log.G(ctx).Debug("Waiting for controllers to be done")
 		cancel()
-		if err := pc.Err(); err != nil {
-			return err
-		}
-	}
-
-	go func() {
-		if err := nodeRunner.Run(ctx); err != nil {
-			log.G(ctx).Fatal(err)
-		}
+		<-cm.Done()
 	}()
+
+	log.G(ctx).Info("Waiting for controller to be ready")
+	if err := cm.WaitReady(ctx, c.StartupTimeout); err != nil {
+		return err
+	}
 
 	setNodeReady(pNode)
 	if err := np.UpdateStatus(ctx, pNode); err != nil {
@@ -232,7 +219,11 @@ func runRootCommand(ctx context.Context, s *provider.Store, c Opts) error {
 	}
 	log.G(ctx).Info("Initialized")
 
-	<-ctx.Done()
+	select {
+	case <-ctx.Done():
+	case <-cm.Done():
+		return cm.Err()
+	}
 	return nil
 }
 

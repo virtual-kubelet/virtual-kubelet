@@ -65,16 +65,13 @@ func testNodeRun(t *testing.T, enableLease bool) {
 	node, err := NewNodeController(testP, testNode, nodes, opts...)
 	assert.NilError(t, err)
 
-	chErr := make(chan error)
 	defer func() {
 		cancel()
-		assert.NilError(t, <-chErr)
+		<-node.Done()
+		assert.NilError(t, node.Err())
 	}()
 
-	go func() {
-		chErr <- node.Run(ctx)
-		close(chErr)
-	}()
+	go node.Run(ctx) // nolint:errcheck
 
 	nw := makeWatch(ctx, t, nodes, testNodeCopy.Name)
 	defer nw.Stop()
@@ -103,8 +100,8 @@ func testNodeRun(t *testing.T, enableLease bool) {
 		case <-time.After(time.Second):
 			t.Errorf("timeout waiting for event")
 			continue
-		case err := <-chErr:
-			t.Fatal(err) // if this returns at all it is an error regardless if err is nil
+		case <-node.Done():
+			t.Fatal(node.Err()) // if this returns at all it is an error regardless if err is nil
 		case <-nr:
 			nodeUpdates++
 			continue
@@ -152,8 +149,8 @@ func testNodeRun(t *testing.T, enableLease bool) {
 	defer eCancel()
 
 	select {
-	case err := <-chErr:
-		t.Fatal(err) // if this returns at all it is an error regardless if err is nil
+	case <-node.Done():
+		t.Fatal(node.Err()) // if this returns at all it is an error regardless if err is nil
 	case err := <-waitForEvent(eCtx, nr, func(e watch.Event) bool {
 		node := e.Object.(*corev1.Node)
 		if len(node.Status.Conditions) == 0 {
@@ -192,10 +189,7 @@ func TestNodeCustomUpdateStatusErrorHandler(t *testing.T) {
 	)
 	assert.NilError(t, err)
 
-	chErr := make(chan error, 1)
-	go func() {
-		chErr <- node.Run(ctx)
-	}()
+	go node.Run(ctx) // nolint:errcheck
 
 	timer := time.NewTimer(10 * time.Second)
 	defer timer.Stop()
@@ -204,8 +198,8 @@ func TestNodeCustomUpdateStatusErrorHandler(t *testing.T) {
 	select {
 	case <-timer.C:
 		t.Fatal("timeout waiting for node to be ready")
-	case <-chErr:
-		t.Fatalf("node.Run returned earlier than expected: %v", err)
+	case <-node.Done():
+		t.Fatalf("node.Run returned earlier than expected: %v", node.Err())
 	case <-node.Ready():
 	}
 
@@ -218,8 +212,8 @@ func TestNodeCustomUpdateStatusErrorHandler(t *testing.T) {
 	defer timer.Stop()
 
 	select {
-	case err := <-chErr:
-		assert.Equal(t, err, nil)
+	case <-node.Done():
+		assert.NilError(t, node.Err())
 	case <-timer.C:
 		t.Fatal("timeout waiting for node shutdown")
 	}
@@ -301,9 +295,11 @@ func TestPingAfterStatusUpdate(t *testing.T) {
 	node, err := NewNodeController(testP, testNode, nodes, opts...)
 	assert.NilError(t, err)
 
-	chErr := make(chan error, 1)
-	go func() {
-		chErr <- node.Run(ctx)
+	go node.Run(ctx) // nolint:errcheck
+	defer func() {
+		cancel()
+		<-node.Done()
+		assert.NilError(t, node.Err())
 	}()
 
 	timer := time.NewTimer(10 * time.Second)
@@ -313,10 +309,11 @@ func TestPingAfterStatusUpdate(t *testing.T) {
 	select {
 	case <-timer.C:
 		t.Fatal("timeout waiting for node to be ready")
-	case <-chErr:
-		t.Fatalf("node.Run returned earlier than expected: %v", err)
+	case <-node.Done():
+		t.Fatalf("node.Run returned earlier than expected: %v", node.Err())
 	case <-node.Ready():
 	}
+	timer.Stop()
 
 	notifyTimer := time.After(interval * time.Duration(10))
 	<-notifyTimer
@@ -360,16 +357,13 @@ func TestBeforeAnnotationsPreserved(t *testing.T) {
 	node, err := NewNodeController(testP, testNode, nodes, opts...)
 	assert.NilError(t, err)
 
-	chErr := make(chan error)
 	defer func() {
 		cancel()
-		assert.NilError(t, <-chErr)
+		<-node.Done()
+		assert.NilError(t, node.Err())
 	}()
 
-	go func() {
-		chErr <- node.Run(ctx)
-		close(chErr)
-	}()
+	go node.Run(ctx) // nolint:errcheck
 
 	nw := makeWatch(ctx, t, nodes, testNodeCopy.Name)
 	defer nw.Stop()
@@ -427,16 +421,13 @@ func TestManualConditionsPreserved(t *testing.T) {
 	node, err := NewNodeController(testP, testNode, nodes, opts...)
 	assert.NilError(t, err)
 
-	chErr := make(chan error)
 	defer func() {
 		cancel()
-		assert.NilError(t, <-chErr)
+		<-node.Done()
+		assert.NilError(t, node.Err())
 	}()
 
-	go func() {
-		chErr <- node.Run(ctx)
-		close(chErr)
-	}()
+	go node.Run(ctx) // nolint:errcheck
 
 	nw := makeWatch(ctx, t, nodes, testNodeCopy.Name)
 	defer nw.Stop()
