@@ -6,13 +6,13 @@ import (
 	"strings"
 
 	corev1 "k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/runtime"
 	watchapi "k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/watch"
-	podutil "k8s.io/kubernetes/pkg/api/v1/pod"
 )
 
 // CreateDummyPodObjectWithPrefix creates a dujmmy pod object using the specified prefix as the value of .metadata.generateName.
@@ -101,8 +101,18 @@ func (f *Framework) WaitUntilPodCondition(namespace, name string, fn watch.Condi
 func (f *Framework) WaitUntilPodReady(namespace, name string) (*corev1.Pod, error) {
 	return f.WaitUntilPodCondition(namespace, name, func(event watchapi.Event) (bool, error) {
 		pod := event.Object.(*corev1.Pod)
-		return pod.Status.Phase == corev1.PodRunning && podutil.IsPodReady(pod) && pod.Status.PodIP != "", nil
+		return pod.Status.Phase == corev1.PodRunning && IsPodReady(pod) && pod.Status.PodIP != "", nil
 	})
+}
+
+// IsPodReady returns true if a pod is ready.
+func IsPodReady(pod *v1.Pod) bool {
+	for _, cond := range pod.Status.Conditions {
+		if cond.Type == v1.PodReady && cond.Status == v1.ConditionTrue {
+			return true
+		}
+	}
+	return false
 }
 
 // WaitUntilPodDeleted blocks until the pod with the specified name and namespace is deleted from apiserver.

@@ -2,24 +2,13 @@ package expansion
 
 import (
 	"testing"
-
-	api "k8s.io/kubernetes/pkg/apis/core"
 )
 
 func TestMapReference(t *testing.T) {
-	envs := []api.EnvVar{
-		{
-			Name:  "FOO",
-			Value: "bar",
-		},
-		{
-			Name:  "ZOO",
-			Value: "$(FOO)-1",
-		},
-		{
-			Name:  "BLU",
-			Value: "$(ZOO)-2",
-		},
+	envs := map[string]string{
+		"FOO": "bar",
+		"ZOO": "$(FOO)-1",
+		"BLU": "$(ZOO)-2",
 	}
 
 	declaredEnv := map[string]string{
@@ -32,8 +21,8 @@ func TestMapReference(t *testing.T) {
 
 	mapping := MappingFuncFor(declaredEnv, serviceEnv)
 
-	for _, env := range envs {
-		declaredEnv[env.Name] = Expand(env.Value, mapping)
+	for k, v := range envs {
+		declaredEnv[k] = Expand(v, mapping)
 	}
 
 	expectedEnv := map[string]string{
