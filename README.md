@@ -23,6 +23,7 @@ The best description is "Kubernetes API on top, programmable back."
     + [AWS Fargate Provider](#aws-fargate-provider)
     + [Elotl Kip](#elotl-kip)
 	+ [HashiCorp Nomad](#hashicorp-nomad-provider)
+    + [Liqo](#liqo-provider)
     + [OpenStack Zun](#openstack-zun-provider)
     + [Tensile Kube Provider](#tensile-kube-provider)
     + [Adding a New Provider via the Provider Interface](#adding-a-new-provider-via-the-provider-interface)
@@ -133,6 +134,12 @@ registered on Kubernetes will run as jobs on Nomad clients as they
 would on a Kubernetes node.
 
 For detailed instructions, follow the guide [here](https://github.com/virtual-kubelet/nomad/blob/master/README.md).
+
+### Liqo Provider
+
+[Liqo](https://liqo.io) implements a provider for Virtual Kubelet designed to transparently offload pods and services to "peered" Kubernetes remote cluster. Liqo is capable of discovering neighbor clusters (using DNS, mDNS) and "peer" with them, or in other words, establish a relationship to share part of the cluster resources. When a cluster has established a peering, a new instance of the Liqo Virtual Kubelet is spawned to seamlessly extend the capacity of the cluster, by providing an abstraction of the resources of the remote cluster. The provider combined with the Liqo network fabric extends the cluster networking by enabling Pod-to-Pod traffic and multi-cluster east-west services, supporting endpoints on both clusters.
+
+For detailed instruction, follow the guide [here](https://github.com/liqotech/liqo/blob/master/README.md)
 
 ### OpenStack Zun Provider
 
