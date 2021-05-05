@@ -27,7 +27,6 @@ import (
 	"github.com/virtual-kubelet/virtual-kubelet/internal/kubernetes/remotecommand"
 	"k8s.io/apimachinery/pkg/types"
 	remoteutils "k8s.io/client-go/tools/remotecommand"
-	api "k8s.io/kubernetes/pkg/apis/core"
 )
 
 // ContainerExecHandlerFunc defines the handler function used for "execing" into a
@@ -136,11 +135,18 @@ func HandleContainerExec(h ContainerExecHandlerFunc, opts ...ContainerExecHandle
 	})
 }
 
+const (
+	execTTYParam    = "tty"
+	execStdinParam  = "input"
+	execStdoutParam = "output"
+	execStderrParam = "error"
+)
+
 func getExecOptions(req *http.Request) (*remotecommand.Options, error) {
-	tty := req.FormValue(api.ExecTTYParam) == "1"
-	stdin := req.FormValue(api.ExecStdinParam) == "1"
-	stdout := req.FormValue(api.ExecStdoutParam) == "1"
-	stderr := req.FormValue(api.ExecStderrParam) == "1"
+	tty := req.FormValue(execTTYParam) == "1"
+	stdin := req.FormValue(execStdinParam) == "1"
+	stdout := req.FormValue(execStdoutParam) == "1"
+	stderr := req.FormValue(execStderrParam) == "1"
 	if tty && stderr {
 		return nil, errors.New("cannot exec with tty and stderr")
 	}

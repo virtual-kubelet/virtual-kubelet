@@ -30,7 +30,6 @@ import (
 	apivalidation "k8s.io/apimachinery/pkg/util/validation"
 	"k8s.io/client-go/tools/record"
 	podshelper "k8s.io/kubernetes/pkg/apis/core/pods"
-	v1helper "k8s.io/kubernetes/pkg/apis/core/v1/helper"
 	fieldpath "k8s.io/kubernetes/pkg/fieldpath"
 	"k8s.io/kubernetes/pkg/kubelet/envvars"
 	"k8s.io/utils/pointer"
@@ -121,6 +120,10 @@ func populateContainerEnvironment(ctx context.Context, pod *corev1.Pod, containe
 	return nil
 }
 
+func isServiceIPSet(service *corev1.Service) bool {
+	return service.Spec.ClusterIP != corev1.ClusterIPNone && service.Spec.ClusterIP != ""
+}
+
 // getServiceEnvVarMap makes a map[string]string of env vars for services a
 // pod in namespace ns should see.
 // Based on getServiceEnvVarMap in kubelet_pods.go.
@@ -139,7 +142,7 @@ func getServiceEnvVarMap(rm *manager.ResourceManager, ns string, enableServiceLi
 	for i := range services {
 		service := services[i]
 		// ignore services where ClusterIP is "None" or empty
-		if !v1helper.IsServiceIPSet(service) {
+		if !isServiceIPSet(service) {
 			continue
 		}
 		serviceName := service.Name
