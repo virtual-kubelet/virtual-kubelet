@@ -6,8 +6,8 @@ import (
 
 	"github.com/virtual-kubelet/virtual-kubelet/node"
 	"github.com/virtual-kubelet/virtual-kubelet/node/api"
+	"github.com/virtual-kubelet/virtual-kubelet/node/api/statsv1alpha1"
 	v1 "k8s.io/api/core/v1"
-	stats "k8s.io/kubernetes/pkg/kubelet/apis/stats/v1alpha1"
 )
 
 // Provider contains the methods required to implement a virtual-kubelet provider.
@@ -32,5 +32,5 @@ type Provider interface {
 
 // PodMetricsProvider is an optional interface that providers can implement to expose pod stats
 type PodMetricsProvider interface {
-	GetStatsSummary(context.Context) (*stats.Summary, error)
+	GetStatsSummary(context.Context) (*statsv1alpha1.Summary, error)
 }
