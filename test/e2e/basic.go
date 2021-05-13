@@ -7,10 +7,10 @@ import (
 	"time"
 
 	"github.com/virtual-kubelet/virtual-kubelet/internal/podutils"
+	stats "github.com/virtual-kubelet/virtual-kubelet/node/api/statsv1alpha1"
 	"gotest.tools/assert"
 	v1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/kubernetes/pkg/kubelet/apis/stats/v1alpha1"
 )
 
 const (
@@ -401,7 +401,7 @@ func (ts *EndToEndTestSuite) TestCreatePodWithMandatoryInexistentConfigMap(t *te
 
 // findPodInPodStats returns the index of the specified pod in the .pods field of the specified Summary object.
 // It returns an error if the specified pod is not found.
-func findPodInPodStats(summary *v1alpha1.Summary, pod *v1.Pod) (int, error) {
+func findPodInPodStats(summary *stats.Summary, pod *v1.Pod) (int, error) {
 	for i, p := range summary.Pods {
 		if p.PodRef.Namespace == pod.Namespace && p.PodRef.Name == pod.Name && string(p.PodRef.UID) == string(pod.UID) {
 			return i, nil
