@@ -5,6 +5,8 @@ exec := $(DOCKER_IMAGE)
 github_repo := virtual-kubelet/virtual-kubelet
 binary := virtual-kubelet
 
+GOTEST ?= go test $(if $V,-v)
+
 export GO111MODULE ?= on
 
 include Makefile.e2e
@@ -71,36 +73,28 @@ vet:
 	@echo "go vet'ing..."
 ifndef CI
 	@echo "go vet'ing Outside CI..."
-	go vet $(allpackages)
+	go vet $(TESTDIRS)
 else
 	@echo "go vet'ing in CI..."
 	mkdir -p test
-	( go vet $(allpackages); echo $$? ) | \
+	( go vet $(TESTDIRS); echo $$? ) | \
        tee test/vet.txt | sed '$$ d'; exit $$(tail -1 test/vet.txt)
 endif
 
 test:
-ifndef CI
-	@echo "Testing..."
-	go test  $(if $V,-v) $(allpackages)
-else
-	@echo "Testing in CI..."
-	mkdir -p test
-	( GODEBUG=cgocheck=2 go test -timeout=9m -v $(allpackages); echo $$? ) | \
-       tee test/output.txt | sed '$$ d'; exit $$(tail -1 test/output.txt)
-endif
+	$(GOTEST) $(TESTDIRS)
 
 list:
 	@echo "List..."
-	@echo $(allpackages)
+	@echo $(TESTDIRS)
 
 cover: gocovmerge
 	@echo "Coverage Report..."
 	@echo "NOTE: make cover does not exit 1 on failure, don't use it to check for tests success!"
 	rm -f .GOPATH/cover/*.out cover/all.merged
 	$(if $V,@echo "-- go test -coverpkg=./... -coverprofile=cover/... ./...")
-	@for MOD in $(allpackages); do \
-        go test -coverpkg=`echo $(allpackages)|tr " " ","` \
+	@for MOD in $(TESTDIRS); do \
+        go test -coverpkg=`echo $(TESTDIRS)|tr " " ","` \
             -coverprofile=cover/unit-`echo $$MOD|tr "/" "_"`.out \
             $$MOD 2>&1 | grep -v "no packages being tested depend on"; \
     done
@@ -142,11 +136,7 @@ VERSION          := $(shell git describe --tags --always --dirty="-dev")
 DATE             := $(shell date -u '+%Y-%m-%d-%H:%M UTC')
 VERSION_FLAGS    := -ldflags='-X "main.buildVersion=$(VERSION)" -X "main.buildTime=$(DATE)"'
 
-# assuming go 1.9 here!!
-_allpackages = $(shell go list ./...)
-
-# memoize allpackages, so that it's executed only once and only if used
-allpackages = $(if $(__allpackages),,$(eval __allpackages := $$(_allpackages)))$(__allpackages)
+TESTDIRS ?= ./...
 
 .PHONY: goimports
 goimports: $(gobin_tool)
@@ -187,7 +177,7 @@ kubebuilder_2.3.1_${TEST_OS}_${TEST_ARCH}: kubebuilder_2.3.1_${TEST_OS}_${TEST_A
 envtest: kubebuilder_2.3.1_${TEST_OS}_${TEST_ARCH}
 	# You can add klog flags for debugging, like: -klog.v=10 -klog.logtostderr
 	# klogv2 flags just wraps our existing logrus.
-	KUBEBUILDER_ASSETS=$(PWD)/kubebuilder_2.3.1_${TEST_OS}_${TEST_ARCH}/bin go test -v -run=TestEnvtest ./node -envtest=true
+	KUBEBUILDER_ASSETS=$(PWD)/kubebuilder_2.3.1_${TEST_OS}_${TEST_ARCH}/bin $(GOTEST) -run=TestEnvtest ./node -envtest=true
 
 .PHONY: fmt
 fmt:
