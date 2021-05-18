@@ -367,6 +367,14 @@ func testDanglingPodScenario(ctx context.Context, t *testing.T, s *system, m tes
 
 }
 
+func sendErr(ctx context.Context, ch chan error, err error) {
+	select {
+	case <-ctx.Done():
+		log.G(ctx).WithError(err).Warn("timeout waiting to send test error")
+	case ch <- err:
+	}
+}
+
 func testDanglingPodScenarioWithDeletionTimestamp(ctx context.Context, t *testing.T, s *system, m testingProvider) {
 	t.Parallel()
 
@@ -396,7 +404,7 @@ func testDanglingPodScenarioWithDeletionTimestamp(ctx context.Context, t *testin
 			func(ev watch.Event) (bool, error) {
 				return ev.Type == watch.Deleted, nil
 			})
-		watchErrCh <- watchErr
+		sendErr(ctx, watchErrCh, watchErr)
 	}()
 
 	// Start the pod controller
@@ -436,7 +444,7 @@ func testCreateStartDeleteScenario(ctx context.Context, t *testing.T, s *system,
 				return pod.Name == p.ObjectMeta.Name, nil
 			})
 
-		watchErrCh <- watchErr
+		sendErr(ctx, watchErrCh, watchErr)
 	}()
 
 	// Create the Pod
@@ -465,7 +473,7 @@ func testCreateStartDeleteScenario(ctx context.Context, t *testing.T, s *system,
 				return pod.Status.Phase == corev1.PodRunning, nil
 			})
 
-		watchErrCh <- watchErr
+		sendErr(ctx, watchErrCh, watchErr)
 	}()
 
 	assert.NilError(t, s.start(ctx))
@@ -487,7 +495,7 @@ func testCreateStartDeleteScenario(ctx context.Context, t *testing.T, s *system,
 		_, watchDeleteErr := watchutils.UntilWithoutRetry(ctx, watcher2, func(ev watch.Event) (bool, error) {
 			return ev.Type == watch.Deleted, nil
 		})
-		waitDeleteCh <- watchDeleteErr
+		sendErr(ctx, waitDeleteCh, watchDeleteErr)
 	}()
 
 	// Setup a watch prior to pod deletion
@@ -495,7 +503,7 @@ func testCreateStartDeleteScenario(ctx context.Context, t *testing.T, s *system,
 	assert.NilError(t, err)
 	defer watcher.Stop()
 	go func() {
-		watchErrCh <- waitFunction(ctx, watcher)
+		sendErr(ctx, watchErrCh, waitFunction(ctx, watcher))
 	}()
 
 	// Delete the pod via deletiontimestamp
@@ -559,7 +567,7 @@ func testUpdatePodWhileRunningScenario(ctx context.Context, t *testing.T, s *sys
 			})
 		// This deepcopy is required to please the race detector
 		p = newPod.Object.(*corev1.Pod).DeepCopy()
-		watchErrCh <- watchErr
+		sendErr(ctx, watchErrCh, watchErr)
 	}()
 
 	// Start the pod controller
