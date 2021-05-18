@@ -5,10 +5,17 @@ import (
 )
 
 func TestMapReference(t *testing.T) {
-	envs := map[string]string{
-		"FOO": "bar",
-		"ZOO": "$(FOO)-1",
-		"BLU": "$(ZOO)-2",
+	// We use a struct here instead of a map because we need mappings to happen in order.
+	// Go maps are randomized.
+	type envVar struct {
+		Name  string
+		Value string
+	}
+
+	envs := []envVar{
+		{"FOO", "bar"},
+		{"ZOO", "$(FOO)-1"},
+		{"BLU", "$(ZOO)-2"},
 	}
 
 	declaredEnv := map[string]string{
@@ -21,8 +28,8 @@ func TestMapReference(t *testing.T) {
 
 	mapping := MappingFuncFor(declaredEnv, serviceEnv)
 
-	for k, v := range envs {
-		declaredEnv[k] = Expand(v, mapping)
+	for _, env := range envs {
+		declaredEnv[env.Name] = Expand(env.Value, mapping)
 	}
 
 	expectedEnv := map[string]string{
