@@ -47,7 +47,7 @@ project to build a custom Kubernetes node agent.
 See godoc for up to date instructions on consuming this project:
 https://godoc.org/github.com/virtual-kubelet/virtual-kubelet
 
-There are implementations available for several provides (listed above), see
+There are implementations available for [several providers](#providers), see
 those repos for details on how to deploy.
 
 ## Current Features

@@ -6,6 +6,8 @@ run:
   skip-dirs:
     # This directory contains copy code from upstream kubernetes/kubernetes, skip it.
     - internal/kubernetes
+    # This is mostly copied from upstream, rather than fixing that code here just ignore the errors.
+    - internal/podutils
 
 linters:
   enable:

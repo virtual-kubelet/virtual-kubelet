@@ -29,9 +29,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 	apivalidation "k8s.io/apimachinery/pkg/util/validation"
 	"k8s.io/client-go/tools/record"
-	podshelper "k8s.io/kubernetes/pkg/apis/core/pods"
-	fieldpath "k8s.io/kubernetes/pkg/fieldpath"
-	"k8s.io/kubernetes/pkg/kubelet/envvars"
 	"k8s.io/utils/pointer"
 )
 
@@ -120,10 +117,6 @@ func populateContainerEnvironment(ctx context.Context, pod *corev1.Pod, containe
 	return nil
 }
 
-func isServiceIPSet(service *corev1.Service) bool {
-	return service.Spec.ClusterIP != corev1.ClusterIPNone && service.Spec.ClusterIP != ""
-}
-
 // getServiceEnvVarMap makes a map[string]string of env vars for services a
 // pod in namespace ns should see.
 // Based on getServiceEnvVarMap in kubelet_pods.go.
@@ -142,7 +135,7 @@ func getServiceEnvVarMap(rm *manager.ResourceManager, ns string, enableServiceLi
 	for i := range services {
 		service := services[i]
 		// ignore services where ClusterIP is "None" or empty
-		if !isServiceIPSet(service) {
+		if !IsServiceIPSet(service) {
 			continue
 		}
 		serviceName := service.Name
@@ -165,7 +158,7 @@ func getServiceEnvVarMap(rm *manager.ResourceManager, ns string, enableServiceLi
 		mappedServices = append(mappedServices, serviceMap[key])
 	}
 
-	for _, e := range envvars.FromServices(mappedServices) {
+	for _, e := range FromServices(mappedServices) {
 		m[e.Name] = e.Value
 	}
 	return m, nil
@@ -489,7 +482,7 @@ func getEnvironmentVariableValueWithValueFromFieldRef(ctx context.Context, env *
 // podFieldSelectorRuntimeValue returns the runtime value of the given
 // selector for a pod.
 func podFieldSelectorRuntimeValue(fs *corev1.ObjectFieldSelector, pod *corev1.Pod) (string, error) {
-	internalFieldPath, _, err := podshelper.ConvertDownwardAPIFieldLabel(fs.APIVersion, fs.FieldPath, "")
+	internalFieldPath, _, err := ConvertDownwardAPIFieldLabel(fs.APIVersion, fs.FieldPath, "")
 	if err != nil {
 		return "", err
 	}
@@ -500,5 +493,5 @@ func podFieldSelectorRuntimeValue(fs *corev1.ObjectFieldSelector, pod *corev1.Po
 		return pod.Spec.ServiceAccountName, nil
 
 	}
-	return fieldpath.ExtractFieldPathAsString(pod, internalFieldPath)
+	return ExtractFieldPathAsString(pod, internalFieldPath)
 }
