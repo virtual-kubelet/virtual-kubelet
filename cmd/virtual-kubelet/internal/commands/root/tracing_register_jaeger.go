@@ -42,10 +42,10 @@ func NewJaegerExporter(opts TracingExporterOptions) (trace.Exporter, error) {
 		},
 	}
 
-	if jOpts.Endpoint != "" && jOpts.CollectorEndpoint == "" {
+	if jOpts.Endpoint != "" && jOpts.CollectorEndpoint == "" { // nolintlint:staticcheck
 		jOpts.CollectorEndpoint = fmt.Sprintf("%s/api/traces", jOpts.Endpoint)
 	}
-	if jOpts.CollectorEndpoint == "" && jOpts.AgentEndpoint == "" { // nolint:staticcheck
+	if jOpts.CollectorEndpoint == "" && jOpts.AgentEndpoint == "" { // nolintlint:staticcheck
 		return nil, errors.New("Must specify either JAEGER_COLLECTOR_ENDPOINT or JAEGER_AGENT_ENDPOINT")
 	}
 
