@@ -30,7 +30,7 @@ jobs:
   test:
     resource_class: xlarge
     docker:
-      - image: circleci/golang:1.15
+      - image: circleci/golang:1.16
         environment:
           GO111MODULE: "on"
     working_directory: /go/src/github.com/virtual-kubelet/virtual-kubelet
@@ -42,13 +42,22 @@ jobs:
       - run:
           name: Build
           command: V=1 make build
+      - run: go install gotest.tools/gotestsum@latest
       - run:
           name: Tests
-          command: V=1 CI=1 make test envtest
+          environment:
+            GOTEST: gotestsum -- -timeout=9m
+            GOTESTSUM_JUNITFILE: output/unit/results.xml
+            GODEBUG: cgocheck=2
+          command: |
+            mkdir -p output/unit
+            V=1 make test envtest
       - save_cache:
           key: test-{{ checksum "go.mod" }}-{{ checksum "go.sum" }}
           paths:
             - "/go/pkg/mod"
+      - store_test_results:
+          path: output
 
   e2e:
     machine:
@@ -121,13 +130,21 @@ jobs:
             - e2e-{{ checksum "go.mod" }}-{{ checksum "go.sum" }}-2
       - run:
           name: Run the end-to-end test suite
+          environment:
+            GOTEST: gotestsum --
           command: |
             mkdir $HOME/.go
             export PATH=$HOME/.go/bin:${PATH}
-            curl -fsSL -o "/tmp/go.tar.gz" "https://dl.google.com/go/go1.15.6.linux-amd64.tar.gz"
+            curl -fsSL -o "/tmp/go.tar.gz" "https://dl.google.com/go/go1.16.4.linux-amd64.tar.gz"
             tar -C $HOME/.go --strip-components=1 -xzf "/tmp/go.tar.gz"
             go version
+            mkdir -p output/e2e
+            export GOTESTSUM_JUNITFILE="$(pwd)/output/e2e/results.xml"
+            export PATH="${GOPATH}/bin:${PATH}"
+            go install gotest.tools/gotestsum@latest
             make e2e
+      - store_test_results:
+          path: output
       - save_cache:
           key: e2e-{{ checksum "go.mod" }}-{{ checksum "go.sum" }}-2
           paths:
