@@ -232,7 +232,12 @@ type system struct {
 }
 
 func (s *system) start(ctx context.Context) error {
-	go s.pc.Run(ctx, podSyncWorkers) // nolint:errcheck
+	go func() {
+		err := s.pc.Run(ctx, podSyncWorkers)
+		if err != nil {
+			panic(err)
+		}
+	}()
 	select {
 	case <-s.pc.Ready():
 	case <-s.pc.Done():
@@ -248,6 +253,17 @@ func wireUpSystem(ctx context.Context, provider PodLifecycleHandler, f testFunct
 
 	// Create the fake client.
 	client := fake.NewSimpleClientset()
+
+	client.PrependReactor("*", "pod", func(action ktesting.Action) (handled bool, ret runtime.Object, err error) {
+		log.G(ctx).WithFields(map[string]interface{}{
+			"namespace":   action.GetNamespace(),
+			"resource":    action.GetResource(),
+			"subresource": action.GetSubresource(),
+			"verb":        action.GetVerb(),
+		}).Debug("Observed action on pod")
+
+		return false, nil, nil
+	})
 
 	client.PrependReactor("update", "pods", func(action ktesting.Action) (handled bool, ret runtime.Object, err error) {
 		var pod *corev1.Pod
@@ -382,12 +398,12 @@ func testDanglingPodScenarioWithDeletionTimestamp(ctx context.Context, t *testin
 	listOptions := metav1.ListOptions{
 		FieldSelector: fields.OneTermEqualSelector("metadata.name", pod.ObjectMeta.Name).String(),
 	}
+
+	assert.NilError(t, m.CreatePod(ctx, pod))
 	// Setup a watch (prior to pod creation, and pod controller startup)
 	watcher, err := s.client.CoreV1().Pods(testNamespace).Watch(ctx, listOptions)
 	assert.NilError(t, err)
 	defer watcher.Stop()
-
-	assert.NilError(t, m.CreatePod(ctx, pod))
 
 	// Create the Pod
 	podCopyWithDeletionTimestamp := pod.DeepCopy()
