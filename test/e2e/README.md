@@ -14,7 +14,7 @@ To run the E2E test suite, three things are required:
 
 ### Skaffold Folder
 
-Before running the E2E test suite, you will need to copy the [`./hack`](../../hack) folder containing Skaffold-related files such as Dockerfile, manifests, and certificates to your VK project root. Skaffold essentially helps package your virtual kubelet into a container based on the given [`Dockerfile`](../../hack/skaffold/virtual-kubelet/Dockerfile) and deploy it as a pod (see [`pod.yml`](../../hack/skaffold/virtual-kubelet/pod.yml)) to your Kubernetes test cluster. In summary, you will likely need to modify the VK name in those files, customize the VK configuration file, and the API server certificates (`<vk-name>-crt.pem` and `<vk-name>-key.pem`) before running the test suite.
+Before running the E2E test suite, you will need to copy the [`./hack`](../../hack) folder containing Skaffold-related files such as Dockerfile, manifests, and certificates to your VK project root. If the provider under test does not provide a metrics endpoint please delete the `readinessProbe` from the `pod.yml`. Skaffold essentially helps package your virtual kubelet into a container based on the given [`Dockerfile`](../../hack/skaffold/virtual-kubelet/Dockerfile) and deploy it as a pod (see [`pod.yml`](../../hack/skaffold/virtual-kubelet/pod.yml)) to your Kubernetes test cluster. In summary, you will likely need to modify the VK name in those files, customize the VK configuration file, and the API server certificates (`<vk-name>-crt.pem` and `<vk-name>-key.pem`) before running the test suite.
 
 ### Makefile.e2e
 
