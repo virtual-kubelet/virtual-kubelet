@@ -74,14 +74,7 @@ func runRootCommand(ctx context.Context, s *provider.Store, c Opts) error {
 		return err
 	}
 
-	cancelHTTP := func() {}
-	defer func() {
-		// note: this is purposefully using a closure so that when this is actually set the correct function will be called
-		if cancelHTTP != nil {
-			cancelHTTP()
-		}
-	}()
-	newProvider := func(cfg nodeutil.ProviderConfig) (node.PodLifecycleHandler, node.NodeProvider, error) {
+	newProvider := func(cfg nodeutil.ProviderConfig) (nodeutil.Provider, node.NodeProvider, error) {
 		var err error
 		rm, err := manager.NewResourceManager(cfg.Pods, cfg.Secrets, cfg.ConfigMaps, cfg.Services)
 		if err != nil {
@@ -107,18 +100,6 @@ func runRootCommand(ctx context.Context, s *provider.Store, c Opts) error {
 		}
 		p.ConfigureNode(ctx, cfg.Node)
 
-		apiConfig, err := getAPIConfig(c)
-		if err != nil {
-			return nil, nil, err
-		}
-
-		cancelHTTP, err = setupHTTPServer(ctx, p, apiConfig, func(context.Context) ([]*corev1.Pod, error) {
-			return rm.GetPods(), nil
-		})
-		if err != nil {
-			return nil, nil, err
-		}
-
 		return p, nil, nil
 	}
 
@@ -131,6 +112,21 @@ func runRootCommand(ctx context.Context, s *provider.Store, c Opts) error {
 		cfg.NodeSpec.Status.NodeInfo.Architecture = runtime.GOARCH
 		cfg.NodeSpec.Status.NodeInfo.OperatingSystem = c.OperatingSystem
 
+		apiConfig, err := getAPIConfig(c)
+		if err != nil {
+			return err
+		}
+
+		cfg.HTTPListenAddr = apiConfig.Addr
+		cfg.StreamCreationTimeout = apiConfig.StreamCreationTimeout
+		cfg.StreamIdleTimeout = apiConfig.StreamIdleTimeout
+
+		cfg.TLSConfig, err = loadTLSConfig(apiConfig.CertPath, apiConfig.KeyPath)
+		if err != nil {
+			return errors.Wrap(err, "error loading tls config")
+		}
+
+		cfg.DebugHTTP = true
 		return nil
 	})
 	if err != nil {
@@ -148,8 +144,6 @@ func runRootCommand(ctx context.Context, s *provider.Store, c Opts) error {
 		"watchedNamespace": c.KubeNamespace,
 	}))
 
-	defer cancelHTTP()
-
 	go cm.Run(ctx, c.PodSyncWorkers) // nolint:errcheck
 
 	defer func() {
@@ -162,6 +156,8 @@ func runRootCommand(ctx context.Context, s *provider.Store, c Opts) error {
 	if err := cm.WaitReady(ctx, c.StartupTimeout); err != nil {
 		return err
 	}
+
+	log.G(ctx).Info("Ready")
 
 	select {
 	case <-ctx.Done():

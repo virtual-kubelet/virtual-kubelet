@@ -30,11 +30,4 @@ spec:
       valueFrom:
         fieldRef:
           fieldPath: status.podIP
-    ports:
-    - name: metrics
-      containerPort: 10255
-    readinessProbe:
-      httpGet:
-        path: /stats/summary
-        port: metrics
   serviceAccountName: virtual-kubelet

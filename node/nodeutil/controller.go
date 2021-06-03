@@ -2,7 +2,10 @@ package nodeutil
 
 import (
 	"context"
+	"crypto/tls"
 	"fmt"
+	"net"
+	"net/http"
 	"os"
 	"path"
 	"time"
@@ -10,13 +13,14 @@ import (
 	"github.com/pkg/errors"
 	"github.com/virtual-kubelet/virtual-kubelet/log"
 	"github.com/virtual-kubelet/virtual-kubelet/node"
+	"github.com/virtual-kubelet/virtual-kubelet/node/api"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme"
 	corev1client "k8s.io/client-go/kubernetes/typed/core/v1"
-	corev1listers "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/tools/record"
 )
 
@@ -38,6 +42,10 @@ type Node struct {
 	scmInformerFactory informers.SharedInformerFactory
 	client             kubernetes.Interface
 
+	listenAddr  string
+	httpHandler HTTPHandler
+	tlsConfig   *tls.Config
+
 	eb record.EventBroadcaster
 }
 
@@ -54,7 +62,12 @@ func (n *Node) PodController() *node.PodController {
 // Run starts all the underlying controllers
 func (n *Node) Run(ctx context.Context, workers int) (retErr error) {
 	ctx, cancel := context.WithCancel(ctx)
-	defer cancel()
+	defer func() {
+		cancel()
+
+		n.err = retErr
+		close(n.done)
+	}()
 
 	if n.podInformerFactory != nil {
 		go n.podInformerFactory.Start(ctx.Done())
@@ -68,15 +81,23 @@ func (n *Node) Run(ctx context.Context, workers int) (retErr error) {
 		n.eb.StartRecordingToSink(&corev1client.EventSinkImpl{Interface: n.client.CoreV1().Events(v1.NamespaceAll)})
 	}
 
-	go n.pc.Run(ctx, workers) // nolint:errcheck
+	l, err := tls.Listen("tcp", n.listenAddr, n.tlsConfig)
+	if err != nil {
+		return errors.Wrap(err, "error starting http listener")
+	}
+	log.G(ctx).Debug("Started TLS listener")
+	defer l.Close()
+
+	srv := &http.Server{Handler: n.httpHandler, TLSConfig: n.tlsConfig}
+	go srv.Serve(l)
+	defer srv.Close()
+
+	go n.pc.Run(ctx, workers) //nolint:errcheck
+	log.G(ctx).Debug("HTTP server running")
 
 	defer func() {
 		cancel()
-
 		<-n.pc.Done()
-
-		n.err = retErr
-		close(n.done)
 	}()
 
 	select {
@@ -86,6 +107,8 @@ func (n *Node) Run(ctx context.Context, workers int) (retErr error) {
 	case <-n.pc.Done():
 		return n.pc.Err()
 	}
+
+	log.G(ctx).Debug("pod controller ready")
 
 	go n.nc.Run(ctx) // nolint:errcheck
 
@@ -102,6 +125,8 @@ func (n *Node) Run(ctx context.Context, workers int) (retErr error) {
 	case <-n.nc.Done():
 		return n.nc.Err()
 	}
+
+	log.G(ctx).Debug("node controller ready")
 
 	if n.readyCb != nil {
 		if err := n.readyCb(ctx); err != nil {
@@ -162,18 +187,6 @@ func (n *Node) Err() error {
 	}
 }
 
-// ProviderConfig holds objects created by NewNodeFromClient that a provider may need to bootstrap itself.
-type ProviderConfig struct {
-	Pods       corev1listers.PodLister
-	ConfigMaps corev1listers.ConfigMapLister
-	Secrets    corev1listers.SecretLister
-	Services   corev1listers.ServiceLister
-	// Hack to allow the provider to set things on the node
-	// Since the provider is bootstrapped after the node object is configured
-	// Primarily this is due to carry-over from the pre-1.0 interfaces that expect the provider to configure the node.
-	Node *v1.Node
-}
-
 // NodeOpt is used as functional options when configuring a new node in NewNodeFromClient
 type NodeOpt func(c *NodeConfig) error
 
@@ -187,11 +200,32 @@ type NodeConfig struct {
 	KubeconfigPath string
 	// Set the period for a full resync for generated client-go informers
 	InformerResyncPeriod time.Duration
+
+	// Set the address to listen on for the http API
+	HTTPListenAddr string
+	// Set a custom API handler to use.
+	// You can use this to setup, for example, authentication middleware.
+	// If one is not provided a default one will be created.
+	// Pod routes will be attached to this handler when creating the node
+	HTTPHandler HTTPHandler
+	// Set the timeout for idle http streams
+	StreamIdleTimeout time.Duration
+	// Set the timeout for creating http streams
+	StreamCreationTimeout time.Duration
+	// Enable http debugging routes
+	DebugHTTP bool
+	// Set the tls config to use for the http server
+	TLSConfig *tls.Config
+
+	// Specify the event recorder to use
+	// If this is not provided, a default one will be used.
+	EventRecorder record.EventRecorder
 }
 
-// NewProviderFunc is used from NewNodeFromClient to bootstrap a provider using the client/listers/etc created there.
-// If a nil node provider is returned a default one will be used.
-type NewProviderFunc func(ProviderConfig) (node.PodLifecycleHandler, node.NodeProvider, error)
+type HTTPHandler interface {
+	api.ServeMux
+	http.Handler
+}
 
 // WithNodeConfig returns a NodeOpt which replaces the NodeConfig with the passed in value.
 func WithNodeConfig(c NodeConfig) NodeOpt {
@@ -218,6 +252,7 @@ func NewNodeFromClient(client kubernetes.Interface, name string, newProvider New
 		// TODO: this is what was set in the cli code... its not clear what a good value actually is.
 		InformerResyncPeriod: time.Minute,
 		KubeconfigPath:       os.Getenv("KUBECONFIG"),
+		HTTPListenAddr:       ":10250",
 		NodeSpec: v1.Node{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: name,
@@ -244,6 +279,14 @@ func NewNodeFromClient(client kubernetes.Interface, name string, newProvider New
 		if err := o(&cfg); err != nil {
 			return nil, err
 		}
+	}
+
+	if _, _, err := net.SplitHostPort(cfg.HTTPListenAddr); err != nil {
+		return nil, errors.Wrap(err, "error parsing http listen address")
+	}
+
+	if cfg.HTTPHandler == nil {
+		cfg.HTTPHandler = http.NewServeMux()
 	}
 
 	if client == nil {
@@ -281,6 +324,18 @@ func NewNodeFromClient(client kubernetes.Interface, name string, newProvider New
 		return nil, errors.Wrap(err, "error creating provider")
 	}
 
+	api.AttachPodRoutes(api.PodHandlerConfig{
+		RunInContainer:   p.RunInContainer,
+		GetContainerLogs: p.GetContainerLogs,
+		GetPods:          p.GetPods,
+		GetPodsFromKubernetes: func(context.Context) ([]*v1.Pod, error) {
+			return podInformer.Lister().List(labels.Everything())
+		},
+		GetStatsSummary:       p.GetStatsSummary,
+		StreamIdleTimeout:     cfg.StreamIdleTimeout,
+		StreamCreationTimeout: cfg.StreamCreationTimeout,
+	}, cfg.HTTPHandler, cfg.DebugHTTP)
+
 	var readyCb func(context.Context) error
 	if np == nil {
 		nnp := node.NewNaiveNodeProvider()
@@ -303,11 +358,15 @@ func NewNodeFromClient(client kubernetes.Interface, name string, newProvider New
 		return nil, errors.Wrap(err, "error creating node controller")
 	}
 
-	eb := record.NewBroadcaster()
+	var eb record.EventBroadcaster
+	if cfg.EventRecorder == nil {
+		eb := record.NewBroadcaster()
+		cfg.EventRecorder = eb.NewRecorder(scheme.Scheme, v1.EventSource{Component: path.Join(name, "pod-controller")})
+	}
 
 	pc, err := node.NewPodController(node.PodControllerConfig{
 		PodClient:         client.CoreV1(),
-		EventRecorder:     eb.NewRecorder(scheme.Scheme, v1.EventSource{Component: path.Join(name, "pod-controller")}),
+		EventRecorder:     cfg.EventRecorder,
 		Provider:          p,
 		PodInformer:       podInformer,
 		SecretInformer:    secretInformer,
@@ -317,6 +376,7 @@ func NewNodeFromClient(client kubernetes.Interface, name string, newProvider New
 	if err != nil {
 		return nil, errors.Wrap(err, "error creating pod controller")
 	}
+
 	return &Node{
 		nc:                 nc,
 		pc:                 pc,
@@ -327,6 +387,9 @@ func NewNodeFromClient(client kubernetes.Interface, name string, newProvider New
 		podInformerFactory: podInformerFactory,
 		scmInformerFactory: scmInformerFactory,
 		client:             client,
+		tlsConfig:          cfg.TLSConfig,
+		httpHandler:        cfg.HTTPHandler,
+		listenAddr:         cfg.HTTPListenAddr,
 	}, nil
 }
 
