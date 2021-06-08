@@ -8,6 +8,7 @@ import (
 	"github.com/virtual-kubelet/virtual-kubelet/node/api"
 	"github.com/virtual-kubelet/virtual-kubelet/node/api/statsv1alpha1"
 	v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	corev1listers "k8s.io/client-go/listers/core/v1"
 )
 
@@ -45,3 +46,25 @@ type ProviderConfig struct {
 // NewProviderFunc is used from NewNodeFromClient to bootstrap a provider using the client/listers/etc created there.
 // If a nil node provider is returned a default one will be used.
 type NewProviderFunc func(ProviderConfig) (Provider, node.NodeProvider, error)
+
+// AttachProviderRoutes returns a NodeOpt which uses api.PodHandler to attach the routes to the provider functions.
+//
+// Note this only attaches routes, you'll need to ensure to set the handler in the node config.
+func AttachProviderRoutes(mux api.ServeMux) NodeOpt {
+	return func(cfg *NodeConfig) error {
+		cfg.routeAttacher = func(p Provider, cfg NodeConfig, pods corev1listers.PodLister) {
+			mux.Handle("/", api.PodHandler(api.PodHandlerConfig{
+				RunInContainer:   p.RunInContainer,
+				GetContainerLogs: p.GetContainerLogs,
+				GetPods:          p.GetPods,
+				GetPodsFromKubernetes: func(context.Context) ([]*v1.Pod, error) {
+					return pods.List(labels.Everything())
+				},
+				GetStatsSummary:       p.GetStatsSummary,
+				StreamIdleTimeout:     cfg.StreamIdleTimeout,
+				StreamCreationTimeout: cfg.StreamCreationTimeout,
+			}, true))
+		}
+		return nil
+	}
+}

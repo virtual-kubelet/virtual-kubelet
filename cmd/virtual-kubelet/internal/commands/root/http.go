@@ -15,45 +15,15 @@
 package root
 
 import (
-	"crypto/tls"
 	"fmt"
 	"os"
 	"time"
-
-	"github.com/pkg/errors"
 )
-
-// AcceptedCiphers is the list of accepted TLS ciphers, with known weak ciphers elided
-// Note this list should be a moving target.
-var AcceptedCiphers = []uint16{
-	tls.TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA,
-	tls.TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA,
-	tls.TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA,
-	tls.TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA,
-
-	tls.TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,
-	tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
-	tls.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
-	tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
-}
-
-func loadTLSConfig(certPath, keyPath string) (*tls.Config, error) {
-	cert, err := tls.LoadX509KeyPair(certPath, keyPath)
-	if err != nil {
-		return nil, errors.Wrap(err, "error loading tls certs")
-	}
-
-	return &tls.Config{
-		Certificates:             []tls.Certificate{cert},
-		MinVersion:               tls.VersionTLS12,
-		PreferServerCipherSuites: true,
-		CipherSuites:             AcceptedCiphers,
-	}, nil
-}
 
 type apiServerConfig struct {
 	CertPath              string
 	KeyPath               string
+	CACertPath            string
 	Addr                  string
 	MetricsAddr           string
 	StreamIdleTimeout     time.Duration
@@ -62,8 +32,9 @@ type apiServerConfig struct {
 
 func getAPIConfig(c Opts) (*apiServerConfig, error) {
 	config := apiServerConfig{
-		CertPath: os.Getenv("APISERVER_CERT_LOCATION"),
-		KeyPath:  os.Getenv("APISERVER_KEY_LOCATION"),
+		CertPath:   os.Getenv("APISERVER_CERT_LOCATION"),
+		KeyPath:    os.Getenv("APISERVER_KEY_LOCATION"),
+		CACertPath: os.Getenv("APISERVER_CA_CERT_LOCATION"),
 	}
 
 	config.Addr = fmt.Sprintf(":%d", c.ListenPort)

@@ -4,6 +4,8 @@ metadata:
   name: vkubelet-mock-0
 spec:
   containers:
+  - name: jaeger-tracing
+    image: jaegertracing/all-in-one:1.22
   - name: vkubelet-mock-0
     image: virtual-kubelet
     # "IfNotPresent" is used to prevent Minikube from trying to pull from the registry (and failing) in the first place.
@@ -23,7 +25,12 @@ spec:
     - --klog.logtostderr
     - --log-level
     - debug
+    - --trace-exporter
+    - jaeger
+    - --trace-sample-rate=always
     env:
+    - name: JAEGER_AGENT_ENDPOINT
+      value: localhost:6831
     - name: KUBELET_PORT
       value: "10250"
     - name: VKUBELET_POD_IP

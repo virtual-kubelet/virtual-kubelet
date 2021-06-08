@@ -16,6 +16,8 @@ package root
 
 import (
 	"context"
+	"crypto/tls"
+	"net/http"
 	"os"
 	"runtime"
 
@@ -26,8 +28,11 @@ import (
 	"github.com/virtual-kubelet/virtual-kubelet/internal/manager"
 	"github.com/virtual-kubelet/virtual-kubelet/log"
 	"github.com/virtual-kubelet/virtual-kubelet/node"
+	"github.com/virtual-kubelet/virtual-kubelet/node/api"
 	"github.com/virtual-kubelet/virtual-kubelet/node/nodeutil"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apiserver/pkg/server/dynamiccertificates"
+	"k8s.io/client-go/kubernetes"
 )
 
 // NewCommand creates a new top-level command.
@@ -74,8 +79,8 @@ func runRootCommand(ctx context.Context, s *provider.Store, c Opts) error {
 		return err
 	}
 
+	mux := http.NewServeMux()
 	newProvider := func(cfg nodeutil.ProviderConfig) (nodeutil.Provider, node.NodeProvider, error) {
-		var err error
 		rm, err := manager.NewResourceManager(cfg.Pods, cfg.Secrets, cfg.ConfigMaps, cfg.Services)
 		if err != nil {
 			return nil, nil, errors.Wrap(err, "could not create resource manager")
@@ -99,11 +104,17 @@ func runRootCommand(ctx context.Context, s *provider.Store, c Opts) error {
 			return nil, nil, errors.Wrapf(err, "error initializing provider %s", c.Provider)
 		}
 		p.ConfigureNode(ctx, cfg.Node)
-
+		cfg.Node.Status.NodeInfo.KubeletVersion = c.Version
 		return p, nil, nil
 	}
 
-	cm, err := nodeutil.NewNodeFromClient(client, c.NodeName, newProvider, func(cfg *nodeutil.NodeConfig) error {
+	apiConfig, err := getAPIConfig(c)
+	if err != nil {
+		return err
+	}
+
+	cm, err := nodeutil.NewNodeFromClient(c.NodeName, newProvider, func(cfg *nodeutil.NodeConfig) error {
+		cfg.Handler = mux
 		cfg.InformerResyncPeriod = c.InformerResyncPeriod
 
 		if taint != nil {
@@ -112,23 +123,23 @@ func runRootCommand(ctx context.Context, s *provider.Store, c Opts) error {
 		cfg.NodeSpec.Status.NodeInfo.Architecture = runtime.GOARCH
 		cfg.NodeSpec.Status.NodeInfo.OperatingSystem = c.OperatingSystem
 
-		apiConfig, err := getAPIConfig(c)
-		if err != nil {
-			return err
-		}
-
 		cfg.HTTPListenAddr = apiConfig.Addr
 		cfg.StreamCreationTimeout = apiConfig.StreamCreationTimeout
 		cfg.StreamIdleTimeout = apiConfig.StreamIdleTimeout
-
-		cfg.TLSConfig, err = loadTLSConfig(apiConfig.CertPath, apiConfig.KeyPath)
-		if err != nil {
-			return errors.Wrap(err, "error loading tls config")
-		}
-
 		cfg.DebugHTTP = true
+
+		cfg.NumWorkers = c.PodSyncWorkers
+
 		return nil
-	})
+	},
+		nodeutil.WithClient(client),
+		setAuth(client, c.NodeName, apiConfig),
+		nodeutil.WithTLSConfig(
+			nodeutil.WithKeyPairFromPath(apiConfig.CertPath, apiConfig.KeyPath),
+			maybeCA(apiConfig.CACertPath),
+		),
+		nodeutil.AttachProviderRoutes(mux),
+	)
 	if err != nil {
 		return err
 	}
@@ -144,7 +155,7 @@ func runRootCommand(ctx context.Context, s *provider.Store, c Opts) error {
 		"watchedNamespace": c.KubeNamespace,
 	}))
 
-	go cm.Run(ctx, c.PodSyncWorkers) // nolint:errcheck
+	go cm.Run(ctx) //nolint:errcheck
 
 	defer func() {
 		log.G(ctx).Debug("Waiting for controllers to be done")
@@ -165,4 +176,33 @@ func runRootCommand(ctx context.Context, s *provider.Store, c Opts) error {
 		return cm.Err()
 	}
 	return nil
+}
+
+func setAuth(client kubernetes.Interface, node string, apiCfg *apiServerConfig) nodeutil.NodeOpt {
+	if apiCfg.CACertPath == "" {
+		return func(cfg *nodeutil.NodeConfig) error {
+			cfg.Handler = api.InstrumentHandler(nodeutil.WithAuth(nodeutil.NoAuth(), cfg.Handler))
+			return nil
+		}
+	}
+
+	return func(cfg *nodeutil.NodeConfig) error {
+		auth, err := nodeutil.WebhookAuth(client, node, func(cfg *nodeutil.WebhookAuthConfig) error {
+			var err error
+			cfg.AuthnConfig.ClientCertificateCAContentProvider, err = dynamiccertificates.NewDynamicCAContentFromFile("ca-cert-bundle", apiCfg.CACertPath)
+			return err
+		})
+		if err != nil {
+			return err
+		}
+		cfg.Handler = api.InstrumentHandler(nodeutil.WithAuth(auth, cfg.Handler))
+		return nil
+	}
+}
+
+func maybeCA(p string) func(*tls.Config) error {
+	if p == "" {
+		return func(*tls.Config) error { return nil }
+	}
+	return nodeutil.WithCAFromPath(p)
 }
