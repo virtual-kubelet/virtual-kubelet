@@ -28,7 +28,7 @@ import (
 // Defaults for root command options
 const (
 	DefaultNodeName             = "virtual-kubelet"
-	DefaultOperatingSystem      = "Linux"
+	DefaultOperatingSystem      = "linux"
 	DefaultInformerResyncPeriod = 1 * time.Minute
 	DefaultMetricsAddr          = ":10255"
 	DefaultListenPort           = 10250 // TODO(cpuguy83)(VK1.0): Change this to an addr instead of just a port.. we should not be listening on all interfaces.
