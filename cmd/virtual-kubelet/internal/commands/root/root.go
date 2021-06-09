@@ -32,7 +32,6 @@ import (
 	"github.com/virtual-kubelet/virtual-kubelet/node/nodeutil"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apiserver/pkg/server/dynamiccertificates"
-	"k8s.io/client-go/kubernetes"
 )
 
 // NewCommand creates a new top-level command.
@@ -74,11 +73,6 @@ func runRootCommand(ctx context.Context, s *provider.Store, c Opts) error {
 		}
 	}
 
-	client, err := nodeutil.ClientsetFromEnv(c.KubeConfigPath)
-	if err != nil {
-		return err
-	}
-
 	mux := http.NewServeMux()
 	newProvider := func(cfg nodeutil.ProviderConfig) (nodeutil.Provider, node.NodeProvider, error) {
 		rm, err := manager.NewResourceManager(cfg.Pods, cfg.Secrets, cfg.ConfigMaps, cfg.Services)
@@ -113,7 +107,8 @@ func runRootCommand(ctx context.Context, s *provider.Store, c Opts) error {
 		return err
 	}
 
-	cm, err := nodeutil.NewNodeFromClient(c.NodeName, newProvider, func(cfg *nodeutil.NodeConfig) error {
+	cm, err := nodeutil.NewNode(c.NodeName, newProvider, func(cfg *nodeutil.NodeConfig) error {
+		cfg.KubeconfigPath = c.KubeConfigPath
 		cfg.Handler = mux
 		cfg.InformerResyncPeriod = c.InformerResyncPeriod
 
@@ -132,8 +127,7 @@ func runRootCommand(ctx context.Context, s *provider.Store, c Opts) error {
 
 		return nil
 	},
-		nodeutil.WithClient(client),
-		setAuth(client, c.NodeName, apiConfig),
+		setAuth(c.NodeName, apiConfig),
 		nodeutil.WithTLSConfig(
 			nodeutil.WithKeyPairFromPath(apiConfig.CertPath, apiConfig.KeyPath),
 			maybeCA(apiConfig.CACertPath),
@@ -178,7 +172,7 @@ func runRootCommand(ctx context.Context, s *provider.Store, c Opts) error {
 	return nil
 }
 
-func setAuth(client kubernetes.Interface, node string, apiCfg *apiServerConfig) nodeutil.NodeOpt {
+func setAuth(node string, apiCfg *apiServerConfig) nodeutil.NodeOpt {
 	if apiCfg.CACertPath == "" {
 		return func(cfg *nodeutil.NodeConfig) error {
 			cfg.Handler = api.InstrumentHandler(nodeutil.WithAuth(nodeutil.NoAuth(), cfg.Handler))
@@ -187,7 +181,7 @@ func setAuth(client kubernetes.Interface, node string, apiCfg *apiServerConfig) 
 	}
 
 	return func(cfg *nodeutil.NodeConfig) error {
-		auth, err := nodeutil.WebhookAuth(client, node, func(cfg *nodeutil.WebhookAuthConfig) error {
+		auth, err := nodeutil.WebhookAuth(cfg.Client, node, func(cfg *nodeutil.WebhookAuthConfig) error {
 			var err error
 			cfg.AuthnConfig.ClientCertificateCAContentProvider, err = dynamiccertificates.NewDynamicCAContentFromFile("ca-cert-bundle", apiCfg.CACertPath)
 			return err

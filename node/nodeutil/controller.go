@@ -268,7 +268,7 @@ func WithClient(c kubernetes.Interface) NodeOpt {
 	}
 }
 
-// NewNodeFromClient creates a new node using the provided client and name.
+// NewNode creates a new node using the provided client and name.
 // This is intended for high-level/low boiler-plate usage.
 // Use the constructors in the `node` package for lower level configuration.
 //
@@ -277,7 +277,7 @@ func WithClient(c kubernetes.Interface) NodeOpt {
 // If client is nil, this will construct a client using ClientsetFromEnv
 //
 // It is up to the caller to configure auth on the HTTP handler.
-func NewNodeFromClient(name string, newProvider NewProviderFunc, opts ...NodeOpt) (*Node, error) {
+func NewNode(name string, newProvider NewProviderFunc, opts ...NodeOpt) (*Node, error) {
 	cfg := NodeConfig{
 		NumWorkers:           runtime.NumCPU(),
 		InformerResyncPeriod: time.Minute,
@@ -315,23 +315,22 @@ func NewNodeFromClient(name string, newProvider NewProviderFunc, opts ...NodeOpt
 		return nil, errors.Wrap(err, "error parsing http listen address")
 	}
 
-	client := cfg.Client
-	if client == nil {
+	if cfg.Client == nil {
 		var err error
-		client, err = ClientsetFromEnv(cfg.KubeconfigPath)
+		cfg.Client, err = ClientsetFromEnv(cfg.KubeconfigPath)
 		if err != nil {
 			return nil, errors.Wrap(err, "error creating clientset from env")
 		}
 	}
 
 	podInformerFactory := informers.NewSharedInformerFactoryWithOptions(
-		client,
+		cfg.Client,
 		cfg.InformerResyncPeriod,
 		PodInformerFilter(name),
 	)
 
 	scmInformerFactory := informers.NewSharedInformerFactoryWithOptions(
-		client,
+		cfg.Client,
 		cfg.InformerResyncPeriod,
 	)
 
@@ -370,8 +369,8 @@ func NewNodeFromClient(name string, newProvider NewProviderFunc, opts ...NodeOpt
 	nc, err := node.NewNodeController(
 		np,
 		&cfg.NodeSpec,
-		client.CoreV1().Nodes(),
-		node.WithNodeEnableLeaseV1(NodeLeaseV1Client(client), node.DefaultLeaseDuration),
+		cfg.Client.CoreV1().Nodes(),
+		node.WithNodeEnableLeaseV1(NodeLeaseV1Client(cfg.Client), node.DefaultLeaseDuration),
 	)
 	if err != nil {
 		return nil, errors.Wrap(err, "error creating node controller")
@@ -384,7 +383,7 @@ func NewNodeFromClient(name string, newProvider NewProviderFunc, opts ...NodeOpt
 	}
 
 	pc, err := node.NewPodController(node.PodControllerConfig{
-		PodClient:         client.CoreV1(),
+		PodClient:         cfg.Client.CoreV1(),
 		EventRecorder:     cfg.EventRecorder,
 		Provider:          p,
 		PodInformer:       podInformer,
@@ -405,7 +404,7 @@ func NewNodeFromClient(name string, newProvider NewProviderFunc, opts ...NodeOpt
 		eb:                 eb,
 		podInformerFactory: podInformerFactory,
 		scmInformerFactory: scmInformerFactory,
-		client:             client,
+		client:             cfg.Client,
 		tlsConfig:          cfg.TLSConfig,
 		h:                  cfg.Handler,
 		listenAddr:         cfg.HTTPListenAddr,
