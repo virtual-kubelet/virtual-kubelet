@@ -47,6 +47,7 @@ type Queue struct {
 	clock clock.Clock
 	// lock protects running, and the items list / map
 	lock    sync.Mutex
+	cond    *sync.Cond
 	running bool
 	name    string
 	handler ItemHandler
@@ -61,9 +62,6 @@ type Queue struct {
 	// Wait for next semaphore is an exclusive (1 item) lock that is taken every time items is checked to see if there
 	// is an item in queue for work
 	waitForNextItemSemaphore *semaphore.Weighted
-
-	// wakeup
-	wakeupCh chan struct{}
 
 	retryFunc ShouldRetryFunc
 }
@@ -94,7 +92,7 @@ func New(ratelimiter workqueue.RateLimiter, name string, handler ItemHandler, re
 	if retryFunc == nil {
 		retryFunc = DefaultRetryFunc
 	}
-	return &Queue{
+	q := &Queue{
 		clock:                    clock.RealClock{},
 		name:                     name,
 		ratelimiter:              ratelimiter,
@@ -102,10 +100,11 @@ func New(ratelimiter workqueue.RateLimiter, name string, handler ItemHandler, re
 		itemsBeingProcessed:      make(map[string]*queueItem),
 		itemsInQueue:             make(map[string]*list.Element),
 		handler:                  handler,
-		wakeupCh:                 make(chan struct{}, 1),
 		waitForNextItemSemaphore: semaphore.NewWeighted(1),
 		retryFunc:                retryFunc,
 	}
+	q.cond = sync.NewCond(&q.lock)
+	return q
 }
 
 // Enqueue enqueues the key in a rate limited fashion
@@ -179,12 +178,7 @@ func (q *Queue) insert(ctx context.Context, key string, ratelimit bool, delay *t
 		ctx = span.WithField(ctx, "delay", delay.String())
 	}
 
-	defer func() {
-		select {
-		case q.wakeupCh <- struct{}{}:
-		default:
-		}
-	}()
+	defer q.cond.Signal()
 
 	// First see if the item is already being processed
 	if item, ok := q.itemsBeingProcessed[key]; ok {
@@ -308,10 +302,6 @@ func (q *Queue) Run(ctx context.Context, workers int) {
 		q.running = false
 	}()
 
-	// Make sure all workers are stopped before we finish up.
-	ctx, cancel := context.WithCancel(ctx)
-	defer cancel()
-
 	group := &wait.Group{}
 	for i := 0; i < workers; i++ {
 		// This is required because i is referencing a mutable variable and that's running in a separate goroutine
@@ -322,6 +312,9 @@ func (q *Queue) Run(ctx context.Context, workers int) {
 	}
 	defer group.Wait()
 	<-ctx.Done()
+
+	// context is cancelled, signal all the workers so they can exit
+	q.cond.Broadcast()
 }
 
 func (q *Queue) worker(ctx context.Context, i int) {
@@ -339,45 +332,53 @@ func (q *Queue) getNextItem(ctx context.Context) (*queueItem, error) {
 	}
 	defer q.waitForNextItemSemaphore.Release(1)
 
-	for {
-		q.lock.Lock()
-		element := q.items.Front()
-		if element == nil {
-			// Wait for the next item
+	q.lock.Lock()
+	locked := true
+	defer func() {
+		if locked {
 			q.lock.Unlock()
+		}
+	}()
+
+	timer := time.NewTimer(0)
+	defer timer.Stop() // make sure it is stopped on return
+
+	timer.Stop() // stop it now because we don't need it yet.
+
+	for {
+		for ctx.Err() == nil && q.items.Len() == 0 {
+			q.cond.Wait()
+		}
+
+		if err := ctx.Err(); err != nil {
+			return nil, err
+		}
+
+		element := q.items.Front()
+
+		qi := element.Value.(*queueItem)
+		timeUntilProcessing := time.Until(qi.plannedToStartWorkAt)
+
+		if timeUntilProcessing > 0 {
+			q.lock.Unlock()
+			locked = false
+
+			timer.Reset(timeUntilProcessing)
 			select {
 			case <-ctx.Done():
 				return nil, ctx.Err()
-			case <-q.wakeupCh:
-			}
-		} else {
-			qi := element.Value.(*queueItem)
-			timeUntilProcessing := time.Until(qi.plannedToStartWorkAt)
-
-			// Do we need to sleep? If not, let's party.
-			if timeUntilProcessing <= 0 {
-				q.itemsBeingProcessed[qi.key] = qi
-				q.items.Remove(element)
-				delete(q.itemsInQueue, qi.key)
-				q.lock.Unlock()
-				return qi, nil
+			case <-timer.C:
 			}
 
-			q.lock.Unlock()
-			if err := func() error {
-				timer := q.clock.NewTimer(timeUntilProcessing)
-				defer timer.Stop()
-				select {
-				case <-timer.C():
-				case <-ctx.Done():
-					return ctx.Err()
-				case <-q.wakeupCh:
-				}
-				return nil
-			}(); err != nil {
-				return nil, err
-			}
+			q.lock.Lock()
+			locked = true
+			continue
 		}
+
+		q.itemsBeingProcessed[qi.key] = qi
+		q.items.Remove(element)
+		delete(q.itemsInQueue, qi.key)
+		return qi, nil
 	}
 }
 
