@@ -38,7 +38,7 @@ flags:
   default: virtual-kubelet
 - name: --os
   arg: string
-  description: The operating system (must be `Linux` or `Windows`)
+  description: The operating system (must be `linux` or `windows`)
   default: Linux
 - name: --pod-sync-workers
   arg: int

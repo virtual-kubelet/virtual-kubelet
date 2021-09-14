@@ -3,7 +3,6 @@ package framework
 import (
 	"context"
 	"encoding/json"
-	"strconv"
 
 	stats "github.com/virtual-kubelet/virtual-kubelet/node/api/statsv1alpha1"
 	"k8s.io/apimachinery/pkg/util/net"
@@ -18,7 +17,7 @@ func (f *Framework) GetStatsSummary(ctx context.Context) (*stats.Summary, error)
 		Namespace(f.Namespace).
 		Resource("pods").
 		SubResource("proxy").
-		Name(net.JoinSchemeNamePort("http", f.NodeName, strconv.Itoa(10255))).
+		Name(net.JoinSchemeNamePort("https", f.NodeName, "10250")).
 		Suffix("/stats/summary").DoRaw(ctx)
 	if err != nil {
 		return nil, err
