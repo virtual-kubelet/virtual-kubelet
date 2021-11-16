@@ -271,6 +271,11 @@ One of the roles of a Kubelet is to accept requests from the API server for
 things like `kubectl logs` and  `kubectl exec`. Helpers for setting this up are
 provided [here](https://godoc.org/github.com/virtual-kubelet/virtual-kubelet/node/api)
 
+#### Scrape Pod metrics
+
+If you want to use HPA(Horizontal Pod Autoscaler) in your cluster, the provider should implement the `GetStatsSummary` function. Then metrics-server will be able to get the metrics of the pods on virtual-kubelet. Otherwise, you may see `No metrics for pod ` on metrics-server, which means the metrics of the pods on virtual-kubelet are not collected.
+
+
 ## Testing
 
 ### Unit tests
@@ -305,4 +310,3 @@ Monthly Virtual Kubelet Office Hours are held at 10am PST on the last Thursday o
 Our google drive with design specifications and meeting notes are [here](https://drive.google.com/drive/folders/19Ndu11WBCCBDowo9CrrGUHoIfd2L8Ueg?usp=sharing).
 
 We also have a community slack channel named virtual-kubelet in the Kubernetes slack. You can also connect with the Virtual Kubelet community via the [mailing list](https://lists.cncf.io/g/virtualkubelet-dev).
-
