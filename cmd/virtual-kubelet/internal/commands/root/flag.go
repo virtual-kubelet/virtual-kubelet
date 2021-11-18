@@ -22,7 +22,7 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/spf13/pflag"
-	"k8s.io/klog"
+	"k8s.io/klog/v2"
 )
 
 type mapVar map[string]string
