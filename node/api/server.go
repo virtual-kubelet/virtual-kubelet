@@ -70,6 +70,7 @@ func PodHandler(p PodHandlerConfig, debug bool) http.Handler {
 		f := HandlePodStatsSummary(p.GetStatsSummary)
 		r.HandleFunc("/stats/summary", f).Methods("GET")
 		r.HandleFunc("/stats/summary/", f).Methods("GET")
+		r.HandleFunc("/metrics/resource", f).Methods("GET")
 	}
 
 	r.NotFoundHandler = http.HandlerFunc(NotFound)
