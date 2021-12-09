@@ -274,6 +274,7 @@ func TestPodStatusDelete(t *testing.T) {
 	pod := &corev1.Pod{}
 	pod.ObjectMeta.Namespace = "default"
 	pod.ObjectMeta.Name = "nginx"
+	pod.ObjectMeta.UID = "00000000-0000-0000-0000-00000000000"
 	pod.Spec = newPodSpec()
 	fk8s := fake.NewSimpleClientset(pod)
 	c.client = fk8s

@@ -15,7 +15,9 @@
 package node
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
@@ -30,6 +32,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/strategicpatch"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/tools/cache"
 )
@@ -200,6 +204,46 @@ func shouldSkipPodStatusUpdate(pod *corev1.Pod) bool {
 		pod.Status.Phase == corev1.PodFailed
 }
 
+func (pc *PodController) patchPodStatus(ctx context.Context, oldPod, newPod *corev1.Pod) error {
+	ctx, span := trace.StartSpan(ctx, "patchPodStatus")
+	defer span.End()
+	ctx = addPodAttributes(ctx, span, newPod)
+
+	oldData, err := json.Marshal(corev1.Pod{
+		Status: oldPod.Status,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to Marshal oldData for pod %q/%q: %v", oldPod.Namespace, oldPod.Name, err)
+	}
+
+	newData, err := json.Marshal(corev1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			UID: newPod.UID, // only put the uid in the new object to ensure it appears in the patch as a precondition
+		},
+		Status: newPod.Status,
+	})
+	if err != nil {
+		return pkgerrors.Wrapf(err, "failed to Marshal newData for pod %q/%q", newPod.Namespace, newPod.Name)
+	}
+
+	patchBytes, err := strategicpatch.CreateTwoWayMergePatch(oldData, newData, corev1.Pod{})
+	if err != nil {
+		return pkgerrors.Wrapf(err, "failed to CreateTwoWayMergePatch for pod %q/%q", newPod.Namespace, newPod.Name)
+	}
+
+	if bytes.Equal(patchBytes, []byte(fmt.Sprintf(`{"metadata":{"uid":%q}}`, newPod.UID))) {
+		log.G(ctx).Debugf("Status for pod %q/%q is up-to-date", newPod.Namespace, newPod.Name)
+		return nil
+	}
+
+	_, err = pc.client.Pods(newPod.Namespace).Patch(context.TODO(), newPod.Name, types.StrategicMergePatchType, patchBytes, metav1.PatchOptions{}, "status")
+	if err != nil {
+		return pkgerrors.Wrapf(err, "failed to patch status %q for pod %q/%q", patchBytes, newPod.Namespace, newPod.Name)
+	}
+
+	return nil
+}
+
 func (pc *PodController) updatePodStatus(ctx context.Context, podFromKubernetes *corev1.Pod, key string) error {
 	if shouldSkipPodStatusUpdate(podFromKubernetes) {
 		return nil
@@ -235,16 +279,14 @@ func (pc *PodController) updatePodStatus(ctx context.Context, podFromKubernetes 
 				span.SetStatus(err)
 				return pkgerrors.Wrap(err, "error while delete pod in kubernetes")
 			}
+			// Pod is being deleted, no need to update status
+			return nil
 		}
 	}
 
-	// We need to do this because the other parts of the pod can be updated elsewhere. Since we're only updating
-	// the pod status, and we should be the sole writers of the pod status, we can blind overwrite it. Therefore
-	// we need to copy the pod and set ResourceVersion to 0.
-	podFromProvider.ResourceVersion = "0"
-	if _, err := pc.client.Pods(podFromKubernetes.Namespace).UpdateStatus(ctx, podFromProvider, metav1.UpdateOptions{}); err != nil && !errors.IsNotFound(err) {
+	if err := pc.patchPodStatus(ctx, podFromKubernetes, podFromProvider); err != nil {
 		span.SetStatus(err)
-		return pkgerrors.Wrap(err, "error while updating pod status in kubernetes")
+		return pkgerrors.Wrap(err, "error while patch pod status in kubernetes")
 	}
 
 	log.G(ctx).WithFields(log.Fields{
