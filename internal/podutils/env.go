@@ -20,9 +20,9 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/virtual-kubelet/virtual-kubelet/internal/expansion"
-	"github.com/virtual-kubelet/virtual-kubelet/internal/manager"
-	"github.com/virtual-kubelet/virtual-kubelet/log"
+	"github.com/nuczzz/virtual-kubelet/internal/expansion"
+	"github.com/nuczzz/virtual-kubelet/internal/manager"
+	"github.com/nuczzz/virtual-kubelet/log"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -468,7 +468,7 @@ func getEnvironmentVariableValueWithValueFromSecretKeyRef(ctx context.Context, e
 
 // Handle population from a field (downward API).
 func getEnvironmentVariableValueWithValueFromFieldRef(ctx context.Context, env *corev1.EnvVar, mappingFunc func(string) string, pod *corev1.Pod, container *corev1.Container, rm *manager.ResourceManager, recorder record.EventRecorder) (*string, error) {
-	// https://github.com/virtual-kubelet/virtual-kubelet/issues/123
+	// https://github.com/nuczzz/virtual-kubelet/issues/123
 	vf := env.ValueFrom.FieldRef
 
 	runtimeVal, err := podFieldSelectorRuntimeValue(vf, pod)

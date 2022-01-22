@@ -7,7 +7,7 @@ jobs:
         environment:
           GO111MODULE: "on"
           GOPROXY: https://proxy.golang.org
-    working_directory: /go/src/github.com/virtual-kubelet/virtual-kubelet
+    working_directory: /go/src/github.com/nuczzz/virtual-kubelet
     steps:
       - checkout
       - restore_cache:
@@ -33,7 +33,7 @@ jobs:
       - image: circleci/golang:1.16
         environment:
           GO111MODULE: "on"
-    working_directory: /go/src/github.com/virtual-kubelet/virtual-kubelet
+    working_directory: /go/src/github.com/nuczzz/virtual-kubelet
     steps:
       - checkout
       - restore_cache:
@@ -62,7 +62,7 @@ jobs:
   e2e:
     machine:
       image: ubuntu-1604:202010-01
-    working_directory: /home/circleci/go/src/github.com/virtual-kubelet/virtual-kubelet
+    working_directory: /home/circleci/go/src/github.com/nuczzz/virtual-kubelet
     environment:
       CHANGE_MINIKUBE_NONE_USER: true
       GOPATH: /home/circleci/go

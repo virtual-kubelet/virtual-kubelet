@@ -25,20 +25,21 @@ import (
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-	"github.com/virtual-kubelet/virtual-kubelet/cmd/virtual-kubelet/internal/commands/providers"
-	"github.com/virtual-kubelet/virtual-kubelet/cmd/virtual-kubelet/internal/commands/root"
-	"github.com/virtual-kubelet/virtual-kubelet/cmd/virtual-kubelet/internal/commands/version"
-	"github.com/virtual-kubelet/virtual-kubelet/cmd/virtual-kubelet/internal/provider"
-	"github.com/virtual-kubelet/virtual-kubelet/log"
-	logruslogger "github.com/virtual-kubelet/virtual-kubelet/log/logrus"
-	"github.com/virtual-kubelet/virtual-kubelet/trace"
-	"github.com/virtual-kubelet/virtual-kubelet/trace/opencensus"
+
+	"github.com/nuczzz/virtual-kubelet/cmd/virtual-kubelet/internal/commands/providers"
+	"github.com/nuczzz/virtual-kubelet/cmd/virtual-kubelet/internal/commands/root"
+	"github.com/nuczzz/virtual-kubelet/cmd/virtual-kubelet/internal/commands/version"
+	"github.com/nuczzz/virtual-kubelet/cmd/virtual-kubelet/internal/provider"
+	"github.com/nuczzz/virtual-kubelet/log"
+	logruslogger "github.com/nuczzz/virtual-kubelet/log/logrus"
+	"github.com/nuczzz/virtual-kubelet/trace"
+	"github.com/nuczzz/virtual-kubelet/trace/opencensus"
 )
 
 var (
 	buildVersion = "N/A"
 	buildTime    = "N/A"
-	k8sVersion   = "v1.15.2" // This should follow the version of k8s.io/kubernetes we are importing
+	k8sVersion   = "v1.19.10" // This should follow the version of k8s.io/kubernetes we are importing
 )
 
 func main() {
@@ -52,13 +53,14 @@ func main() {
 
 	log.L = logruslogger.FromLogrus(logrus.NewEntry(logrus.StandardLogger()))
 	trace.T = opencensus.Adapter{}
+	log.G(ctx).Debug("init log success")
 
 	var opts root.Opts
 	optsErr := root.SetDefaultOpts(&opts)
 	opts.Version = strings.Join([]string{k8sVersion, "vk", buildVersion}, "-")
 
 	s := provider.NewStore()
-	registerMock(s)
+	registerProvider(ctx, s)
 
 	rootCmd := root.NewCommand(ctx, filepath.Base(os.Args[0]), s, opts)
 	rootCmd.AddCommand(version.NewCommand(buildVersion, buildTime), providers.NewCommand(s))

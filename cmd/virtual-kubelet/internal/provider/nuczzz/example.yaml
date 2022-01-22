@@ -1,0 +1,8 @@
+kubeconfig: kubeconfig
+
+capacity:
+  cpu: 100C
+  memory: 100G
+  pods: 110
+
+namespace: default

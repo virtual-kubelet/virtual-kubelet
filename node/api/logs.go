@@ -24,8 +24,8 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/pkg/errors"
-	"github.com/virtual-kubelet/virtual-kubelet/errdefs"
-	"github.com/virtual-kubelet/virtual-kubelet/log"
+	"github.com/nuczzz/virtual-kubelet/errdefs"
+	"github.com/nuczzz/virtual-kubelet/log"
 )
 
 // ContainerLogsHandlerFunc is used in place of backend implementations for getting container logs

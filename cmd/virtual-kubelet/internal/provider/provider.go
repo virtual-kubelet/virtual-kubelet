@@ -3,8 +3,9 @@ package provider
 import (
 	"context"
 
-	"github.com/virtual-kubelet/virtual-kubelet/node/nodeutil"
 	v1 "k8s.io/api/core/v1"
+
+	"github.com/nuczzz/virtual-kubelet/node/nodeutil"
 )
 
 // Provider wraps the core provider type with an extra function needed to bootstrap the node

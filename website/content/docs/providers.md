@@ -28,7 +28,7 @@ Virtual Kubelet currently has a wide variety of providers:
 
 To add a new Virtual Kubelet provider, create a new directory for your provider.
 
-In that created directory, implement [`PodLifecycleHandler`](https://godoc.org/github.com/virtual-kubelet/virtual-kubelet/node#PodLifecycleHandler) interface in [Go](https://golang.org).
+In that created directory, implement [`PodLifecycleHandler`](https://godoc.org/github.com/nuczzz/virtual-kubelet/node#PodLifecycleHandler) interface in [Go](https://golang.org).
 
 > For an example implementation of the Virtual Kubelet `PodLifecycleHandler` interface, see the [Virtual Kubelet CRI Provider](https://github.com/virtual-kubelet/cri), especially [`cri.go`](https://github.com/virtual-kubelet/cri/blob/master/cri.go).
 
@@ -41,7 +41,7 @@ You can see the list of required methods, with relevant descriptions of each met
 // to new and changed pods scheduled to the node that is being managed.
 //
 // Errors produced by these methods should implement an interface from
-// github.com/virtual-kubelet/virtual-kubelet/errdefs package in order for the
+// github.com/nuczzz/virtual-kubelet/errdefs package in order for the
 // core logic to be able to understand the type of failure.
 type PodLifecycleHandler interface {
     // CreatePod takes a Kubernetes Pod and deploys it within the provider.
@@ -73,7 +73,7 @@ type PodLifecycleHandler interface {
 }
 ```
 
-In addition to `PodLifecycleHandler`, there's an optional [`PodMetricsProvider`](https://godoc.org/github.com/virtual-kubelet/virtual-kubelet/cmd/virtual-kubelet/internal/provider#PodMetricsProvider) interface that providers can implement to expose Kubernetes Pod stats:
+In addition to `PodLifecycleHandler`, there's an optional [`PodMetricsProvider`](https://godoc.org/github.com/nuczzz/virtual-kubelet/cmd/virtual-kubelet/internal/provider#PodMetricsProvider) interface that providers can implement to expose Kubernetes Pod stats:
 
 ```go
 type PodMetricsProvider interface {
@@ -91,7 +91,7 @@ For a Virtual Kubelet provider to be considered viable, it must support the foll
 
 No Virtual Kubelet provider is complete without solid documentation. We strongly recommend providing a README for your provider in its directory. The READMEs for the currently existing implementations can provide a blueprint.
 
-You'll also likely want your provider to appear in the [list of current providers](#current-providers). That list is generated from a [`provider.yaml`](https://github.com/virtual-kubelet/virtual-kubelet/blob/master/website/data/providers.yaml) file. Add a `name` field for the displayed name of the provider and the subdirectory as the `tag` field. The `name` field supports Markdown, so feel free to use bold text or a hyperlink.
+You'll also likely want your provider to appear in the [list of current providers](#current-providers). That list is generated from a [`provider.yaml`](https://github.com/nuczzz/virtual-kubelet/blob/master/website/data/providers.yaml) file. Add a `name` field for the displayed name of the provider and the subdirectory as the `tag` field. The `name` field supports Markdown, so feel free to use bold text or a hyperlink.
 
 ## Testing
 

@@ -22,11 +22,11 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	pkgerrors "github.com/pkg/errors"
-	"github.com/virtual-kubelet/virtual-kubelet/errdefs"
-	"github.com/virtual-kubelet/virtual-kubelet/internal/manager"
-	"github.com/virtual-kubelet/virtual-kubelet/internal/queue"
-	"github.com/virtual-kubelet/virtual-kubelet/log"
-	"github.com/virtual-kubelet/virtual-kubelet/trace"
+	"github.com/nuczzz/virtual-kubelet/errdefs"
+	"github.com/nuczzz/virtual-kubelet/internal/manager"
+	"github.com/nuczzz/virtual-kubelet/internal/queue"
+	"github.com/nuczzz/virtual-kubelet/log"
+	"github.com/nuczzz/virtual-kubelet/trace"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -42,7 +42,7 @@ import (
 // to new and changed pods scheduled to the node that is being managed.
 //
 // Errors produced by these methods should implement an interface from
-// github.com/virtual-kubelet/virtual-kubelet/errdefs package in order for the
+// github.com/nuczzz/virtual-kubelet/errdefs package in order for the
 // core logic to be able to understand the type of failure.
 type PodLifecycleHandler interface {
 	// CreatePod takes a Kubernetes Pod and deploys it within the provider.
@@ -513,7 +513,7 @@ func (pc *PodController) syncPodInProvider(ctx context.Context, pod *corev1.Pod,
 	ctx = addPodAttributes(ctx, span, pod)
 
 	// If the pod('s containers) is no longer in a running state then we force-delete the pod from API server
-	// more context is here: https://github.com/virtual-kubelet/virtual-kubelet/pull/760
+	// more context is here: https://github.com/nuczzz/virtual-kubelet/pull/760
 	if pod.DeletionTimestamp != nil && !running(&pod.Status) {
 		log.G(ctx).Debug("Force deleting pod from API Server as it is no longer running")
 		key = fmt.Sprintf("%v/%v", key, pod.UID)

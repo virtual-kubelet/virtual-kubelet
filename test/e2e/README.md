@@ -10,7 +10,7 @@ To run the E2E test suite, three things are required:
 - Your _kubeconfig_ default context points to the local Kubernetes cluster;
 - [skaffold](https://skaffold.dev/docs/getting-started/#installing-skaffold)
 
-> The test suite is based on [VK 1.0](https://github.com/virtual-kubelet/virtual-kubelet/releases/tag/v1.0.0). If your VK implementation is based on legacy VK library (< v1.0.0), you will have to upgrade it to VK 1.0 using [virtual-kubelet/node-cli](https://github.com/virtual-kubelet/node-cli).
+> The test suite is based on [VK 1.0](https://github.com/nuczzz/virtual-kubelet/releases/tag/v1.0.0). If your VK implementation is based on legacy VK library (< v1.0.0), you will have to upgrade it to VK 1.0 using [virtual-kubelet/node-cli](https://github.com/virtual-kubelet/node-cli).
 
 ### Skaffold Folder
 
@@ -56,7 +56,7 @@ A minimal VK provider should now have a file structure similar to the one below:
 The test suite can be easily imported in your test files (e.g. `./test/e2e/main_test.go`) with the following import statement:
 ```go
 import (
-	vke2e "github.com/virtual-kubelet/virtual-kubelet/test/e2e"
+	vke2e "github.com/nuczzz/virtual-kubelet/test/e2e"
 )
 ```
 
@@ -97,7 +97,7 @@ import (
 	"testing"
 	"time"
 
-	vke2e "github.com/virtual-kubelet/virtual-kubelet/test/e2e"
+	vke2e "github.com/nuczzz/virtual-kubelet/test/e2e"
 )
 
 var (
@@ -201,7 +201,7 @@ Tearing down end-to-end test suite for mock provider...
     --- PASS: TestEndToEnd/TestPodLifecycleForceDelete (2.05s)
     --- PASS: TestEndToEnd/TestPodLifecycleGracefulDelete (1.05s)
 PASS
-ok      github.com/virtual-kubelet/virtual-kubelet/internal/test/e2e    12.298s
-?       github.com/virtual-kubelet/virtual-kubelet/internal/test/e2e/framework  [no test files]
+ok      github.com/nuczzz/virtual-kubelet/internal/test/e2e    12.298s
+?       github.com/nuczzz/virtual-kubelet/internal/test/e2e/framework  [no test files]
 ...
 ```

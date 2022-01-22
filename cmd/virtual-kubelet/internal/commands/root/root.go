@@ -21,15 +21,15 @@ import (
 	"os"
 	"runtime"
 
+	"github.com/nuczzz/virtual-kubelet/cmd/virtual-kubelet/internal/provider"
+	"github.com/nuczzz/virtual-kubelet/errdefs"
+	"github.com/nuczzz/virtual-kubelet/internal/manager"
+	"github.com/nuczzz/virtual-kubelet/log"
+	"github.com/nuczzz/virtual-kubelet/node"
+	"github.com/nuczzz/virtual-kubelet/node/api"
+	"github.com/nuczzz/virtual-kubelet/node/nodeutil"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
-	"github.com/virtual-kubelet/virtual-kubelet/cmd/virtual-kubelet/internal/provider"
-	"github.com/virtual-kubelet/virtual-kubelet/errdefs"
-	"github.com/virtual-kubelet/virtual-kubelet/internal/manager"
-	"github.com/virtual-kubelet/virtual-kubelet/log"
-	"github.com/virtual-kubelet/virtual-kubelet/node"
-	"github.com/virtual-kubelet/virtual-kubelet/node/api"
-	"github.com/virtual-kubelet/virtual-kubelet/node/nodeutil"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apiserver/pkg/server/dynamiccertificates"
 )
@@ -135,7 +135,7 @@ func runRootCommand(ctx context.Context, s *provider.Store, c Opts) error {
 		nodeutil.AttachProviderRoutes(mux),
 	)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "NewNode error")
 	}
 
 	if err := setupTracing(ctx, c); err != nil {

@@ -1,0 +1,33 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: vk
+spec:
+  hostAliases:
+    - ip: xxx.xxx.xxx.xxx
+      hostnames: 
+        - xxx.ccs.tencent-cloud.com
+  serviceAccountName: vk
+  restartPolicy: Never
+  containers:
+  - name: vk
+    image: vk:latest
+    imagePullPolicy: IfNotPresent
+    env:
+      - name: APISERVER_CERT_LOCATION
+        value: /cert/server.crt
+      - name: APISERVER_KEY_LOCATION
+        value: /cert/server.key
+      - name: DEFAULT_NODE_NAME
+        value: vk-nuczzz
+      - name: VKUBELET_POD_IP
+        valueFrom:
+          fieldRef:
+            fieldPath: status.podIP
+    command:
+    - /vk
+    args:
+    - --provider-config=/example.yaml
+    - --provider=nuczzz
+
+

@@ -15,8 +15,9 @@
 package root
 
 import (
-	"github.com/virtual-kubelet/virtual-kubelet/errdefs"
 	corev1 "k8s.io/api/core/v1"
+
+	"github.com/nuczzz/virtual-kubelet/errdefs"
 )
 
 // getTaint creates a taint using the provided key/value.

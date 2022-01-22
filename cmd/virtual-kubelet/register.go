@@ -1,18 +1,14 @@
 package main
 
 import (
-	"github.com/virtual-kubelet/virtual-kubelet/cmd/virtual-kubelet/internal/provider"
-	"github.com/virtual-kubelet/virtual-kubelet/cmd/virtual-kubelet/internal/provider/mock"
+	"context"
+
+	"github.com/nuczzz/virtual-kubelet/cmd/virtual-kubelet/internal/provider"
+	"github.com/nuczzz/virtual-kubelet/cmd/virtual-kubelet/internal/provider/mock"
+	"github.com/nuczzz/virtual-kubelet/cmd/virtual-kubelet/internal/provider/nuczzz"
 )
 
-func registerMock(s *provider.Store) {
-	s.Register("mock", func(cfg provider.InitConfig) (provider.Provider, error) { //nolint:errcheck
-		return mock.NewMockProvider(
-			cfg.ConfigPath,
-			cfg.NodeName,
-			cfg.OperatingSystem,
-			cfg.InternalIP,
-			cfg.DaemonPort,
-		)
-	})
+func registerProvider(ctx context.Context, s *provider.Store) {
+	s.Register(mock.ProviderName, mock.NewMockProvider)            //nolint:errcheck
+	s.Register(nuczzz.ProviderName, nuczzz.NewNuczzzProvider(ctx)) //nolint:errcheck
 }

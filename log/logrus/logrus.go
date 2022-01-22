@@ -12,14 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package logrus implements a github.com/virtual-kubelet/virtual-kubelet/log.Logger using Logrus as a backend
+// Package logrus implements a github.com/nuczzz/virtual-kubelet/log.Logger using Logrus as a backend
 // You can use this by creating a logrus logger and calling `FromLogrus(entry)`.
 // If you want this to be the default logger for virtual-kubelet, set `log.L` to the value returned by `FromLogrus`
 package logrus
 
 import (
 	"github.com/sirupsen/logrus"
-	"github.com/virtual-kubelet/virtual-kubelet/log"
+	"github.com/nuczzz/virtual-kubelet/log"
 )
 
 // Ensure log.Logger is fully implemented during compile time.

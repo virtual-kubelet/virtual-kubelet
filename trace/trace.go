@@ -22,7 +22,7 @@ package trace
 import (
 	"context"
 
-	"github.com/virtual-kubelet/virtual-kubelet/log"
+	"github.com/nuczzz/virtual-kubelet/log"
 )
 
 // Tracer is the interface used for creating a tracing span
@@ -67,7 +67,7 @@ type Span interface {
 
 	// SetStatus sets the final status of the span.
 	// errors passed to this should use interfaces defined in
-	// github.com/virtual-kubelet/virtual-kubelet/errdefs
+	// github.com/nuczzz/virtual-kubelet/errdefs
 	//
 	// If the error is nil, the span should be considered successful.
 	SetStatus(err error)

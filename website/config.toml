@@ -47,7 +47,7 @@ sizes = [400]
 [[params.social]]
 name  = "GitHub"
 color = "black"
-url   = "https://github.com/virtual-kubelet/virtual-kubelet"
+url   = "https://github.com/nuczzz/virtual-kubelet"
 icon  = "github"
 
 [[params.social]]

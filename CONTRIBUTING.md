@@ -18,7 +18,7 @@ signed the CLA can be accepted into the repository.
 
 This is an open source project and as such no formal support is available.
 However, like all good open source projects we do offer "best effort" support
-through [github issues](https://github.com/virtual-kubelet/virtual-kubelet).
+through [github issues](https://github.com/nuczzz/virtual-kubelet).
 
 Before opening a new issue or submitting a new pull request, it's helpful to
 search the project - it's likely that another user has already reported the
