@@ -2,9 +2,9 @@ package provider
 
 const (
 	// OperatingSystemLinux is the configuration value for defining Linux.
-	OperatingSystemLinux = "Linux"
+	OperatingSystemLinux = "linux"
 	// OperatingSystemWindows is the configuration value for defining Windows.
-	OperatingSystemWindows = "Windows"
+	OperatingSystemWindows = "windows"
 )
 
 type OperatingSystems map[string]bool // nolint:golint

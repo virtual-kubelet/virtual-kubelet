@@ -134,7 +134,12 @@ func (p *syncProviderWrapper) syncPodStatuses(ctx context.Context) {
 
 	for _, pod := range pods {
 		if shouldSkipPodStatusUpdate(pod) {
-			log.G(ctx).Debug("Skipping pod status update")
+			log.G(ctx).WithFields(log.Fields{
+				"pod":       pod.Name,
+				"namespace": pod.Namespace,
+				"phase":     pod.Status.Phase,
+				"status":    pod.Status.Reason,
+			}).Debug("Skipping pod status update")
 			continue
 		}
 
