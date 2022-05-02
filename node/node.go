@@ -84,6 +84,7 @@ func NewNodeController(p NodeProvider, node *corev1.Node, nodes v1.NodeInterface
 		serverNode: node,
 		nodes:      nodes,
 		chReady:    make(chan struct{}),
+		chDone:     make(chan struct{}),
 	}
 	for _, o := range opts {
 		if err := o(n); err != nil {
@@ -223,7 +224,12 @@ type NodeController struct { // nolint:golint
 
 	nodeStatusUpdateErrorHandler ErrorHandler
 
+	// chReady is closed once the controller is ready to start the control loop
 	chReady chan struct{}
+	// chDone is closed once the control loop has exited
+	chDone chan struct{}
+	errMu  sync.Mutex
+	err    error
 
 	nodePingController *nodePingController
 	pingTimeout        *time.Duration
@@ -249,7 +255,14 @@ const (
 // node status update (because some things still expect the node to be updated
 // periodically), otherwise it will only use node status update with the configured
 // ping interval.
-func (n *NodeController) Run(ctx context.Context) error {
+func (n *NodeController) Run(ctx context.Context) (retErr error) {
+	defer func() {
+		n.errMu.Lock()
+		n.err = retErr
+		n.errMu.Unlock()
+		close(n.chDone)
+	}()
+
 	n.chStatusUpdate = make(chan *corev1.Node, 1)
 	n.p.NotifyNodeStatus(ctx, func(node *corev1.Node) {
 		n.chStatusUpdate <- node
@@ -271,6 +284,22 @@ func (n *NodeController) Run(ctx context.Context) error {
 	}
 
 	return n.controlLoop(ctx, providerNode)
+}
+
+// Done signals to the caller when the controller is done and the control loop is exited.
+//
+// Call n.Err() to find out if there was an error.
+func (n *NodeController) Done() <-chan struct{} {
+	return n.chDone
+}
+
+// Err returns any errors that have occurred that trigger the control loop to exit.
+//
+// Err only returns a non-nil error after `<-n.Done()` returns.
+func (n *NodeController) Err() error {
+	n.errMu.Lock()
+	defer n.errMu.Unlock()
+	return n.err
 }
 
 func (n *NodeController) ensureNode(ctx context.Context, providerNode *corev1.Node) (err error) {
@@ -307,14 +336,12 @@ func (n *NodeController) ensureNode(ctx context.Context, providerNode *corev1.No
 
 // Ready returns a channel that gets closed when the node is fully up and
 // running. Note that if there is an error on startup this channel will never
-// be started.
+// be closed.
 func (n *NodeController) Ready() <-chan struct{} {
 	return n.chReady
 }
 
 func (n *NodeController) controlLoop(ctx context.Context, providerNode *corev1.Node) error {
-	close(n.chReady)
-
 	defer n.group.Wait()
 
 	var sleepInterval time.Duration
@@ -355,6 +382,7 @@ func (n *NodeController) controlLoop(ctx context.Context, providerNode *corev1.N
 		return false
 	}
 
+	close(n.chReady)
 	for {
 		shouldTerminate := loop()
 		if shouldTerminate {

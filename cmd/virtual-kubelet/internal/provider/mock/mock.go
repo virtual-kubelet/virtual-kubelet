@@ -339,7 +339,7 @@ func (p *MockProvider) ConfigureNode(ctx context.Context, n *v1.Node) { // nolin
 	n.Status.DaemonEndpoints = p.nodeDaemonEndpoints()
 	os := p.operatingSystem
 	if os == "" {
-		os = "Linux"
+		os = "linux"
 	}
 	n.Status.NodeInfo.OperatingSystem = os
 	n.Status.NodeInfo.Architecture = "amd64"

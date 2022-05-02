@@ -19,6 +19,9 @@
   tag: huawei-cci
 - name: HashiCorp Nomad
   tag: nomad
+- name: Liqo
+  tag: liqo
+  org: liqotech
 - name: OpenStack Zun
   tag: openstack-zun
 - name: Tencent Games Tensile Kube

@@ -23,6 +23,7 @@ The best description is "Kubernetes API on top, programmable back."
     + [AWS Fargate Provider](#aws-fargate-provider)
     + [Elotl Kip](#elotl-kip)
 	+ [HashiCorp Nomad](#hashicorp-nomad-provider)
+    + [Liqo](#liqo-provider)
     + [OpenStack Zun](#openstack-zun-provider)
     + [Tensile Kube Provider](#tensile-kube-provider)
     + [Adding a New Provider via the Provider Interface](#adding-a-new-provider-via-the-provider-interface)
@@ -133,6 +134,12 @@ registered on Kubernetes will run as jobs on Nomad clients as they
 would on a Kubernetes node.
 
 For detailed instructions, follow the guide [here](https://github.com/virtual-kubelet/nomad/blob/master/README.md).
+
+### Liqo Provider
+
+[Liqo](https://liqo.io) implements a provider for Virtual Kubelet designed to transparently offload pods and services to "peered" Kubernetes remote cluster. Liqo is capable of discovering neighbor clusters (using DNS, mDNS) and "peer" with them, or in other words, establish a relationship to share part of the cluster resources. When a cluster has established a peering, a new instance of the Liqo Virtual Kubelet is spawned to seamlessly extend the capacity of the cluster, by providing an abstraction of the resources of the remote cluster. The provider combined with the Liqo network fabric extends the cluster networking by enabling Pod-to-Pod traffic and multi-cluster east-west services, supporting endpoints on both clusters.
+
+For detailed instruction, follow the guide [here](https://github.com/liqotech/liqo/blob/master/README.md)
 
 ### OpenStack Zun Provider
 
@@ -264,6 +271,11 @@ One of the roles of a Kubelet is to accept requests from the API server for
 things like `kubectl logs` and  `kubectl exec`. Helpers for setting this up are
 provided [here](https://godoc.org/github.com/virtual-kubelet/virtual-kubelet/node/api)
 
+#### Scrape Pod metrics
+
+If you want to use HPA(Horizontal Pod Autoscaler) in your cluster, the provider should implement the `GetStatsSummary` function. Then metrics-server will be able to get the metrics of the pods on virtual-kubelet. Otherwise, you may see `No metrics for pod ` on metrics-server, which means the metrics of the pods on virtual-kubelet are not collected.
+
+
 ## Testing
 
 ### Unit tests
@@ -298,4 +310,3 @@ Monthly Virtual Kubelet Office Hours are held at 10am PST on the last Thursday o
 Our google drive with design specifications and meeting notes are [here](https://drive.google.com/drive/folders/19Ndu11WBCCBDowo9CrrGUHoIfd2L8Ueg?usp=sharing).
 
 We also have a community slack channel named virtual-kubelet in the Kubernetes slack. You can also connect with the Virtual Kubelet community via the [mailing list](https://lists.cncf.io/g/virtualkubelet-dev).
-
