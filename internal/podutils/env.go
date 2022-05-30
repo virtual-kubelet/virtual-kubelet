@@ -495,6 +495,19 @@ func podFieldSelectorRuntimeValue(fs *corev1.ObjectFieldSelector, pod *corev1.Po
 		return pod.Status.HostIP, nil
 	case "status.podIP":
 		return pod.Status.PodIP, nil
+	case "status.podIPs":
+		podIPs := pod.Status.PodIPs
+		var buffer strings.Builder
+		for i := range podIPs {
+			buffer.WriteString(podIPs[i].IP)
+			buffer.WriteByte(',')
+		}
+		n := buffer.Len()
+		if n == 0 {
+			return "", nil
+		}
+		podIPsStr := buffer.String()[:n-1]
+		return podIPsStr, nil
 	}
 	return ExtractFieldPathAsString(pod, internalFieldPath)
 }

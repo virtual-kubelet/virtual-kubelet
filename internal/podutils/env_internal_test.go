@@ -49,6 +49,8 @@ const (
 	envVarName5 = "XXX"
 	// envVarName6 is a string that can be used as the name of an environment value.
 	envVarName6 = "YYY"
+	// envVarName7 is a string that can be used as the name of an environment value.
+	envVarName7 = "ZZZ"
 	// invalidKey1 is a key that cannot be used as the name of an environment variable (since it starts with a digit).
 	invalidKey1 = "1INVALID"
 	// invalidKey2 is a key that cannot be used as the name of an environment variable (since it starts with a digit).
@@ -347,6 +349,15 @@ func TestPopulatePodWithInitContainersUsingEnvWithFieldRef(t *testing.T) {
 								},
 							},
 						},
+						{
+							Name: envVarName7,
+							ValueFrom: &corev1.EnvVarSource{
+								FieldRef: &corev1.ObjectFieldSelector{
+									APIVersion: "v1",
+									FieldPath:  "status.podIPs",
+								},
+							},
+						},
 					},
 				},
 			},
@@ -407,6 +418,15 @@ func TestPopulatePodWithInitContainersUsingEnvWithFieldRef(t *testing.T) {
 								},
 							},
 						},
+						{
+							Name: envVarName7,
+							ValueFrom: &corev1.EnvVarSource{
+								FieldRef: &corev1.ObjectFieldSelector{
+									APIVersion: "v1",
+									FieldPath:  "status.podIPs",
+								},
+							},
+						},
 					},
 				},
 			},
@@ -415,6 +435,10 @@ func TestPopulatePodWithInitContainersUsingEnvWithFieldRef(t *testing.T) {
 		Status: corev1.PodStatus{
 			HostIP: "1.2.3.4",
 			PodIP:  "5.6.7.8",
+			PodIPs: []corev1.PodIP{
+				{IP: "5.6.7.8"},
+				{IP: "a00:100::4"},
+			},
 		},
 	}
 
@@ -449,6 +473,10 @@ func TestPopulatePodWithInitContainersUsingEnvWithFieldRef(t *testing.T) {
 			Name:  envVarName6,
 			Value: "5.6.7.8",
 		},
+		{
+			Name:  envVarName7,
+			Value: "5.6.7.8,a00:100::4",
+		},
 	}, sortOpt))
 
 	assert.Check(t, is.DeepEqual(pod.Spec.Containers[0].Env, []corev1.EnvVar{
@@ -476,6 +504,10 @@ func TestPopulatePodWithInitContainersUsingEnvWithFieldRef(t *testing.T) {
 		{
 			Name:  envVarName6,
 			Value: "5.6.7.8",
+		},
+		{
+			Name:  envVarName7,
+			Value: "5.6.7.8,a00:100::4",
 		},
 	}, sortOpt))
 }
