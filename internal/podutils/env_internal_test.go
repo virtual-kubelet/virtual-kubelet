@@ -45,6 +45,10 @@ const (
 	envVarName3 = "CHO"
 	// envVarName4 is a string that can be used as the name of an environment value.
 	envVarName4 = "CAR"
+	// envVarName5 is a string that can be used as the name of an environment value.
+	envVarName5 = "XXX"
+	// envVarName6 is a string that can be used as the name of an environment value.
+	envVarName6 = "YYY"
 	// invalidKey1 is a key that cannot be used as the name of an environment variable (since it starts with a digit).
 	invalidKey1 = "1INVALID"
 	// invalidKey2 is a key that cannot be used as the name of an environment variable (since it starts with a digit).
@@ -325,6 +329,24 @@ func TestPopulatePodWithInitContainersUsingEnvWithFieldRef(t *testing.T) {
 								},
 							},
 						},
+						{
+							Name: envVarName5,
+							ValueFrom: &corev1.EnvVarSource{
+								FieldRef: &corev1.ObjectFieldSelector{
+									APIVersion: "v1",
+									FieldPath:  "status.hostIP",
+								},
+							},
+						},
+						{
+							Name: envVarName6,
+							ValueFrom: &corev1.EnvVarSource{
+								FieldRef: &corev1.ObjectFieldSelector{
+									APIVersion: "v1",
+									FieldPath:  "status.podIP",
+								},
+							},
+						},
 					},
 				},
 			},
@@ -367,10 +389,32 @@ func TestPopulatePodWithInitContainersUsingEnvWithFieldRef(t *testing.T) {
 								},
 							},
 						},
+						{
+							Name: envVarName5,
+							ValueFrom: &corev1.EnvVarSource{
+								FieldRef: &corev1.ObjectFieldSelector{
+									APIVersion: "v1",
+									FieldPath:  "status.hostIP",
+								},
+							},
+						},
+						{
+							Name: envVarName6,
+							ValueFrom: &corev1.EnvVarSource{
+								FieldRef: &corev1.ObjectFieldSelector{
+									APIVersion: "v1",
+									FieldPath:  "status.podIP",
+								},
+							},
+						},
 					},
 				},
 			},
 			EnableServiceLinks: &bFalse,
+		},
+		Status: corev1.PodStatus{
+			HostIP: "1.2.3.4",
+			PodIP:  "5.6.7.8",
 		},
 	}
 
@@ -397,6 +441,14 @@ func TestPopulatePodWithInitContainersUsingEnvWithFieldRef(t *testing.T) {
 			Name:  envVarName4,
 			Value: "serviceaccount",
 		},
+		{
+			Name:  envVarName5,
+			Value: "1.2.3.4",
+		},
+		{
+			Name:  envVarName6,
+			Value: "5.6.7.8",
+		},
 	}, sortOpt))
 
 	assert.Check(t, is.DeepEqual(pod.Spec.Containers[0].Env, []corev1.EnvVar{
@@ -416,6 +468,14 @@ func TestPopulatePodWithInitContainersUsingEnvWithFieldRef(t *testing.T) {
 		{
 			Name:  envVarName4,
 			Value: "serviceaccount",
+		},
+		{
+			Name:  envVarName5,
+			Value: "1.2.3.4",
+		},
+		{
+			Name:  envVarName6,
+			Value: "5.6.7.8",
 		},
 	}, sortOpt))
 }
