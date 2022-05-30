@@ -491,7 +491,10 @@ func podFieldSelectorRuntimeValue(fs *corev1.ObjectFieldSelector, pod *corev1.Po
 		return pod.Spec.NodeName, nil
 	case "spec.serviceAccountName":
 		return pod.Spec.ServiceAccountName, nil
-
+	case "status.hostIP":
+		return pod.Status.HostIP, nil
+	case "status.podIP":
+		return pod.Status.PodIP, nil
 	}
 	return ExtractFieldPathAsString(pod, internalFieldPath)
 }
