@@ -360,7 +360,7 @@ func TestReCreatePodRace(t *testing.T) {
 		return true, nil, errors.NewConflict(schema.GroupResource{Group: "", Resource: "pods"}, "nginx", fmt.Errorf("test conflict"))
 	})
 	c.client.AddReactor("get", "pods", func(action core.Action) (handled bool, ret runtime.Object, err error) {
-		name := action.(core.DeleteAction).GetName()
+		name := action.(core.GetAction).GetName()
 		t.Logf("get pod %s", name)
 		return true, podCopy, nil
 	})
@@ -394,7 +394,7 @@ func TestReCreatePodRace(t *testing.T) {
 	})
 
 	c.client.AddReactor("get", "pods", func(action core.Action) (handled bool, ret runtime.Object, err error) {
-		name := action.(core.DeleteAction).GetName()
+		name := action.(core.GetAction).GetName()
 		t.Logf("get pod %s", name)
 		return true, nil, errors.NewNotFound(schema.GroupResource{Group: "", Resource: "pods"}, "nginx")
 	})
@@ -430,7 +430,7 @@ func TestReCreatePodRace(t *testing.T) {
 	})
 
 	c.client.AddReactor("get", "pods", func(action core.Action) (handled bool, ret runtime.Object, err error) {
-		name := action.(core.DeleteAction).GetName()
+		name := action.(core.GetAction).GetName()
 		t.Logf("get pod %s", name)
 		return true, nil, errors.NewNotFound(schema.GroupResource{Group: "", Resource: "pods"}, "nginx")
 	})
