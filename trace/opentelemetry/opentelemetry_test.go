@@ -30,10 +30,6 @@ import (
 	semconv "go.opentelemetry.io/otel/semconv/v1.10.0"
 	"gotest.tools/assert"
 	"gotest.tools/assert/cmp"
-	//"github.com/virtual-kubelet/virtual-kubelet/trace"
-	//octrace "go.opencensus.io/trace"
-	//"gotest.tools/assert"
-	//is "gotest.tools/assert/cmp"
 )
 
 func TestStartSpan(t *testing.T) {
@@ -93,7 +89,6 @@ func TestSetStatus(t *testing.T) {
 			assert.Assert(t, !s.s.IsRecording())
 			assert.Assert(t, e.status.Code == tt.expectedCode)
 			assert.Assert(t, e.status.Description == tt.expectedDescription)
-
 			s.SetStatus(tt.inputStatus) // should not be panic even if span is ended.
 		})
 	}
@@ -147,9 +142,8 @@ func TestWithField(t *testing.T) {
 			s.End()
 
 			assert.Assert(t, len(e.attributes) == len(tt.expectedAttributes))
-			for i, a := range tt.expectedAttributes {
-				assert.Assert(t, e.attributes[i].Key == a.Key)
-				assert.Assert(t, e.attributes[i].Value == a.Value)
+			for _, a := range tt.expectedAttributes {
+				cmp.Contains(e.attributes, a)
 			}
 		})
 	}
@@ -191,9 +185,8 @@ func TestWithFields(t *testing.T) {
 			s.End()
 
 			assert.Assert(t, len(e.attributes) == len(tt.expectedAttributes))
-			for i, a := range tt.expectedAttributes {
-				assert.Assert(t, e.attributes[i].Key == a.Key)
-				assert.Assert(t, e.attributes[i].Value == a.Value)
+			for _, a := range tt.expectedAttributes {
+				cmp.Contains(e.attributes, a)
 			}
 		})
 	}
@@ -272,9 +265,8 @@ func TestLog(t *testing.T) {
 
 			//TODO add assertion with exporter here once logic for recoding log event is added.
 			assert.Assert(t, len(l.a) == len(tt.expectedAttributes))
-			for i, a := range tt.expectedAttributes {
-				assert.Assert(t, l.a[i].Key == a.Key)
-				assert.Assert(t, l.a[i].Value == a.Value)
+			for _, a := range tt.expectedAttributes {
+				cmp.Contains(l.a, a)
 			}
 		})
 	}
@@ -519,6 +511,7 @@ func setupSuite() (func(provider *sdktrace.TracerProvider), *sdktrace.TracerProv
 	p := sdktrace.NewTracerProvider(
 		sdktrace.WithSyncer(e),
 		sdktrace.WithResource(r),
+		sdktrace.WithSampler(sdktrace.AlwaysSample()),
 	)
 	otel.SetTracerProvider(p)
 
@@ -538,6 +531,7 @@ func NewResource(name, version string) *resource.Resource {
 
 type fakeExporter struct {
 	sync.Mutex
+	// attributes describe the aspects of the spans.
 	attributes []attribute.KeyValue
 	// Links returns all the links the span has to other spans.
 	links []sdktrace.Link
