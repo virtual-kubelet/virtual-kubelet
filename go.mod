@@ -35,11 +35,3 @@ require (
 	k8s.io/utils v0.0.0-20200912215256-4140de9c8800
 	sigs.k8s.io/controller-runtime v0.7.1
 )
-
-replace (
-	// Note: Latest opentelemetry (v1.7.0) requires go-logr/logr v1.2 which conflicts with k8s.io/apimachinery.
-	// Safe to bump up to opentelemetry (v1.7.0) by removing these lines once k8s.io/apimachinery is updated.
-	go.opentelemetry.io/otel => go.opentelemetry.io/otel v1.2.0
-	go.opentelemetry.io/otel/sdk => go.opentelemetry.io/otel/sdk v1.2.0
-	go.opentelemetry.io/otel/trace => go.opentelemetry.io/otel/trace v1.2.0
-)
