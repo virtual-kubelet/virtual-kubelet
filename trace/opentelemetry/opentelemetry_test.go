@@ -16,6 +16,7 @@ package openTelemetry
 
 import (
 	"context"
+	"strconv"
 	"sync"
 	"testing"
 	"time"
@@ -248,7 +249,8 @@ func TestLog(t *testing.T) {
 			defer cancel()
 
 			ctx, s := otel.Tracer(tt.spanName).Start(ctx, tt.spanName)
-			l := logger{s: s, l: log.G(ctx), a: make([]attribute.KeyValue, 0)}
+			fl := &fakeLogger{}
+			l := logger{s: s, l: fl, a: make([]attribute.KeyValue, 0)}
 			switch tt.logLevel {
 			case lDebug:
 				l.WithFields(tt.fields).Debug(tt.msg)
@@ -264,9 +266,9 @@ func TestLog(t *testing.T) {
 			s.End()
 
 			//TODO add assertion with exporter here once logic for recoding log event is added.
-			assert.Assert(t, len(l.a) == len(tt.expectedAttributes))
+			assert.Assert(t, len(fl.a) == len(tt.expectedAttributes))
 			for _, a := range tt.expectedAttributes {
-				cmp.Contains(l.a, a)
+				cmp.Contains(fl.a, a)
 			}
 		})
 	}
@@ -310,10 +312,11 @@ func TestLogf(t *testing.T) {
 			description: "warn",
 			spanName:    "test",
 			logLevel:    lWarn,
-			msg:         "k1: %v",
-			fields:      map[string]interface{}{"k1": map[int]int{1: 1}},
+			msg:         "k1: %v, k2: %v",
+			fields:      map[string]interface{}{"k1": map[int]int{1: 1}, "k2": num(1)},
 			expectedAttributes: []attribute.KeyValue{
 				attribute.String("k1", "{1:1}"),
+				attribute.Stringer("k2", num(1)),
 			},
 		}, {
 			description: "error",
@@ -343,7 +346,8 @@ func TestLogf(t *testing.T) {
 			defer cancel()
 
 			ctx, s := otel.Tracer(tt.spanName).Start(ctx, tt.spanName)
-			l := logger{s: s, l: log.G(ctx), a: make([]attribute.KeyValue, 0)}
+			fl := &fakeLogger{}
+			l := logger{s: s, l: fl, a: make([]attribute.KeyValue, 0)}
 			switch tt.logLevel {
 			case lDebug:
 				l.WithFields(tt.fields).Debugf(tt.msg, tt.args)
@@ -359,10 +363,12 @@ func TestLogf(t *testing.T) {
 			s.End()
 
 			//TODO add assertion with exporter here once logic for recoding log event is added.
-			assert.Assert(t, len(l.a) == len(tt.expectedAttributes))
+			assert.Assert(t, len(fl.a) == len(tt.expectedAttributes))
 			for _, a := range tt.expectedAttributes {
-				cmp.Contains(l.a, a)
+				cmp.Contains(fl.a, a)
 			}
+
+			l.Debugf(tt.msg, tt.args) // should not panic even if span is finished
 		})
 	}
 }
@@ -406,17 +412,21 @@ func TestLogWithField(t *testing.T) {
 			defer cancel()
 
 			ctx, s := otel.Tracer(tt.spanName).Start(ctx, tt.spanName)
-			l := logger{s: s, l: log.G(ctx), a: make([]attribute.KeyValue, 0)}
+			fl := &fakeLogger{}
+			l := logger{s: s, l: fl, a: make([]attribute.KeyValue, 0)}
 
 			for _, f := range tt.fields {
 				l.WithField(f.key, f.value).Info("")
 			}
 			s.End()
 
-			assert.Assert(t, len(l.a) == len(tt.expectedAttributes))
+			assert.Assert(t, len(fl.a) == len(tt.expectedAttributes))
 			for _, a := range tt.expectedAttributes {
-				cmp.Contains(l.a, a)
+				cmp.Contains(fl.a, a)
 			}
+
+			l.Debug("") // should not panic even if span is finished
+
 		})
 	}
 }
@@ -437,7 +447,7 @@ func TestLogWithError(t *testing.T) {
 			description:        "nil error",
 			spanName:           "test",
 			err:                nil,
-			expectedAttributes: []attribute.KeyValue{},
+			expectedAttributes: []attribute.KeyValue{{Key: "err", Value: attribute.StringValue("")}},
 		},
 	}
 
@@ -450,14 +460,15 @@ func TestLogWithError(t *testing.T) {
 			defer cancel()
 
 			ctx, s := otel.Tracer(tt.spanName).Start(ctx, tt.spanName)
-			l := logger{s: s, l: log.G(ctx), a: make([]attribute.KeyValue, 0)}
+			fl := &fakeLogger{}
+			l := logger{s: s, l: fl, a: make([]attribute.KeyValue, 0)}
 
 			l.WithError(tt.err).Error("")
 			s.End()
 
-			assert.Assert(t, len(l.a) == len(tt.expectedAttributes))
+			assert.Assert(t, len(fl.a) == len(tt.expectedAttributes))
 			for _, a := range tt.expectedAttributes {
-				cmp.Contains(l.a, a)
+				cmp.Contains(fl.a, a)
 			}
 		})
 	}
@@ -492,14 +503,15 @@ func TestLogWithFields(t *testing.T) {
 			defer cancel()
 
 			ctx, s := otel.Tracer(tt.spanName).Start(ctx, tt.spanName)
-			l := logger{s: s, l: log.G(ctx), a: make([]attribute.KeyValue, 0)}
+			fl := &fakeLogger{}
+			l := logger{s: s, l: fl, a: make([]attribute.KeyValue, 0)}
 
 			l.WithFields(tt.fields).Debug("")
 			s.End()
 
-			assert.Assert(t, len(l.a) == len(tt.expectedAttributes))
+			assert.Assert(t, len(fl.a) == len(tt.expectedAttributes))
 			for _, a := range tt.expectedAttributes {
-				cmp.Contains(l.a, a)
+				cmp.Contains(fl.a, a)
 			}
 		})
 	}
@@ -563,4 +575,40 @@ func (f *fakeExporter) Shutdown(_ context.Context) (err error) {
 	f.links = make([]sdktrace.Link, 0)
 	f.events = make([]sdktrace.Event, 0)
 	return
+}
+
+type fakeLogger struct {
+	a []attribute.KeyValue
+}
+
+func (*fakeLogger) Debug(...interface{})          {}
+func (*fakeLogger) Debugf(string, ...interface{}) {}
+func (*fakeLogger) Info(...interface{})           {}
+func (*fakeLogger) Infof(string, ...interface{})  {}
+func (*fakeLogger) Warn(...interface{})           {}
+func (*fakeLogger) Warnf(string, ...interface{})  {}
+func (*fakeLogger) Error(...interface{})          {}
+func (*fakeLogger) Errorf(string, ...interface{}) {}
+func (*fakeLogger) Fatal(...interface{})          {}
+func (*fakeLogger) Fatalf(string, ...interface{}) {}
+
+func (l *fakeLogger) WithField(k string, v interface{}) log.Logger {
+	l.a = append(l.a, makeAttribute(k, v))
+	return l
+}
+func (l *fakeLogger) WithFields(fs log.Fields) log.Logger {
+	for k, v := range fs {
+		l.a = append(l.a, makeAttribute(k, v))
+	}
+	return l
+}
+func (l *fakeLogger) WithError(err error) log.Logger {
+	l.a = append(l.a, makeAttribute("err", err))
+	return l
+}
+
+type num int
+
+func (i num) String() string {
+	return strconv.Itoa(int(i))
 }

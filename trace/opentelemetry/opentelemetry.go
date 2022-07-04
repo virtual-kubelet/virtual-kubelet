@@ -214,9 +214,6 @@ func (l *logger) logEventf(ll logLevel, f string, args ...interface{}) {
 }
 
 func (l *logger) WithError(err error) log.Logger {
-	if err == nil {
-		return l
-	}
 	return l.WithField("err", err)
 }
 
@@ -227,7 +224,6 @@ func (l *logger) WithField(k string, value interface{}) log.Logger {
 		copy(attrs, l.a)
 		attrs[len(attrs)-1] = makeAttribute(k, value)
 	}
-	l.a = attrs
 	return &logger{s: l.s, a: attrs, l: l.l.WithField(k, value)}
 }
 
@@ -240,7 +236,6 @@ func (l *logger) WithFields(fields log.Fields) log.Logger {
 			attrs = append(attrs, makeAttribute(k, v))
 		}
 	}
-	l.a = attrs
 	return &logger{s: l.s, a: attrs, l: l.l.WithFields(fields)}
 }
 
@@ -269,6 +264,9 @@ func makeAttribute(key string, val interface{}) (attr attribute.KeyValue) {
 	case []bool:
 		return attribute.BoolSlice(key, v)
 	case error:
+		if v == nil {
+			attribute.String(key, "")
+		}
 		return attribute.String(key, v.Error())
 	default:
 		return attribute.String(key, fmt.Sprintf("%+v", val))
