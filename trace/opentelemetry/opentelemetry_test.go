@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package openTelemetry
+package opentelemetry
 
 import (
 	"context"
@@ -200,6 +200,7 @@ func TestLog(t *testing.T) {
 		logLevel           logLevel
 		fields             log.Fields
 		msg                string
+		expectedEvents     []sdktrace.Event
 		expectedAttributes []attribute.KeyValue
 	}{
 		{
@@ -208,6 +209,7 @@ func TestLog(t *testing.T) {
 			logLevel:           lDebug,
 			fields:             log.Fields{"testKey1": "value1"},
 			msg:                "message",
+			expectedEvents:     []sdktrace.Event{{Name: "message"}},
 			expectedAttributes: []attribute.KeyValue{{Key: "testKey1", Value: attribute.StringValue("value1")}},
 		}, {
 			description:        "info",
@@ -215,6 +217,7 @@ func TestLog(t *testing.T) {
 			logLevel:           lInfo,
 			fields:             log.Fields{"testKey1": "value1"},
 			msg:                "message",
+			expectedEvents:     []sdktrace.Event{{Name: "message"}},
 			expectedAttributes: []attribute.KeyValue{{Key: "testKey1", Value: attribute.StringValue("value1")}},
 		}, {
 			description:        "warn",
@@ -222,6 +225,7 @@ func TestLog(t *testing.T) {
 			logLevel:           lWarn,
 			fields:             log.Fields{"testKey1": "value1"},
 			msg:                "message",
+			expectedEvents:     []sdktrace.Event{{Name: "message"}},
 			expectedAttributes: []attribute.KeyValue{{Key: "testKey1", Value: attribute.StringValue("value1")}},
 		}, {
 			description:        "error",
@@ -229,6 +233,7 @@ func TestLog(t *testing.T) {
 			logLevel:           lErr,
 			fields:             log.Fields{"testKey1": "value1"},
 			msg:                "message",
+			expectedEvents:     []sdktrace.Event{{Name: "message"}},
 			expectedAttributes: []attribute.KeyValue{{Key: "testKey1", Value: attribute.StringValue("value1")}},
 		}, {
 			description:        "fatal",
@@ -236,13 +241,14 @@ func TestLog(t *testing.T) {
 			logLevel:           lFatal,
 			fields:             log.Fields{"testKey1": "value1"},
 			msg:                "message",
+			expectedEvents:     []sdktrace.Event{{Name: "message"}},
 			expectedAttributes: []attribute.KeyValue{{Key: "testKey1", Value: attribute.StringValue("value1")}},
 		},
 	}
 
 	for _, tt := range testCases {
 		t.Run(tt.description, func(t *testing.T) {
-			tearDown, p, _ := setupSuite()
+			tearDown, p, e := setupSuite()
 			defer tearDown(p)
 
 			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -265,7 +271,12 @@ func TestLog(t *testing.T) {
 			}
 			s.End()
 
-			//TODO add assertion with exporter here once logic for recoding log event is added.
+			assert.Assert(t, len(e.events) == len(tt.expectedEvents))
+			for i, event := range tt.expectedEvents {
+				assert.Assert(t, e.events[i].Name == event.Name)
+				assert.Assert(t, !e.events[i].Time.IsZero())
+			}
+
 			assert.Assert(t, len(fl.a) == len(tt.expectedAttributes))
 			for _, a := range tt.expectedAttributes {
 				cmp.Contains(fl.a, a)
@@ -282,14 +293,17 @@ func TestLogf(t *testing.T) {
 		msg                string
 		fields             log.Fields
 		args               []interface{}
+		expectedEvents     []sdktrace.Event
 		expectedAttributes []attribute.KeyValue
 	}{
 		{
-			description: "debug",
-			spanName:    "test",
-			logLevel:    lDebug,
-			msg:         "k1: %s, k2: %v, k3: %d, k4: %v",
-			fields:      map[string]interface{}{"k1": "test", "k2": []string{"test"}, "k3": 1, "k4": []int{1}},
+			description:    "debug",
+			spanName:       "test",
+			logLevel:       lDebug,
+			msg:            "k1: %s, k2: %v, k3: %d, k4: %v",
+			fields:         map[string]interface{}{"k1": "test", "k2": []string{"test"}, "k3": 1, "k4": []int{1}},
+			args:           []interface{}{"test", []string{"test"}, int(1), []int{1}},
+			expectedEvents: []sdktrace.Event{{Name: "k1: test, k2: [test], k3: 1, k4: [1]"}},
 			expectedAttributes: []attribute.KeyValue{
 				attribute.String("k1", "test"),
 				attribute.StringSlice("k2", []string{"test"}),
@@ -297,11 +311,13 @@ func TestLogf(t *testing.T) {
 				attribute.IntSlice("k4", []int{1}),
 			},
 		}, {
-			description: "info",
-			spanName:    "test",
-			logLevel:    lInfo,
-			msg:         "k1: %d, k2: %v, k3: %f, k4: %v",
-			fields:      map[string]interface{}{"k1": int64(3), "k2": []int64{4}, "k3": float64(2), "k4": []float64{4}},
+			description:    "info",
+			spanName:       "test",
+			logLevel:       lInfo,
+			msg:            "k1: %d, k2: %v, k3: %f, k4: %v",
+			fields:         map[string]interface{}{"k1": int64(3), "k2": []int64{4}, "k3": float64(2), "k4": []float64{4}},
+			args:           []interface{}{int64(3), []int64{4}, float64(2), []float64{4}},
+			expectedEvents: []sdktrace.Event{{Name: "k1: 3, k2: [4], k3: 2.000000, k4: [4]"}},
 			expectedAttributes: []attribute.KeyValue{
 				attribute.Int64("k1", 1),
 				attribute.Int64Slice("k2", []int64{2}),
@@ -309,21 +325,25 @@ func TestLogf(t *testing.T) {
 				attribute.Float64Slice("k2", []float64{4}),
 			},
 		}, {
-			description: "warn",
-			spanName:    "test",
-			logLevel:    lWarn,
-			msg:         "k1: %v, k2: %v",
-			fields:      map[string]interface{}{"k1": map[int]int{1: 1}, "k2": num(1)},
+			description:    "warn",
+			spanName:       "test",
+			logLevel:       lWarn,
+			msg:            "k1: %v, k2: %v",
+			fields:         map[string]interface{}{"k1": map[int]int{1: 1}, "k2": num(1)},
+			args:           []interface{}{map[int]int{1: 1}, num(1)},
+			expectedEvents: []sdktrace.Event{{Name: "k1: map[1:1], k2: 1"}},
 			expectedAttributes: []attribute.KeyValue{
 				attribute.String("k1", "{1:1}"),
 				attribute.Stringer("k2", num(1)),
 			},
 		}, {
-			description: "error",
-			spanName:    "test",
-			logLevel:    lErr,
-			msg:         "k1: %t, k2: %v",
-			fields:      map[string]interface{}{"k1": true, "k2": []bool{true}, "k3": errors.New("fake")},
+			description:    "error",
+			spanName:       "test",
+			logLevel:       lErr,
+			msg:            "k1: %t, k2: %v, k3: %s",
+			fields:         map[string]interface{}{"k1": true, "k2": []bool{true}, "k3": errors.New("fake")},
+			args:           []interface{}{true, []bool{true}, errors.New("fake")},
+			expectedEvents: []sdktrace.Event{{Name: "k1: true, k2: [true], k3: fake"}},
 			expectedAttributes: []attribute.KeyValue{
 				attribute.Bool("k1", true),
 				attribute.BoolSlice("k2", []bool{true}),
@@ -333,13 +353,14 @@ func TestLogf(t *testing.T) {
 			description:        "fatal",
 			spanName:           "test",
 			logLevel:           lFatal,
+			expectedEvents:     []sdktrace.Event{{Name: ""}},
 			expectedAttributes: []attribute.KeyValue{},
 		},
 	}
 
 	for _, tt := range testCases {
 		t.Run(tt.description, func(t *testing.T) {
-			tearDown, p, _ := setupSuite()
+			tearDown, p, e := setupSuite()
 			defer tearDown(p)
 
 			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -350,19 +371,24 @@ func TestLogf(t *testing.T) {
 			l := logger{s: s, l: fl, a: make([]attribute.KeyValue, 0)}
 			switch tt.logLevel {
 			case lDebug:
-				l.WithFields(tt.fields).Debugf(tt.msg, tt.args)
+				l.WithFields(tt.fields).Debugf(tt.msg, tt.args...)
 			case lInfo:
-				l.WithFields(tt.fields).Infof(tt.msg, tt.args)
+				l.WithFields(tt.fields).Infof(tt.msg, tt.args...)
 			case lWarn:
-				l.WithFields(tt.fields).Warnf(tt.msg, tt.args)
+				l.WithFields(tt.fields).Warnf(tt.msg, tt.args...)
 			case lErr:
-				l.WithFields(tt.fields).Errorf(tt.msg, tt.args)
+				l.WithFields(tt.fields).Errorf(tt.msg, tt.args...)
 			case lFatal:
-				l.WithFields(tt.fields).Fatalf(tt.msg, tt.args)
+				l.WithFields(tt.fields).Fatalf(tt.msg, tt.args...)
 			}
 			s.End()
 
-			//TODO add assertion with exporter here once logic for recoding log event is added.
+			assert.Assert(t, len(e.events) == len(tt.expectedEvents))
+			for i, event := range tt.expectedEvents {
+				assert.Assert(t, e.events[i].Name == event.Name, e.events[i].Name)
+				assert.Assert(t, !e.events[i].Time.IsZero())
+			}
+
 			assert.Assert(t, len(fl.a) == len(tt.expectedAttributes))
 			for _, a := range tt.expectedAttributes {
 				cmp.Contains(fl.a, a)

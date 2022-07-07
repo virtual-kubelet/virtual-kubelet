@@ -21,12 +21,13 @@
 //`otel.SetTracerProvider(*sdktrace.TracerProvider)`. Examples of customize are setting service name,
 // use your own exporter (e.g. jaeger, otlp, prometheus, zipkin, and stdout) etc. Do not forget
 // to call TracerProvider.Shutdown() when you create your TracerProvider to avoid memory leak.
-package openTelemetry
+package opentelemetry
 
 import (
 	"context"
 	"fmt"
 	"sync"
+	"time"
 
 	"go.opentelemetry.io/otel/codes"
 
@@ -184,10 +185,7 @@ func (l *logger) logEvent(ll logLevel, args ...interface{}) {
 	if !l.s.IsRecording() {
 		return
 	}
-
-	//TODO Add log event to span once it is available.
-	// The Logs signal is not supported in opentelemetry-go yet.
-	// ref: https://github.com/open-telemetry/opentelemetry-go
+	l.s.AddEvent(msg, ot.WithTimestamp(time.Now()))
 }
 
 func (l *logger) logEventf(ll logLevel, f string, args ...interface{}) {
@@ -207,10 +205,8 @@ func (l *logger) logEventf(ll logLevel, f string, args ...interface{}) {
 	if !l.s.IsRecording() {
 		return
 	}
-
-	//TODO Add log event to span once it is available.
-	// The Logs signal is not supported in opentelemetry-go yet.
-	// ref: https://github.com/open-telemetry/opentelemetry-go
+	msg := fmt.Sprintf(f, args...)
+	l.s.AddEvent(msg, ot.WithTimestamp(time.Now()))
 }
 
 func (l *logger) WithError(err error) log.Logger {
