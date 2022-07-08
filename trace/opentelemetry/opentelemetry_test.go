@@ -42,7 +42,7 @@ func TestStartSpan(t *testing.T) {
 		defer cancel()
 
 		a := Adapter{}
-		ctx, s := a.StartSpan(ctx, "name")
+		_, s := a.StartSpan(ctx, "name")
 		s.End()
 	})
 }
@@ -182,7 +182,7 @@ func TestWithFields(t *testing.T) {
 			l := log.G(ctx).WithField("method", tt.spanName)
 			s := &span{s: ots, l: l}
 
-			ctx = s.WithFields(ctx, tt.fields)
+			_ = s.WithFields(ctx, tt.fields)
 			s.End()
 
 			assert.Assert(t, len(e.attributes) == len(tt.expectedAttributes))
@@ -254,7 +254,7 @@ func TestLog(t *testing.T) {
 			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 			defer cancel()
 
-			ctx, s := otel.Tracer(tt.spanName).Start(ctx, tt.spanName)
+			_, s := otel.Tracer(tt.spanName).Start(ctx, tt.spanName)
 			fl := &fakeLogger{}
 			l := logger{s: s, l: fl, a: make([]attribute.KeyValue, 0)}
 			switch tt.logLevel {
@@ -366,7 +366,7 @@ func TestLogf(t *testing.T) {
 			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 			defer cancel()
 
-			ctx, s := otel.Tracer(tt.spanName).Start(ctx, tt.spanName)
+			_, s := otel.Tracer(tt.spanName).Start(ctx, tt.spanName)
 			fl := &fakeLogger{}
 			l := logger{s: s, l: fl, a: make([]attribute.KeyValue, 0)}
 			switch tt.logLevel {
@@ -437,7 +437,7 @@ func TestLogWithField(t *testing.T) {
 			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 			defer cancel()
 
-			ctx, s := otel.Tracer(tt.spanName).Start(ctx, tt.spanName)
+			_, s := otel.Tracer(tt.spanName).Start(ctx, tt.spanName)
 			fl := &fakeLogger{}
 			l := logger{s: s, l: fl, a: make([]attribute.KeyValue, 0)}
 
@@ -485,7 +485,7 @@ func TestLogWithError(t *testing.T) {
 			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 			defer cancel()
 
-			ctx, s := otel.Tracer(tt.spanName).Start(ctx, tt.spanName)
+			_, s := otel.Tracer(tt.spanName).Start(ctx, tt.spanName)
 			fl := &fakeLogger{}
 			l := logger{s: s, l: fl, a: make([]attribute.KeyValue, 0)}
 
@@ -528,7 +528,7 @@ func TestLogWithFields(t *testing.T) {
 			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 			defer cancel()
 
-			ctx, s := otel.Tracer(tt.spanName).Start(ctx, tt.spanName)
+			_, s := otel.Tracer(tt.spanName).Start(ctx, tt.spanName)
 			fl := &fakeLogger{}
 			l := logger{s: s, l: fl, a: make([]attribute.KeyValue, 0)}
 

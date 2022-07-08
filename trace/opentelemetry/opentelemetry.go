@@ -12,13 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package openTelemetry implements a github.com/virtual-kubelet/virtual-kubelet/trace.Tracer
+// Package opentelemetry implements a github.com/virtual-kubelet/virtual-kubelet/trace.Tracer
 // using openTelemetry as a backend.
 //
 // Use this by setting `trace.T = Adapter{}`
 //
 // For customizing trace provider used in Adapter, set trace provider by
-//`otel.SetTracerProvider(*sdktrace.TracerProvider)`. Examples of customize are setting service name,
+// `otel.SetTracerProvider(*sdktrace.TracerProvider)`. Examples of customize are setting service name,
 // use your own exporter (e.g. jaeger, otlp, prometheus, zipkin, and stdout) etc. Do not forget
 // to call TracerProvider.Shutdown() when you create your TracerProvider to avoid memory leak.
 package opentelemetry
@@ -47,10 +47,6 @@ const (
 	lErr   logLevel = "ERROR"
 	lFatal logLevel = "FATAL"
 )
-
-func (l logLevel) string() string {
-	return string(l)
-}
 
 // Adapter implements the trace.Tracer interface for openTelemetry
 type Adapter struct{}
