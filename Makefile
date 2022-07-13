@@ -206,4 +206,4 @@ envtest: kubebuilder_2.3.1_${TEST_OS}_${TEST_ARCH}
 .PHONY: fmt
 fmt: $(GOIMPORTS)
 	go fmt ./...
-	$(GOIMPORTS) -local go.goms.io/fleet -w $$(go list -f {{.Dir}} ./...)
+	$(GOIMPORTS) -w $$(go list -f {{.Dir}} ./...)
