@@ -1,64 +1,5 @@
 version: 2.0
 jobs:
-  validate:
-    resource_class: xlarge
-    docker:
-      - image: circleci/golang:1.15
-        environment:
-          GO111MODULE: "on"
-          GOPROXY: https://proxy.golang.org
-    working_directory: /go/src/github.com/virtual-kubelet/virtual-kubelet
-    steps:
-      - checkout
-      - restore_cache:
-          keys:
-            - validate-{{ checksum "go.mod" }}-{{ checksum "go.sum" }}
-      - run:
-          name: go vet
-          command: V=1 CI=1 make vet
-      - run:
-          name: Lint
-          command: make lint
-      - run:
-          name: Dependencies
-          command: scripts/validate/gomod.sh
-      - save_cache:
-          key: validate-{{ checksum "go.mod" }}-{{ checksum "go.sum" }}
-          paths:
-            - "/go/pkg/mod"
-
-  test:
-    resource_class: xlarge
-    docker:
-      - image: circleci/golang:1.16
-        environment:
-          GO111MODULE: "on"
-    working_directory: /go/src/github.com/virtual-kubelet/virtual-kubelet
-    steps:
-      - checkout
-      - restore_cache:
-          keys:
-            - test-{{ checksum "go.mod" }}-{{ checksum "go.sum" }}
-      - run:
-          name: Build
-          command: V=1 make build
-      - run: go install gotest.tools/gotestsum@latest
-      - run:
-          name: Tests
-          environment:
-            GOTEST: gotestsum -- -timeout=9m
-            GOTESTSUM_JUNITFILE: output/unit/results.xml
-            GODEBUG: cgocheck=2
-          command: |
-            mkdir -p output/unit
-            V=1 make test envtest
-      - save_cache:
-          key: test-{{ checksum "go.mod" }}-{{ checksum "go.sum" }}
-          paths:
-            - "/go/pkg/mod"
-      - store_test_results:
-          path: output
-
   e2e:
     machine:
       image: ubuntu-1604:202010-01
@@ -157,11 +98,7 @@ jobs:
 
 workflows:
   version: 2
-  validate_and_test:
+  e2e-test:
     jobs:
-      - validate
-      - test
-      - e2e:
-          requires:
-            - validate
-            - test
+      - e2e
+

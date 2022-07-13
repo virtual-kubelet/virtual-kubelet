@@ -9,13 +9,42 @@ GOTEST ?= go test $(if $V,-v)
 
 export GO111MODULE ?= on
 
+# Directories
+ROOT_DIR := $(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
+TOOLS_DIR := hack/tools
+TOOLS_BIN_DIR := $(abspath $(TOOLS_DIR)/bin)
+
+# Scripts
+GO_INSTALL := ./hack/go-install.sh
+
+# Binaries
+# Note: Need to use abspath so we can invoke these from subdirectories
+
+GOLANGCI_LINT_VER := v1.41.1
+GOLANGCI_LINT_BIN := golangci-lint
+GOLANGCI_LINT := $(abspath $(TOOLS_BIN_DIR)/$(GOLANGCI_LINT_BIN)-$(GOLANGCI_LINT_VER))
+
+GOIMPORTS_VER := latest
+GOIMPORTS_BIN := goimports
+GOIMPORTS := $(abspath $(TOOLS_BIN_DIR)/$(GOIMPORTS_BIN)-$(GOIMPORTS_VER))
+
+## --------------------------------------
+## Tooling Binaries
+## --------------------------------------
+
+$(GOLANGCI_LINT):
+	GOBIN=$(TOOLS_BIN_DIR) $(GO_INSTALL) github.com/golangci/golangci-lint/cmd/golangci-lint $(GOLANGCI_LINT_BIN) $(GOLANGCI_LINT_VER)
+
+# GOIMPORTS
+$(GOIMPORTS):
+	GOBIN=$(TOOLS_BIN_DIR) $(GO_INSTALL) golang.org/x/tools/cmd/goimports $(GOIMPORTS_BIN) $(GOIMPORTS_VER)
+
 include Makefile.e2e
 # Currently this looks for a globally installed gobin. When we move to modules,
 # should consider installing it locally
 # Also, we will want to lock our tool versions using go mod:
 # https://github.com/golang/go/wiki/Modules#how-can-i-track-tool-dependencies-for-a-module
 gobin_tool ?= $(shell which gobin || echo $(GOPATH)/bin/gobin)
-goimports := golang.org/x/tools/cmd/goimports@release-branch.go1.15
 gocovmerge := github.com/wadey/gocovmerge@b5bfa59ec0adc420475f97f89b58045c721d761c
 goreleaser := github.com/goreleaser/goreleaser@v0.82.2
 gox := github.com/mitchellh/gox@v1.0.1
@@ -82,11 +111,15 @@ else
 endif
 
 test:
-	$(GOTEST) $(TESTDIRS)
+	go test -v $(shell go list ./... | grep -v /test/e2e) -race -coverprofile=coverage.out -covermode=atomic
 
-list:
-	@echo "List..."
-	@echo $(TESTDIRS)
+## --------------------------------------
+## Linting
+## --------------------------------------
+
+.PHONY: lint
+lint: $(GOLANGCI_LINT)
+	$(GOLANGCI_LINT) run -v
 
 cover: gocovmerge
 	@echo "Coverage Report..."
@@ -111,15 +144,10 @@ endif
 	@echo ""
 	go tool cover -func .GOPATH/cover/all.merged
 
-format: goimports
-	@echo "Formatting..."
-	find . -iname \*.go | grep -v \
-        -e "^$$" $(addprefix -e ,$(IGNORED_PACKAGES)) | xargs $(gobin_tool) -run $(goimports) -w
-
 ##### =====> Internals <===== #####
 
 .PHONY: setup
-setup: goimports gocovmerge goreleaser gox clean
+setup: $(GOIMPORTS) gocovmerge goreleaser gox clean
 	env
 	@echo "Setup..."
 	if ! grep "/bin" .gitignore > /dev/null 2>&1; then \
@@ -137,10 +165,6 @@ DATE             := $(shell date -u '+%Y-%m-%d-%H:%M UTC')
 VERSION_FLAGS    := -ldflags='-X "main.buildVersion=$(VERSION)" -X "main.buildTime=$(DATE)"'
 
 TESTDIRS ?= ./...
-
-.PHONY: goimports
-goimports: $(gobin_tool)
-	$(gobin_tool) -d $(goimports)
 
 .PHONY: gocovmerge
 gocovmerge: $(gobin_tool)
@@ -180,9 +204,6 @@ envtest: kubebuilder_2.3.1_${TEST_OS}_${TEST_ARCH}
 	KUBEBUILDER_ASSETS=$(PWD)/kubebuilder_2.3.1_${TEST_OS}_${TEST_ARCH}/bin $(GOTEST) -run=TestEnvtest ./node -envtest=true
 
 .PHONY: fmt
-fmt:
-	goimports -w $(shell go list -f '{{.Dir}}' ./...)
-
-.PHONY: lint
-lint: $(gobin_tool)
-	gobin -run github.com/golangci/golangci-lint/cmd/golangci-lint@v1.33.0 run ./...
+fmt: $(GOIMPORTS)
+	go fmt ./...
+	$(GOIMPORTS) -local go.goms.io/fleet -w $$(go list -f {{.Dir}} ./...)

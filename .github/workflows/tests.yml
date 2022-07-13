@@ -1,0 +1,58 @@
+name: virtual-kubelet-test
+
+on:
+  push:
+    branches: [master]
+  pull_request_target:
+    branches: [master]
+    paths-ignore: [ docs/**, "**.md", "**.mdx", "**.png", "**.jpg" ]
+
+jobs:
+  detect-noop:
+    runs-on: ubuntu-latest
+    outputs:
+      noop: ${{ steps.noop.outputs.should_skip  }}
+    steps:
+      - name: Detect No-op Changes
+        id: noop
+        uses: fkirc/skip-duplicate-actions@v4.0.0
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN  }}
+          do_not_skip: '["workflow_dispatch", "schedule", "push"]'
+          concurrent_skipping: false
+
+  test:
+    runs-on: ubuntu-latest
+    needs: detect-noop
+    if: needs.detect-noop.outputs.noop != 'true'
+    steps:
+      - name: Set up Go
+        uses: actions/setup-go@v3
+        with:
+          go-version: ${{ secrets.GO_VERSION  }}
+
+      - name: Check out code
+        uses: actions/checkout@v3
+
+      - name: Cache node modules
+        uses: actions/cache@v3
+        with:
+          path: /go/pkg/mod
+          key: validate-{{ checksum "go.mod" }}-{{ checksum "go.sum" }}
+          restore-keys: validate-{{ checksum "go.mod" }}-{{ checksum "go.sum" }}
+
+      - name: Build
+        run: |
+          V=1 make build
+
+      - name: Build
+        run: |
+          V=1 make test 
+
+      - name: Upload Codecov report
+        uses: codecov/codecov-action@v3
+        with:
+          ## Repository upload token - get it from codecov.io. Required only for private repositories
+          token: ${{ secrets.CODECOV_TOKEN  }}
+          ## Comma-separated list of files to upload
+          files: ./coverage.xml

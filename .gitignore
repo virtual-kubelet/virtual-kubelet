@@ -3,7 +3,6 @@
 *.dll
 *.so
 *.dylib
-bin/
 
 # Certificates
 *.pem
@@ -41,3 +40,10 @@ loganalytics.json
 **/terraform-provider-kubernetes
 **/*.tfstate*
 debug
+
+# binary output
+bin/
+hack/tools/bin/
+
+# cover profile
+coverage.xml

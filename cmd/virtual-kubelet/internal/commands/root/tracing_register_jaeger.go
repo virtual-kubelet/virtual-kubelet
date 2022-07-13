@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//go:build !no_jaeger_exporter
 // +build !no_jaeger_exporter
 
 package root
