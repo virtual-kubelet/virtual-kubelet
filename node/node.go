@@ -685,10 +685,9 @@ func (t taintsStringer) String() string {
 
 func addNodeAttributes(ctx context.Context, span trace.Span, n *corev1.Node) context.Context {
 	return span.WithFields(ctx, log.Fields{
-		"node.UID":     string(n.UID),
-		"node.name":    n.Name,
-		"node.cluster": n.ClusterName,
-		"node.taints":  taintsStringer(n.Spec.Taints),
+		"node.UID":    string(n.UID),
+		"node.name":   n.Name,
+		"node.taints": taintsStringer(n.Spec.Taints),
 	})
 }
 
