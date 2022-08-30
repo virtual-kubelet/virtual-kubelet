@@ -48,7 +48,8 @@ type Node struct {
 
 	workers int
 
-	eb record.EventBroadcaster
+	eb           record.EventBroadcaster
+	caController caController
 }
 
 // NodeController returns the configured node controller.
@@ -105,6 +106,10 @@ func (n *Node) Run(ctx context.Context) (retErr error) {
 		n.eb.StartRecordingToSink(&corev1client.EventSinkImpl{Interface: n.client.CoreV1().Events(v1.NamespaceAll)})
 		defer n.eb.Shutdown()
 		log.G(ctx).Debug("Started event broadcaster")
+	}
+
+	if n.caController != nil {
+		go n.caController.Run(1, ctx.Done())
 	}
 
 	cancelHTTP, err := n.runHTTP(ctx)
@@ -212,6 +217,8 @@ func (n *Node) Err() error {
 // NodeOpt is used as functional options when configuring a new node in NewNodeFromClient
 type NodeOpt func(c *NodeConfig) error
 
+type caController interface{ Run(int, <-chan struct{}) }
+
 // NodeConfig is used to hold configuration items for a Node.
 // It gets used in conjection with NodeOpt in NewNodeFromClient
 type NodeConfig struct {
@@ -260,22 +267,8 @@ type NodeConfig struct {
 	SkipDownwardAPIResolution bool
 
 	routeAttacher func(Provider, NodeConfig, corev1listers.PodLister)
-}
 
-// WithNodeConfig returns a NodeOpt which replaces the NodeConfig with the passed in value.
-func WithNodeConfig(c NodeConfig) NodeOpt {
-	return func(orig *NodeConfig) error {
-		*orig = c
-		return nil
-	}
-}
-
-// WithClient return a NodeOpt that sets the client that will be used to create/manage the node.
-func WithClient(c kubernetes.Interface) NodeOpt {
-	return func(cfg *NodeConfig) error {
-		cfg.Client = c
-		return nil
-	}
+	caController caController
 }
 
 // NewNode creates a new node using the provided client and name.
@@ -324,10 +317,6 @@ func NewNode(name string, newProvider NewProviderFunc, opts ...NodeOpt) (*Node, 
 
 	if _, _, err := net.SplitHostPort(cfg.HTTPListenAddr); err != nil {
 		return nil, errors.Wrap(err, "error parsing http listen address")
-	}
-
-	if cfg.Client == nil {
-		return nil, errors.New("no client provided")
 	}
 
 	podInformerFactory := informers.NewSharedInformerFactoryWithOptions(
@@ -425,6 +414,7 @@ func NewNode(name string, newProvider NewProviderFunc, opts ...NodeOpt) (*Node, 
 		h:                  cfg.Handler,
 		listenAddr:         cfg.HTTPListenAddr,
 		workers:            cfg.NumWorkers,
+		caController:       cfg.caController,
 	}, nil
 }
 

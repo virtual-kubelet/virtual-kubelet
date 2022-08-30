@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/virtual-kubelet/virtual-kubelet/errdefs"
 	"github.com/virtual-kubelet/virtual-kubelet/log"
 	"github.com/virtual-kubelet/virtual-kubelet/trace"
 	"k8s.io/apiserver/pkg/authentication/authenticator"
@@ -69,14 +70,24 @@ func handleAuth(auth Auth, w http.ResponseWriter, r *http.Request, next http.Han
 	defer span.End()
 	r = r.WithContext(ctx)
 
+	logger := log.G(r.Context())
 	info, ok, err := auth.AuthenticateRequest(r)
-	if err != nil || !ok {
-		log.G(r.Context()).WithError(err).Error("Authorization error")
+	if err != nil {
+		logger.WithError(err).Error("Error authenticating request")
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		span.SetStatus(err)
 		return
 	}
 
-	logger := log.G(ctx).WithFields(log.Fields{
+	if !ok {
+		logger.Error("Request not authenticated")
+		log.G(r.Context()).Infof("Unauthorized: RequestURI: %s", r.RequestURI)
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		span.SetStatus(errdefs.ErrUnauthorized)
+		return
+	}
+
+	logger = logger.WithFields(log.Fields{
 		"user-name": info.User.GetName(),
 		"user-id":   info.User.GetUID(),
 	})
@@ -90,11 +101,13 @@ func handleAuth(auth Auth, w http.ResponseWriter, r *http.Request, next http.Han
 	if err != nil {
 		log.G(r.Context()).WithError(err).Error("Authorization error")
 		http.Error(w, err.Error(), http.StatusInternalServerError)
+		span.SetStatus(err)
 		return
 	}
 
 	if decision != authorizer.DecisionAllow {
 		http.Error(w, "Forbidden", http.StatusForbidden)
+		span.SetStatus(errdefs.ErrForbidden)
 		return
 	}
 

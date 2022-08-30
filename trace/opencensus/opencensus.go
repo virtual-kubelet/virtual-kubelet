@@ -79,8 +79,12 @@ func (s *span) SetStatus(err error) {
 		status.Code = octrace.StatusCodeNotFound
 	case errdefs.IsInvalidInput(err):
 		status.Code = octrace.StatusCodeInvalidArgument
-		// TODO: other error types
+	case errdefs.IsForbidden(err):
+		status.Code = octrace.StatusCodePermissionDenied
+	case errdefs.IsUnauthorized(err):
+		status.Code = octrace.StatusCodeUnauthenticated
 	default:
+		// TODO: other error types
 		status.Code = octrace.StatusCodeUnknown
 	}
 
