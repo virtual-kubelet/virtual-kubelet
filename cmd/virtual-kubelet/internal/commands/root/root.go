@@ -16,8 +16,6 @@ package root
 
 import (
 	"context"
-	"crypto/tls"
-	"net/http"
 	"os"
 	"runtime"
 
@@ -28,10 +26,8 @@ import (
 	"github.com/virtual-kubelet/virtual-kubelet/internal/manager"
 	"github.com/virtual-kubelet/virtual-kubelet/log"
 	"github.com/virtual-kubelet/virtual-kubelet/node"
-	"github.com/virtual-kubelet/virtual-kubelet/node/api"
 	"github.com/virtual-kubelet/virtual-kubelet/node/nodeutil"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apiserver/pkg/server/dynamiccertificates"
 )
 
 // NewCommand creates a new top-level command.
@@ -73,14 +69,6 @@ func runRootCommand(ctx context.Context, s *provider.Store, c Opts) error {
 		}
 	}
 
-	// Ensure API client.
-	clientSet, err := nodeutil.ClientsetFromEnv(c.KubeConfigPath)
-	if err != nil {
-		return err
-	}
-
-	// Set-up the node provider.
-	mux := http.NewServeMux()
 	newProvider := func(cfg nodeutil.ProviderConfig) (nodeutil.Provider, node.NodeProvider, error) {
 		rm, err := manager.NewResourceManager(cfg.Pods, cfg.Secrets, cfg.ConfigMaps, cfg.Services)
 		if err != nil {
@@ -109,14 +97,9 @@ func runRootCommand(ctx context.Context, s *provider.Store, c Opts) error {
 		return p, nil, nil
 	}
 
-	apiConfig, err := getAPIConfig(c)
-	if err != nil {
-		return err
-	}
-
+	apiConfig := getAPIConfig(c)
 	cm, err := nodeutil.NewNode(c.NodeName, newProvider, func(cfg *nodeutil.NodeConfig) error {
 		cfg.KubeconfigPath = c.KubeConfigPath
-		cfg.Handler = mux
 		cfg.InformerResyncPeriod = c.InformerResyncPeriod
 
 		if taint != nil {
@@ -134,6 +117,7 @@ func runRootCommand(ctx context.Context, s *provider.Store, c Opts) error {
 
 		return nil
 	},
+<<<<<<< HEAD
 		nodeutil.WithClient(clientSet),
 		setAuth(c.NodeName, apiConfig),
 		nodeutil.WithTLSConfig(
@@ -141,6 +125,9 @@ func runRootCommand(ctx context.Context, s *provider.Store, c Opts) error {
 			maybeCA(apiConfig.CACertPath),
 		),
 		nodeutil.AttachProviderRoutes(mux),
+=======
+		nodeutil.WithBootstrapFromRestConfig(),
+>>>>>>> 1eab7362 (Update mock CLI to use bootstrapper)
 	)
 	if err != nil {
 		return err
@@ -178,33 +165,4 @@ func runRootCommand(ctx context.Context, s *provider.Store, c Opts) error {
 		return cm.Err()
 	}
 	return nil
-}
-
-func setAuth(node string, apiCfg *apiServerConfig) nodeutil.NodeOpt {
-	if apiCfg.CACertPath == "" {
-		return func(cfg *nodeutil.NodeConfig) error {
-			cfg.Handler = api.InstrumentHandler(nodeutil.WithAuth(nodeutil.NoAuth(), cfg.Handler))
-			return nil
-		}
-	}
-
-	return func(cfg *nodeutil.NodeConfig) error {
-		auth, err := nodeutil.WebhookAuth(cfg.Client, node, func(cfg *nodeutil.WebhookAuthConfig) error {
-			var err error
-			cfg.AuthnConfig.ClientCertificateCAContentProvider, err = dynamiccertificates.NewDynamicCAContentFromFile("ca-cert-bundle", apiCfg.CACertPath)
-			return err
-		})
-		if err != nil {
-			return err
-		}
-		cfg.Handler = api.InstrumentHandler(nodeutil.WithAuth(auth, cfg.Handler))
-		return nil
-	}
-}
-
-func maybeCA(p string) func(*tls.Config) error {
-	if p == "" {
-		return func(*tls.Config) error { return nil }
-	}
-	return nodeutil.WithCAFromPath(p)
 }

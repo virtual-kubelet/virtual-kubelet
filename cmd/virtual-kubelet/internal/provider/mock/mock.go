@@ -102,7 +102,7 @@ func NewMockProvider(providerConfig, nodeName, operatingSystem string, internalI
 func loadConfig(providerConfig, nodeName string) (config MockConfig, err error) {
 	data, err := os.ReadFile(providerConfig)
 	if err != nil {
-		return config, err
+		return config, fmt.Errorf("error reaeding provider config: %w", err)
 	}
 	configMap := map[string]MockConfig{}
 	err = json.Unmarshal(data, &configMap)
