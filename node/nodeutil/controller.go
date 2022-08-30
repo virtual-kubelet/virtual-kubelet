@@ -109,7 +109,7 @@ func (n *Node) Run(ctx context.Context) (retErr error) {
 	}
 
 	if n.caController != nil {
-		go n.caController.Run(1, ctx.Done())
+		go n.caController.Run(ctx, 1)
 	}
 
 	cancelHTTP, err := n.runHTTP(ctx)
@@ -217,7 +217,7 @@ func (n *Node) Err() error {
 // NodeOpt is used as functional options when configuring a new node in NewNodeFromClient
 type NodeOpt func(c *NodeConfig) error
 
-type caController interface{ Run(int, <-chan struct{}) }
+type caController interface{ Run(context.Context, int) }
 
 // NodeConfig is used to hold configuration items for a Node.
 // It gets used in conjection with NodeOpt in NewNodeFromClient

@@ -117,17 +117,7 @@ func runRootCommand(ctx context.Context, s *provider.Store, c Opts) error {
 
 		return nil
 	},
-<<<<<<< HEAD
-		nodeutil.WithClient(clientSet),
-		setAuth(c.NodeName, apiConfig),
-		nodeutil.WithTLSConfig(
-			nodeutil.WithKeyPairFromPath(apiConfig.CertPath, apiConfig.KeyPath),
-			maybeCA(apiConfig.CACertPath),
-		),
-		nodeutil.AttachProviderRoutes(mux),
-=======
 		nodeutil.WithBootstrapFromRestConfig(),
->>>>>>> 1eab7362 (Update mock CLI to use bootstrapper)
 	)
 	if err != nil {
 		return err
