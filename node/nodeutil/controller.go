@@ -78,12 +78,14 @@ func (n *Node) runHTTP(ctx context.Context) (func(), error) {
 
 	log.G(ctx).Debug("Started TLS listener")
 
-	srv := &http.Server{Handler: n.h, TLSConfig: n.tlsConfig}
+	srv := &http.Server{Handler: n.h, TLSConfig: n.tlsConfig, ReadHeaderTimeout: 30 * time.Second}
 	go srv.Serve(l) //nolint:errcheck
 	log.G(ctx).Debug("HTTP server running")
 
 	return func() {
+		/* #nosec */
 		srv.Close()
+		/* #nosec */
 		l.Close()
 	}, nil
 }
@@ -275,7 +277,6 @@ func WithClient(c kubernetes.Interface) NodeOpt {
 // Some basic values are set for node status, you'll almost certainly want to modify it.
 //
 // If client is nil, this will construct a client using ClientsetFromEnv
-//
 // It is up to the caller to configure auth on the HTTP handler.
 func NewNode(name string, newProvider NewProviderFunc, opts ...NodeOpt) (*Node, error) {
 	cfg := NodeConfig{

@@ -403,7 +403,7 @@ func (ts *EndToEndTestSuite) TestCreatePodWithMandatoryInexistentConfigMap(t *te
 // It returns an error if the specified pod is not found.
 func findPodInPodStats(summary *stats.Summary, pod *v1.Pod) (int, error) {
 	for i, p := range summary.Pods {
-		if p.PodRef.Namespace == pod.Namespace && p.PodRef.Name == pod.Name && string(p.PodRef.UID) == string(pod.UID) {
+		if p.PodRef.Namespace == pod.Namespace && p.PodRef.Name == pod.Name && p.PodRef.UID == string(pod.UID) {
 			return i, nil
 		}
 	}
