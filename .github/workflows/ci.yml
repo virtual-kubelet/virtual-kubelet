@@ -44,7 +44,7 @@ jobs:
         run: make test
 
   env-tests:
-    name: Evntest Tests
+    name: Envtest Tests
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
