@@ -4,7 +4,7 @@ go 1.15
 
 require (
 	contrib.go.opencensus.io/exporter/jaeger v0.1.0
-	contrib.go.opencensus.io/exporter/ocagent v0.4.12
+	contrib.go.opencensus.io/exporter/ocagent v0.7.0
 	github.com/bombsimon/logrusr v1.0.0
 	github.com/docker/spdystream v0.0.0-20170912183627-bc6354cbbc29 // indirect
 	github.com/elazarl/goproxy v0.0.0-20190421051319-9d40249d3c2f // indirect
