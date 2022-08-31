@@ -71,7 +71,7 @@ func testNodeRun(t *testing.T, enableLease bool) {
 		assert.NilError(t, node.Err())
 	}()
 
-	go node.Run(ctx) // nolint:errcheck
+	go node.Run(ctx) //nolint:errcheck
 
 	nw := makeWatch(ctx, t, nodes, testNodeCopy.Name)
 	defer nw.Stop()
@@ -189,7 +189,7 @@ func TestNodeCustomUpdateStatusErrorHandler(t *testing.T) {
 	)
 	assert.NilError(t, err)
 
-	go node.Run(ctx) // nolint:errcheck
+	go node.Run(ctx) //nolint:errcheck
 
 	timer := time.NewTimer(10 * time.Second)
 	defer timer.Stop()
@@ -295,7 +295,7 @@ func TestPingAfterStatusUpdate(t *testing.T) {
 	node, err := NewNodeController(testP, testNode, nodes, opts...)
 	assert.NilError(t, err)
 
-	go node.Run(ctx) // nolint:errcheck
+	go node.Run(ctx) //nolint:errcheck
 	defer func() {
 		cancel()
 		<-node.Done()
@@ -363,7 +363,7 @@ func TestBeforeAnnotationsPreserved(t *testing.T) {
 		assert.NilError(t, node.Err())
 	}()
 
-	go node.Run(ctx) // nolint:errcheck
+	go node.Run(ctx) //nolint:errcheck
 
 	nw := makeWatch(ctx, t, nodes, testNodeCopy.Name)
 	defer nw.Stop()
@@ -427,7 +427,7 @@ func TestManualConditionsPreserved(t *testing.T) {
 		assert.NilError(t, node.Err())
 	}()
 
-	go node.Run(ctx) // nolint:errcheck
+	go node.Run(ctx) //nolint:errcheck
 
 	nw := makeWatch(ctx, t, nodes, testNodeCopy.Name)
 	defer nw.Stop()
