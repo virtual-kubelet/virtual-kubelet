@@ -38,7 +38,7 @@ var (
 const (
 	// There might be a constant we can already leverage here
 	testNamespace        = "default"
-	informerResyncPeriod = time.Duration(1 * time.Second)
+	informerResyncPeriod = 1 * time.Second
 	testNodeName         = "testnode"
 	podSyncWorkers       = 3
 )
@@ -232,7 +232,7 @@ type system struct {
 }
 
 func (s *system) start(ctx context.Context) error {
-	go s.pc.Run(ctx, podSyncWorkers) // nolint:errcheck
+	go s.pc.Run(ctx, podSyncWorkers) //nolint:errcheck
 	select {
 	case <-s.pc.Ready():
 	case <-s.pc.Done():

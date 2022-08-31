@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//go:build !no_ocagent_exporter
 // +build !no_ocagent_exporter
 
 package root

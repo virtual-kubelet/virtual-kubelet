@@ -123,7 +123,7 @@ func TestGetConfigMap(t *testing.T) {
 	}
 	value := configMap.Data["key-0"]
 	if value != "val-0" {
-		t.Fatal("got unexpected value", string(value))
+		t.Fatal("got unexpected value", value)
 	}
 
 	// Try to get a configmap that does not exist, and make sure we've got a "not found" error as a response.

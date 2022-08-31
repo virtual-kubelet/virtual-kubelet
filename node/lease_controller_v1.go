@@ -333,7 +333,7 @@ func (e *nodeNotReadyError) Is(target error) bool {
 	return ok
 }
 
-func (e *nodeNotReadyError) As(target error) bool {
+func (e *nodeNotReadyError) As(target interface{}) bool {
 	val, ok := target.(*nodeNotReadyError)
 	if ok {
 		*val = *e
