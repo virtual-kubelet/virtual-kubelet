@@ -12,20 +12,26 @@ run:
 linters:
   enable:
     - errcheck
-    - govet
-    - ineffassign
-    - golint
-    - goconst
-    - goimports
-    - unused
+    - structcheck
     - varcheck
-    - deadcode
+    - staticcheck
+    - unconvert
+    - gofmt
+    - goimports
+    - ineffassign
+    - vet
+    - unused
     - misspell
-    - nolintlint
-    - gocritic
+    - gosec
+    - exportloopref # Checks for pointers to enclosing loop variables
+    - tenv # Detects using os.Setenv instead of t.Setenv since Go 1.17
 
+linters-settings:
+  gosec:
+    excludes:
+      - G304
 issues:
   exclude-use-default: false
   exclude:
     # EXC0001 errcheck: Almost all programs ignore errors on these functions and in most cases it's ok
-    - Error return value of .((os\.)?std(out|err)\..*|.*Close|.*Flush|os\.Remove(All)?|.*print(f|ln)?|os\.(Un)?Setenv). is not checked
+    - Error return value of .((os\.)?std(out|err)\..*|.*Close|.*Flush|os\.Remove(All)?|.*print(f|ln)?|os\.(Un)?Setenv). (is not checked|Errors unhandled)

@@ -42,7 +42,7 @@ var (
 */
 
 // MockProvider implements the virtual-kubelet provider interface and stores pods in memory.
-type MockProvider struct { // nolint:golint
+type MockProvider struct { //nolint:golint
 	nodeName           string
 	operatingSystem    string
 	internalIP         string
@@ -54,7 +54,7 @@ type MockProvider struct { // nolint:golint
 }
 
 // MockConfig contains a mock virtual-kubelet's configurable parameters.
-type MockConfig struct { // nolint:golint
+type MockConfig struct { //nolint:golint
 	CPU    string `json:"cpu,omitempty"`
 	Memory string `json:"memory,omitempty"`
 	Pods   string `json:"pods,omitempty"`
@@ -328,8 +328,8 @@ func (p *MockProvider) GetPods(ctx context.Context) ([]*v1.Pod, error) {
 	return pods, nil
 }
 
-func (p *MockProvider) ConfigureNode(ctx context.Context, n *v1.Node) { // nolint:golint
-	ctx, span := trace.StartSpan(ctx, "mock.ConfigureNode") // nolint:staticcheck,ineffassign
+func (p *MockProvider) ConfigureNode(ctx context.Context, n *v1.Node) { //nolint:golint
+	ctx, span := trace.StartSpan(ctx, "mock.ConfigureNode") //nolint:staticcheck,ineffassign
 	defer span.End()
 
 	n.Status.Capacity = p.capacity()
@@ -467,10 +467,14 @@ func (p *MockProvider) GetStatsSummary(ctx context.Context) (*stats.Summary, err
 		for _, container := range pod.Spec.Containers {
 			// Grab a dummy value to be used as the total CPU usage.
 			// The value should fit a uint32 in order to avoid overflows later on when computing pod stats.
+
+			/* #nosec */
 			dummyUsageNanoCores := uint64(rand.Uint32())
 			totalUsageNanoCores += dummyUsageNanoCores
 			// Create a dummy value to be used as the total RAM usage.
 			// The value should fit a uint32 in order to avoid overflows later on when computing pod stats.
+
+			/* #nosec */
 			dummyUsageBytes := uint64(rand.Uint32())
 			totalUsageBytes += dummyUsageBytes
 			// Append a ContainerStats object containing the dummy stats to the PodStats object.

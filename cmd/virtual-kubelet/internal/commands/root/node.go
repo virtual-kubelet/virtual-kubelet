@@ -36,7 +36,7 @@ func getTaint(c Opts) (*corev1.Taint, error) {
 
 	key = getEnv("VKUBELET_TAINT_KEY", key)
 	value = getEnv("VKUBELET_TAINT_VALUE", value)
-	effectEnv := getEnv("VKUBELET_TAINT_EFFECT", string(c.TaintEffect))
+	effectEnv := getEnv("VKUBELET_TAINT_EFFECT", c.TaintEffect)
 
 	var effect corev1.TaintEffect
 	switch effectEnv {
