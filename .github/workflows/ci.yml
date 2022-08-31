@@ -45,7 +45,7 @@ jobs:
           path: |
             ~/.cache/go-build
             ~/go/pkg/mod
-          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          key: ${{ runner.os }}-go-unit-${{ hashFiles('**/go.sum') }}
           restore-keys: |
             ${{ runner.os }}-go-unit
       - name: Run Tests
@@ -67,7 +67,7 @@ jobs:
           path: |
             ~/.cache/go-build
             ~/go/pkg/mod
-          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          key: ${{ runner.os }}-go-envtest-${{ hashFiles('**/go.sum') }}
           restore-keys: |
             ${{ runner.os }}-go-envtest
       - name: Run Tests
@@ -93,12 +93,20 @@ jobs:
           go-version: ${{ env.GO_VERSION }}
       - name: Checkout repository
         uses: actions/checkout@v3
+      - uses: actions/cache@v3
+        id: cache-skaffold
+        with:
+          path: |
+            ~/.cache/skaffold
+          key: ${{ runner.os }}-skaffold-${{ env.SKAFFOLD_VERSION }}
+          restore-keys: |
+            skaffold
       - name: Install Skaffold
+        if: steps.cache-skaffold.outputs.cache-hit != 'true'
         run: |
-          curl -Lo skaffold https://storage.googleapis.com/skaffold/releases/${SKAFFOLD_VERSION}/skaffold-linux-amd64
-          chmod +x skaffold
-          sudo mv skaffold /usr/local/bin/
-          echo /usr/local/bin >> $GITHUB_PATH
+          mkdir -p ~/.cache/skaffold
+          curl -Lo ~/.cache/skaffold/skaffold https://storage.googleapis.com/skaffold/releases/${SKAFFOLD_VERSION}/skaffold-linux-amd64
+          chmod +x ~/.cache/skaffold/skaffold
       - name: Install Minikube dependencies
         run: |
           sudo apt-get update && sudo apt-get install -y apt-transport-https curl
@@ -108,11 +116,24 @@ jobs:
           EOF
           sudo apt-get update
           sudo apt-get install -y kubelet # systemd unit is disabled
+      - uses: actions/cache@v3
+        id: cache-minikube
+        with:
+          path: |
+            ~/.cache/minikube
+          key: ${{ runner.os }}-minikube-${{ env.MINIKUBE_VERSION }}
+          restore-keys: |
+            minikube
       - name: Install Minikube
+        if: steps.cache-minikube.outputs.cache-hit != 'true'
         run: |
-          curl -Lo minikube https://storage.googleapis.com/minikube/releases/${MINIKUBE_VERSION}/minikube-linux-amd64
-          chmod +x minikube
-          sudo mv minikube /usr/local/bin/
+          mkdir -p ~/.cache/minikube
+          curl -Lo ~/.cache/minikube/minikube https://storage.googleapis.com/minikube/releases/${MINIKUBE_VERSION}/minikube-linux-amd64
+          chmod +x ~/.cache/minikube/minikube
+      - name: Set bin paths
+        run: |
+          echo "$HOME/.cache/skaffold" >> $GITHUB_PATH
+          echo "$HOME/.cache/minikube" >> $GITHUB_PATH
       - name: Start Minikube
         run: |
           sudo -E PATH=$PATH minikube start --vm-driver=none --cpus 2 --memory 2048 --kubernetes-version=${KUBERNETES_VERSION}
@@ -127,7 +148,7 @@ jobs:
           path: |
             ~/.cache/go-build
             ~/go/pkg/mod
-          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          key: ${{ runner.os }}-go-e2e-${{ hashFiles('**/go.sum') }}
           restore-keys: |
             ${{ runner.os }}-go-e2e
       - name: Run Tests
