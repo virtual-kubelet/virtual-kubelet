@@ -9,7 +9,7 @@ require (
 	github.com/docker/spdystream v0.0.0-20170912183627-bc6354cbbc29 // indirect
 	github.com/elazarl/goproxy v0.0.0-20190421051319-9d40249d3c2f // indirect
 	github.com/elazarl/goproxy/ext v0.0.0-20190711103511-473e67f1d7d2 // indirect
-	github.com/google/go-cmp v0.5.6
+	github.com/google/go-cmp v0.5.8
 	github.com/gorilla/mux v1.7.3
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/pkg/errors v0.9.1
