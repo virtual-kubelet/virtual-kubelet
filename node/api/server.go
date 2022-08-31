@@ -33,7 +33,7 @@ type ServeMux interface {
 	Handle(path string, h http.Handler)
 }
 
-type PodHandlerConfig struct { // nolint:golint
+type PodHandlerConfig struct { //nolint:golint
 	RunInContainer   ContainerExecHandlerFunc
 	GetContainerLogs ContainerLogsHandlerFunc
 	// GetPods is meant to enumerate the pods that the provider knows about
@@ -79,7 +79,7 @@ func PodHandler(p PodHandlerConfig, debug bool) http.Handler {
 // PodStatsSummaryHandler creates an http handler for serving pod metrics.
 //
 // If the passed in handler func is nil this will create handlers which only
-//  serves http.StatusNotImplemented
+// serves http.StatusNotImplemented
 func PodStatsSummaryHandler(f PodStatsSummaryHandlerFunc) http.Handler {
 	if f == nil {
 		return http.HandlerFunc(NotImplemented)

@@ -12,13 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//go:build !no_jaeger_exporter
 // +build !no_jaeger_exporter
 
 package root
 
 import (
 	"errors"
-	"fmt"
 	"os"
 
 	"contrib.go.opencensus.io/exporter/jaeger"
@@ -32,7 +32,6 @@ func init() {
 // NewJaegerExporter creates a new opencensus tracing exporter.
 func NewJaegerExporter(opts TracingExporterOptions) (trace.Exporter, error) {
 	jOpts := jaeger.Options{
-		Endpoint:          os.Getenv("JAEGER_ENDPOINT"), // deprecated
 		CollectorEndpoint: os.Getenv("JAEGER_COLLECTOR_ENDPOINT"),
 		AgentEndpoint:     os.Getenv("JAEGER_AGENT_ENDPOINT"),
 		Username:          os.Getenv("JAEGER_USER"),
@@ -42,11 +41,8 @@ func NewJaegerExporter(opts TracingExporterOptions) (trace.Exporter, error) {
 		},
 	}
 
-	if jOpts.Endpoint != "" && jOpts.CollectorEndpoint == "" { // nolintlint:staticcheck
-		jOpts.CollectorEndpoint = fmt.Sprintf("%s/api/traces", jOpts.Endpoint) // nolintlint:staticcheck
-	}
 	if jOpts.CollectorEndpoint == "" && jOpts.AgentEndpoint == "" { // nolintlint:staticcheck
-		return nil, errors.New("Must specify either JAEGER_COLLECTOR_ENDPOINT or JAEGER_AGENT_ENDPOINT")
+		return nil, errors.New("must specify either JAEGER_COLLECTOR_ENDPOINT or JAEGER_AGENT_ENDPOINT")
 	}
 
 	for k, v := range opts.Tags {

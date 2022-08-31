@@ -6,6 +6,7 @@ import (
 )
 
 func registerMock(s *provider.Store) {
+	/* #nosec */
 	s.Register("mock", func(cfg provider.InitConfig) (provider.Provider, error) { //nolint:errcheck
 		return mock.NewMockProvider(
 			cfg.ConfigPath,
