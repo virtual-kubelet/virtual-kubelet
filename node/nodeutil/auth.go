@@ -33,7 +33,7 @@ type authWrapper struct {
 // InstrumentAuth wraps the provided Auth in a new instrumented Auth
 //
 // Note: You would only need this if you rolled your own auth.
-// 	The Auth implementations defined in this package are already instrumented.
+// The Auth implementations defined in this package are already instrumented.
 func InstrumentAuth(auth Auth) Auth {
 	if _, ok := auth.(*authWrapper); ok {
 		// This is already instrumented

@@ -1,0 +1,110 @@
+name: CI
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+env:
+  GO_VERSION: "1.18"
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+      - uses: actions/setup-go@v2
+        with:
+          go-version: ${{ env.GO_VERSION }}
+      - uses: actions/checkout@v2
+      - uses: golangci/golangci-lint-action@v3
+        with:
+          version: v1.48.0
+          args: --timeout=5m
+
+  unit-tests:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+      - uses: actions/setup-go@v2
+        with:
+          go-version: ${{ env.GO_VERSION }}
+      - uses: actions/checkout@v2
+      - name: Run Tests
+        run: make test
+
+  env-tests:
+    name: Evntest Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+      - uses: actions/setup-go@v2
+        with:
+          go-version: ${{ env.GO_VERSION }}
+      - uses: actions/checkout@v2
+      - name: Run Tests
+        run: make envtest
+
+  e2e:
+    name: E2E
+    runs-on: ubuntu-22.04
+    timeout-minutes: 10
+    env:
+      CHANGE_MINIKUBE_NONE_USER: true
+      KUBERNETES_VERSION: v1.20.1
+      MINIKUBE_HOME: /home/circleci
+      MINIKUBE_VERSION: v1.16.0
+      MINIKUBE_WANTUPDATENOTIFICATION: false
+      MINIKUBE_WANTREPORTERRORPROMPT: false
+      SKAFFOLD_VERSION: v1.17.2
+      GO111MODULE: "on"
+
+    steps:
+      - uses: actions/setup-go@v2
+        with:
+          go-version: ${{ env.GO_VERSION }}
+      - name: Checkout repository
+        uses: actions/checkout@v3
+      - name: Install Skaffold
+        run: |
+          curl -Lo skaffold https://storage.googleapis.com/skaffold/releases/${SKAFFOLD_VERSION}/skaffold-linux-amd64
+          chmod +x skaffold
+          sudo mv skaffold /usr/local/bin/
+          echo /usr/local/bin >> $GITHUB_PATH
+      - name: Install Minikube dependencies
+        run: |
+          sudo apt-get update && sudo apt-get install -y apt-transport-https curl
+          curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add -
+          cat <<EOF | sudo tee /etc/apt/sources.list.d/kubernetes.list
+          deb https://apt.kubernetes.io/ kubernetes-xenial main
+          EOF
+          sudo apt-get update
+          sudo apt-get install -y kubelet # systemd unit is disabled
+      - name: Install Minikube
+        run: |
+          curl -Lo minikube https://storage.googleapis.com/minikube/releases/${MINIKUBE_VERSION}/minikube-linux-amd64
+          chmod +x minikube
+          sudo mv minikube /usr/local/bin/
+      - name: Start Minikube
+        run: |
+          sudo -E PATH=$PATH minikube start --vm-driver=none --cpus 2 --memory 2048 --kubernetes-version=${KUBERNETES_VERSION}
+      - name: Wait for Minikube
+        run: |
+          JSONPATH='{range .items[*]}{@.metadata.name}:{range @.status.conditions[*]}{@.type}={@.status};{end}{end}';
+          until kubectl get nodes -o jsonpath="$JSONPATH" 2>&1 | grep -q "Ready=True"; do
+            sleep 1;
+          done
+      - name: Run Tests
+        run: make e2e

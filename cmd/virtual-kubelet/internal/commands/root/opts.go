@@ -15,6 +15,7 @@
 package root
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -95,6 +96,8 @@ type Opts struct {
 	Version string
 }
 
+const maxInt32 = 1<<31 - 1
+
 // SetDefaultOpts sets default options for unset values on the passed in option struct.
 // Fields tht are already set will not be modified.
 func SetDefaultOpts(c *Opts) error {
@@ -128,6 +131,10 @@ func SetDefaultOpts(c *Opts) error {
 			if err != nil {
 				return errors.Wrap(err, "error parsing KUBELET_PORT environment variable")
 			}
+			if p > maxInt32 {
+				return fmt.Errorf("KUBELET_PORT environment variable is too large")
+			}
+			/* #nosec */
 			c.ListenPort = int32(p)
 		} else {
 			c.ListenPort = DefaultListenPort
