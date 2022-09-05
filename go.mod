@@ -30,7 +30,7 @@ require (
 	k8s.io/apiserver v0.19.10
 	k8s.io/client-go v0.19.10
 	k8s.io/klog v1.0.0
-	k8s.io/klog/v2 v2.2.0
+	k8s.io/klog/v2 v2.80.0
 	k8s.io/utils v0.0.0-20200912215256-4140de9c8800
 	sigs.k8s.io/controller-runtime v0.7.1
 )
