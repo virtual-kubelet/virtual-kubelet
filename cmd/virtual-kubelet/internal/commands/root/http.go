@@ -16,31 +16,21 @@ package root
 
 import (
 	"fmt"
-	"os"
 	"time"
 )
 
 type apiServerConfig struct {
-	CertPath              string
-	KeyPath               string
-	CACertPath            string
 	Addr                  string
 	MetricsAddr           string
 	StreamIdleTimeout     time.Duration
 	StreamCreationTimeout time.Duration
 }
 
-func getAPIConfig(c Opts) (*apiServerConfig, error) {
-	config := apiServerConfig{
-		CertPath:   os.Getenv("APISERVER_CERT_LOCATION"),
-		KeyPath:    os.Getenv("APISERVER_KEY_LOCATION"),
-		CACertPath: os.Getenv("APISERVER_CA_CERT_LOCATION"),
+func getAPIConfig(c Opts) apiServerConfig {
+	return apiServerConfig{
+		Addr:                  fmt.Sprintf(":%d", c.ListenPort),
+		MetricsAddr:           c.MetricsAddr,
+		StreamIdleTimeout:     c.StreamIdleTimeout,
+		StreamCreationTimeout: c.StreamCreationTimeout,
 	}
-
-	config.Addr = fmt.Sprintf(":%d", c.ListenPort)
-	config.MetricsAddr = c.MetricsAddr
-	config.StreamIdleTimeout = c.StreamIdleTimeout
-	config.StreamCreationTimeout = c.StreamCreationTimeout
-
-	return &config, nil
 }
