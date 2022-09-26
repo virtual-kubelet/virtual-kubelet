@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/bombsimon/logrusr"
+	"github.com/bombsimon/logrusr/v3"
 	"github.com/sirupsen/logrus"
 	"github.com/virtual-kubelet/virtual-kubelet/log"
 	logruslogger "github.com/virtual-kubelet/virtual-kubelet/log/logrus"
@@ -65,7 +65,7 @@ func wrapE2ETest(ctx context.Context, env *envtest.Environment, f func(context.C
 
 		// The following requires that E2E tests are performed *sequentially*
 		log.L = logger
-		klogv2.SetLogger(logrusr.NewLogger(sl))
+		klogv2.SetLogger(logrusr.New(sl))
 		f(ctx, t, env)
 	}
 }
