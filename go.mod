@@ -28,8 +28,7 @@ require (
 	k8s.io/apimachinery v0.19.10
 	k8s.io/apiserver v0.19.10
 	k8s.io/client-go v0.19.10
-	k8s.io/klog v1.0.0
-	k8s.io/klog/v2 v2.2.0
+	k8s.io/klog/v2 v2.80.0
 	k8s.io/utils v0.0.0-20200912215256-4140de9c8800
 	sigs.k8s.io/controller-runtime v0.7.1
 )
@@ -43,7 +42,7 @@ require (
 	github.com/cespare/xxhash/v2 v2.1.2 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/evanphx/json-patch v4.9.0+incompatible // indirect
-	github.com/go-logr/logr v0.3.0 // indirect
+	github.com/go-logr/logr v1.2.3 // indirect
 	github.com/go-openapi/jsonpointer v0.19.3 // indirect
 	github.com/go-openapi/jsonreference v0.19.3 // indirect
 	github.com/go-openapi/spec v0.19.3 // indirect

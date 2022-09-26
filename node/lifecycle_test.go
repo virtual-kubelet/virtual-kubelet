@@ -28,7 +28,7 @@ import (
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
 	watchutils "k8s.io/client-go/tools/watch"
-	"k8s.io/klog"
+	"k8s.io/klog/v2"
 )
 
 var (
