@@ -2,6 +2,8 @@ linter-settings:
   lll:
     line-length: 200
 
+timeout: 10m
+
 run:
   skip-dirs:
     # This directory contains copy code from upstream kubernetes/kubernetes, skip it.

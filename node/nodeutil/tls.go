@@ -4,7 +4,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
-	"io/ioutil"
+	"os"
 )
 
 // WithTLSConfig returns a NodeOpt which creates a base TLSConfig with the default cipher suites and tls min verions.
@@ -31,7 +31,7 @@ func WithTLSConfig(opts ...func(*tls.Config) error) NodeOpt {
 // WithCAFromPath makes a TLS config option to set up client auth using the path to a PEM encoded CA cert.
 func WithCAFromPath(p string) func(*tls.Config) error {
 	return func(cfg *tls.Config) error {
-		pem, err := ioutil.ReadFile(p)
+		pem, err := os.ReadFile(p)
 		if err != nil {
 			return fmt.Errorf("error reading ca cert pem: %w", err)
 		}

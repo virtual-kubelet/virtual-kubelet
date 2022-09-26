@@ -5,8 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"math/rand"
+	"os"
 	"strings"
 	"time"
 
@@ -97,7 +97,7 @@ func NewMockProvider(providerConfig, nodeName, operatingSystem string, internalI
 
 // loadConfig loads the given json configuration files.
 func loadConfig(providerConfig, nodeName string) (config MockConfig, err error) {
-	data, err := ioutil.ReadFile(providerConfig)
+	data, err := os.ReadFile(providerConfig)
 	if err != nil {
 		return config, err
 	}
@@ -283,7 +283,7 @@ func (p *MockProvider) GetContainerLogs(ctx context.Context, namespace, podName,
 	ctx = addAttributes(ctx, span, namespaceKey, namespace, nameKey, podName, containerNameKey, containerName)
 
 	log.G(ctx).Infof("receive GetContainerLogs %q", podName)
-	return ioutil.NopCloser(strings.NewReader("")), nil
+	return io.NopCloser(strings.NewReader("")), nil
 }
 
 // RunInContainer executes a command in a container in the pod, copying data
