@@ -23,7 +23,7 @@ RUN \
     --mount=type=cache,target=/root/.cache/go-build \
     --mount=type=cache,target=/go/pkg/mod \
     --mount=type=cache,target=/root/.cache/golangci-lint \
-    golangci-lint run -v $(if [ -n "${OUT_FORMAT}" ]; then echo "--out-format=${OUT_FORMAT}"; fi)
+    golangci-lint run -v --out-format="${OUT_FORMAT:-colored-line-number}"
 
 FROM scratch
 COPY --from=builder /usr/bin/virtual-kubelet /usr/bin/virtual-kubelet
