@@ -306,6 +306,8 @@ func NewNode(name string, newProvider NewProviderFunc, opts ...NodeOpt) (*Node, 
 		},
 	}
 
+	cfg.Client = defaultClientFromEnv(cfg.KubeconfigPath)
+
 	for _, o := range opts {
 		if err := o(&cfg); err != nil {
 			return nil, err
@@ -317,11 +319,7 @@ func NewNode(name string, newProvider NewProviderFunc, opts ...NodeOpt) (*Node, 
 	}
 
 	if cfg.Client == nil {
-		var err error
-		cfg.Client, err = ClientsetFromEnv(cfg.KubeconfigPath)
-		if err != nil {
-			return nil, errors.Wrap(err, "error creating clientset from env")
-		}
+		return nil, errors.New("no client provided")
 	}
 
 	podInformerFactory := informers.NewSharedInformerFactoryWithOptions(
@@ -428,4 +426,13 @@ func setNodeReady(n *v1.Node) {
 		n.Status.Conditions[i] = c
 		return
 	}
+}
+
+func defaultClientFromEnv(kubeconfigPath string) kubernetes.Interface {
+	client, err := ClientsetFromEnv(kubeconfigPath)
+	if err != nil {
+		log.G(context.TODO()).WithError(err).
+			Warn("Failed to create clientset from env. Ignore this error If you use your own client")
+	}
+	return client
 }
