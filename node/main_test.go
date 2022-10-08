@@ -6,14 +6,14 @@ import (
 	"os"
 	"testing"
 
-	klogv1 "k8s.io/klog"
+	"k8s.io/klog/v2"
 )
 
 var enableEnvTest = flag.Bool("envtest", false, "Enable envtest based tests")
 
 func TestMain(m *testing.M) {
 	flagset := flag.NewFlagSet("klog", flag.PanicOnError)
-	klogv1.InitFlags(flagset)
+	klog.InitFlags(flagset)
 	flagset.VisitAll(func(f *flag.Flag) {
 		flag.Var(f.Value, "klog."+f.Name, f.Usage)
 	})

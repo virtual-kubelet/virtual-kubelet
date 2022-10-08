@@ -235,26 +235,26 @@ func makeAttribute(key string, val interface{}) (attr attribute.KeyValue) {
 	switch v := val.(type) {
 	case string:
 		return attribute.String(key, v)
-	case []string:
-		return attribute.StringSlice(key, v)
+	// case []string:
+	// 	return attribute.StringSlice(key, v)
 	case fmt.Stringer:
 		return attribute.Stringer(key, v)
 	case int:
 		return attribute.Int(key, v)
-	case []int:
-		return attribute.IntSlice(key, v)
+	// case []int:
+	// 	return attribute.IntSlice(key, v)
 	case int64:
 		return attribute.Int64(key, v)
 	case float64:
 		return attribute.Float64(key, v)
-	case []float64:
-		return attribute.Float64Slice(key, v)
-	case []int64:
-		return attribute.Int64Slice(key, v)
+	// case []float64:
+	// 	return attribute.Float64Slice(key, v)
+	// case []int64:
+	// 	return attribute.Int64Slice(key, v)
 	case bool:
 		return attribute.Bool(key, v)
-	case []bool:
-		return attribute.BoolSlice(key, v)
+	// case []bool:
+	// 	return attribute.BoolSlice(key, v)
 	case error:
 		if v == nil {
 			attribute.String(key, "")

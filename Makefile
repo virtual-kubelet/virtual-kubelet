@@ -183,6 +183,10 @@ envtest: kubebuilder_2.3.1_${TEST_OS}_${TEST_ARCH}
 fmt:
 	goimports -w $(shell go list -f '{{.Dir}}' ./...)
 
+
+export GOLANG_CI_LINT_VERSION ?= v1.48.0
+DOCKER_BUILD ?= docker buildx build
+
 .PHONY: lint
-lint: $(gobin_tool)
-	gobin -run github.com/golangci/golangci-lint/cmd/golangci-lint@v1.33.0 run ./...
+lint:
+	$(DOCKER_BUILD) --target=lint --build-arg GOLANG_CI_LINT_VERSION --build-arg OUT_FORMAT .
