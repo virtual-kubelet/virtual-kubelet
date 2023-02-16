@@ -51,19 +51,19 @@ The `PodMetricsResourceHandler` calls the new `GetMetricsResource` method of the
 
 ### API
 Add `GetMetricsResource` to `PodHandlerConfig`
-
+![PodHandlerConfig](PodHandlerConfig.png)
  
 Add endpoint to `PodHandler` method 
- 
+![PodHandler](podHandler.png)
 
   
 New `PodMetricsResourceHandler` method, that uses the new `PodMetricsResourceHandlerFunc` definition.
- 
+![PodMetricsResourceHandler](PodMetricsREsourceHAndler.png)
 
  
  
 `HandlePodMetricsResource` method
-
+![HandlePodMetricsResource](HandlePodMetricsResource.png)
  
  
 The `PodMetricsResourceHandlerFunc` returns the metrics data using Prometheus' `MetricFamily` data structure. More details are provided in the Data subsection
@@ -77,25 +77,19 @@ Currently virtual-kubelet is sending data to the server using the [summary](http
 Examples of how the new metrics data should look can be seen in the Kubernetes e2e test that calls the /metrics/resource endpoint [here](https://github.com/kubernetes/kubernetes/blob/a93eda9db305611cacd8b6ee930ab3149a08f9b0/test/e2e_node/resource_metrics_test.go#L76), and the kubelet metrics defined in the Kubernetes/kubelet code [here](https://github.com/kubernetes/kubernetes/blob/master/pkg/kubelet/metrics/collectors/resource_metrics.go) .
  
  
-
+![KubeletMetrics](KubeletMetrics.png)
  
  
  
 The kubernetes/kubelet code implements Prometheus' [collector](https://github.com/kubernetes/kubernetes/blob/master/pkg/kubelet/metrics/collectors/resource_metrics.go#L88) interface which is used along with the k8s.io/component-base implementation of the [registry](https://github.com/kubernetes/component-base/blob/40d14bdbd62f9e2ea697f97d81d4abc72839901e/metrics/registry.go#L114) interface in order to collect and return the metrics data using the Prometheus' [MetricFamily](https://github.com/prometheus/client_model/blob/master/go/metrics.pb.go#L773) data structure.
  
 The Gather method in the registry calls the kubelet collector's Collect method, and returns the data u the MetricFamily data structure.
- 
-
- 
-
-
-
-
-
-
+![KubeRegistry](KubeRegistry.png)
 
 
 Prometheus’ MetricsFamily data structure:  
+
+![MetricsFamily](MetricsFamily.png)
 
 Therefore the provider's GetMetricsResource method should use the same return type as the Gather method in the registry interface.
  
