@@ -41,6 +41,7 @@ type PodHandlerConfig struct { //nolint:golint
 	// GetPodsFromKubernetes is meant to enumerate the pods that the node is meant to be running
 	GetPodsFromKubernetes PodListerFunc
 	GetStatsSummary       PodStatsSummaryHandlerFunc
+	GetMetricsResource    PodMetricsResourceHandlerFunc
 	StreamIdleTimeout     time.Duration
 	StreamCreationTimeout time.Duration
 }
@@ -72,6 +73,11 @@ func PodHandler(p PodHandlerConfig, debug bool) http.Handler {
 		r.HandleFunc("/stats/summary/", f).Methods("GET")
 	}
 
+	if p.GetMetricsResource != nil {
+		f := HandlePodMetricsResource(p.GetMetricsResource)
+		r.HandleFunc("/metrics/resource", f).Methods("GET")
+		r.HandleFunc("/metrics/resource/", f).Methods("GET")
+	}
 	r.NotFoundHandler = http.HandlerFunc(NotFound)
 	return r
 }
@@ -97,6 +103,27 @@ func PodStatsSummaryHandler(f PodStatsSummaryHandlerFunc) http.Handler {
 	return r
 }
 
+// PodMetricsResourceHandler creates an http handler for serving pod metrics.
+//
+// If the passed in handler func is nil this will create handlers which only
+// serves http.StatusNotImplemented
+func PodMetricsResourceHandler(f PodMetricsResourceHandlerFunc) http.Handler {
+	if f == nil {
+		return http.HandlerFunc(NotImplemented)
+	}
+
+	r := mux.NewRouter()
+
+	const summaryRoute = "/metrics/resource"
+	h := HandlePodMetricsResource(f)
+
+	r.Handle(summaryRoute, ochttp.WithRouteTag(h, "PodMetricsResourceHandler")).Methods("GET")
+	r.Handle(summaryRoute+"/", ochttp.WithRouteTag(h, "PodMetricsResourceHandler")).Methods("GET")
+
+	r.NotFoundHandler = http.HandlerFunc(NotFound)
+	return r
+}
+
 // AttachPodRoutes adds the http routes for pod stuff to the passed in serve mux.
 //
 // Callers should take care to namespace the serve mux as they see fit, however
@@ -112,6 +139,7 @@ func AttachPodRoutes(p PodHandlerConfig, mux ServeMux, debug bool) {
 // the package level API.
 type PodMetricsConfig struct {
 	GetStatsSummary PodStatsSummaryHandlerFunc
+	GetMetricsResource PodMetricsResourceHandlerFunc
 }
 
 // AttachPodMetricsRoutes adds the http routes for pod/node metrics to the passed in serve mux.
@@ -120,6 +148,7 @@ type PodMetricsConfig struct {
 // these routes get called by the Kubernetes API server.
 func AttachPodMetricsRoutes(p PodMetricsConfig, mux ServeMux) {
 	mux.Handle("/", InstrumentHandler(HandlePodStatsSummary(p.GetStatsSummary)))
+	mux.Handle("/", InstrumentHandler(HandlePodMetricsResource(p.GetMetricsResource)))
 }
 
 func instrumentRequest(r *http.Request) *http.Request {
