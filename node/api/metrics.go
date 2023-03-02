@@ -23,10 +23,10 @@ import (
 	dto "github.com/prometheus/client_model/go"
 )
 
-// PodStatsSummaryHandlerFunc defines the handler for getting pod stats summaries
+// PodMetricsResourceHandlerFunc defines the handler for getting pod metrics
 type PodMetricsResourceHandlerFunc func(context.Context) ([]*dto.MetricFamily, error)
 
-// HandlePodStatsSummary makes an HTTP handler for implementing the kubelet summary stats endpoint
+// HandlePodMetricsResource makes an HTTP handler for implementing the kubelet /metrics/resource endpoint
 func HandlePodMetricsResource(h PodMetricsResourceHandlerFunc) http.HandlerFunc {
 	if h == nil {
 		return NotImplemented
