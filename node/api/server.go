@@ -138,7 +138,7 @@ func AttachPodRoutes(p PodHandlerConfig, mux ServeMux, debug bool) {
 // The main reason for this struct is in case of expansion we do not need to break
 // the package level API.
 type PodMetricsConfig struct {
-	GetStatsSummary PodStatsSummaryHandlerFunc
+	GetStatsSummary    PodStatsSummaryHandlerFunc
 	GetMetricsResource PodMetricsResourceHandlerFunc
 }
 
