@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"testing"
 	"time"
+	"to"
 
 	"github.com/virtual-kubelet/virtual-kubelet/internal/podutils"
 	stats "github.com/virtual-kubelet/virtual-kubelet/node/api/statsv1alpha1"
@@ -111,6 +112,63 @@ func (ts *EndToEndTestSuite) TestGetStatsSummary(t *testing.T) {
 	}
 }
 
+// TestGetMetricsResource creates a pod having two containers and queries the /metrics/resource endpoint of the virtual-kubelet.
+// It expects this endpoint to return stats for the current node, as well as for the aforementioned pod and each of its two containers.
+func (ts *EndToEndTestSuite) TestGetMetricsResource(t *testing.T) {
+	ctx := context.Background()
+
+	// Create a pod with prefix "nginx-" having three containers.
+	pod, err := f.CreatePod(ctx, f.CreateDummyPodObjectWithPrefix(t.Name(), "nginx", "foo", "bar", "baz"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Delete the "nginx-0-X" pod after the test finishes.
+	defer func() {
+		if err := f.DeletePodImmediately(ctx, pod.Namespace, pod.Name); err != nil && !apierrors.IsNotFound(err) {
+			t.Error(err)
+		}
+	}()
+
+	// Wait for the "nginx-" pod to be reported as running and ready.
+	if _, err := f.WaitUntilPodReady(pod.Namespace, pod.Name); err != nil {
+		t.Fatal(err)
+	}
+
+	// Grab the stats from the provider.
+	metricsResourceResponse, err := f.GetMetricsResource(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Make sure the "nginx-" pod exists in the metrics returned.
+	currentContaienrStatsCount := 0
+	found := false
+	for _, metricFamily := range metricResourceResponse {
+		if *metricFamily.Name == "pod_cpu_usage_seconds_total" {
+			for _, metric := range *metricFamily.Metric {
+				if metric.Label[1].Value == pod.Name{
+					found = true
+				}
+			}
+		}
+		if *metricFamily.Name == "container_cpu_usage_seconds_total" {
+			for _, metric := range *metricFamily.Metric {
+				if metric.Label[1].Value == pod.Name {
+					currentContainerStatsCount += 1
+				}
+			}
+		}
+	}
+	if !found {
+		t.Fatalf("Pod %s not found in metrics", pod.Name)
+	}
+
+	// Make sure that we've got stats for all the containers in the "nginx-" pod.
+	desiredContainerStatsCount := len(pod.Spec.Containers)
+	if currentContainerStatsCount != desiredContainerStatsCount {
+		t.Fatalf("expected stats for %d containers, got stats for %d containers", desiredContainerStatsCount, currentContainerStatsCount)
+	}
+}
 // TestPodLifecycleGracefulDelete creates a pod and verifies that the provider has been asked to create it.
 // Then, it deletes the pods and verifies that the provider has been asked to delete it.
 // These verifications are made using the /stats/summary endpoint of the virtual-kubelet, by checking for the presence or absence of the pods.

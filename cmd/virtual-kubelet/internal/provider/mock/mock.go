@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	dto "github.com/prometheus/client_model/go"
 	"github.com/virtual-kubelet/virtual-kubelet/errdefs"
 	"github.com/virtual-kubelet/virtual-kubelet/log"
 	"github.com/virtual-kubelet/virtual-kubelet/node/api"
@@ -505,6 +506,46 @@ func (p *MockProvider) GetStatsSummary(ctx context.Context) (*stats.Summary, err
 	}
 
 	// Return the dummy stats.
+	return res, nil
+}
+
+func (p *MockProvider) GetMetricsResource(ctx context.Context) ([]*dto.MetricFamily, error) {
+	var span trace.Span
+	ctx, span = trace.StartSpan(ctx, "GetMetricsResource") //nolint: ineffassign,staticcheck
+	defer span.End()
+
+	var (
+		dtoCounterMetricType   = dto.MetricType_COUNTER
+		dtoGaugeMetricType     = dto.MetricType_GAUGE
+		podCPUMetricName       = "pod_cpu_usage_seconds_total"
+		podMemoryMetricName    = "pod_memory_working_set_bytes"
+		dummyValue             = float64(100)
+	)
+
+	res := []*dto.MetricFamily{
+		&dto.MetricFamily{
+			Name: &podCPUMetricName,
+			Type: &dtoCounterMetricType,
+			Metric: []*dto.Metric{
+				&dto.Metric{
+					Counter: &dto.Counter{
+						Value: &dummyValue,
+					},
+				},
+			},
+		},
+		&dto.MetricFamily{
+			Name: &podMemoryMetricName,
+			Type: &dtoGaugeMetricType,
+			Metric: []*dto.Metric{
+				&dto.Metric{
+					Gauge: &dto.Gauge{
+						Value: &dummyValue,
+					},
+				},
+			},
+		},
+	}
 	return res, nil
 }
 
