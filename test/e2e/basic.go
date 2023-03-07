@@ -141,19 +141,19 @@ func (ts *EndToEndTestSuite) TestGetMetricsResource(t *testing.T) {
 	}
 
 	// Make sure the "nginx-" pod exists in the metrics returned.
-	currentContaienrStatsCount := 0
+	currentContainerStatsCount := 0
 	found := false
-	for _, metricFamily := range metricResourceResponse {
+	for _, metricFamily := range metricsResourceResponse {
 		if *metricFamily.Name == "pod_cpu_usage_seconds_total" {
-			for _, metric := range *metricFamily.Metric {
-				if metric.Label[1].Value == pod.Name{
+			for _, metric := range metricFamily.Metric {
+				if *metric.Label[1].Value == pod.Name{
 					found = true
 				}
 			}
 		}
 		if *metricFamily.Name == "container_cpu_usage_seconds_total" {
-			for _, metric := range *metricFamily.Metric {
-				if metric.Label[1].Value == pod.Name {
+			for _, metric := range metricFamily.Metric {
+				if *metric.Label[1].Value == pod.Name {
 					currentContainerStatsCount += 1
 				}
 			}

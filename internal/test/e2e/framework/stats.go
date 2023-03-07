@@ -47,8 +47,9 @@ func (f *Framework) GetMetricsResource(ctx context.Context) ([]*dto.MetricFamily
 		return nil, err
 	}
 	// Unmarshal the response as a MetricFamily object and return it.
-	res := []&dto.MetricFamily{}
-	if err := json.Unmarshal(b, res); err != nil {
+	res := []*dto.MetricFamily{}
+	err = json.Unmarshal(b, res)
+	if err != nil {
 		return nil, err
 	}
 	return res, nil
