@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"testing"
 	"time"
-	"to"
 
 	"github.com/virtual-kubelet/virtual-kubelet/internal/podutils"
 	stats "github.com/virtual-kubelet/virtual-kubelet/node/api/statsv1alpha1"
