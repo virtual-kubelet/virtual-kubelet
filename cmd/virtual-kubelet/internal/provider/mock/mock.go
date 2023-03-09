@@ -515,30 +515,30 @@ func (p *MockProvider) GetMetricsResource(ctx context.Context) ([]*dto.MetricFam
 	defer span.End()
 
 	var (
-		dtoCounterMetricType   = dto.MetricType_COUNTER
-		dtoGaugeMetricType     = dto.MetricType_GAUGE
-		podCPUMetricName       = "pod_cpu_usage_seconds_total"
-		podMemoryMetricName    = "pod_memory_working_set_bytes"
-		dummyValue             = float64(100)
+		dtoCounterMetricType = dto.MetricType_COUNTER
+		dtoGaugeMetricType   = dto.MetricType_GAUGE
+		podCPUMetricName     = "pod_cpu_usage_seconds_total"
+		podMemoryMetricName  = "pod_memory_working_set_bytes"
+		dummyValue           = float64(100)
 	)
 
 	res := []*dto.MetricFamily{
-		&dto.MetricFamily{
+		{
 			Name: &podCPUMetricName,
 			Type: &dtoCounterMetricType,
 			Metric: []*dto.Metric{
-				&dto.Metric{
+				{
 					Counter: &dto.Counter{
 						Value: &dummyValue,
 					},
 				},
 			},
 		},
-		&dto.MetricFamily{
+		{
 			Name: &podMemoryMetricName,
 			Type: &dtoGaugeMetricType,
 			Metric: []*dto.Metric{
-				&dto.Metric{
+				{
 					Gauge: &dto.Gauge{
 						Value: &dummyValue,
 					},
