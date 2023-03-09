@@ -145,7 +145,7 @@ func (ts *EndToEndTestSuite) TestGetMetricsResource(t *testing.T) {
 	for _, metricFamily := range metricsResourceResponse {
 		if *metricFamily.Name == "pod_cpu_usage_seconds_total" {
 			for _, metric := range metricFamily.Metric {
-				if *metric.Label[1].Value == pod.Name{
+				if *metric.Label[1].Value == pod.Name {
 					found = true
 				}
 			}
@@ -168,6 +168,7 @@ func (ts *EndToEndTestSuite) TestGetMetricsResource(t *testing.T) {
 		t.Fatalf("expected stats for %d containers, got stats for %d containers", desiredContainerStatsCount, currentContainerStatsCount)
 	}
 }
+
 // TestPodLifecycleGracefulDelete creates a pod and verifies that the provider has been asked to create it.
 // Then, it deletes the pods and verifies that the provider has been asked to delete it.
 // These verifications are made using the /stats/summary endpoint of the virtual-kubelet, by checking for the presence or absence of the pods.

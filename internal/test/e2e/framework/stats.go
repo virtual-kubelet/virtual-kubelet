@@ -31,7 +31,6 @@ func (f *Framework) GetStatsSummary(ctx context.Context) (*stats.Summary, error)
 	return res, nil
 }
 
-
 // GetStatsSummary queries the /metrics/resource endpoint of the virtual-kubelet and returns the Summary object obtained as a response.
 func (f *Framework) GetMetricsResource(ctx context.Context) ([]*dto.MetricFamily, error) {
 	// Query the /stats/summary endpoint.
