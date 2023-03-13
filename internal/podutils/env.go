@@ -334,7 +334,7 @@ func getEnvironmentVariableValue(ctx context.Context, env *corev1.EnvVar, mappin
 		return getEnvironmentVariableValueWithValueFrom(ctx, env, mappingFunc, pod, container, rm, recorder)
 	}
 	// Handle values that have been directly provided after expanding variable references.
-	return pointer.StringPtr(expansion.Expand(env.Value, mappingFunc)), nil
+	return pointer.String(expansion.Expand(env.Value, mappingFunc)), nil
 }
 
 func getEnvironmentVariableValueWithValueFrom(ctx context.Context, env *corev1.EnvVar, mappingFunc func(string) string, pod *corev1.Pod, container *corev1.Container, rm *manager.ResourceManager, recorder record.EventRecorder) (*string, error) {
@@ -411,7 +411,7 @@ func getEnvironmentVariableValueWithValueFromConfigMapKeyRef(ctx context.Context
 		return nil, fmt.Errorf("configmap %q doesn't contain the %q key required by pod %s", vf.Name, vf.Key, pod.Name)
 	}
 	// Populate the environment variable and continue on to the next reference.
-	return pointer.StringPtr(keyValue), nil
+	return pointer.String(keyValue), nil
 }
 
 func getEnvironmentVariableValueWithValueFromSecretKeyRef(ctx context.Context, env *corev1.EnvVar, mappingFunc func(string) string, pod *corev1.Pod, container *corev1.Container, rm *manager.ResourceManager, recorder record.EventRecorder) (*string, error) {
@@ -463,7 +463,7 @@ func getEnvironmentVariableValueWithValueFromSecretKeyRef(ctx context.Context, e
 		return nil, fmt.Errorf("secret %q doesn't contain the %q key required by pod %s", vf.Name, vf.Key, pod.Name)
 	}
 	// Populate the environment variable and continue on to the next reference.
-	return pointer.StringPtr(string(keyValue)), nil
+	return pointer.String(string(keyValue)), nil
 }
 
 // Handle population from a field (downward API).
@@ -476,7 +476,7 @@ func getEnvironmentVariableValueWithValueFromFieldRef(ctx context.Context, env *
 		return nil, err
 	}
 
-	return pointer.StringPtr(runtimeVal), nil
+	return pointer.String(runtimeVal), nil
 }
 
 // podFieldSelectorRuntimeValue returns the runtime value of the given
