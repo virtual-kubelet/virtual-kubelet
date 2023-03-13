@@ -6,10 +6,10 @@ import (
 
 	"github.com/virtual-kubelet/virtual-kubelet/node"
 	"github.com/virtual-kubelet/virtual-kubelet/node/api"
-	"github.com/virtual-kubelet/virtual-kubelet/node/api/statsv1alpha1"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	corev1listers "k8s.io/client-go/listers/core/v1"
+	stats "k8s.io/kubelet/pkg/apis/stats/v1alpha1"
 )
 
 // Provider contains the methods required to implement a virtual-kubelet provider.
@@ -28,7 +28,7 @@ type Provider interface {
 	RunInContainer(ctx context.Context, namespace, podName, containerName string, cmd []string, attach api.AttachIO) error
 
 	// GetStatsSummary gets the stats for the node, including running pods
-	GetStatsSummary(context.Context) (*statsv1alpha1.Summary, error)
+	GetStatsSummary(context.Context) (*stats.Summary, error)
 }
 
 // ProviderConfig holds objects created by NewNodeFromClient that a provider may need to bootstrap itself.
