@@ -20,7 +20,7 @@ require (
 	go.opentelemetry.io/otel/trace v0.20.0
 	golang.org/x/sync v0.0.0-20220722155255-886fb9371eb4
 	golang.org/x/sys v0.5.0
-	golang.org/x/time v0.0.0-20220609170525-579cf78fd858
+	golang.org/x/time v0.3.0
 	gotest.tools v2.2.0+incompatible
 	k8s.io/api v0.26.2
 	k8s.io/apimachinery v0.26.2
