@@ -14,6 +14,7 @@ import (
 	"k8s.io/apiserver/pkg/authentication/user"
 	"k8s.io/apiserver/pkg/authorization/authorizer"
 	"k8s.io/apiserver/pkg/authorization/authorizerfactory"
+	"k8s.io/apiserver/pkg/server/options"
 	"k8s.io/client-go/kubernetes"
 )
 
@@ -114,13 +115,13 @@ type WebhookAuthConfig struct {
 func WebhookAuth(client kubernetes.Interface, nodeName string, opts ...WebhookAuthOption) (Auth, error) {
 	cfg := WebhookAuthConfig{
 		AuthnConfig: authenticatorfactory.DelegatingAuthenticatorConfig{
-			CacheTTL: 2 * time.Minute, // default taken from k8s.io/kubernetes/pkg/kubelet/apis/config/v1beta1
-			// TODO: After upgrading k8s libs, we need to add the retry backoff option
+			CacheTTL:            2 * time.Minute, // default taken from k8s.io/kubernetes/pkg/kubelet/apis/config/v1beta1
+			WebhookRetryBackoff: options.DefaultAuthWebhookRetryBackoff(),
 		},
 		AuthzConfig: authorizerfactory.DelegatingAuthorizerConfig{
-			AllowCacheTTL: 5 * time.Minute,  // default taken from k8s.io/kubernetes/pkg/kubelet/apis/config/v1beta1
-			DenyCacheTTL:  30 * time.Second, // default taken from k8s.io/kubernetes/pkg/kubelet/apis/config/v1beta1
-			// TODO: After upgrading k8s libs, we need to add the retry backoff option
+			AllowCacheTTL:       5 * time.Minute,  // default taken from k8s.io/kubernetes/pkg/kubelet/apis/config/v1beta1
+			DenyCacheTTL:        30 * time.Second, // default taken from k8s.io/kubernetes/pkg/kubelet/apis/config/v1beta1
+			WebhookRetryBackoff: options.DefaultAuthWebhookRetryBackoff(),
 		},
 	}
 
