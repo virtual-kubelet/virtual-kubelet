@@ -56,9 +56,11 @@ type MockProvider struct { //nolint:golint
 
 // MockConfig contains a mock virtual-kubelet's configurable parameters.
 type MockConfig struct { //nolint:golint
-	CPU    string `json:"cpu,omitempty"`
-	Memory string `json:"memory,omitempty"`
-	Pods   string `json:"pods,omitempty"`
+	CPU        string            `json:"cpu,omitempty"`
+	Memory     string            `json:"memory,omitempty"`
+	Pods       string            `json:"pods,omitempty"`
+	Others     map[string]string `json:"others,omitempty"`
+	ProviderID string            `json:"providerID,omitempty"`
 }
 
 // NewMockProviderMockConfig creates a new MockV0Provider. Mock legacy provider does not implement the new asynchronous podnotifier interface
@@ -128,6 +130,11 @@ func loadConfig(providerConfig, nodeName string) (config MockConfig, err error) 
 	}
 	if _, err = resource.ParseQuantity(config.Pods); err != nil {
 		return config, fmt.Errorf("Invalid pods value %v", config.Pods)
+	}
+	for _, v := range config.Others {
+		if _, err = resource.ParseQuantity(v); err != nil {
+			return config, fmt.Errorf("Invalid other value %v", v)
+		}
 	}
 	return config, nil
 }
@@ -333,6 +340,9 @@ func (p *MockProvider) ConfigureNode(ctx context.Context, n *v1.Node) { //nolint
 	ctx, span := trace.StartSpan(ctx, "mock.ConfigureNode") //nolint:staticcheck,ineffassign
 	defer span.End()
 
+	if p.config.ProviderID != "" {
+		n.Spec.ProviderID = p.config.ProviderID
+	}
 	n.Status.Capacity = p.capacity()
 	n.Status.Allocatable = p.capacity()
 	n.Status.Conditions = p.nodeConditions()
@@ -350,11 +360,15 @@ func (p *MockProvider) ConfigureNode(ctx context.Context, n *v1.Node) { //nolint
 
 // Capacity returns a resource list containing the capacity limits.
 func (p *MockProvider) capacity() v1.ResourceList {
-	return v1.ResourceList{
+	rl := v1.ResourceList{
 		"cpu":    resource.MustParse(p.config.CPU),
 		"memory": resource.MustParse(p.config.Memory),
 		"pods":   resource.MustParse(p.config.Pods),
 	}
+	for k, v := range p.config.Others {
+		rl[v1.ResourceName(k)] = resource.MustParse(v)
+	}
+	return rl
 }
 
 // NodeConditions returns a list of conditions (Ready, OutOfDisk, etc), for updates to the node status
