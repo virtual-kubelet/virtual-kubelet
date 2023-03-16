@@ -42,5 +42,4 @@ loganalytics.json
 **/*.tfstate*
 debug
 
-# Dependency directory
 vendor/
