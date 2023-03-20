@@ -51,23 +51,118 @@ The `PodMetricsResourceHandler` calls the new `GetMetricsResource` method of the
 
 ### API
 Add `GetMetricsResource` to `PodHandlerConfig`
-![PodHandlerConfig](PodHandlerConfig.png)
- 
+```go
+type PodHandlerConfig struct { //nolint:golint
+	RunInContainer   ContainerExecHandlerFunc
+	GetContainerLogs ContainerLogsHandlerFunc
+	// GetPods is meant to enumerate the pods that the provider knows about
+	GetPods PodListerFunc
+	// GetPodsFromKubernetes is meant to enumerate the pods that the node is meant to be running
+	GetPodsFromKubernetes PodListerFunc
+	GetStatsSummary       PodStatsSummaryHandlerFunc
+	GetMetricsResource    PodMetricsResourceHandlerFunc
+	StreamIdleTimeout     time.Duration
+	StreamCreationTimeout time.Duration
+}
+```
 Add endpoint to `PodHandler` method 
-![PodHandler](podHandler.png)
+```go
+func PodHandler(p PodHandlerConfig, debug bool) http.Handler {
+	r := mux.NewRouter()
 
+	// This matches the behaviour in the reference kubelet
+	r.StrictSlash(true)
+	if debug {
+		r.HandleFunc("/runningpods/", HandleRunningPods(p.GetPods)).Methods("GET")
+	}
+
+	r.HandleFunc("/pods", HandleRunningPods(p.GetPodsFromKubernetes)).Methods("GET")
+	r.HandleFunc("/containerLogs/{namespace}/{pod}/{container}", HandleContainerLogs(p.GetContainerLogs)).Methods("GET")
+	r.HandleFunc(
+		"/exec/{namespace}/{pod}/{container}",
+		HandleContainerExec(
+			p.RunInContainer,
+			WithExecStreamCreationTimeout(p.StreamCreationTimeout),
+			WithExecStreamIdleTimeout(p.StreamIdleTimeout),
+		),
+	).Methods("POST", "GET")
+
+	if p.GetStatsSummary != nil {
+		f := HandlePodStatsSummary(p.GetStatsSummary)
+		r.HandleFunc("/stats/summary", f).Methods("GET")
+		r.HandleFunc("/stats/summary/", f).Methods("GET")
+	}
+
+	if p.GetMetricsResource != nil {
+		f := HandlePodMetricsResource(p.GetMetricsResource)
+		r.HandleFunc("/metrics/resource", f).Methods("GET")
+		r.HandleFunc("/metrics/resource/", f).Methods("GET")
+	}
+	r.NotFoundHandler = http.HandlerFunc(NotFound)
+	return r
+}
+```
   
 New `PodMetricsResourceHandler` method, that uses the new `PodMetricsResourceHandlerFunc` definition.
-![PodMetricsResourceHandler](PodMetricsREsourceHAndler.png)
+```go
+// PodMetricsResourceHandler creates an http handler for serving pod metrics.
+//
+// If the passed in handler func is nil this will create handlers which only
+// serves http.StatusNotImplemented
+func PodMetricsResourceHandler(f PodMetricsResourceHandlerFunc) http.Handler {
+	if f == nil {
+		return http.HandlerFunc(NotImplemented)
+	}
 
+	r := mux.NewRouter()
+
+	const summaryRoute = "/metrics/resource"
+	h := HandlePodMetricsResource(f)
+
+	r.Handle(summaryRoute, ochttp.WithRouteTag(h, "PodMetricsResourceHandler")).Methods("GET")
+	r.Handle(summaryRoute+"/", ochttp.WithRouteTag(h, "PodMetricsResourceHandler")).Methods("GET")
+
+	r.NotFoundHandler = http.HandlerFunc(NotFound)
+	return r
+}
+
+```
  
  
 `HandlePodMetricsResource` method
-![HandlePodMetricsResource](HandlePodMetricsResource.png)
- 
+```go
+// HandlePodMetricsResource makes an HTTP handler for implementing the kubelet /metrics/resource endpoint
+func HandlePodMetricsResource(h PodMetricsResourceHandlerFunc) http.HandlerFunc {
+	if h == nil {
+		return NotImplemented
+	}
+	return handleError(func(w http.ResponseWriter, req *http.Request) error {
+		metrics, err := h(req.Context())
+		if err != nil {
+			if isCancelled(err) {
+				return err
+			}
+			return errors.Wrap(err, "error getting status from provider")
+		}
+
+		b, err := json.Marshal(metrics)
+		if err != nil {
+			return errors.Wrap(err, "error marshalling metrics")
+		}
+
+		if _, err := w.Write(b); err != nil {
+			return errors.Wrap(err, "could not write to client")
+		}
+		return nil
+	})
+}
+```
  
 The `PodMetricsResourceHandlerFunc` returns the metrics data using Prometheus' `MetricFamily` data structure. More details are provided in the Data subsection
-
+```go
+// PodMetricsResourceHandlerFunc defines the handler for getting pod metrics
+type PodMetricsResourceHandlerFunc func(context.Context) ([]*dto.MetricFamily, error)
+```
  
 ### Data
 
@@ -76,20 +171,103 @@ Currently virtual-kubelet is sending data to the server using the [summary](http
  
 Examples of how the new metrics data should look can be seen in the Kubernetes e2e test that calls the /metrics/resource endpoint [here](https://github.com/kubernetes/kubernetes/blob/a93eda9db305611cacd8b6ee930ab3149a08f9b0/test/e2e_node/resource_metrics_test.go#L76), and the kubelet metrics defined in the Kubernetes/kubelet code [here](https://github.com/kubernetes/kubernetes/blob/master/pkg/kubelet/metrics/collectors/resource_metrics.go) .
  
- 
-![KubeletMetrics](KubeletMetrics.png)
- 
- 
+```go
+var (
+	nodeCPUUsageDesc = metrics.NewDesc("node_cpu_usage_seconds_total",
+		"Cumulative cpu time consumed by the node in core-seconds",
+		nil,
+		nil,
+		metrics.ALPHA,
+		"")
+
+	nodeMemoryUsageDesc = metrics.NewDesc("node_memory_working_set_bytes",
+		"Current working set of the node in bytes",
+		nil,
+		nil,
+		metrics.ALPHA,
+		"")
+
+	containerCPUUsageDesc = metrics.NewDesc("container_cpu_usage_seconds_total",
+		"Cumulative cpu time consumed by the container in core-seconds",
+		[]string{"container", "pod", "namespace"},
+		nil,
+		metrics.ALPHA,
+		"")
+
+	containerMemoryUsageDesc = metrics.NewDesc("container_memory_working_set_bytes",
+		"Current working set of the container in bytes",
+		[]string{"container", "pod", "namespace"},
+		nil,
+		metrics.ALPHA,
+		"")
+
+	podCPUUsageDesc = metrics.NewDesc("pod_cpu_usage_seconds_total",
+		"Cumulative cpu time consumed by the pod in core-seconds",
+		[]string{"pod", "namespace"},
+		nil,
+		metrics.ALPHA,
+		"")
+
+	podMemoryUsageDesc = metrics.NewDesc("pod_memory_working_set_bytes",
+		"Current working set of the pod in bytes",
+		[]string{"pod", "namespace"},
+		nil,
+		metrics.ALPHA,
+		"")
+
+	resourceScrapeResultDesc = metrics.NewDesc("scrape_error",
+		"1 if there was an error while getting container metrics, 0 otherwise",
+		nil,
+		nil,
+		metrics.ALPHA,
+		"")
+
+	containerStartTimeDesc = metrics.NewDesc("container_start_time_seconds",
+		"Start time of the container since unix epoch in seconds",
+		[]string{"container", "pod", "namespace"},
+		nil,
+		metrics.ALPHA,
+		"")
+)
+```
  
 The kubernetes/kubelet code implements Prometheus' [collector](https://github.com/kubernetes/kubernetes/blob/master/pkg/kubelet/metrics/collectors/resource_metrics.go#L88) interface which is used along with the k8s.io/component-base implementation of the [registry](https://github.com/kubernetes/component-base/blob/40d14bdbd62f9e2ea697f97d81d4abc72839901e/metrics/registry.go#L114) interface in order to collect and return the metrics data using the Prometheus' [MetricFamily](https://github.com/prometheus/client_model/blob/master/go/metrics.pb.go#L773) data structure.
  
 The Gather method in the registry calls the kubelet collector's Collect method, and returns the data u the MetricFamily data structure.
-![KubeRegistry](KubeRegistry.png)
-
+```go
+type KubeRegistry interface {
+	// Deprecated
+	RawMustRegister(...prometheus.Collector)
+	// CustomRegister is our internal variant of Prometheus registry.Register
+	CustomRegister(c StableCollector) error
+	// CustomMustRegister is our internal variant of Prometheus registry.MustRegister
+	CustomMustRegister(cs ...StableCollector)
+	// Register conforms to Prometheus registry.Register
+	Register(Registerable) error
+	// MustRegister conforms to Prometheus registry.MustRegister
+	MustRegister(...Registerable)
+	// Unregister conforms to Prometheus registry.Unregister
+	Unregister(collector Collector) bool
+	// Gather conforms to Prometheus gatherer.Gather
+	Gather() ([]*dto.MetricFamily, error)
+	// Reset invokes the Reset() function on all items in the registry
+	// which are added as resettables.
+	Reset()
+}
+```
 
 Prometheus’ MetricsFamily data structure:  
-
-![MetricsFamily](MetricsFamily.png)
+```go
+type MetricFamily struct {
+	Name                 *string     `protobuf:"bytes,1,opt,name=name" json:"name,omitempty"`
+	Help                 *string     `protobuf:"bytes,2,opt,name=help" json:"help,omitempty"`
+	Type                 *MetricType `protobuf:"varint,3,opt,name=type,enum=io.prometheus.client.MetricType" json:"type,omitempty"`
+	Metric               []*Metric   `protobuf:"bytes,4,rep,name=metric" json:"metric,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}    `json:"-"`
+	XXX_unrecognized     []byte      `json:"-"`
+	XXX_sizecache        int32       `json:"-"`
+}
+```
 
 Therefore the provider's GetMetricsResource method should use the same return type as the Gather method in the registry interface.
  
