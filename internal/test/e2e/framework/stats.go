@@ -41,7 +41,7 @@ func (f *Framework) GetMetricsResource(ctx context.Context) ([]*dto.MetricFamily
 		Resource("pods").
 		SubResource("proxy").
 		Name(net.JoinSchemeNamePort("https", f.NodeName, "10250")).
-		Suffix("/metric/resource").DoRaw(ctx)
+		Suffix("/metrics/resource").DoRaw(ctx)
 	if err != nil {
 		return nil, err
 	}
