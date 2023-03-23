@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 
 	dto "github.com/prometheus/client_model/go"
+	api "github.com/virtual-kubelet/virtual-kubelet/node/api"
 	stats "github.com/virtual-kubelet/virtual-kubelet/node/api/statsv1alpha1"
 	"k8s.io/apimachinery/pkg/util/net"
 )
@@ -41,7 +42,7 @@ func (f *Framework) GetMetricsResource(ctx context.Context) ([]*dto.MetricFamily
 		Resource("pods").
 		SubResource("proxy").
 		Name(net.JoinSchemeNamePort("https", f.NodeName, "10250")).
-		Suffix("/metrics/resource").DoRaw(ctx)
+		Suffix(api.MetricsResourceRouteSuffix).DoRaw(ctx)
 	if err != nil {
 		return nil, err
 	}
