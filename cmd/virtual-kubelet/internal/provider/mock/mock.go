@@ -509,30 +509,29 @@ func (p *MockProvider) GetStatsSummary(ctx context.Context) (*stats.Summary, err
 	return res, nil
 }
 
-
 func (p *MockProvider) generateMockMetrics(metricsMap map[string][]*dto.Metric, resourceType string, label []*dto.LabelPair) map[string][]*dto.Metric {
 	var (
-		cpuMetricSuffix            = "_cpu_usage_seconds_total"
-		memoryMetricSuffix         = "_memory_working_set_bytes"
-		dummyValue                 = float64(100)
+		cpuMetricSuffix    = "_cpu_usage_seconds_total"
+		memoryMetricSuffix = "_memory_working_set_bytes"
+		dummyValue         = float64(100)
 	)
 
 	if metricsMap == nil {
 		metricsMap = map[string][]*dto.Metric{}
 	}
 
-	finalCpuMetricName    := resourceType + cpuMetricSuffix
+	finalCpuMetricName := resourceType + cpuMetricSuffix
 	finalMemoryMetricName := resourceType + memoryMetricSuffix
 
-	newCPUMetric := dto.Metric {
+	newCPUMetric := dto.Metric{
 		Label: label,
-		Counter: &dto.Counter {
+		Counter: &dto.Counter{
 			Value: &dummyValue,
 		},
 	}
-	newMemoryMetric := dto.Metric {
+	newMemoryMetric := dto.Metric{
 		Label: label,
-		Gauge: &dto.Gauge {
+		Gauge: &dto.Gauge{
 			Value: &dummyValue,
 		},
 	}
@@ -553,10 +552,10 @@ func (p *MockProvider) generateMockMetrics(metricsMap map[string][]*dto.Metric, 
 
 func (p *MockProvider) getMetricType(metricName string) *dto.MetricType {
 	var (
-		dtoCounterMetricType       = dto.MetricType_COUNTER
-		dtoGaugeMetricType         = dto.MetricType_GAUGE
-		cpuMetricSuffix            = "_cpu_usage_seconds_total"
-		memoryMetricSuffix         = "_memory_working_set_bytes"
+		dtoCounterMetricType = dto.MetricType_COUNTER
+		dtoGaugeMetricType   = dto.MetricType_GAUGE
+		cpuMetricSuffix      = "_cpu_usage_seconds_total"
+		memoryMetricSuffix   = "_memory_working_set_bytes"
 	)
 	if strings.HasSuffix(metricName, cpuMetricSuffix) {
 		return &dtoCounterMetricType
@@ -574,8 +573,8 @@ func (p *MockProvider) GetMetricsResource(ctx context.Context) ([]*dto.MetricFam
 	defer span.End()
 
 	var (
-		nodeNameStr = "NodeName"
-		podNameStr = "PodName"
+		nodeNameStr      = "NodeName"
+		podNameStr       = "PodName"
 		containerNameStr = "containerName"
 	)
 	nodeLabels := []*dto.LabelPair{
@@ -587,29 +586,29 @@ func (p *MockProvider) GetMetricsResource(ctx context.Context) ([]*dto.MetricFam
 
 	metricsMap := p.generateMockMetrics(nil, "node", nodeLabels)
 	for _, pod := range p.pods {
-		podLabels := []*dto.LabelPair {
+		podLabels := []*dto.LabelPair{
 			{
-				Name: &nodeNameStr,
+				Name:  &nodeNameStr,
 				Value: &p.nodeName,
 			},
 			{
-				Name: &podNameStr,
+				Name:  &podNameStr,
 				Value: &pod.Name,
 			},
 		}
 		metricsMap = p.generateMockMetrics(metricsMap, "pod", podLabels)
-		for _, container:= range pod.Spec.Containers {
-			containerLabels := []*dto.LabelPair {
+		for _, container := range pod.Spec.Containers {
+			containerLabels := []*dto.LabelPair{
 				{
-					Name: &nodeNameStr,
+					Name:  &nodeNameStr,
 					Value: &p.nodeName,
 				},
 				{
-					Name: &podNameStr,
+					Name:  &podNameStr,
 					Value: &pod.Name,
 				},
 				{
-					Name: &containerNameStr,
+					Name:  &containerNameStr,
 					Value: &container.Name,
 				},
 			}
@@ -619,9 +618,9 @@ func (p *MockProvider) GetMetricsResource(ctx context.Context) ([]*dto.MetricFam
 
 	res := []*dto.MetricFamily{}
 	for metricName, metrics := range metricsMap {
-		metricFamily := dto.MetricFamily {
-			Name: &metricName,
-			Type: p.getMetricType(metricName),
+		metricFamily := dto.MetricFamily{
+			Name:   &metricName,
+			Type:   p.getMetricType(metricName),
 			Metric: metrics,
 		}
 		res = append(res, &metricFamily)
