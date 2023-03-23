@@ -73,6 +73,13 @@ func runRootCommand(ctx context.Context, s *provider.Store, c Opts) error {
 		}
 	}
 
+	// Ensure API client.
+	clientSet, err := nodeutil.ClientsetFromEnv(c.KubeConfigPath)
+	if err != nil {
+		return err
+	}
+
+	// Set-up the node provider.
 	mux := http.NewServeMux()
 	newProvider := func(cfg nodeutil.ProviderConfig) (nodeutil.Provider, node.NodeProvider, error) {
 		rm, err := manager.NewResourceManager(cfg.Pods, cfg.Secrets, cfg.ConfigMaps, cfg.Services)
@@ -127,6 +134,7 @@ func runRootCommand(ctx context.Context, s *provider.Store, c Opts) error {
 
 		return nil
 	},
+		nodeutil.WithClient(clientSet),
 		setAuth(c.NodeName, apiConfig),
 		nodeutil.WithTLSConfig(
 			nodeutil.WithKeyPairFromPath(apiConfig.CertPath, apiConfig.KeyPath),

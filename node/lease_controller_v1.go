@@ -275,8 +275,8 @@ func (c *leaseController) newLease(ctx context.Context, node *corev1.Node, base 
 				Namespace: corev1.NamespaceNodeLease,
 			},
 			Spec: coordinationv1.LeaseSpec{
-				HolderIdentity:       pointer.StringPtr(node.Name),
-				LeaseDurationSeconds: pointer.Int32Ptr(c.leaseDurationSeconds),
+				HolderIdentity:       pointer.String(node.Name),
+				LeaseDurationSeconds: pointer.Int32(c.leaseDurationSeconds),
 			},
 		}
 	} else {
