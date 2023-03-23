@@ -617,11 +617,14 @@ func (p *MockProvider) GetMetricsResource(ctx context.Context) ([]*dto.MetricFam
 	}
 
 	res := []*dto.MetricFamily{}
-	for metricName, metrics := range metricsMap {
+	for metricName := range metricsMap {
+		tempName := metricName
+		tempMetrics := metricsMap[tempName]
+
 		metricFamily := dto.MetricFamily{
-			Name:   &metricName,
-			Type:   p.getMetricType(metricName),
-			Metric: metrics,
+			Name:   &tempName,
+			Type:   p.getMetricType(tempName),
+			Metric: tempMetrics,
 		}
 		res = append(res, &metricFamily)
 	}
