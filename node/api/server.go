@@ -46,6 +46,8 @@ type PodHandlerConfig struct { //nolint:golint
 	StreamCreationTimeout time.Duration
 }
 
+const MetricsResourceRouteSuffix = "/metrics/resource"
+
 // PodHandler creates an http handler for interacting with pods/containers.
 func PodHandler(p PodHandlerConfig, debug bool) http.Handler {
 	r := mux.NewRouter()
@@ -75,8 +77,8 @@ func PodHandler(p PodHandlerConfig, debug bool) http.Handler {
 
 	if p.GetMetricsResource != nil {
 		f := HandlePodMetricsResource(p.GetMetricsResource)
-		r.HandleFunc("/metrics/resource", f).Methods("GET")
-		r.HandleFunc("/metrics/resource/", f).Methods("GET")
+		r.HandleFunc(MetricsResourceRouteSuffix, f).Methods("GET")
+		r.HandleFunc(MetricsResourceRouteSuffix+"/", f).Methods("GET")
 	}
 	r.NotFoundHandler = http.HandlerFunc(NotFound)
 	return r
@@ -114,11 +116,10 @@ func PodMetricsResourceHandler(f PodMetricsResourceHandlerFunc) http.Handler {
 
 	r := mux.NewRouter()
 
-	const summaryRoute = "/metrics/resource"
 	h := HandlePodMetricsResource(f)
 
-	r.Handle(summaryRoute, ochttp.WithRouteTag(h, "PodMetricsResourceHandler")).Methods("GET")
-	r.Handle(summaryRoute+"/", ochttp.WithRouteTag(h, "PodMetricsResourceHandler")).Methods("GET")
+	r.Handle(MetricsResourceRouteSuffix, ochttp.WithRouteTag(h, "PodMetricsResourceHandler")).Methods("GET")
+	r.Handle(MetricsResourceRouteSuffix+"/", ochttp.WithRouteTag(h, "PodMetricsResourceHandler")).Methods("GET")
 
 	r.NotFoundHandler = http.HandlerFunc(NotFound)
 	return r
