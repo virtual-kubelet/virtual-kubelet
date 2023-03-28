@@ -4,6 +4,7 @@ import (
 	"context"
 	"io"
 
+	dto "github.com/prometheus/client_model/go"
 	"github.com/virtual-kubelet/virtual-kubelet/node"
 	"github.com/virtual-kubelet/virtual-kubelet/node/api"
 	"github.com/virtual-kubelet/virtual-kubelet/node/api/statsv1alpha1"
@@ -29,6 +30,9 @@ type Provider interface {
 
 	// GetStatsSummary gets the stats for the node, including running pods
 	GetStatsSummary(context.Context) (*statsv1alpha1.Summary, error)
+
+	// GetMetricsResource gets the metrics for the node, including running pods
+	GetMetricsResource(context.Context) ([]*dto.MetricFamily, error)
 }
 
 // ProviderConfig holds objects created by NewNodeFromClient that a provider may need to bootstrap itself.
@@ -61,6 +65,7 @@ func AttachProviderRoutes(mux api.ServeMux) NodeOpt {
 					return pods.List(labels.Everything())
 				},
 				GetStatsSummary:       p.GetStatsSummary,
+				GetMetricsResource:    p.GetMetricsResource,
 				StreamIdleTimeout:     cfg.StreamIdleTimeout,
 				StreamCreationTimeout: cfg.StreamCreationTimeout,
 			}, true))
