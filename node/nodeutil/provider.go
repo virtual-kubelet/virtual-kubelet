@@ -28,6 +28,10 @@ type Provider interface {
 	// between in/out/err and the container's stdin/stdout/stderr.
 	RunInContainer(ctx context.Context, namespace, podName, containerName string, cmd []string, attach api.AttachIO) error
 
+	// AttachToContainer attaches to the executing process of a container in the pod, copying data
+	// between in/out/err and the container's stdin/stdout/stderr.
+	AttachToContainer(ctx context.Context, namespace, podName, containerName string, attach api.AttachIO) error
+
 	// GetStatsSummary gets the stats for the node, including running pods
 	GetStatsSummary(context.Context) (*statsv1alpha1.Summary, error)
 
@@ -58,9 +62,10 @@ func AttachProviderRoutes(mux api.ServeMux) NodeOpt {
 	return func(cfg *NodeConfig) error {
 		cfg.routeAttacher = func(p Provider, cfg NodeConfig, pods corev1listers.PodLister) {
 			mux.Handle("/", api.PodHandler(api.PodHandlerConfig{
-				RunInContainer:   p.RunInContainer,
-				GetContainerLogs: p.GetContainerLogs,
-				GetPods:          p.GetPods,
+				RunInContainer:    p.RunInContainer,
+				AttachToContainer: p.AttachToContainer,
+				GetContainerLogs:  p.GetContainerLogs,
+				GetPods:           p.GetPods,
 				GetPodsFromKubernetes: func(context.Context) ([]*v1.Pod, error) {
 					return pods.List(labels.Everything())
 				},

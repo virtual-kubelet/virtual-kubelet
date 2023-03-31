@@ -301,6 +301,13 @@ func (p *MockProvider) RunInContainer(ctx context.Context, namespace, name, cont
 	return nil
 }
 
+// AttachToContainer attaches to the executing process of a container in the pod, copying data
+// between in/out/err and the container's stdin/stdout/stderr.
+func (p *MockProvider) AttachToContainer(ctx context.Context, namespace, name, container string, attach api.AttachIO) error {
+	log.G(ctx).Infof("receive AttachToContainer %q", container)
+	return nil
+}
+
 // GetPodStatus returns the status of a pod by name that is "running".
 // returns nil if a pod by that name is not found.
 func (p *MockProvider) GetPodStatus(ctx context.Context, namespace, name string) (*v1.PodStatus, error) {
