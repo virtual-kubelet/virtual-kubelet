@@ -28,11 +28,11 @@ import (
 	remoteutils "k8s.io/client-go/tools/remotecommand"
 )
 
-// ContainerExecHandlerFunc defines the handler function used for "execing" into a
+// ContainerAttachHandlerFunc defines the handler function used for "execing" into a
 // container in a pod.
 type ContainerAttachHandlerFunc func(ctx context.Context, namespace, podName, containerName string, attach AttachIO) error
 
-// HandleContainerExec makes an http handler func from a Provider which execs a command in a pod's container
+// HandleContainerAttach makes an http handler func from a Provider which execs a command in a pod's container
 // Note that this handler currently depends on gorrilla/mux to get url parts as variables.
 // TODO(@cpuguy83): don't force gorilla/mux on consumers of this function
 func HandleContainerAttach(h ContainerAttachHandlerFunc, opts ...ContainerExecHandlerOption) http.HandlerFunc {
