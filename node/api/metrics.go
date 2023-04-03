@@ -15,12 +15,17 @@
 package api
 
 import (
+	"bytes"
 	"context"
-	"encoding/json"
 	"net/http"
 
 	"github.com/pkg/errors"
 	dto "github.com/prometheus/client_model/go"
+	"github.com/prometheus/common/expfmt"
+)
+
+const (
+	PrometheusTextFormatContentType = "text/plain; version=0.0.4"
 )
 
 // PodMetricsResourceHandlerFunc defines the handler for getting pod metrics
@@ -40,14 +45,23 @@ func HandlePodMetricsResource(h PodMetricsResourceHandlerFunc) http.HandlerFunc 
 			return errors.Wrap(err, "error getting status from provider")
 		}
 
-		b, err := json.Marshal(metrics)
-		if err != nil {
-			return errors.Wrap(err, "error marshalling metrics")
+		// Convert metrics to Prometheus text format.
+		var buffer bytes.Buffer
+		enc := expfmt.NewEncoder(&buffer, expfmt.FmtText)
+		for _, mf := range metrics {
+			if err := enc.Encode(mf); err != nil {
+				return errors.Wrap(err, "could not convert metrics to prometheus text format")
+			}
 		}
 
-		if _, err := w.Write(b); err != nil {
+		// Set the response content type to "text/plain; version=0.0.4".
+		w.Header().Set("Content-Type", PrometheusTextFormatContentType)
+
+		// Write the metrics in Prometheus text format to the response writer.
+		if _, err := w.Write(buffer.Bytes()); err != nil {
 			return errors.Wrap(err, "could not write to client")
 		}
+
 		return nil
 	})
 }
