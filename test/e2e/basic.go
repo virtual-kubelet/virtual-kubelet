@@ -1,9 +1,9 @@
 package e2e
 
 import (
+	"bytes"
 	"context"
 	"fmt"
-	"io"
 	"testing"
 	"time"
 
@@ -142,7 +142,7 @@ func (ts *EndToEndTestSuite) TestGetMetricsResource(t *testing.T) {
 	}
 
 	// decode metrics response bytes to metric family
-	reader := io.NewReader(metricsResourceResponse)
+	reader := bytes.NewReader(metricsResourceResponse)
 	parser := expfmt.TextParser{}
 	metricsFamilyMap, err := parser.TextToMetricFamilies(reader)
 	if err != nil {
