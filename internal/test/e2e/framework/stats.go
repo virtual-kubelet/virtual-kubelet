@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 
-	dto "github.com/prometheus/client_model/go"
 	api "github.com/virtual-kubelet/virtual-kubelet/node/api"
 	stats "github.com/virtual-kubelet/virtual-kubelet/node/api/statsv1alpha1"
 	"k8s.io/apimachinery/pkg/util/net"
@@ -33,7 +32,7 @@ func (f *Framework) GetStatsSummary(ctx context.Context) (*stats.Summary, error)
 }
 
 // GetStatsSummary queries the /metrics/resource endpoint of the virtual-kubelet and returns the Summary object obtained as a response.
-func (f *Framework) GetMetricsResource(ctx context.Context) ([]*dto.MetricFamily, error) {
+func (f *Framework) GetMetricsResource(ctx context.Context) ([]byte, error) {
 	// Query the /stats/summary endpoint.
 	b, err := f.KubeClient.CoreV1().
 		RESTClient().
@@ -46,11 +45,6 @@ func (f *Framework) GetMetricsResource(ctx context.Context) ([]*dto.MetricFamily
 	if err != nil {
 		return nil, err
 	}
-	// Unmarshal the response as a MetricFamily object and return it.
-	res := []*dto.MetricFamily{}
-	err = json.Unmarshal(b, &res)
-	if err != nil {
-		return nil, err
-	}
-	return res, nil
+
+	return b, nil
 }

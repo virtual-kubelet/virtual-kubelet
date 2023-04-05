@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/promehteus/common/expfmt"
+	"github.com/prometheus/common/expfmt"
 	"github.com/virtual-kubelet/virtual-kubelet/internal/podutils"
 	stats "github.com/virtual-kubelet/virtual-kubelet/node/api/statsv1alpha1"
 	"gotest.tools/assert"
