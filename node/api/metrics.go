@@ -45,21 +45,23 @@ func HandlePodMetricsResource(h PodMetricsResourceHandlerFunc) http.HandlerFunc 
 			return errors.Wrap(err, "error getting status from provider")
 		}
 
-		// Convert metrics to Prometheus text format
+		// Convert metrics to Prometheus text format.
 		var buffer bytes.Buffer
 		enc := expfmt.NewEncoder(&buffer, expfmt.FmtText)
 		for _, mf := range metrics {
-			if err := enc.Encode(mf); err != nil{
+			if err := enc.Encode(mf); err != nil {
 				return errors.Wrap(err, "could not convert metrics to prometheus text format")
 			}
 		}
 
-		// Set the response content type to "text/plain; version=0.0.4"
+		// Set the response content type to "text/plain; version=0.0.4".
 		w.Header().Set("Content-Type", PrometheusTextFormatContentType)
 
+		// Write the metrics in Prometheus text format to the response writer.
 		if _, err := w.Write(buffer.Bytes()); err != nil {
 			return errors.Wrap(err, "could not write to client")
 		}
+
 		return nil
 	})
 }
