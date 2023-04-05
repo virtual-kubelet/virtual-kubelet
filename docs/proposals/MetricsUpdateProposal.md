@@ -67,6 +67,8 @@ type PodHandlerConfig struct { //nolint:golint
 ```
 Add endpoint to `PodHandler` method 
 ```go
+const MetricsResourceRouteSuffix = "/metrics/resource"
+
 func PodHandler(p PodHandlerConfig, debug bool) http.Handler {
 	r := mux.NewRouter()
 
@@ -95,8 +97,8 @@ func PodHandler(p PodHandlerConfig, debug bool) http.Handler {
 
 	if p.GetMetricsResource != nil {
 		f := HandlePodMetricsResource(p.GetMetricsResource)
-		r.HandleFunc("/metrics/resource", f).Methods("GET")
-		r.HandleFunc("/metrics/resource/", f).Methods("GET")
+		r.HandleFunc(MetricsResourceRouteSuffix, f).Methods("GET")
+		r.HandleFunc(MetricsResourceRouteSuffix+"/", f).Methods("GET")
 	}
 	r.NotFoundHandler = http.HandlerFunc(NotFound)
 	return r
@@ -116,11 +118,10 @@ func PodMetricsResourceHandler(f PodMetricsResourceHandlerFunc) http.Handler {
 
 	r := mux.NewRouter()
 
-	const summaryRoute = "/metrics/resource"
 	h := HandlePodMetricsResource(f)
 
-	r.Handle(summaryRoute, ochttp.WithRouteTag(h, "PodMetricsResourceHandler")).Methods("GET")
-	r.Handle(summaryRoute+"/", ochttp.WithRouteTag(h, "PodMetricsResourceHandler")).Methods("GET")
+	r.Handle(MetricsResourceRouteSuffix, ochttp.WithRouteTag(h, "PodMetricsResourceHandler")).Methods("GET")
+	r.Handle(MetricsResourceRouteSuffix+"/", ochttp.WithRouteTag(h, "PodMetricsResourceHandler")).Methods("GET")
 
 	r.NotFoundHandler = http.HandlerFunc(NotFound)
 	return r
@@ -129,7 +130,7 @@ func PodMetricsResourceHandler(f PodMetricsResourceHandlerFunc) http.Handler {
 ```
  
  
-`HandlePodMetricsResource` method
+`HandlePodMetricsResource` method returns a HandlerFunc which serves the metrics encoded in prometheus' text format encoding as expected by the  metrics-server
 ```go
 // HandlePodMetricsResource makes an HTTP handler for implementing the kubelet /metrics/resource endpoint
 func HandlePodMetricsResource(h PodMetricsResourceHandlerFunc) http.HandlerFunc {
@@ -169,7 +170,7 @@ type PodMetricsResourceHandlerFunc func(context.Context) ([]*dto.MetricFamily, e
 The updated metrics server does not add any new fields to the metrics data but uses the Prometheus textparse series parser to parse and reconstruct the [MetricsBatch](https://github.com/kubernetes-sigs/metrics-server/blob/83b2e01f9825849ae5f562e47aa1a4178b5d06e5/pkg/storage/types.go#L31) data structure.  
 Currently virtual-kubelet is sending data to the server using the [summary](https://github.com/virtual-kubelet/virtual-kubelet/blob/be0a062aec9a5eeea3ad6fbe5aec557a235558f6/node/api/statsv1alpha1/types.go#L24) data structure. The Prometheus text parser expects a series of bytes as in the Prometheus [model.Samples](https://github.com/kubernetes/kubernetes/blob/a93eda9db305611cacd8b6ee930ab3149a08f9b0/vendor/github.com/prometheus/common/model/value.go#L184) data structure, similar to the test [here](https://github.com/prometheus/prometheus/blob/c70d85baed260f6013afd18d6cd0ffcac4339861/model/textparse/promparse_test.go#L31).
  
-Examples of how the new metrics data should look can be seen in the Kubernetes e2e test that calls the /metrics/resource endpoint [here](https://github.com/kubernetes/kubernetes/blob/a93eda9db305611cacd8b6ee930ab3149a08f9b0/test/e2e_node/resource_metrics_test.go#L76), and the kubelet metrics defined in the Kubernetes/kubelet code [here](https://github.com/kubernetes/kubernetes/blob/master/pkg/kubelet/metrics/collectors/resource_metrics.go) .
+Examples of how the new metrics are defined may be seen in the Kubernetes e2e test that calls the /metrics/resource endpoint [here](https://github.com/kubernetes/kubernetes/blob/a93eda9db305611cacd8b6ee930ab3149a08f9b0/test/e2e_node/resource_metrics_test.go#L76), and the kubelet metrics defined in the Kubernetes/kubelet code [here](https://github.com/kubernetes/kubernetes/blob/master/pkg/kubelet/metrics/collectors/resource_metrics.go) .
  
 ```go
 var (
@@ -233,7 +234,8 @@ var (
  
 The kubernetes/kubelet code implements Prometheus' [collector](https://github.com/kubernetes/kubernetes/blob/master/pkg/kubelet/metrics/collectors/resource_metrics.go#L88) interface which is used along with the k8s.io/component-base implementation of the [registry](https://github.com/kubernetes/component-base/blob/40d14bdbd62f9e2ea697f97d81d4abc72839901e/metrics/registry.go#L114) interface in order to collect and return the metrics data using the Prometheus' [MetricFamily](https://github.com/prometheus/client_model/blob/master/go/metrics.pb.go#L773) data structure.
  
-The Gather method in the registry calls the kubelet collector's Collect method, and returns the data u the MetricFamily data structure.
+The Gather method in the registry calls the kubelet collector's Collect method, and returns the data using the MetricFamily data structure. The metrics server expects metrics to be encoded in prometheus'
+text format, and the kubelet uses the http handler from prometheus' promhttp module which returns the metrics data encoded in prometheus' text format encoding.
 ```go
 type KubeRegistry interface {
 	// Deprecated
