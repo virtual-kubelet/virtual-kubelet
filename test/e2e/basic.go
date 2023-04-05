@@ -7,12 +7,12 @@ import (
 	"testing"
 	"time"
 
+	"github.com/promehteus/common/expfmt"
 	"github.com/virtual-kubelet/virtual-kubelet/internal/podutils"
 	stats "github.com/virtual-kubelet/virtual-kubelet/node/api/statsv1alpha1"
 	"gotest.tools/assert"
 	v1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"github.com/promehteus/common/expfmt"
 )
 
 const (
@@ -144,7 +144,7 @@ func (ts *EndToEndTestSuite) TestGetMetricsResource(t *testing.T) {
 	// decode metrics response bytes to metric family
 	reader := io.NewReader(metricsResourceResponse)
 	parser := expfmt.TextParser{}
-	metricsFamilyMap , err := parser.TextToMetricFamilies(reader)
+	metricsFamilyMap, err := parser.TextToMetricFamilies(reader)
 	if err != nil {
 		t.Fatal(err)
 	}
