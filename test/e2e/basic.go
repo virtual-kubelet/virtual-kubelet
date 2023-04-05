@@ -141,7 +141,6 @@ func (ts *EndToEndTestSuite) TestGetMetricsResource(t *testing.T) {
 		t.Fatal(err)
 	}
 
-
 	// decode metrics response bytes to metric family
 	reader := io.NewReader(metricsResourceResponse)
 	parser := expfmt.TextParser{}
