@@ -3,6 +3,7 @@ package e2e
 import (
 	"context"
 	"fmt"
+	"io"
 	"testing"
 	"time"
 
@@ -11,6 +12,7 @@ import (
 	"gotest.tools/assert"
 	v1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"github.com/promehteus/common/expfmt"
 )
 
 const (
@@ -139,18 +141,27 @@ func (ts *EndToEndTestSuite) TestGetMetricsResource(t *testing.T) {
 		t.Fatal(err)
 	}
 
+
+	// decode metrics response bytes to metric family
+	reader := io.NewReader(metricsResourceResponse)
+	parser := expfmt.TextParser{}
+	metricsFamilyMap , err := parser.TextToMetricFamilies(reader)
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	// Make sure the "nginx-" pod exists in the metrics returned.
 	currentContainerStatsCount := 0
 	found := false
-	for _, metricFamily := range metricsResourceResponse {
-		if *metricFamily.Name == "pod_cpu_usage_seconds_total" {
+	for metricName, metricFamily := range metricsFamilyMap {
+		if metricName == "pod_cpu_usage_seconds_total" {
 			for _, metric := range metricFamily.Metric {
 				if *metric.Label[1].Value == pod.Name {
 					found = true
 				}
 			}
 		}
-		if *metricFamily.Name == "container_cpu_usage_seconds_total" {
+		if metricName == "container_cpu_usage_seconds_total" {
 			for _, metric := range metricFamily.Metric {
 				if *metric.Label[1].Value == pod.Name {
 					currentContainerStatsCount += 1
