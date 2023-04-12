@@ -16,7 +16,7 @@ package api_test
 
 import (
 	"context"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -125,7 +125,7 @@ func TestHandlePodMetricsResource(t *testing.T) {
 			assert.Equal(t, tc.expectedStatusCode, rr.Code)
 
 			if tc.expectedError != nil {
-				bodyBytes, err := ioutil.ReadAll(rr.Body)
+				bodyBytes, err := io.ReadAll(rr.Body)
 				require.NoError(t, err)
 				assert.Contains(t, string(bodyBytes), tc.expectedError.Error())
 			} else if tc.expectedStatusCode == http.StatusOK {
