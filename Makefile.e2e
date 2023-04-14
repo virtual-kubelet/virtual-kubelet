@@ -1,3 +1,10 @@
+
+# skaffold checks for kubectl context
+# For minikube, docker-for-desktop and docker-desktop the context matches above names
+# If one wants to use kind, kind gives context names based on the cluster-name
+# But as of now they match the following syntax: kind-*
+# The first check verifies that this is a kind kubernetes context
+# Second check verifies the other ones
 .PHONY: skaffold.validate
 skaffold.validate: kubectl_context := $(shell kubectl config current-context)
 skaffold.validate:
