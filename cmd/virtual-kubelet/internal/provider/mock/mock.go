@@ -308,6 +308,12 @@ func (p *MockProvider) AttachToContainer(ctx context.Context, namespace, name, c
 	return nil
 }
 
+// PortForward forwards a local port to a port on the pod
+func (p *MockProvider) PortForward(ctx context.Context, namespace, pod string, port int32, stream io.ReadWriteCloser) error {
+	log.G(ctx).Infof("receive PortForward %q", pod)
+	return nil
+}
+
 // GetPodStatus returns the status of a pod by name that is "running".
 // returns nil if a pod by that name is not found.
 func (p *MockProvider) GetPodStatus(ctx context.Context, namespace, name string) (*v1.PodStatus, error) {
