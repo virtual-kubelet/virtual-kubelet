@@ -26,3 +26,6 @@
   tag: openstack-zun
 - name: Tencent Games Tensile Kube
   tag: tensile-kube
+- name: Stackpath Edge Compute
+  tag: virtual-kubelet-stackpath
+  org: stackpath
