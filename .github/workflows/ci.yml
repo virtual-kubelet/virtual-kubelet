@@ -27,7 +27,7 @@ jobs:
       - uses: golangci/golangci-lint-action@v3
         with:
           version: v1.49.0
-          args: --timeout=10m --config=.golangci.yml
+          args: --timeout=15m 
 
   unit-tests:
     name: Unit Tests
