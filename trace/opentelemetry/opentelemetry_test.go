@@ -30,8 +30,7 @@ import (
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
-	semconv "go.opentelemetry.io/otel/semconv"
-	"go.opentelemetry.io/otel/trace"
+	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
 	"gotest.tools/assert"
 	"gotest.tools/assert/cmp"
 )
@@ -92,7 +91,6 @@ func TestSetStatus(t *testing.T) {
 
 			assert.Assert(t, !s.s.IsRecording())
 			assert.Assert(t, e.status == tt.expectedCode)
-			assert.Assert(t, e.statusMessage == tt.expectedDescription)
 			s.SetStatus(tt.inputStatus) // should not be panic even if span is ended.
 		})
 	}
@@ -203,7 +201,7 @@ func TestLog(t *testing.T) {
 		logLevel           logLevel
 		fields             log.Fields
 		msg                string
-		expectedEvents     []trace.Event
+		expectedEvents     []sdktrace.Event
 		expectedAttributes []attribute.KeyValue
 	}{
 		{
@@ -212,7 +210,7 @@ func TestLog(t *testing.T) {
 			logLevel:           lDebug,
 			fields:             log.Fields{"testKey1": "value1"},
 			msg:                "message",
-			expectedEvents:     []trace.Event{{Name: "message"}},
+			expectedEvents:     []sdktrace.Event{{Name: "message"}},
 			expectedAttributes: []attribute.KeyValue{{Key: "testKey1", Value: attribute.StringValue("value1")}},
 		}, {
 			description:        "info",
@@ -220,7 +218,7 @@ func TestLog(t *testing.T) {
 			logLevel:           lInfo,
 			fields:             log.Fields{"testKey1": "value1"},
 			msg:                "message",
-			expectedEvents:     []trace.Event{{Name: "message"}},
+			expectedEvents:     []sdktrace.Event{{Name: "message"}},
 			expectedAttributes: []attribute.KeyValue{{Key: "testKey1", Value: attribute.StringValue("value1")}},
 		}, {
 			description:        "warn",
@@ -228,7 +226,7 @@ func TestLog(t *testing.T) {
 			logLevel:           lWarn,
 			fields:             log.Fields{"testKey1": "value1"},
 			msg:                "message",
-			expectedEvents:     []trace.Event{{Name: "message"}},
+			expectedEvents:     []sdktrace.Event{{Name: "message"}},
 			expectedAttributes: []attribute.KeyValue{{Key: "testKey1", Value: attribute.StringValue("value1")}},
 		}, {
 			description:        "error",
@@ -236,7 +234,7 @@ func TestLog(t *testing.T) {
 			logLevel:           lErr,
 			fields:             log.Fields{"testKey1": "value1"},
 			msg:                "message",
-			expectedEvents:     []trace.Event{{Name: "message"}},
+			expectedEvents:     []sdktrace.Event{{Name: "message"}},
 			expectedAttributes: []attribute.KeyValue{{Key: "testKey1", Value: attribute.StringValue("value1")}},
 		}, {
 			description:        "fatal",
@@ -244,7 +242,7 @@ func TestLog(t *testing.T) {
 			logLevel:           lFatal,
 			fields:             log.Fields{"testKey1": "value1"},
 			msg:                "message",
-			expectedEvents:     []trace.Event{{Name: "message"}},
+			expectedEvents:     []sdktrace.Event{{Name: "message"}},
 			expectedAttributes: []attribute.KeyValue{{Key: "testKey1", Value: attribute.StringValue("value1")}},
 		},
 	}
@@ -296,7 +294,7 @@ func TestLogf(t *testing.T) {
 		msg                string
 		fields             log.Fields
 		args               []interface{}
-		expectedEvents     []trace.Event
+		expectedEvents     []sdktrace.Event
 		expectedAttributes []attribute.KeyValue
 	}{
 		{
@@ -306,7 +304,7 @@ func TestLogf(t *testing.T) {
 			msg:            "k1: %s, k2: %v, k3: %d, k4: %v",
 			fields:         map[string]interface{}{"k1": "test", "k2": []string{"test"}, "k3": 1, "k4": []int{1}},
 			args:           []interface{}{"test", []string{"test"}, int(1), []int{1}},
-			expectedEvents: []trace.Event{{Name: "k1: test, k2: [test], k3: 1, k4: [1]"}},
+			expectedEvents: []sdktrace.Event{{Name: "k1: test, k2: [test], k3: 1, k4: [1]"}},
 			expectedAttributes: []attribute.KeyValue{
 				attribute.String("k1", "test"),
 				attribute.String("k2", fmt.Sprintf("%+v", []string{"test"})),
@@ -320,7 +318,7 @@ func TestLogf(t *testing.T) {
 			msg:            "k1: %d, k2: %v, k3: %f, k4: %v",
 			fields:         map[string]interface{}{"k1": int64(3), "k2": []int64{4}, "k3": float64(2), "k4": []float64{4}},
 			args:           []interface{}{int64(3), []int64{4}, float64(2), []float64{4}},
-			expectedEvents: []trace.Event{{Name: "k1: 3, k2: [4], k3: 2.000000, k4: [4]"}},
+			expectedEvents: []sdktrace.Event{{Name: "k1: 3, k2: [4], k3: 2.000000, k4: [4]"}},
 			expectedAttributes: []attribute.KeyValue{
 				attribute.Int64("k1", 1),
 				attribute.String("k2", fmt.Sprintf("%+v", []int64{2})),
@@ -334,7 +332,7 @@ func TestLogf(t *testing.T) {
 			msg:            "k1: %v, k2: %v",
 			fields:         map[string]interface{}{"k1": map[int]int{1: 1}, "k2": num(1)},
 			args:           []interface{}{map[int]int{1: 1}, num(1)},
-			expectedEvents: []trace.Event{{Name: "k1: map[1:1], k2: 1"}},
+			expectedEvents: []sdktrace.Event{{Name: "k1: map[1:1], k2: 1"}},
 			expectedAttributes: []attribute.KeyValue{
 				attribute.String("k1", "{1:1}"),
 				attribute.Stringer("k2", num(1)),
@@ -346,7 +344,7 @@ func TestLogf(t *testing.T) {
 			msg:            "k1: %t, k2: %v, k3: %s",
 			fields:         map[string]interface{}{"k1": true, "k2": []bool{true}, "k3": errors.New("fake")},
 			args:           []interface{}{true, []bool{true}, errors.New("fake")},
-			expectedEvents: []trace.Event{{Name: "k1: true, k2: [true], k3: fake"}},
+			expectedEvents: []sdktrace.Event{{Name: "k1: true, k2: [true], k3: fake"}},
 			expectedAttributes: []attribute.KeyValue{
 				attribute.Bool("k1", true),
 				attribute.String("k2", fmt.Sprintf("%+v", []bool{true})),
@@ -356,7 +354,7 @@ func TestLogf(t *testing.T) {
 			description:        "fatal",
 			spanName:           "test",
 			logLevel:           lFatal,
-			expectedEvents:     []trace.Event{{Name: ""}},
+			expectedEvents:     []sdktrace.Event{{Name: ""}},
 			expectedAttributes: []attribute.KeyValue{},
 		},
 	}
@@ -579,8 +577,7 @@ func setupSuite() (func(provider *sdktrace.TracerProvider), *sdktrace.TracerProv
 }
 
 func NewResource(name, version string) *resource.Resource {
-	return resource.NewWithAttributes(
-		semconv.ServiceNameKey.String(name),
+	return resource.NewWithAttributes(name,
 		semconv.ServiceVersionKey.String(version),
 	)
 }
@@ -590,36 +587,34 @@ type fakeExporter struct {
 	// attributes describe the aspects of the spans.
 	attributes []attribute.KeyValue
 	// Links returns all the links the span has to other spans.
-	links []trace.Link
+	links []sdktrace.Link
 	// Events returns all the events that occurred within in the spans
 	// lifetime.
-	events []trace.Event
+	events []sdktrace.Event
 	// Status returns the spans status.
-	status        codes.Code
-	statusMessage string
+	status codes.Code
 }
 
-func (f *fakeExporter) ExportSpans(_ context.Context, spans []*sdktrace.SpanSnapshot) error {
+func (f *fakeExporter) ExportSpans(_ context.Context, spans []sdktrace.ReadOnlySpan) error {
 	f.Lock()
 	defer f.Unlock()
 
 	f.attributes = make([]attribute.KeyValue, 0)
-	f.links = make([]trace.Link, 0)
-	f.events = make([]trace.Event, 0)
+	f.links = make([]sdktrace.Link, 0)
+	f.events = make([]sdktrace.Event, 0)
 	for _, s := range spans {
-		f.attributes = append(f.attributes, s.Attributes...)
-		f.links = append(f.links, s.Links...)
-		f.events = append(f.events, s.MessageEvents...)
-		f.status = s.StatusCode
-		f.statusMessage = s.StatusMessage
+		f.attributes = append(f.attributes, s.Attributes()...)
+		f.links = append(f.links, s.Links()...)
+		f.events = append(f.events, s.Events()...)
+		f.status = s.Status().Code
 	}
 	return nil
 }
 
 func (f *fakeExporter) Shutdown(_ context.Context) (err error) {
 	f.attributes = make([]attribute.KeyValue, 0)
-	f.links = make([]trace.Link, 0)
-	f.events = make([]trace.Event, 0)
+	f.links = make([]sdktrace.Link, 0)
+	f.events = make([]sdktrace.Event, 0)
 	return
 }
 
