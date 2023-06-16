@@ -1,0 +1,39 @@
+linter-settings:
+  lll:
+    line-length: 200
+
+timeout: 10m
+
+run:
+  skip-dirs:
+    # This directory contains copy code from upstream kubernetes/kubernetes, skip it.
+    - internal/kubernetes
+    # This is mostly copied from upstream, rather than fixing that code here just ignore the errors.
+    - internal/podutils
+
+linters:
+  enable:
+    - errcheck
+    - structcheck
+    - varcheck
+    - staticcheck
+    - unconvert
+    - gofmt
+    - goimports
+    - ineffassign
+    - vet
+    - unused
+    - misspell
+    - gosec
+    - exportloopref # Checks for pointers to enclosing loop variables
+    - tenv # Detects using os.Setenv instead of t.Setenv since Go 1.17
+
+linters-settings:
+  gosec:
+    excludes:
+      - G304
+issues:
+  exclude-use-default: false
+  exclude:
+    # EXC0001 errcheck: Almost all programs ignore errors on these functions and in most cases it's ok
+    - Error return value of .((os\.)?std(out|err)\..*|.*Close|.*Flush|os\.Remove(All)?|.*print(f|ln)?|os\.(Un)?Setenv). (is not checked|Errors unhandled)
