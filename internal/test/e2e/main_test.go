@@ -1,3 +1,4 @@
+//go:build e2e
 // +build e2e
 
 package e2e
@@ -48,7 +49,7 @@ func teardown() error {
 	return nil
 }
 
-//  Provider-specific shouldSkipTest function
+// Provider-specific shouldSkipTest function
 func shouldSkipTest(testName string) bool {
 	return false
 }

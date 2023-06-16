@@ -257,7 +257,7 @@ func makeAttribute(key string, val interface{}) (attr attribute.KeyValue) {
 	// 	return attribute.BoolSlice(key, v)
 	case error:
 		if v == nil {
-			attribute.String(key, "")
+			return attribute.String(key, "")
 		}
 		return attribute.String(key, v.Error())
 	default:
