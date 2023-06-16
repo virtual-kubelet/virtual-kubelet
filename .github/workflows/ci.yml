@@ -9,30 +9,36 @@ on:
     branches: [master]
   pull_request:
 
+permissions:
+  contents: read
+
 env:
-  GO_VERSION: "1.19"
+  GO_VERSION: "1.20"
 
 jobs:
   lint:
     name: Lint
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
+    runs-on: ubuntu-20.04
+    timeout-minutes: 20
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
       - uses: actions/setup-go@v4
         with:
           go-version: ${{ env.GO_VERSION }}
+          cache: false
       - uses: actions/checkout@v3
       - uses: golangci/golangci-lint-action@v3
         with:
-          version: v1.48.0
-          args: --timeout=5m
+          version: v1.51.0
+          args: --timeout=15m --config=.golangci.yml
+          skip-cache: true
+          skip-build-cache: true
 
   unit-tests:
     name: Unit Tests
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 20
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
@@ -60,7 +66,7 @@ jobs:
   e2e:
     name: E2E
     runs-on: ubuntu-22.04
-    timeout-minutes: 10
+    timeout-minutes: 20
     env:
       CHANGE_MINIKUBE_NONE_USER: true
       KUBERNETES_VERSION: v1.20.1

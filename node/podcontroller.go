@@ -402,7 +402,10 @@ func (pc *PodController) Run(ctx context.Context, podSyncWorkers int) (retErr er
 		}
 	}
 
-	pc.podsInformer.Informer().AddEventHandler(eventHandler)
+	_, err := pc.podsInformer.Informer().AddEventHandler(eventHandler)
+	if err != nil {
+		log.G(ctx).Error(err)
+	}
 
 	// Perform a reconciliation step that deletes any dangling pods from the provider.
 	// This happens only when the virtual-kubelet is starting, and operates on a "best-effort" basis.

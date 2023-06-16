@@ -184,7 +184,7 @@ fmt:
 	goimports -w $(shell go list -f '{{.Dir}}' ./...)
 
 
-export GOLANG_CI_LINT_VERSION ?= v1.48.0
+export GOLANG_CI_LINT_VERSION ?= v1.49.0
 DOCKER_BUILD ?= docker buildx build
 
 .PHONY: lint
