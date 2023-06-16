@@ -29,6 +29,7 @@ jobs:
         with:
           version: v1.49.0
           args: --timeout=15m
+          skip-cache: true
 
   unit-tests:
     name: Unit Tests
