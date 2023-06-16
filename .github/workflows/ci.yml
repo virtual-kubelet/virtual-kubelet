@@ -30,9 +30,10 @@ jobs:
       - uses: actions/checkout@v3
       - uses: golangci/golangci-lint-action@v3
         with:
-          version: v1.49.0
+          version: v1.51.0
           args: --timeout=15m
           skip-cache: true
+          skip-build-cache: true
 
   unit-tests:
     name: Unit Tests
