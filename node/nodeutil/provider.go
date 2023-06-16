@@ -37,6 +37,9 @@ type Provider interface {
 
 	// GetMetricsResource gets the metrics for the node, including running pods
 	GetMetricsResource(context.Context) ([]*dto.MetricFamily, error)
+
+	// PortForward forwards a local port to a port on the pod
+	PortForward(ctx context.Context, namespace, pod string, port int32, stream io.ReadWriteCloser) error
 }
 
 // ProviderConfig holds objects created by NewNodeFromClient that a provider may need to bootstrap itself.
@@ -73,6 +76,7 @@ func AttachProviderRoutes(mux api.ServeMux) NodeOpt {
 				GetMetricsResource:    p.GetMetricsResource,
 				StreamIdleTimeout:     cfg.StreamIdleTimeout,
 				StreamCreationTimeout: cfg.StreamCreationTimeout,
+				PortForward:           p.PortForward,
 			}, true))
 		}
 		return nil
