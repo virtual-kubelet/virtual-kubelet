@@ -278,7 +278,7 @@ func (pc *PodController) enqueuePodStatusUpdate(ctx context.Context, pod *corev1
 	ctx = span.WithField(ctx, "key", key)
 
 	var obj interface{}
-	err = wait.PollImmediateUntil(notificationRetryPeriod, func() (bool, error) {
+	err = wait.PollUntilContextCancel(ctx, notificationRetryPeriod, true, func(ctx context.Context) (bool, error) {
 		var ok bool
 		obj, ok = pc.knownPods.Load(key)
 		if ok {
@@ -304,7 +304,7 @@ func (pc *PodController) enqueuePodStatusUpdate(ctx context.Context, pod *corev1
 		// that we're in some kind of startup synchronization issue where the provider knows about a pod (as it performs
 		// recover, that we do not yet know about).
 		return false, nil
-	}, ctx.Done())
+	})
 
 	if err != nil {
 		if errors.IsNotFound(err) {
