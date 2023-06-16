@@ -23,11 +23,12 @@ jobs:
       - uses: actions/setup-go@v4
         with:
           go-version: ${{ env.GO_VERSION }}
+          cache: false
       - uses: actions/checkout@v3
       - uses: golangci/golangci-lint-action@v3
         with:
           version: v1.49.0
-          args: --timeout=15m 
+          args: --timeout=15m
 
   unit-tests:
     name: Unit Tests
