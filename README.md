@@ -171,7 +171,7 @@ performing the neccessary actions.
 
 There are 3 main interfaces:
 
-#### PodLifecylceHandler
+#### PodLifecycleHandler
 
 When pods are created, updated, or deleted from Kubernetes, these methods are
 called to handle those actions.
