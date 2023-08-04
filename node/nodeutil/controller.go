@@ -15,6 +15,7 @@ import (
 	"github.com/virtual-kubelet/virtual-kubelet/log"
 	"github.com/virtual-kubelet/virtual-kubelet/node"
 	v1 "k8s.io/api/core/v1"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
@@ -370,6 +371,21 @@ func NewNode(name string, newProvider NewProviderFunc, opts ...NodeOpt) (*Node, 
 		&cfg.NodeSpec,
 		cfg.Client.CoreV1().Nodes(),
 		node.WithNodeEnableLeaseV1(NodeLeaseV1Client(cfg.Client), node.DefaultLeaseDuration),
+		node.WithNodeStatusUpdateErrorHandler(func(ctx context.Context, err error) error {
+			if !k8serrors.IsNotFound(err) {
+				return err
+			}
+
+			log.G(ctx).Debug("node not found")
+			newNode := cfg.NodeSpec.DeepCopy()
+			newNode.ResourceVersion = ""
+			_, err = cfg.Client.CoreV1().Nodes().Create(ctx, newNode, metav1.CreateOptions{})
+			if err != nil {
+				return err
+			}
+			log.G(ctx).Debug("created new node")
+			return nil
+		}),
 	)
 	if err != nil {
 		return nil, errors.Wrap(err, "error creating node controller")
