@@ -372,7 +372,7 @@ func NewNode(name string, newProvider NewProviderFunc, opts ...NodeOpt) (*Node, 
 		node.WithNodeEnableLeaseV1(NodeLeaseV1Client(cfg.Client), node.DefaultLeaseDuration),
 	}
 
-	if(cfg.NodeStatusUpdateErrorHandler != nil) {
+	if cfg.NodeStatusUpdateErrorHandler != nil {
 		nodeControllerOpts = append(nodeControllerOpts, node.WithNodeStatusUpdateErrorHandler(cfg.NodeStatusUpdateErrorHandler))
 	}
 
