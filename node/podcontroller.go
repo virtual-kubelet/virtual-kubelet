@@ -453,6 +453,21 @@ func (pc *PodController) Err() error {
 	return pc.err
 }
 
+// SyncPodsFromKubernetesQueueLen returns the length of the SyncPodsFromKubernetes queue
+func (pc *PodController) SyncPodsFromKubernetesQueueLen() int {
+	return pc.syncPodsFromKubernetes.Len()
+}
+
+// DeletePodsFromKubernetesQueueLen returns the length of the DeletePodsFromKubernetes queue
+func (pc *PodController) DeletePodsFromKubernetesQueueLen() int {
+	return pc.deletePodsFromKubernetes.Len()
+}
+
+// SyncPodStatusFromProviderQueueLen returns the length of the SyncPodStatusFromProvider queue
+func (pc *PodController) SyncPodStatusFromProviderQueueLen() int {
+	return pc.syncPodStatusFromProvider.Len()
+}
+
 // syncPodFromKubernetesHandler compares the actual state with the desired, and attempts to converge the two.
 func (pc *PodController) syncPodFromKubernetesHandler(ctx context.Context, key string) error {
 	ctx, span := trace.StartSpan(ctx, "syncPodFromKubernetesHandler")
