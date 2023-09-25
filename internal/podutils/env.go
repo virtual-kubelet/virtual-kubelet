@@ -476,22 +476,29 @@ func getEnvironmentVariableValueWithValueFromFieldRef(ctx context.Context, env *
 		return nil, err
 	}
 
-	return pointer.String(runtimeVal), nil
+	return runtimeVal, nil
 }
 
 // podFieldSelectorRuntimeValue returns the runtime value of the given
 // selector for a pod.
-func podFieldSelectorRuntimeValue(fs *corev1.ObjectFieldSelector, pod *corev1.Pod) (string, error) {
+func podFieldSelectorRuntimeValue(fs *corev1.ObjectFieldSelector, pod *corev1.Pod) (*string, error) {
 	internalFieldPath, _, err := ConvertDownwardAPIFieldLabel(fs.APIVersion, fs.FieldPath, "")
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	switch internalFieldPath {
 	case "spec.nodeName":
-		return pod.Spec.NodeName, nil
+		return pointer.String(pod.Spec.NodeName), nil
 	case "spec.serviceAccountName":
-		return pod.Spec.ServiceAccountName, nil
-
+		return pointer.String(pod.Spec.ServiceAccountName), nil
+	case "status.hostIP":
+		return nil, nil
+	case "status.podIP":
+		return nil, nil
 	}
-	return ExtractFieldPathAsString(pod, internalFieldPath)
+	val, err2 := ExtractFieldPathAsString(pod, internalFieldPath)
+	if err2 != nil {
+		return nil, err2
+	}
+	return pointer.String(val), nil
 }
