@@ -139,7 +139,7 @@ func deleteGraceTimeEqual(old, new *int64) bool {
 	return false
 }
 
-// podShouldEnqueue checks if two pods equal according according to podsEqual func and DeleteTimeStamp
+// podShouldEnqueue checks if two pods equal according to podsEqual func and DeleteTimeStamp
 func podShouldEnqueue(oldPod, newPod *corev1.Pod) bool {
 	if !podsEqual(oldPod, newPod) {
 		return true
