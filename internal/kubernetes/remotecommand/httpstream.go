@@ -148,6 +148,8 @@ func createHTTPStreamStreams(req *http.Request, w http.ResponseWriter, opts *Opt
 
 	var handler protocolHandler
 	switch protocol {
+	case remotecommandconsts.StreamProtocolV5Name:
+		handler = &v5ProtocolHandler{}
 	case remotecommandconsts.StreamProtocolV4Name:
 		handler = &v4ProtocolHandler{}
 	case remotecommandconsts.StreamProtocolV3Name:
@@ -159,6 +161,9 @@ func createHTTPStreamStreams(req *http.Request, w http.ResponseWriter, opts *Opt
 		fallthrough
 	case remotecommandconsts.StreamProtocolV1Name:
 		handler = &v1ProtocolHandler{}
+	default:
+		klog.Errorf("unable to create HTTP stream: unknown protocol %q", protocol)
+		return nil, false
 	}
 
 	// count the streams client asked for, starting with 1
@@ -198,6 +203,57 @@ type protocolHandler interface {
 	// supportsTerminalResizing returns true if the protocol handler supports terminal resizing
 	supportsTerminalResizing() bool
 }
+
+// v5ProtocolHandler implements the V5 protocol version for streaming command execution.
+type v5ProtocolHandler struct{}
+
+func (*v5ProtocolHandler) waitForStreams(streams <-chan streamAndReply, expectedStreams int, expired <-chan time.Time) (*context, error) {
+	ctx := &context{}
+	receivedStreams := 0
+	replyChan := make(chan struct{})
+	stop := make(chan struct{})
+	defer close(stop)
+WaitForStreams:
+	for {
+		select {
+		case stream := <-streams:
+			streamType := stream.Headers().Get(api.StreamType)
+			switch streamType {
+			case api.StreamTypeError:
+				ctx.writeStatus = v4WriteStatusFunc(stream) // write json errors
+				go waitStreamReply(stream.replySent, replyChan, stop)
+			case api.StreamTypeStdin:
+				ctx.stdinStream = stream
+				go waitStreamReply(stream.replySent, replyChan, stop)
+			case api.StreamTypeStdout:
+				ctx.stdoutStream = stream
+				go waitStreamReply(stream.replySent, replyChan, stop)
+			case api.StreamTypeStderr:
+				ctx.stderrStream = stream
+				go waitStreamReply(stream.replySent, replyChan, stop)
+			case api.StreamTypeResize:
+				ctx.resizeStream = stream
+				go waitStreamReply(stream.replySent, replyChan, stop)
+			default:
+				runtime.HandleError(fmt.Errorf("unexpected stream type: %q", streamType))
+			}
+		case <-replyChan:
+			receivedStreams++
+			if receivedStreams == expectedStreams {
+				break WaitForStreams
+			}
+		case <-expired:
+			// TODO find a way to return the error to the user. Maybe use a separate
+			// stream to report errors?
+			return nil, errors.New("timed out waiting for client to create streams")
+		}
+	}
+
+	return ctx, nil
+}
+
+// supportsTerminalResizing returns true because v5ProtocolHandler supports it
+func (*v5ProtocolHandler) supportsTerminalResizing() bool { return true }
 
 // v4ProtocolHandler implements the V4 protocol version for streaming command execution. It only differs
 // in from v3 in the error stream format using an json-marshaled metav1.Status which carries
