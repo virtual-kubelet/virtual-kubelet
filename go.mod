@@ -26,10 +26,10 @@ require (
 	golang.org/x/time v0.3.0
 	google.golang.org/protobuf v1.31.0
 	gotest.tools v2.2.0+incompatible
-	k8s.io/api v0.29.0
-	k8s.io/apimachinery v0.29.0
+	k8s.io/api v0.29.1
+	k8s.io/apimachinery v0.29.1
 	k8s.io/apiserver v0.29.0
-	k8s.io/client-go v0.29.0
+	k8s.io/client-go v0.29.1
 	k8s.io/klog/v2 v2.110.1
 	k8s.io/utils v0.0.0-20230726121419-3b25d923346b
 	sigs.k8s.io/controller-runtime v0.15.0
@@ -96,7 +96,7 @@ require (
 	go.uber.org/zap v1.24.0 // indirect
 	golang.org/x/crypto v0.17.0 // indirect
 	golang.org/x/exp v0.0.0-20220722155223-a9213eeb770e // indirect
-	golang.org/x/net v0.17.0 // indirect
+	golang.org/x/net v0.19.0 // indirect
 	golang.org/x/oauth2 v0.10.0 // indirect
 	golang.org/x/term v0.15.0 // indirect
 	golang.org/x/text v0.14.0 // indirect
