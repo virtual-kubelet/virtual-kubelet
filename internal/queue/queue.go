@@ -288,6 +288,24 @@ func (q *Queue) Len() int {
 	return q.items.Len() + len(q.itemsBeingProcessed)
 }
 
+// UnprocessedLen returns the count of items yet to be processed in the queue
+func (q *Queue) UnprocessedLen() int {
+	q.lock.Lock()
+	defer q.lock.Unlock()
+	if q.items.Len() != len(q.itemsInQueue) {
+		panic("Internally inconsistent state")
+	}
+
+	return len(q.itemsInQueue)
+}
+
+// ProcessedLen returns the count items that are being processed
+func (q *Queue) ItemsBeingProcessedLen() int {
+	q.lock.Lock()
+	defer q.lock.Unlock()
+	return len(q.itemsBeingProcessed)
+}
+
 // Run starts the workers
 //
 // It blocks until context is cancelled, and all of the workers exit.
