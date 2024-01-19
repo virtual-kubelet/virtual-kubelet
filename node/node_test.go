@@ -25,7 +25,6 @@ import (
 
 	"gotest.tools/assert"
 	"gotest.tools/assert/cmp"
-	is "gotest.tools/assert/cmp"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -394,8 +393,8 @@ func TestBeforeAnnotationsPreserved(t *testing.T) {
 	newNode, err := nodes.Get(ctx, testNodeCopy.Name, emptyGetOptions)
 	assert.NilError(t, err)
 
-	assert.Assert(t, is.Contains(newNode.Annotations, "testAnnotation"))
-	assert.Assert(t, is.Contains(newNode.Annotations, "beforeAnnotation"))
+	assert.Assert(t, cmp.Contains(newNode.Annotations, "testAnnotation"))
+	assert.Assert(t, cmp.Contains(newNode.Annotations, "beforeAnnotation"))
 }
 
 // Are conditions set by systems outside of VK preserved?
@@ -444,7 +443,7 @@ func TestManualConditionsPreserved(t *testing.T) {
 
 	newNode, err := nodes.Get(ctx, testNodeCopy.Name, emptyGetOptions)
 	assert.NilError(t, err)
-	assert.Assert(t, is.Len(newNode.Status.Conditions, 0))
+	assert.Assert(t, cmp.Len(newNode.Status.Conditions, 0))
 
 	baseCondition := corev1.NodeCondition{
 		Type:    "BaseCondition",
@@ -479,8 +478,8 @@ func TestManualConditionsPreserved(t *testing.T) {
 
 	newNode, err = nodes.Get(ctx, testNodeCopy.Name, emptyGetOptions)
 	assert.NilError(t, err)
-	assert.Assert(t, is.Len(newNode.Status.Conditions, 1))
-	assert.Assert(t, is.Contains(newNode.Annotations, "testAnnotation"))
+	assert.Assert(t, cmp.Len(newNode.Status.Conditions, 1))
+	assert.Assert(t, cmp.Contains(newNode.Annotations, "testAnnotation"))
 
 	// Add a new event manually
 	manuallyAddedCondition := corev1.NodeCondition{
@@ -507,8 +506,8 @@ func TestManualConditionsPreserved(t *testing.T) {
 				return true
 			}
 		}
-		assert.Assert(t, is.Contains(receivedNode.Annotations, "testAnnotation"))
-		assert.Assert(t, is.Contains(newNode.Annotations, "manuallyAddedAnnotation"))
+		assert.Assert(t, cmp.Contains(receivedNode.Annotations, "testAnnotation"))
+		assert.Assert(t, cmp.Contains(newNode.Annotations, "manuallyAddedAnnotation"))
 
 		return false
 	}))
@@ -553,11 +552,11 @@ func TestManualConditionsPreserved(t *testing.T) {
 	for idx := range newNode.Status.Conditions {
 		seenConditionTypes[idx] = newNode.Status.Conditions[idx].Type
 	}
-	assert.Assert(t, is.Contains(seenConditionTypes, baseCondition.Type))
-	assert.Assert(t, is.Contains(seenConditionTypes, newCondition.Type))
-	assert.Assert(t, is.Contains(seenConditionTypes, manuallyAddedCondition.Type))
-	assert.Assert(t, is.Equal(newNode.Annotations["testAnnotation"], ""))
-	assert.Assert(t, is.Contains(newNode.Annotations, "manuallyAddedAnnotation"))
+	assert.Assert(t, cmp.Contains(seenConditionTypes, baseCondition.Type))
+	assert.Assert(t, cmp.Contains(seenConditionTypes, newCondition.Type))
+	assert.Assert(t, cmp.Contains(seenConditionTypes, manuallyAddedCondition.Type))
+	assert.Assert(t, cmp.Equal(newNode.Annotations["testAnnotation"], ""))
+	assert.Assert(t, cmp.Contains(newNode.Annotations, "manuallyAddedAnnotation"))
 
 	t.Log(newNode.Status.Conditions)
 }
@@ -607,15 +606,15 @@ func TestNodePingSingleInflight(t *testing.T) {
 	assert.Assert(t, timeTakenToCompleteFirstPing < pingTimeout*5, "Time taken to complete first ping: %v", timeTakenToCompleteFirstPing)
 
 	assert.Assert(t, cmp.Error(firstPing.error, context.DeadlineExceeded.Error()))
-	assert.Assert(t, is.Equal(1, calls.read()))
-	assert.Assert(t, is.Equal(0, finished.read()))
+	assert.Assert(t, cmp.Equal(1, calls.read()))
+	assert.Assert(t, cmp.Equal(0, finished.read()))
 
 	// Wait until the first sleep finishes (the test context is done)
 	assert.NilError(t, finished.until(testCtx, func(i int) bool { return i > 0 }))
 
 	// Assert we didn't stack up goroutines, and that the one goroutine in flight finishd
-	assert.Assert(t, is.Equal(1, calls.read()))
-	assert.Assert(t, is.Equal(1, finished.read()))
+	assert.Assert(t, cmp.Equal(1, calls.read()))
+	assert.Assert(t, cmp.Equal(1, finished.read()))
 
 }
 

@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	corev1 "k8s.io/api/core/v1"
-	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -106,9 +105,9 @@ func (f *Framework) WaitUntilPodReady(namespace, name string) (*corev1.Pod, erro
 }
 
 // IsPodReady returns true if a pod is ready.
-func IsPodReady(pod *v1.Pod) bool {
+func IsPodReady(pod *corev1.Pod) bool {
 	for _, cond := range pod.Status.Conditions {
-		if cond.Type == v1.PodReady && cond.Status == v1.ConditionTrue {
+		if cond.Type == corev1.PodReady && cond.Status == corev1.ConditionTrue {
 			return true
 		}
 	}
