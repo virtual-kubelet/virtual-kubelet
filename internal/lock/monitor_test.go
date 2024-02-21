@@ -66,7 +66,7 @@ func TestMonitorMultipleVersions(t *testing.T) {
 	lock := sync.Mutex{}
 	lock.Lock()
 	mv := NewMonitorVariable()
-	triggers := []int{}
+	var triggers []int
 	ch := make(chan struct{}, 10)
 	go func() {
 		defer lock.Unlock()
