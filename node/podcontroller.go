@@ -514,12 +514,12 @@ func (pc *PodController) syncPodInProvider(ctx context.Context, pod *corev1.Pod,
 
 	// If the pod('s containers) is no longer in a running state then we force-delete the pod from API server
 	// more context is here: https://github.com/virtual-kubelet/virtual-kubelet/pull/760
-	if pod.DeletionTimestamp != nil && !running(&pod.Status) {
-		log.G(ctx).Debug("Force deleting pod from API Server as it is no longer running")
-		key = fmt.Sprintf("%v/%v", key, pod.UID)
-		pc.deletePodsFromKubernetes.EnqueueWithoutRateLimit(ctx, key)
-		return nil
-	}
+	// if pod.DeletionTimestamp != nil && !running(&pod.Status) {
+	// 	log.G(ctx).Debug("Force deleting pod from API Server as it is no longer running")
+	// 	key = fmt.Sprintf("%v/%v", key, pod.UID)
+	// 	pc.deletePodsFromKubernetes.EnqueueWithoutRateLimit(ctx, key)
+	// 	return nil
+	// }
 	obj, ok := pc.knownPods.Load(key)
 	if !ok {
 		// That means the pod was deleted while we were working
