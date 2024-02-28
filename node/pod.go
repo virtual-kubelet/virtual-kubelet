@@ -98,9 +98,12 @@ func (pc *PodController) createOrUpdatePod(ctx context.Context, pod *corev1.Pod)
 		}
 	} else {
 		if origErr := pc.provider.CreatePod(ctx, podForProvider); origErr != nil {
-			pc.handleProviderError(ctx, span, origErr, pod)
-			pc.recorder.Event(pod, corev1.EventTypeWarning, podEventCreateFailed, origErr.Error())
-			return origErr
+			if !errors.IsAlreadyExists(origErr) {
+				pc.handleProviderError(ctx, span, origErr, pod)
+				pc.recorder.Event(pod, corev1.EventTypeWarning, podEventCreateFailed, origErr.Error())
+				return origErr
+			}
+			return nil
 		}
 		log.G(ctx).Info("Created pod in provider")
 		pc.recorder.Event(pod, corev1.EventTypeNormal, podEventCreateSuccess, "Create pod in provider successfully")
