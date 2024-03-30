@@ -85,7 +85,7 @@ jobs:
         uses: actions/checkout@v4
       - name: Install Skaffold
         run: |
-          curl -Lo skaffold https://storage.googleapis.com/skaffold/releases/${SKAFFOLD_VERSION}/skaffold-linux-amd64
+          curl -sLo skaffold https://storage.googleapis.com/skaffold/releases/${SKAFFOLD_VERSION}/skaffold-linux-amd64
           chmod +x skaffold
           sudo mv skaffold /usr/local/bin/
           echo /usr/local/bin >> $GITHUB_PATH
@@ -93,12 +93,12 @@ jobs:
         run: |
           sudo apt-get update && sudo apt-get install -y apt-transport-https curl
           echo "deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v1.29/deb/ /" | sudo tee /etc/apt/sources.list.d/kubernetes.list
-          curl -fsSL https://pkgs.k8s.io/core:/stable:/v1.28/deb/Release.key | sudo gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+          curl -fsSL https://pkgs.k8s.io/core:/stable:/v1.28/deb/Release.key | sudo gpg --no-tty --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
           sudo apt-get update
           sudo apt-get install -y kubelet # systemd unit is disabled
       - name: Install Minikube
         run: |
-          curl -Lo minikube https://storage.googleapis.com/minikube/releases/${MINIKUBE_VERSION}/minikube-linux-amd64
+          curl -sLo minikube https://storage.googleapis.com/minikube/releases/${MINIKUBE_VERSION}/minikube-linux-amd64
           chmod +x minikube
           sudo mv minikube /usr/local/bin/
       - name: Start Minikube
