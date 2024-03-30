@@ -1,0 +1,18 @@
+apiVersion: skaffold/v2beta10
+kind: Config
+build:
+  artifacts:
+  - image: virtual-kubelet
+    docker:
+      # Use a Dockerfile specific for development only.
+      dockerfile: hack/skaffold/virtual-kubelet/Dockerfile
+deploy:
+  kubectl:
+    manifests:
+    - hack/skaffold/virtual-kubelet/base.yml
+    - hack/skaffold/virtual-kubelet/pod.yml
+profiles:
+- name: local
+  build:
+    # For the "local" profile, we must perform the build locally.
+    local: {}
