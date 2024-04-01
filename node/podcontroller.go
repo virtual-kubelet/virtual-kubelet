@@ -453,19 +453,49 @@ func (pc *PodController) Err() error {
 	return pc.err
 }
 
-// SyncPodsFromKubernetesQueueLen returns the length of the SyncPodsFromKubernetes queue
+// SyncPodsFromKubernetesQueueLen returns the length of the SyncPodsFromKubernetes queue, which include items being processed and unprocessed
 func (pc *PodController) SyncPodsFromKubernetesQueueLen() int {
 	return pc.syncPodsFromKubernetes.Len()
 }
 
-// DeletePodsFromKubernetesQueueLen returns the length of the DeletePodsFromKubernetes queue
+// SyncPodsFromKubernetesQueueUnprocessedLen returns the length of the unprocessed items in the SyncPodsFromKubernetes queue
+func (pc *PodController) SyncPodsFromKubernetesQueueUnprocessedLen() int {
+	return pc.syncPodsFromKubernetes.UnprocessedLen()
+}
+
+// SyncPodsFromKubernetesQueueItemsBeingProcessedLen returns the length of the items being processed in the SyncPodsFromKubernetes queue
+func (pc *PodController) SyncPodsFromKubernetesQueueItemsBeingProcessedLen() int {
+	return pc.syncPodsFromKubernetes.ItemsBeingProcessedLen()
+}
+
+// DeletePodsFromKubernetesQueueLen returns the length of the DeletePodsFromKubernetes queue, which include items being processed and unprocessed
 func (pc *PodController) DeletePodsFromKubernetesQueueLen() int {
 	return pc.deletePodsFromKubernetes.Len()
 }
 
-// SyncPodStatusFromProviderQueueLen returns the length of the SyncPodStatusFromProvider queue
+// DeletePodsFromKubernetesQueueUnprocessedLen returns the length of the unprocessed items in the DeletePodsFromKubernetes queue
+func (pc *PodController) DeletePodsFromKubernetesQueueUnprocessedLen() int {
+	return pc.deletePodsFromKubernetes.UnprocessedLen()
+}
+
+// DeletePodsFromKubernetesQueueItemsBeingProcessedLen returns the length of the items being processed in the DeletePodsFromKubernetes queue
+func (pc *PodController) DeletePodsFromKubernetesQueueItemsBeingProcessedLen() int {
+	return pc.deletePodsFromKubernetes.ItemsBeingProcessedLen()
+}
+
+// SyncPodStatusFromProviderQueueLen returns the length of the SyncPodStatusFromProvider queue, which include items being processed and unprocessed
 func (pc *PodController) SyncPodStatusFromProviderQueueLen() int {
 	return pc.syncPodStatusFromProvider.Len()
+}
+
+// SyncPodStatusFromProviderQueueUnprocessedLen returns the length of the unprocessed items in the SyncPodStatusFromProvider queue
+func (pc *PodController) SyncPodStatusFromProviderQueueUnprocessedLen() int {
+	return pc.syncPodStatusFromProvider.UnprocessedLen()
+}
+
+// SyncPodStatusFromProviderQueueItemsBeingProcessedLen returns the length of the items being processed in the SyncPodStatusFromProvider queue
+func (pc *PodController) SyncPodStatusFromProviderQueueItemsBeingProcessedLen() int {
+	return pc.syncPodStatusFromProvider.ItemsBeingProcessedLen()
 }
 
 // syncPodFromKubernetesHandler compares the actual state with the desired, and attempts to converge the two.
