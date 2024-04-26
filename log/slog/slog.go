@@ -1,3 +1,20 @@
+// Copyright © 2021 The virtual-kubelet authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//	http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+// Package slog implements a virtual-kubelet/log.Logger using slog as a backend
+// You can use this by creating a slog logger and calling `FromSlog(logger)`
+// If you want this to be the default logger for virtual-kubelet, set `log.L` to the value returned by `FromSlog(logger)`
 package slog
 
 import (
@@ -11,10 +28,18 @@ import (
 // Ensure log.Logger is fully implemented during compile time.
 var _ log.Logger = (*adapter)(nil)
 
+// Create a custom logging level for the Fatal level as slog does not
+// have this level by default
 const LevelFatal = slog.Level(12)
 
+// adapter implements the `log.Logger` interface for slog
 type adapter struct {
 	inner *slog.Logger
+}
+
+// FromSlog creates a new `log.Logger` from a slog logger
+func FromSlog(logger *slog.Logger) log.Logger {
+	return &adapter{inner: logger}
 }
 
 func (l *adapter) Debug(args ...interface{}) {
