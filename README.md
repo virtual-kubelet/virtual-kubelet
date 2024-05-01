@@ -25,6 +25,7 @@ The best description is "Kubernetes API on top, programmable back."
     + [AWS Fargate Provider](#aws-fargate-provider)
     + [Elotl Kip](#elotl-kip)
 	+ [HashiCorp Nomad](#hashicorp-nomad-provider)
+    + [InterLink](#interlink-provider)
     + [Liqo](#liqo-provider)
     + [OpenStack Zun](#openstack-zun-provider)
     + [Tensile Kube Provider](#tensile-kube-provider)
@@ -136,6 +137,14 @@ registered on Kubernetes will run as jobs on Nomad clients as they
 would on a Kubernetes node.
 
 For detailed instructions, follow the guide [here](https://github.com/virtual-kubelet/nomad/blob/master/README.md).
+
+### Interlink Provider
+
+[interLink](https://intertwin-eu.github.io/interLink/) provides an abstraction for the execution of a Kubernetes pod on any remote resource that has the capability to manage a container's execution lifecycle. The use cases that drove the initial development of the tool are the Slurm-powered HPC centers, regardless the plugin based design is enabling several additional use cases to provide Kubernetes-API based access to infrastracture that cannot host a Kubelet processes. 
+InterLink is a Virtual Kubelet provider that can manage container lifecycle through a well defined API specification, allowing for any resource provider to be integrated with a simple http server and a handful of methods.
+In other words, this is an attempt to streamline the process of creating custom Virtual Kubelet providers, avoiding the need for any resource provider to implement its own version of a Kubelet workflow, which would require having some domain expertise in the Kubernetes internals.
+
+For detailed instruction, follow the guide [here](phttps://intertwin-eu.github.io/interLink/docs/category/guides).
 
 ### Liqo Provider
 
