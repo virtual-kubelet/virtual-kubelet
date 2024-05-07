@@ -144,7 +144,7 @@ For detailed instructions, follow the guide [here](https://github.com/virtual-ku
 InterLink is a Virtual Kubelet provider that can manage container lifecycle through a well defined API specification, allowing for any resource provider to be integrated with a simple http server and a handful of methods.
 In other words, this is an attempt to streamline the process of creating custom Virtual Kubelet providers, avoiding the need for any resource provider to implement its own version of a Kubelet workflow, which would require having some domain expertise in the Kubernetes internals.
 
-For detailed instruction, follow the guide [here](phttps://intertwin-eu.github.io/interLink/docs/category/guides).
+For detailed instruction, follow the guide [here](https://intertwin-eu.github.io/interLink/docs/category/guides).
 
 ### Liqo Provider
 
