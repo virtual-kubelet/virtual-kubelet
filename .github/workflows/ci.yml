@@ -95,7 +95,7 @@ jobs:
           echo "deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/${KUBERNETES_VERSION}/deb/ /" | sudo tee /etc/apt/sources.list.d/kubernetes.list
           curl -fsSL https://pkgs.k8s.io/core:/stable:/${KUBERNETES_VERSION}/deb/Release.key | sudo gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
           sudo apt-get update
-          sudo apt-get install -y kubelet # systemd unit is disabled
+          sudo apt-get install -y kubectl docker.io
       - name: Install Minikube
         run: |
           curl -Lo minikube https://storage.googleapis.com/minikube/releases/${MINIKUBE_VERSION}/minikube-linux-amd64
@@ -103,7 +103,8 @@ jobs:
           sudo mv minikube /usr/local/bin/
       - name: Start Minikube
         run: |
-          sudo -E PATH=$PATH minikube start --vm-driver=none --cpus 2 --memory 2048 --kubernetes-version=${KUBERNETES_VERSION}
+          sudo usermod -aG docker $USER && newgrp docker
+          minikube start --vm-driver=docker --cpus 2 --memory 2048 --kubernetes-version=${KUBERNETES_VERSION}
       - name: Wait for Minikube
         run: |
           JSONPATH='{range .items[*]}{@.metadata.name}:{range @.status.conditions[*]}{@.type}={@.status};{end}{end}';
