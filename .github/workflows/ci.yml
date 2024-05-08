@@ -69,9 +69,9 @@ jobs:
     timeout-minutes: 20
     env:
       CHANGE_MINIKUBE_NONE_USER: true
-      KUBERNETES_VERSION: v1.20.1
+      KUBERNETES_VERSION: v1.29
       MINIKUBE_HOME: /home/circleci
-      MINIKUBE_VERSION: v1.16.0
+      MINIKUBE_VERSION: v1.33.0
       MINIKUBE_WANTUPDATENOTIFICATION: false
       MINIKUBE_WANTREPORTERRORPROMPT: false
       SKAFFOLD_VERSION: v1.17.2
@@ -92,10 +92,8 @@ jobs:
       - name: Install Minikube dependencies
         run: |
           sudo apt-get update && sudo apt-get install -y apt-transport-https curl
-          curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add -
-          cat <<EOF | sudo tee /etc/apt/sources.list.d/kubernetes.list
-          deb https://apt.kubernetes.io/ kubernetes-xenial main
-          EOF
+          echo "deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/${KUBERNETES_VERSION}/deb/ /" | sudo tee /etc/apt/sources.list.d/kubernetes.list
+          curl -fsSL https://pkgs.k8s.io/core:/stable:/${KUBERNETES_VERSION}/deb/Release.key | sudo gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
           sudo apt-get update
           sudo apt-get install -y kubelet # systemd unit is disabled
       - name: Install Minikube
