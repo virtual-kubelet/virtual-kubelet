@@ -105,7 +105,6 @@ jobs:
       - name: Start Minikube
         run: |
           sudo usermod -aG docker $USER && newgrp docker
-          whoami
           minikube start --vm-driver=docker --cpus 2 --memory 2048 --kubernetes-version=${KUBERNETES_VERSION}
       - name: Wait for Minikube
         run: |
