@@ -69,9 +69,9 @@ jobs:
     timeout-minutes: 20
     env:
       CHANGE_MINIKUBE_NONE_USER: true
-      KUBERNETES_VERSION: v1.20.1
-      MINIKUBE_HOME: /home/circleci
-      MINIKUBE_VERSION: v1.16.0
+      KUBERNETES_VERSION: v1.29
+      MINIKUBE_HOME: /home/runner
+      MINIKUBE_VERSION: v1.33.0
       MINIKUBE_WANTUPDATENOTIFICATION: false
       MINIKUBE_WANTREPORTERRORPROMPT: false
       SKAFFOLD_VERSION: v1.17.2
@@ -92,12 +92,11 @@ jobs:
       - name: Install Minikube dependencies
         run: |
           sudo apt-get update && sudo apt-get install -y apt-transport-https curl
-          curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add -
-          cat <<EOF | sudo tee /etc/apt/sources.list.d/kubernetes.list
-          deb https://apt.kubernetes.io/ kubernetes-xenial main
-          EOF
+          echo "deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/${KUBERNETES_VERSION}/deb/ /" | sudo tee /etc/apt/sources.list.d/kubernetes.list
+          curl -fsSL https://pkgs.k8s.io/core:/stable:/${KUBERNETES_VERSION}/deb/Release.key | sudo gpg --no-tty --yes --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
           sudo apt-get update
-          sudo apt-get install -y kubelet # systemd unit is disabled
+          sudo apt-get remove -y containerd.io containerd
+          sudo apt-get install -y kubectl docker.io
       - name: Install Minikube
         run: |
           curl -Lo minikube https://storage.googleapis.com/minikube/releases/${MINIKUBE_VERSION}/minikube-linux-amd64
@@ -105,7 +104,8 @@ jobs:
           sudo mv minikube /usr/local/bin/
       - name: Start Minikube
         run: |
-          sudo -E PATH=$PATH minikube start --vm-driver=none --cpus 2 --memory 2048 --kubernetes-version=${KUBERNETES_VERSION}
+          sudo usermod -aG docker $USER && newgrp docker
+          minikube start --vm-driver=docker --cpus 2 --memory 2048 --kubernetes-version=${KUBERNETES_VERSION}
       - name: Wait for Minikube
         run: |
           JSONPATH='{range .items[*]}{@.metadata.name}:{range @.status.conditions[*]}{@.type}={@.status};{end}{end}';
