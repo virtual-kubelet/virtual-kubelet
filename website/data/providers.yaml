@@ -19,6 +19,9 @@
   tag: huawei-cci
 - name: HashiCorp Nomad
   tag: nomad
+- name: InterLink
+  tag: interlink
+  org: infn
 - name: Liqo
   tag: liqo
   org: liqotech
