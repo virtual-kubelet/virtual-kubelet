@@ -24,7 +24,7 @@ require (
 	golang.org/x/sync v0.5.0
 	golang.org/x/sys v0.18.0
 	golang.org/x/time v0.3.0
-	google.golang.org/protobuf v1.31.0
+	google.golang.org/protobuf v1.34.1
 	gotest.tools v2.2.0+incompatible
 	k8s.io/api v0.29.1
 	k8s.io/apimachinery v0.29.1
