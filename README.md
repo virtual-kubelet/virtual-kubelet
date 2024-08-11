@@ -185,7 +185,7 @@ There are 3 main interfaces:
 When pods are created, updated, or deleted from Kubernetes, these methods are
 called to handle those actions.
 
-[godoc#PodLifecylceHandler](https://godoc.org/github.com/virtual-kubelet/virtual-kubelet/node#PodLifecycleHandler)
+[godoc#PodLifecycleHandler](https://godoc.org/github.com/virtual-kubelet/virtual-kubelet/node#PodLifecycleHandler)
 
 ```go
 type PodLifecycleHandler interface {
