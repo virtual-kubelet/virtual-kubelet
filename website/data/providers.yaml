@@ -21,7 +21,7 @@
   tag: nomad
 - name: InterLink
   tag: interlink
-  org: infn
+  org: intertwin-eu
 - name: Liqo
   tag: liqo
   org: liqotech
