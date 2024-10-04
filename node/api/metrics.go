@@ -47,7 +47,7 @@ func HandlePodMetricsResource(h PodMetricsResourceHandlerFunc) http.HandlerFunc 
 
 		// Convert metrics to Prometheus text format.
 		var buffer bytes.Buffer
-		enc := expfmt.NewEncoder(&buffer, expfmt.FmtText)
+		enc := expfmt.NewEncoder(&buffer, expfmt.NewFormat(expfmt.TypeTextPlain))
 		for _, mf := range metrics {
 			if err := enc.Encode(mf); err != nil {
 				return errors.Wrap(err, "could not convert metrics to prometheus text format")

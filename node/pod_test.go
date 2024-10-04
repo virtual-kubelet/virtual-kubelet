@@ -290,10 +290,14 @@ func TestPodStatusDelete(t *testing.T) {
 		t.Fatal("pod updated failed")
 	}
 	newPod, err := c.client.CoreV1().Pods(pod.Namespace).Get(ctx, pod.Name, v1.GetOptions{})
-	if err != nil && !errors.IsNotFound(err) {
-		t.Fatalf("Get pod %v failed", key)
+	found := true
+	if err != nil {
+		if !errors.IsNotFound(err) {
+			t.Fatalf("Get pod %v failed", key)
+		}
+		found = false
 	}
-	if newPod != nil && newPod.DeletionTimestamp == nil {
+	if found && newPod.DeletionTimestamp == nil {
 		t.Fatalf("Pod %v delete failed", key)
 	}
 	t.Logf("pod delete success")
