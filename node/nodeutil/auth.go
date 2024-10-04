@@ -8,6 +8,7 @@ import (
 
 	"github.com/virtual-kubelet/virtual-kubelet/log"
 	"github.com/virtual-kubelet/virtual-kubelet/trace"
+	"k8s.io/apiserver/pkg/apis/apiserver"
 	"k8s.io/apiserver/pkg/authentication/authenticator"
 	"k8s.io/apiserver/pkg/authentication/authenticatorfactory"
 	"k8s.io/apiserver/pkg/authentication/request/anonymous"
@@ -50,7 +51,7 @@ func InstrumentAuth(auth Auth) Auth {
 // NoAuth creates an Auth which allows anonymous access to all resouorces
 func NoAuth() Auth {
 	return &authWrapper{
-		Request:                 anonymous.NewAuthenticator(),
+		Request:                 anonymous.NewAuthenticator([]apiserver.AnonymousAuthCondition{}),
 		RequestAttributesGetter: &NodeRequestAttr{},
 		Authorizer:              authorizerfactory.NewAlwaysAllowAuthorizer(),
 	}
