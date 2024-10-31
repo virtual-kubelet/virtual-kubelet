@@ -65,6 +65,15 @@ type Fields map[string]interface{}
 // WithLogger returns a new context with the provided logger. Use in
 // combination with logger.WithField(s) for great effect.
 func WithLogger(ctx context.Context, logger Logger) context.Context {
+	// nopSpan.Logger() passes in nil here any time trace.StartSpan is invoked, which overrides the
+	// logger from an externally provided context. This inadvertently suppresses all logging for
+	// the span, including for errors. Prevent clearing the existing logger here if, for example,
+	// trace.StartSpan does not pass in a new one. To use the default logger again, invoke
+	// log.WithLogger with log.L explicitly.
+	if logger == nil {
+		return ctx
+	}
+
 	return context.WithValue(ctx, loggerKey{}, logger)
 }
 
