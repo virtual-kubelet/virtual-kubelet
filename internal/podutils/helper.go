@@ -75,7 +75,6 @@ func ExtractFieldPathAsString(obj interface{}, fieldPath string) (string, error)
 	if err != nil {
 		return "", err
 	}
-	// TODO if provider had some sort of method for handling this, we'd need that reference here
 
 	if path, subscript, ok := SplitMaybeSubscriptedPath(fieldPath); ok {
 		switch path {
@@ -108,7 +107,6 @@ func ExtractFieldPathAsString(obj interface{}, fieldPath string) (string, error)
 	}
 
 	return fieldPath, nil
-	// return "", fmt.Errorf("unsupported fieldPath: %v", fieldPath)
 }
 
 // SplitMaybeSubscriptedPath checks whether the specified fieldPath is
