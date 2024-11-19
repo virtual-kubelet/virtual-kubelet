@@ -254,6 +254,11 @@ type NodeConfig struct {
 	// Set the error handler for node status update failures
 	NodeStatusUpdateErrorHandler node.ErrorHandler
 
+	// SkipDownwardAPIResolution can be used to skip any attempts at resolving downward API references
+	// in pods before calling CreatePod on the provider.
+	// Providers need this if they need to do their own custom resolving
+	SkipDownwardAPIResolution bool
+
 	routeAttacher func(Provider, NodeConfig, corev1listers.PodLister)
 }
 
@@ -393,13 +398,14 @@ func NewNode(name string, newProvider NewProviderFunc, opts ...NodeOpt) (*Node, 
 	}
 
 	pc, err := node.NewPodController(node.PodControllerConfig{
-		PodClient:         cfg.Client.CoreV1(),
-		EventRecorder:     cfg.EventRecorder,
-		Provider:          p,
-		PodInformer:       podInformer,
-		SecretInformer:    secretInformer,
-		ConfigMapInformer: configMapInformer,
-		ServiceInformer:   serviceInformer,
+		PodClient:                 cfg.Client.CoreV1(),
+		EventRecorder:             cfg.EventRecorder,
+		Provider:                  p,
+		PodInformer:               podInformer,
+		SecretInformer:            secretInformer,
+		ConfigMapInformer:         configMapInformer,
+		ServiceInformer:           serviceInformer,
+		SkipDownwardAPIResolution: cfg.SkipDownwardAPIResolution,
 	})
 	if err != nil {
 		return nil, errors.Wrap(err, "error creating pod controller")
