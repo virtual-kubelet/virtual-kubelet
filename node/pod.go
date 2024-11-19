@@ -69,11 +69,13 @@ func (pc *PodController) createOrUpdatePod(ctx context.Context, pod *corev1.Pod)
 		"namespace": pod.GetNamespace(),
 	})
 
-	// We do this so we don't mutate the pod from the informer cache
-	pod = pod.DeepCopy()
-	if err := podutils.PopulateEnvironmentVariables(ctx, pod, pc.resourceManager, pc.recorder); err != nil {
-		span.SetStatus(err)
-		return err
+	if !pc.skipDownwardAPIResolution {
+		// We do this so we don't mutate the pod from the informer cache
+		pod = pod.DeepCopy()
+		if err := podutils.PopulateEnvironmentVariables(ctx, pod, pc.resourceManager, pc.recorder); err != nil {
+			span.SetStatus(err)
+			return err
+		}
 	}
 
 	// We have to use a  different pod that we pass to the provider than the one that gets used in handleProviderError

@@ -140,6 +140,11 @@ type PodController struct {
 	// This is used since `pc.Run()` is typically called in a goroutine and managing
 	// this can be non-trivial for callers.
 	err error
+
+	// skipDownwardAPIResolution can be used to skip any attempts at resolving downward API references
+	// in pods before calling CreatePod on the provider.
+	// Providers need this if they need to do their own custom resolving
+	skipDownwardAPIResolution bool
 }
 
 type knownPod struct {
@@ -196,6 +201,11 @@ type PodControllerConfig struct {
 	// For example, if the pod informer is not filtering based on pod.Spec.NodeName, you should
 	// set that filter here so the pod controller does not handle events for pods assigned to other nodes.
 	PodEventFilterFunc PodEventFilterFunc
+
+	// SkipDownwardAPIResolution can be used to skip any attempts at resolving downward API references
+	// in pods before calling CreatePod on the provider.
+	// Providers need this if they need to do their own custom resolving
+	SkipDownwardAPIResolution bool
 }
 
 // NewPodController creates a new pod controller with the provided config.
@@ -236,15 +246,16 @@ func NewPodController(cfg PodControllerConfig) (*PodController, error) {
 	}
 
 	pc := &PodController{
-		client:             cfg.PodClient,
-		podsInformer:       cfg.PodInformer,
-		podsLister:         cfg.PodInformer.Lister(),
-		provider:           cfg.Provider,
-		resourceManager:    rm,
-		ready:              make(chan struct{}),
-		done:               make(chan struct{}),
-		recorder:           cfg.EventRecorder,
-		podEventFilterFunc: cfg.PodEventFilterFunc,
+		client:                    cfg.PodClient,
+		podsInformer:              cfg.PodInformer,
+		podsLister:                cfg.PodInformer.Lister(),
+		provider:                  cfg.Provider,
+		resourceManager:           rm,
+		ready:                     make(chan struct{}),
+		done:                      make(chan struct{}),
+		recorder:                  cfg.EventRecorder,
+		podEventFilterFunc:        cfg.PodEventFilterFunc,
+		skipDownwardAPIResolution: cfg.SkipDownwardAPIResolution,
 	}
 
 	pc.syncPodsFromKubernetes = queue.New(cfg.SyncPodsFromKubernetesRateLimiter, "syncPodsFromKubernetes", pc.syncPodFromKubernetesHandler, cfg.SyncPodsFromKubernetesShouldRetryFunc)
