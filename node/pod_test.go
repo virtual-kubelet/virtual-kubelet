@@ -57,20 +57,20 @@ func newTestController() *TestController {
 		ConfigMapInformer: iFactory.Core().V1().ConfigMaps(),
 		SecretInformer:    iFactory.Core().V1().Secrets(),
 		ServiceInformer:   iFactory.Core().V1().Services(),
-		SyncPodsFromKubernetesRateLimiter: workqueue.NewMaxOfRateLimiter(
+		SyncPodsFromKubernetesRateLimiter: workqueue.NewTypedMaxOfRateLimiter[any](
 			// The default upper bound is 1000 seconds. Let's not use that.
-			workqueue.NewItemExponentialFailureRateLimiter(5*time.Millisecond, 10*time.Millisecond),
-			&workqueue.BucketRateLimiter{Limiter: rate.NewLimiter(rate.Limit(10), 100)},
+			workqueue.NewTypedItemExponentialFailureRateLimiter[any](5*time.Millisecond, 10*time.Millisecond),
+			&workqueue.TypedBucketRateLimiter[any]{Limiter: rate.NewLimiter(rate.Limit(10), 100)},
 		),
-		SyncPodStatusFromProviderRateLimiter: workqueue.NewMaxOfRateLimiter(
+		SyncPodStatusFromProviderRateLimiter: workqueue.NewTypedMaxOfRateLimiter[any](
 			// The default upper bound is 1000 seconds. Let's not use that.
-			workqueue.NewItemExponentialFailureRateLimiter(5*time.Millisecond, 10*time.Millisecond),
-			&workqueue.BucketRateLimiter{Limiter: rate.NewLimiter(rate.Limit(10), 100)},
+			workqueue.NewTypedItemExponentialFailureRateLimiter[any](5*time.Millisecond, 10*time.Millisecond),
+			&workqueue.TypedBucketRateLimiter[any]{Limiter: rate.NewLimiter(rate.Limit(10), 100)},
 		),
-		DeletePodsFromKubernetesRateLimiter: workqueue.NewMaxOfRateLimiter(
+		DeletePodsFromKubernetesRateLimiter: workqueue.NewTypedMaxOfRateLimiter[any](
 			// The default upper bound is 1000 seconds. Let's not use that.
-			workqueue.NewItemExponentialFailureRateLimiter(5*time.Millisecond, 10*time.Millisecond),
-			&workqueue.BucketRateLimiter{Limiter: rate.NewLimiter(rate.Limit(10), 100)},
+			workqueue.NewTypedItemExponentialFailureRateLimiter[any](5*time.Millisecond, 10*time.Millisecond),
+			&workqueue.TypedBucketRateLimiter[any]{Limiter: rate.NewLimiter(rate.Limit(10), 100)},
 		),
 	})
 
