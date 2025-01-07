@@ -1,7 +1,4 @@
 linter-settings:
-  gosec:
-    excludes:
-      - G304 # Potential file inclusion via variable
   lll:
     line-length: 200
 
@@ -31,5 +28,10 @@ linters:
     - unused
     - misspell
     - gosec
-    - exportloopref # Checks for pointers to enclosing loop variables
+    - copyloopvar # Checks for pointers to enclosing loop variables
     - tenv # Detects using os.Setenv instead of t.Setenv since Go 1.17
+
+linters-settings:
+  gosec:
+    excludes:
+      - G304 # Potential file inclusion via variable
