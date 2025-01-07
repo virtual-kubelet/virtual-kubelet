@@ -50,7 +50,7 @@ func InstrumentAuth(auth Auth) Auth {
 // NoAuth creates an Auth which allows anonymous access to all resouorces
 func NoAuth() Auth {
 	return &authWrapper{
-		Request:                 anonymous.NewAuthenticator(),
+		Request:                 anonymous.NewAuthenticator(nil),
 		RequestAttributesGetter: &NodeRequestAttr{},
 		Authorizer:              authorizerfactory.NewAlwaysAllowAuthorizer(),
 	}

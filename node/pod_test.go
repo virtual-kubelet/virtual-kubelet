@@ -17,6 +17,7 @@ package node
 import (
 	"context"
 	"fmt"
+	"reflect"
 	"testing"
 	"time"
 
@@ -56,20 +57,20 @@ func newTestController() *TestController {
 		ConfigMapInformer: iFactory.Core().V1().ConfigMaps(),
 		SecretInformer:    iFactory.Core().V1().Secrets(),
 		ServiceInformer:   iFactory.Core().V1().Services(),
-		SyncPodsFromKubernetesRateLimiter: workqueue.NewMaxOfRateLimiter(
+		SyncPodsFromKubernetesRateLimiter: workqueue.NewTypedMaxOfRateLimiter[any](
 			// The default upper bound is 1000 seconds. Let's not use that.
-			workqueue.NewItemExponentialFailureRateLimiter(5*time.Millisecond, 10*time.Millisecond),
-			&workqueue.BucketRateLimiter{Limiter: rate.NewLimiter(rate.Limit(10), 100)},
+			workqueue.NewTypedItemExponentialFailureRateLimiter[any](5*time.Millisecond, 10*time.Millisecond),
+			&workqueue.TypedBucketRateLimiter[any]{Limiter: rate.NewLimiter(rate.Limit(10), 100)},
 		),
-		SyncPodStatusFromProviderRateLimiter: workqueue.NewMaxOfRateLimiter(
+		SyncPodStatusFromProviderRateLimiter: workqueue.NewTypedMaxOfRateLimiter[any](
 			// The default upper bound is 1000 seconds. Let's not use that.
-			workqueue.NewItemExponentialFailureRateLimiter(5*time.Millisecond, 10*time.Millisecond),
-			&workqueue.BucketRateLimiter{Limiter: rate.NewLimiter(rate.Limit(10), 100)},
+			workqueue.NewTypedItemExponentialFailureRateLimiter[any](5*time.Millisecond, 10*time.Millisecond),
+			&workqueue.TypedBucketRateLimiter[any]{Limiter: rate.NewLimiter(rate.Limit(10), 100)},
 		),
-		DeletePodsFromKubernetesRateLimiter: workqueue.NewMaxOfRateLimiter(
+		DeletePodsFromKubernetesRateLimiter: workqueue.NewTypedMaxOfRateLimiter[any](
 			// The default upper bound is 1000 seconds. Let's not use that.
-			workqueue.NewItemExponentialFailureRateLimiter(5*time.Millisecond, 10*time.Millisecond),
-			&workqueue.BucketRateLimiter{Limiter: rate.NewLimiter(rate.Limit(10), 100)},
+			workqueue.NewTypedItemExponentialFailureRateLimiter[any](5*time.Millisecond, 10*time.Millisecond),
+			&workqueue.TypedBucketRateLimiter[any]{Limiter: rate.NewLimiter(rate.Limit(10), 100)},
 		),
 	})
 
@@ -293,7 +294,8 @@ func TestPodStatusDelete(t *testing.T) {
 	if err != nil && !errors.IsNotFound(err) {
 		t.Fatalf("Get pod %v failed", key)
 	}
-	if newPod != nil && newPod.DeletionTimestamp == nil {
+
+	if newPod != nil && !reflect.ValueOf(*newPod).IsZero() && newPod.DeletionTimestamp == nil {
 		t.Fatalf("Pod %v delete failed", key)
 	}
 	t.Logf("pod delete success")
