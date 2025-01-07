@@ -1,6 +1,6 @@
 ARG GOLANG_CI_LINT_VERSION
 
-FROM golang:1.20 as builder
+FROM golang:1.23 as builder
 ENV PATH /go/bin:/usr/local/go/bin:$PATH
 ENV GOPATH /go
 COPY . /go/src/github.com/virtual-kubelet/virtual-kubelet
