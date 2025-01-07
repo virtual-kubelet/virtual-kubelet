@@ -360,7 +360,6 @@ func TestLogf(t *testing.T) {
 	}
 
 	for _, tt := range testCases {
-		tt := tt
 		t.Run(tt.description, func(t *testing.T) {
 			tearDown, p, e := setupSuite()
 			defer tearDown(p)
@@ -387,8 +386,6 @@ func TestLogf(t *testing.T) {
 
 			assert.Assert(t, len(e.events) == len(tt.expectedEvents))
 			for i, event := range tt.expectedEvents {
-				event := event
-				i := i
 				t.Run(fmt.Sprintf("event %s", event.Name), func(t *testing.T) {
 					assert.Check(t, cmp.Equal(e.events[i].Name, event.Name))
 					assert.Check(t, !e.events[i].Time.IsZero())
@@ -403,7 +400,6 @@ func TestLogf(t *testing.T) {
 				return fl.a[i].Key < fl.a[j].Key
 			})
 			for i, a := range tt.expectedAttributes {
-				a := a
 				t.Run(fmt.Sprintf("attribute %s", a.Key), func(t *testing.T) {
 					assert.Assert(t, fl.a[i].Key == a.Key)
 					assert.Assert(t, cmp.Equal(fl.a[i].Value.Type(), a.Value.Type()))
