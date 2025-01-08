@@ -7,10 +7,10 @@ import (
 	dto "github.com/prometheus/client_model/go"
 	"github.com/virtual-kubelet/virtual-kubelet/node"
 	"github.com/virtual-kubelet/virtual-kubelet/node/api"
-	"github.com/virtual-kubelet/virtual-kubelet/node/api/statsv1alpha1"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	corev1listers "k8s.io/client-go/listers/core/v1"
+	statsv1alpha1 "k8s.io/kubelet/pkg/apis/stats/v1alpha1"
 )
 
 // Provider contains the methods required to implement a virtual-kubelet provider.
