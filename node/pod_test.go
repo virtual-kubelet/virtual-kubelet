@@ -224,6 +224,42 @@ func TestPodCreateNewPod(t *testing.T) {
 	assert.Check(t, is.Equal(svr.mock.updates.read(), 0))
 }
 
+func TestPodCreateNewPodWithNoDownwardAPIResolution(t *testing.T) {
+	svr := newTestController()
+	svr.skipDownwardAPIResolution = true
+
+	pod := &corev1.Pod{}
+	pod.ObjectMeta.Namespace = "default" //nolint:goconst
+	pod.ObjectMeta.Name = "nginx"        //nolint:goconst
+	pod.Spec = newPodSpec()
+	pod.Spec.Containers[0].Env = []corev1.EnvVar{
+		{
+			Name: "MY_NODE_NAME",
+			ValueFrom: &corev1.EnvVarSource{
+				FieldRef: &corev1.ObjectFieldSelector{
+					FieldPath: "spec.nodeName",
+				},
+			},
+		},
+	}
+
+	err := svr.createOrUpdatePod(context.Background(), pod.DeepCopy())
+	assert.Check(t, is.Nil(err))
+
+	// createOrUpdate called CreatePod but did not call UpdatePod because the pod did not exist
+	assert.Check(t, is.Equal(svr.mock.creates.read(), 1))
+	assert.Check(t, is.Equal(svr.mock.updates.read(), 0))
+
+	// make sure the downward API field in env was left alone
+	key, err := buildKey(pod)
+	assert.Check(t, is.Nil(err))
+	createdPod, ok := svr.mock.pods.Load(key)
+	assert.Check(t, ok)
+
+	// createdPod went through the pod controller logic, make sure the downward API wasn't resolved
+	assert.Check(t, is.DeepEqual(createdPod.(*corev1.Pod).Spec.Containers[0].Env, pod.Spec.Containers[0].Env))
+}
+
 func TestPodUpdateExisting(t *testing.T) {
 	svr := newTestController()
 
