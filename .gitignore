@@ -30,6 +30,9 @@ credentials.json
 # Test loganalytics file
 loganalytics.json
 
+# Env test etcd
+default.etcd
+
 # VS Code files
 .vscode/
 

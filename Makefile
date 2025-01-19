@@ -165,19 +165,19 @@ authors:
 	rm -f NEWAUTHORS
 	rm -f GITAUTHORS
 
-checksums_2.3.1.txt:
-	curl -o checksums_2.3.1.txt -L https://github.com/kubernetes-sigs/kubebuilder/releases/download/v2.3.1/checksums.txt
-kubebuilder_2.3.1_${TEST_OS}_${TEST_ARCH}.tar.gz:
-	curl -C - -O -L https://github.com/kubernetes-sigs/kubebuilder/releases/download/v2.3.1/kubebuilder_2.3.1_${TEST_OS}_${TEST_ARCH}.tar.gz
-kubebuilder_2.3.1_${TEST_OS}_${TEST_ARCH}: kubebuilder_2.3.1_${TEST_OS}_${TEST_ARCH}.tar.gz checksums_2.3.1.txt
-	sha256sum -c --ignore-missing checksums_2.3.1.txt
-	tar -xvf kubebuilder_2.3.1_${TEST_OS}_${TEST_ARCH}.tar.gz
+ENVTEST_K8S_VERSION ?= 1.31.x
+ENVTEST_VERSION ?= 0.19.4
 
 .PHONY: envtest
-envtest: kubebuilder_2.3.1_${TEST_OS}_${TEST_ARCH}
+envtest:
+	mkdir -p bin
+	curl -s -C - -O -L https://github.com/kubernetes-sigs/controller-runtime/releases/download/v${ENVTEST_VERSION}/setup-envtest-${TEST_OS}-${TEST_ARCH}
+	mv setup-envtest-${TEST_OS}-${TEST_ARCH} bin/
+	chmod +x bin/setup-envtest-${TEST_OS}-${TEST_ARCH}
+	bin/setup-envtest-${TEST_OS}-${TEST_ARCH} use ${ENVTEST_K8S_VERSION} --bin-dir ./bin -p path
 	# You can add klog flags for debugging, like: -klog.v=10 -klog.logtostderr
 	# klogv2 flags just wraps our existing logrus.
-	KUBEBUILDER_ASSETS=$(PWD)/kubebuilder_2.3.1_${TEST_OS}_${TEST_ARCH}/bin $(GOTEST) -run=TestEnvtest ./node -envtest=true
+	KUBEBUILDER_ASSETS=$(PWD)/$(shell bin/setup-envtest-${TEST_OS}-${TEST_ARCH} use ${ENVTEST_K8S_VERSION} --bin-dir ./bin -p path) $(GOTEST) -run=TestEnvtest ./node -envtest=true
 
 .PHONY: fmt
 fmt:
