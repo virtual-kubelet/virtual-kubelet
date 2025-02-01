@@ -171,7 +171,17 @@ type containerExecContext struct {
 
 // ExecInContainer Implements remotecommand.Executor
 // This is called by remotecommand.ServeExec
-func (c *containerExecContext) ExecInContainer(name string, uid types.UID, container string, cmd []string, in io.Reader, out, err io.WriteCloser, tty bool, resize <-chan remoteutils.TerminalSize, timeout time.Duration) error {
+func (c *containerExecContext) ExecInContainer(
+	name string,
+	uid types.UID,
+	container string,
+	cmd []string,
+	in io.Reader,
+	out, err io.WriteCloser,
+	tty bool,
+	resize <-chan remoteutils.TerminalSize,
+	timeout time.Duration,
+) error {
 
 	eio := &execIO{
 		tty:    tty,

@@ -1,7 +1,3 @@
-linter-settings:
-  lll:
-    line-length: 200
-
 timeout: 10m
 
 issues:
@@ -30,8 +26,11 @@ linters:
     - gosec
     - copyloopvar # Checks for pointers to enclosing loop variables
     - tenv # Detects using os.Setenv instead of t.Setenv since Go 1.17
+    - lll
 
 linters-settings:
   gosec:
     excludes:
       - G304 # Potential file inclusion via variable
+  lll:
+    line-length: 200
