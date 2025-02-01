@@ -32,7 +32,12 @@ type ResourceManager struct {
 }
 
 // NewResourceManager returns a ResourceManager with the internal maps initialized.
-func NewResourceManager(podLister corev1listers.PodLister, secretLister corev1listers.SecretLister, configMapLister corev1listers.ConfigMapLister, serviceLister corev1listers.ServiceLister) (*ResourceManager, error) {
+func NewResourceManager(
+	podLister corev1listers.PodLister,
+	secretLister corev1listers.SecretLister,
+	configMapLister corev1listers.ConfigMapLister,
+	serviceLister corev1listers.ServiceLister,
+) (*ResourceManager, error) {
 	rm := ResourceManager{
 		podLister:       podLister,
 		secretLister:    secretLister,

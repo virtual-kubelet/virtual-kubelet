@@ -95,7 +95,16 @@ type containerAttachContext struct {
 
 // AttachToContainer Implements remotecommand.Attacher
 // This is called by remotecommand.ServeAttach
-func (c *containerAttachContext) AttachToContainer(name string, uid types.UID, container string, in io.Reader, out, err io.WriteCloser, tty bool, resize <-chan remoteutils.TerminalSize, timeout time.Duration) error {
+func (c *containerAttachContext) AttachToContainer(
+	name string,
+	uid types.UID,
+	container string,
+	in io.Reader,
+	out, err io.WriteCloser,
+	tty bool,
+	resize <-chan remoteutils.TerminalSize,
+	timeout time.Duration,
+) error {
 
 	eio := &execIO{
 		tty:    tty,
