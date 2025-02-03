@@ -208,6 +208,27 @@ func TestPodShouldEnqueueGraceTimeChanged(t *testing.T) {
 	assert.Assert(t, podShouldEnqueue(p1, p2))
 }
 
+func TestPodShouldEnqueueAllContainersDead(t *testing.T) {
+	p1 := &corev1.Pod{
+		Spec: newPodSpec(),
+	}
+
+	p2 := p1.DeepCopy()
+	deletionTimestamp := v1.NewTime(time.Now().Add(time.Hour))
+	p2.DeletionTimestamp = &deletionTimestamp
+	for i := 0; i < len(p2.Status.ContainerStatuses); i++ {
+		p2.Status.ContainerStatuses[i].State = corev1.ContainerState{
+			Waiting: nil,
+			Running: nil,
+			Terminated: &corev1.ContainerStateTerminated{
+				ExitCode: 1,
+				Message:  "Exit",
+			},
+		}
+	}
+	assert.Assert(t, podShouldEnqueue(p1, p2))
+}
+
 func TestPodCreateNewPod(t *testing.T) {
 	svr := newTestController()
 
