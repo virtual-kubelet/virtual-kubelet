@@ -36,28 +36,28 @@ const (
 )
 
 // ShouldRetryFunc is a mechanism to have a custom retry policy
-type ShouldRetryFunc func(ctx context.Context, key string, timesTried int, originallyAdded time.Time, err error) (*time.Duration, error)
+type ShouldRetryFunc[K any] func(ctx context.Context, key K, timesTried int, originallyAdded time.Time, err error) (*time.Duration, error)
 
 // ItemHandler is a callback that handles a single key on the Queue
-type ItemHandler func(ctx context.Context, key string) error
+type ItemHandler[K any] func(ctx context.Context, key K) error
 
 // Queue implements a wrapper around workqueue with native VK instrumentation
-type Queue struct {
+type Queue[K comparable] struct {
 	// clock is used for testing
 	clock clock.Clock
 	// lock protects running, and the items list / map
 	lock    sync.Mutex
 	running bool
 	name    string
-	handler ItemHandler
+	handler ItemHandler[K]
 
 	ratelimiter workqueue.TypedRateLimiter[any]
 	// items are items that are marked dirty waiting for processing.
 	items *list.List
-	// itemInQueue is a map of (string) key -> item while it is in the items list
-	itemsInQueue map[string]*list.Element
-	// itemsBeingProcessed is a map of (string) key -> item once it has been moved
-	itemsBeingProcessed map[string]*queueItem
+	// itemInQueue is a map of key -> item while it is in the items list
+	itemsInQueue map[K]*list.Element
+	// itemsBeingProcessed is a map of key -> item once it has been moved
+	itemsBeingProcessed map[K]*queueItem[K]
 	// Wait for next semaphore is an exclusive (1 item) lock that is taken every time items is checked to see if there
 	// is an item in queue for work
 	waitForNextItemSemaphore *semaphore.Weighted
@@ -65,11 +65,11 @@ type Queue struct {
 	// wakeup
 	wakeupCh chan struct{}
 
-	retryFunc ShouldRetryFunc
+	retryFunc ShouldRetryFunc[K]
 }
 
-type queueItem struct {
-	key                    string
+type queueItem[K comparable] struct {
+	key                    K
 	plannedToStartWorkAt   time.Time
 	redirtiedAt            time.Time
 	redirtiedWithRatelimit bool
@@ -82,25 +82,25 @@ type queueItem struct {
 	delayedViaRateLimit *time.Duration
 }
 
-func (item *queueItem) String() string {
-	return fmt.Sprintf("<plannedToStartWorkAt:%s key: %s>", item.plannedToStartWorkAt.String(), item.key)
+func (item *queueItem[K]) String() string {
+	return fmt.Sprintf("<plannedToStartWorkAt:%s key: %+v>", item.plannedToStartWorkAt.String(), item.key)
 }
 
 // New creates a queue
 //
 // It expects to get a item rate limiter, and a friendly name which is used in logs, and in the internal kubernetes
 // metrics. If retryFunc is nil, the default retry function.
-func New(ratelimiter workqueue.TypedRateLimiter[any], name string, handler ItemHandler, retryFunc ShouldRetryFunc) *Queue {
+func New[K comparable](ratelimiter workqueue.TypedRateLimiter[any], name string, handler ItemHandler[K], retryFunc ShouldRetryFunc[K]) *Queue[K] {
 	if retryFunc == nil {
 		retryFunc = DefaultRetryFunc
 	}
-	return &Queue{
+	return &Queue[K]{
 		clock:                    clock.RealClock{},
 		name:                     name,
 		ratelimiter:              ratelimiter,
 		items:                    list.New(),
-		itemsBeingProcessed:      make(map[string]*queueItem),
-		itemsInQueue:             make(map[string]*list.Element),
+		itemsBeingProcessed:      make(map[K]*queueItem[K]),
+		itemsInQueue:             make(map[K]*list.Element),
 		handler:                  handler,
 		wakeupCh:                 make(chan struct{}, 1),
 		waitForNextItemSemaphore: semaphore.NewWeighted(1),
@@ -109,7 +109,7 @@ func New(ratelimiter workqueue.TypedRateLimiter[any], name string, handler ItemH
 }
 
 // Enqueue enqueues the key in a rate limited fashion
-func (q *Queue) Enqueue(ctx context.Context, key string) {
+func (q *Queue[K]) Enqueue(ctx context.Context, key K) {
 	q.lock.Lock()
 	defer q.lock.Unlock()
 
@@ -117,7 +117,7 @@ func (q *Queue) Enqueue(ctx context.Context, key string) {
 }
 
 // EnqueueWithoutRateLimit enqueues the key without a rate limit
-func (q *Queue) EnqueueWithoutRateLimit(ctx context.Context, key string) {
+func (q *Queue[K]) EnqueueWithoutRateLimit(ctx context.Context, key K) {
 	q.lock.Lock()
 	defer q.lock.Unlock()
 
@@ -125,7 +125,7 @@ func (q *Queue) EnqueueWithoutRateLimit(ctx context.Context, key string) {
 }
 
 // Forget forgets the key
-func (q *Queue) Forget(ctx context.Context, key string) {
+func (q *Queue[K]) Forget(ctx context.Context, key K) {
 	q.lock.Lock()
 	defer q.lock.Unlock()
 	ctx, span := trace.StartSpan(ctx, "Forget")
@@ -164,7 +164,7 @@ func durationDeref(duration *time.Duration, def time.Duration) time.Duration {
 // If ratelimit is specified, and delay is nil, then the ratelimiter's delay (return from When function) will be used
 // If ratelimit is specified, and the delay is non-nil, then the delay value will be used
 // If ratelimit is false, then only delay is used to schedule the work. If delay is nil, it will be considered 0.
-func (q *Queue) insert(ctx context.Context, key string, ratelimit bool, delay *time.Duration) *queueItem {
+func (q *Queue[K]) insert(ctx context.Context, key K, ratelimit bool, delay *time.Duration) *queueItem[K] {
 	ctx, span := trace.StartSpan(ctx, "insert")
 	defer span.End()
 
@@ -205,7 +205,7 @@ func (q *Queue) insert(ctx context.Context, key string, ratelimit bool, delay *t
 	// Is the item already in the queue?
 	if item, ok := q.itemsInQueue[key]; ok {
 		span.WithField(ctx, "status", "itemsInQueue")
-		qi := item.Value.(*queueItem)
+		qi := item.Value.(*queueItem[K])
 		when := q.clock.Now().Add(durationDeref(delay, 0))
 		q.adjustPosition(qi, item, when)
 		return qi
@@ -213,7 +213,7 @@ func (q *Queue) insert(ctx context.Context, key string, ratelimit bool, delay *t
 
 	span.WithField(ctx, "status", "added")
 	now := q.clock.Now()
-	val := &queueItem{
+	val := &queueItem[K]{
 		key:                  key,
 		plannedToStartWorkAt: now,
 		originallyAdded:      now,
@@ -233,7 +233,7 @@ func (q *Queue) insert(ctx context.Context, key string, ratelimit bool, delay *t
 	}
 
 	for item := q.items.Back(); item != nil; item = item.Prev() {
-		qi := item.Value.(*queueItem)
+		qi := item.Value.(*queueItem[K])
 		if qi.plannedToStartWorkAt.Before(val.plannedToStartWorkAt) {
 			q.itemsInQueue[key] = q.items.InsertAfter(val, item)
 			return val
@@ -244,7 +244,7 @@ func (q *Queue) insert(ctx context.Context, key string, ratelimit bool, delay *t
 	return val
 }
 
-func (q *Queue) adjustPosition(qi *queueItem, element *list.Element, when time.Time) {
+func (q *Queue[K]) adjustPosition(qi *queueItem[K], element *list.Element, when time.Time) {
 	if when.After(qi.plannedToStartWorkAt) {
 		// The item has already been delayed appropriately
 		return
@@ -252,7 +252,7 @@ func (q *Queue) adjustPosition(qi *queueItem, element *list.Element, when time.T
 
 	qi.plannedToStartWorkAt = when
 	for prev := element.Prev(); prev != nil; prev = prev.Prev() {
-		item := prev.Value.(*queueItem)
+		item := prev.Value.(*queueItem[K])
 		// does this item plan to start work *before* the new time? If so add it
 		if item.plannedToStartWorkAt.Before(when) {
 			q.items.MoveAfter(element, prev)
@@ -264,7 +264,7 @@ func (q *Queue) adjustPosition(qi *queueItem, element *list.Element, when time.T
 }
 
 // EnqueueWithoutRateLimitWithDelay enqueues without rate limiting, but work will not start for this given delay period
-func (q *Queue) EnqueueWithoutRateLimitWithDelay(ctx context.Context, key string, after time.Duration) {
+func (q *Queue[K]) EnqueueWithoutRateLimitWithDelay(ctx context.Context, key K, after time.Duration) {
 	q.lock.Lock()
 	defer q.lock.Unlock()
 	q.insert(ctx, key, false, &after)
@@ -273,12 +273,12 @@ func (q *Queue) EnqueueWithoutRateLimitWithDelay(ctx context.Context, key string
 // Empty returns if the queue has no items in it
 //
 // It should only be used for debugging.
-func (q *Queue) Empty() bool {
+func (q *Queue[K]) Empty() bool {
 	return q.Len() == 0
 }
 
 // Len includes items that are in the queue, and are being processed
-func (q *Queue) Len() int {
+func (q *Queue[K]) Len() int {
 	q.lock.Lock()
 	defer q.lock.Unlock()
 	if q.items.Len() != len(q.itemsInQueue) {
@@ -289,7 +289,7 @@ func (q *Queue) Len() int {
 }
 
 // UnprocessedLen returns the count of items yet to be processed in the queue
-func (q *Queue) UnprocessedLen() int {
+func (q *Queue[K]) UnprocessedLen() int {
 	q.lock.Lock()
 	defer q.lock.Unlock()
 	if q.items.Len() != len(q.itemsInQueue) {
@@ -300,7 +300,7 @@ func (q *Queue) UnprocessedLen() int {
 }
 
 // ProcessedLen returns the count items that are being processed
-func (q *Queue) ItemsBeingProcessedLen() int {
+func (q *Queue[K]) ItemsBeingProcessedLen() int {
 	q.lock.Lock()
 	defer q.lock.Unlock()
 	return len(q.itemsBeingProcessed)
@@ -309,7 +309,7 @@ func (q *Queue) ItemsBeingProcessedLen() int {
 // Run starts the workers
 //
 // It blocks until context is cancelled, and all of the workers exit.
-func (q *Queue) Run(ctx context.Context, workers int) {
+func (q *Queue[K]) Run(ctx context.Context, workers int) {
 	if workers <= 0 {
 		panic(fmt.Sprintf("Workers must be greater than 0, got: %d", workers))
 	}
@@ -342,7 +342,7 @@ func (q *Queue) Run(ctx context.Context, workers int) {
 	<-ctx.Done()
 }
 
-func (q *Queue) worker(ctx context.Context, i int) {
+func (q *Queue[K]) worker(ctx context.Context, i int) {
 	ctx = log.WithLogger(ctx, log.G(ctx).WithFields(map[string]interface{}{
 		"workerId": i,
 		"queue":    q.name,
@@ -351,7 +351,7 @@ func (q *Queue) worker(ctx context.Context, i int) {
 	}
 }
 
-func (q *Queue) getNextItem(ctx context.Context) (*queueItem, error) {
+func (q *Queue[K]) getNextItem(ctx context.Context) (*queueItem[K], error) {
 	if err := q.waitForNextItemSemaphore.Acquire(ctx, 1); err != nil {
 		return nil, err
 	}
@@ -369,7 +369,7 @@ func (q *Queue) getNextItem(ctx context.Context) (*queueItem, error) {
 			case <-q.wakeupCh:
 			}
 		} else {
-			qi := element.Value.(*queueItem)
+			qi := element.Value.(*queueItem[K])
 			timeUntilProcessing := time.Until(qi.plannedToStartWorkAt)
 
 			// Do we need to sleep? If not, let's party.
@@ -402,7 +402,7 @@ func (q *Queue) getNextItem(ctx context.Context) (*queueItem, error) {
 // handleQueueItem handles a single item
 //
 // A return value of "false" indicates that further processing should be stopped.
-func (q *Queue) handleQueueItem(ctx context.Context) bool {
+func (q *Queue[K]) handleQueueItem(ctx context.Context) bool {
 	ctx, span := trace.StartSpan(ctx, "handleQueueItem")
 	defer span.End()
 
@@ -412,8 +412,7 @@ func (q *Queue) handleQueueItem(ctx context.Context) bool {
 		return false
 	}
 
-	// We expect strings to come off the work Queue.
-	// These are of the form namespace/name.
+	// We expect pod identifiers (namespace/name, UID) to come off the work Queue.
 	// We do this as the delayed nature of the work Queue means the items in the informer cache may actually be more u
 	// to date that when the item was initially put onto the workqueue.
 	ctx = span.WithField(ctx, "key", qi.key)
@@ -431,7 +430,7 @@ func (q *Queue) handleQueueItem(ctx context.Context) bool {
 	return true
 }
 
-func (q *Queue) handleQueueItemObject(ctx context.Context, qi *queueItem) error {
+func (q *Queue[K]) handleQueueItemObject(ctx context.Context, qi *queueItem[K]) error {
 	// This is a separate function / span, because the handleQueueItem span is the time spent waiting for the object
 	// plus the time spend handling the object. Instead, this function / span is scoped to a single object.
 	ctx, span := trace.StartSpan(ctx, "handleQueueItemObject")
@@ -459,7 +458,7 @@ func (q *Queue) handleQueueItemObject(ctx context.Context, qi *queueItem) error 
 	delete(q.itemsBeingProcessed, qi.key)
 	if qi.forget {
 		q.ratelimiter.Forget(qi.key)
-		log.G(ctx).WithError(err).Warnf("forgetting %q as told to forget while in progress", qi.key)
+		log.G(ctx).WithError(err).Warnf("forgetting %+v as told to forget while in progress", qi.key)
 		return nil
 	}
 
@@ -472,7 +471,7 @@ func (q *Queue) handleQueueItemObject(ctx context.Context, qi *queueItem) error 
 		delay, err = q.retryFunc(ctx, qi.key, qi.requeues+1, qi.originallyAdded, err)
 		if err == nil {
 			// Put the item back on the work Queue to handle any transient errors.
-			log.G(ctx).WithError(originalError).Warnf("requeuing %q due to failed sync", qi.key)
+			log.G(ctx).WithError(originalError).Warnf("requeuing %+v due to failed sync", qi.key)
 			newQI := q.insert(ctx, qi.key, true, delay)
 			newQI.requeues = qi.requeues + 1
 			newQI.originallyAdded = qi.originallyAdded
@@ -480,9 +479,9 @@ func (q *Queue) handleQueueItemObject(ctx context.Context, qi *queueItem) error 
 			return nil
 		}
 		if !qi.redirtiedAt.IsZero() {
-			err = fmt.Errorf("temporarily (requeued) forgetting %q due to: %w", qi.key, err)
+			err = fmt.Errorf("temporarily (requeued) forgetting %+v due to: %w", qi.key, err)
 		} else {
-			err = fmt.Errorf("forgetting %q due to: %w", qi.key, err)
+			err = fmt.Errorf("forgetting %+v due to: %w", qi.key, err)
 		}
 	}
 
@@ -498,20 +497,20 @@ func (q *Queue) handleQueueItemObject(ctx context.Context, qi *queueItem) error 
 	return err
 }
 
-func (q *Queue) String() string {
+func (q *Queue[K]) String() string {
 	q.lock.Lock()
 	defer q.lock.Unlock()
 
 	items := make([]string, 0, q.items.Len())
 
 	for next := q.items.Front(); next != nil; next = next.Next() {
-		items = append(items, next.Value.(*queueItem).String())
+		items = append(items, next.Value.(*queueItem[K]).String())
 	}
 	return fmt.Sprintf("<items:%s>", items)
 }
 
 // DefaultRetryFunc is the default function used for retries by the queue subsystem.
-func DefaultRetryFunc(ctx context.Context, key string, timesTried int, originallyAdded time.Time, err error) (*time.Duration, error) {
+func DefaultRetryFunc[K any](ctx context.Context, key K, timesTried int, originallyAdded time.Time, err error) (*time.Duration, error) {
 	if timesTried < MaxRetries {
 		return nil, nil
 	}

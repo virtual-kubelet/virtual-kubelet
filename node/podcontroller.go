@@ -111,13 +111,13 @@ type PodController struct {
 
 	resourceManager *manager.ResourceManager
 
-	syncPodsFromKubernetes *queue.Queue
+	syncPodsFromKubernetes *queue.Queue[string]
 
 	// deletePodsFromKubernetes is a queue on which pods are reconciled, and we check if pods are in API server after
 	// the grace period
-	deletePodsFromKubernetes *queue.Queue
+	deletePodsFromKubernetes *queue.Queue[string]
 
-	syncPodStatusFromProvider *queue.Queue
+	syncPodStatusFromProvider *queue.Queue[string]
 
 	// From the time of creation, to termination the knownPods map will contain the pods key
 	// (derived from Kubernetes' cache library) -> a *knownPod struct.
