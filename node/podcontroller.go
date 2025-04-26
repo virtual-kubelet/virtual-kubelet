@@ -29,6 +29,7 @@ import (
 	"github.com/virtual-kubelet/virtual-kubelet/trace"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
 	corev1informers "k8s.io/client-go/informers/core/v1"
 	corev1client "k8s.io/client-go/kubernetes/typed/core/v1"
@@ -75,6 +76,22 @@ type PodLifecycleHandler interface {
 	GetPods(context.Context) ([]*corev1.Pod, error)
 }
 
+type PodUIDLifecycleHandler interface {
+	PodLifecycleHandler
+
+	// GetPodByUID retrieves a pod by name and UID from the provider (can be cached).
+	// The Pod returned is expected to be immutable, and may be accessed
+	// concurrently outside of the calling goroutine. Therefore it is recommended
+	// to return a version after DeepCopy.
+	GetPodByUID(ctx context.Context, namespace, name string, uid types.UID) (*corev1.Pod, error)
+
+	// GetPodStatusByUID retrieves the status of a pod by name and UID from the provider.
+	// The PodStatus returned is expected to be immutable, and may be accessed
+	// concurrently outside of the calling goroutine. Therefore it is recommended
+	// to return a version after DeepCopy.
+	GetPodStatusByUID(ctx context.Context, namespace, name string, uid types.UID) (*corev1.PodStatus, error)
+}
+
 // PodNotifier is used as an extension to PodLifecycleHandler to support async updates of pod statuses.
 type PodNotifier interface {
 	// NotifyPods instructs the notifier to call the passed in function when
@@ -97,7 +114,7 @@ type PodEventFilterFunc func(context.Context, *corev1.Pod) bool
 
 // PodController is the controller implementation for Pod resources.
 type PodController struct {
-	provider PodLifecycleHandler
+	provider PodUIDLifecycleHandler
 
 	// podsInformer is an informer for Pod resources.
 	podsInformer corev1informers.PodInformer
@@ -245,11 +262,18 @@ func NewPodController(cfg PodControllerConfig) (*PodController, error) {
 		return nil, pkgerrors.Wrap(err, "could not create resource manager")
 	}
 
+	var provider PodUIDLifecycleHandler
+	if p, ok := cfg.Provider.(PodUIDLifecycleHandler); ok {
+		provider = p
+	} else {
+		provider = &uidProviderWrapper{PodLifecycleHandler: cfg.Provider}
+	}
+
 	pc := &PodController{
 		client:                    cfg.PodClient,
 		podsInformer:              cfg.PodInformer,
 		podsLister:                cfg.PodInformer.Lister(),
-		provider:                  cfg.Provider,
+		provider:                  provider,
 		resourceManager:           rm,
 		ready:                     make(chan struct{}),
 		done:                      make(chan struct{}),
@@ -266,7 +290,7 @@ func NewPodController(cfg PodControllerConfig) (*PodController, error) {
 }
 
 type asyncProvider interface {
-	PodLifecycleHandler
+	PodUIDLifecycleHandler
 	PodNotifier
 }
 
@@ -296,7 +320,7 @@ func (pc *PodController) Run(ctx context.Context, podSyncWorkers int) (retErr er
 	if p, ok := pc.provider.(asyncProvider); ok {
 		provider = p
 	} else {
-		wrapped := &syncProviderWrapper{PodLifecycleHandler: pc.provider, l: pc.podsLister}
+		wrapped := &syncProviderWrapper{PodUIDLifecycleHandler: pc.provider, l: pc.podsLister}
 		runProvider = wrapped.run
 		provider = wrapped
 		log.G(ctx).Debug("Wrapped non-async provider with async")

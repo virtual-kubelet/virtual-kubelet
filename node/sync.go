@@ -26,9 +26,9 @@ const (
 	containerStatusTerminatedMessage = "Container was terminated. The exit code may not reflect the real exit code"
 )
 
-// syncProviderWrapper wraps a PodLifecycleHandler to give it async-like pod status notification behavior.
+// syncProviderWrapper wraps a PodUIDLifecycleHandler to give it async-like pod status notification behavior.
 type syncProviderWrapper struct {
-	PodLifecycleHandler
+	PodUIDLifecycleHandler
 	notify func(*corev1.Pod)
 	l      corev1listers.PodLister
 
@@ -60,7 +60,7 @@ func (p *syncProviderWrapper) DeletePod(ctx context.Context, pod *corev1.Pod) er
 	}
 
 	p.deletedPods.Store(key, pod)
-	if err := p.PodLifecycleHandler.DeletePod(ctx, pod.DeepCopy()); err != nil {
+	if err := p.PodUIDLifecycleHandler.DeletePod(ctx, pod.DeepCopy()); err != nil {
 		log.G(ctx).WithField("key", key).WithError(err).Debug("Removed key from deleted pods cache")
 		// We aren't going to actually delete the pod from the provider since there is an error so delete it from our cache,
 		// otherwise we could end up leaking pods in our deletion cache.
