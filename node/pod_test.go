@@ -29,6 +29,7 @@ import (
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/util/uuid"
 	kubeinformers "k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes/fake"
 	core "k8s.io/client-go/testing"
@@ -215,6 +216,7 @@ func TestPodCreateNewPod(t *testing.T) {
 	pod.Namespace = "default" //nolint:goconst
 	pod.Name = "nginx"        //nolint:goconst
 	pod.Spec = newPodSpec()
+	pod.UID = uuid.NewUUID()
 
 	err := svr.createOrUpdatePod(context.Background(), pod.DeepCopy())
 
@@ -242,6 +244,7 @@ func TestPodCreateNewPodWithNoDownwardAPIResolution(t *testing.T) {
 			},
 		},
 	}
+	pod.UID = uuid.NewUUID()
 
 	err := svr.createOrUpdatePod(context.Background(), pod.DeepCopy())
 	assert.Check(t, is.Nil(err))
@@ -267,6 +270,7 @@ func TestPodUpdateExisting(t *testing.T) {
 	pod.Namespace = "default"
 	pod.Name = "nginx"
 	pod.Spec = newPodSpec()
+	pod.UID = uuid.NewUUID()
 
 	err := svr.createOrUpdatePod(context.Background(), pod.DeepCopy())
 	assert.Check(t, is.Nil(err))
@@ -291,6 +295,7 @@ func TestPodNoSpecChange(t *testing.T) {
 	pod.Namespace = "default"
 	pod.Name = "nginx"
 	pod.Spec = newPodSpec()
+	pod.UID = uuid.NewUUID()
 
 	err := svr.createOrUpdatePod(context.Background(), pod.DeepCopy())
 	assert.Check(t, is.Nil(err))
@@ -311,6 +316,7 @@ func TestPodStatusDelete(t *testing.T) {
 	pod := &corev1.Pod{}
 	pod.Namespace = "default"
 	pod.Name = "nginx"
+	pod.UID = uuid.NewUUID()
 	pod.Spec = newPodSpec()
 	fk8s := fake.NewSimpleClientset(pod)
 	c.client = fk8s
@@ -495,6 +501,7 @@ func TestUpdatePodStatusWithNilProviderStatus(t *testing.T) {
 	pod.Namespace = "default"
 	pod.Name = "nginx"
 	pod.Spec = newPodSpec()
+	pod.UID = uuid.NewUUID()
 
 	fk8s := fake.NewSimpleClientset(pod)
 	c.client = fk8s
