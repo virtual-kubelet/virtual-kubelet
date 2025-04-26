@@ -7,6 +7,35 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 )
 
+type podUIDKey struct {
+	Namespace string
+	Name      string
+	UID       types.UID
+}
+
+func newPodUIDKey(pod *corev1.Pod) podUIDKey {
+	return podUIDKey{
+		Namespace: pod.Namespace,
+		Name:      pod.Name,
+		UID:       pod.UID,
+	}
+}
+
+func objectName(namespace, name string) string {
+	if len(namespace) > 0 {
+		return namespace + "/" + name
+	}
+	return name
+}
+
+func (k *podUIDKey) ObjectName() string {
+	return objectName(k.Namespace, k.Name)
+}
+
+func (k *podUIDKey) String() string {
+	return k.ObjectName() + "/" + string(k.UID)
+}
+
 type uidProviderWrapper struct {
 	PodLifecycleHandler
 }
