@@ -10,6 +10,7 @@ import (
 	"github.com/virtual-kubelet/virtual-kubelet/log"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 )
 
 const (
@@ -17,7 +18,8 @@ const (
 )
 
 var (
-	_ PodLifecycleHandler = (*mockProvider)(nil)
+	_ PodLifecycleHandler    = (*mockProvider)(nil)
+	_ PodUIDLifecycleHandler = (*mockProvider)(nil)
 )
 
 type mockProvider struct {
@@ -175,11 +177,15 @@ func (p *mockProvider) DeletePod(ctx context.Context, pod *v1.Pod) (err error) {
 	return nil
 }
 
-// GetPod returns a pod by name that is stored in memory.
 func (p *mockProvider) GetPod(ctx context.Context, namespace, name string) (pod *v1.Pod, err error) {
-	log.G(ctx).Infof("receive GetPod %q", name)
+	panic("GetPod not called when GetPodByUID implemented")
+}
 
-	key, err := buildKeyFromNames(namespace, name)
+// GetPodByUID returns a pod by name that is stored in memory.
+func (p *mockProvider) GetPodByUID(ctx context.Context, namespace, name string, uid types.UID) (pod *v1.Pod, err error) {
+	log.G(ctx).Infof("receive GetPodByUID %q", name)
+
+	key, err := buildKeyFromNames(namespace, name, uid)
 	if err != nil {
 		return nil, err
 	}
@@ -190,12 +196,16 @@ func (p *mockProvider) GetPod(ctx context.Context, namespace, name string) (pod 
 	return nil, errdefs.NotFoundf("pod \"%s/%s\" is not known to the provider", namespace, name)
 }
 
-// GetPodStatus returns the status of a pod by name that is "running".
-// returns nil if a pod by that name is not found.
-func (p *mockProvider) GetPodStatus(ctx context.Context, namespace, name string) (*v1.PodStatus, error) {
-	log.G(ctx).Infof("receive GetPodStatus %q", name)
+func (p *mockProvider) GetPodStatus(ctx context.Context, namespace, name string) (pod *v1.PodStatus, err error) {
+	panic("GetPodStatus not called when GetPodByUID implemented")
+}
 
-	pod, err := p.GetPod(ctx, namespace, name)
+// GetPodStatusByUID returns the status of a pod by name that is "running".
+// returns nil if a pod by that name is not found.
+func (p *mockProvider) GetPodStatusByUID(ctx context.Context, namespace, name string, uid types.UID) (*v1.PodStatus, error) {
+	log.G(ctx).Infof("receive GetPodStatusByUID %q", name)
+
+	pod, err := p.GetPodByUID(ctx, namespace, name, uid)
 	if err != nil {
 		return nil, err
 	}
@@ -237,8 +247,8 @@ func (p *mockProvider) getUpdates() *waitableInt {
 	return p.updates
 }
 
-func buildKeyFromNames(namespace string, name string) (string, error) {
-	return fmt.Sprintf("%s-%s", namespace, name), nil
+func buildKeyFromNames(namespace string, name string, uid types.UID) (string, error) {
+	return fmt.Sprintf("%s/%s/%s", namespace, name, uid), nil
 }
 
 // buildKey is a helper for building the "key" for the providers pod store.
@@ -251,7 +261,11 @@ func buildKey(pod *v1.Pod) (string, error) {
 		return "", fmt.Errorf("pod name not found")
 	}
 
-	return buildKeyFromNames(pod.ObjectMeta.Namespace, pod.ObjectMeta.Name)
+	if pod.ObjectMeta.UID == "" {
+		return "", fmt.Errorf("pod UID not found")
+	}
+
+	return buildKeyFromNames(pod.ObjectMeta.Namespace, pod.ObjectMeta.Name, pod.ObjectMeta.UID)
 }
 
 type mockProviderAsync struct {

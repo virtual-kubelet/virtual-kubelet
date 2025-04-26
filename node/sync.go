@@ -13,7 +13,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	corev1listers "k8s.io/client-go/listers/core/v1"
-	"k8s.io/client-go/tools/cache"
 )
 
 const (
@@ -26,9 +25,9 @@ const (
 	containerStatusTerminatedMessage = "Container was terminated. The exit code may not reflect the real exit code"
 )
 
-// syncProviderWrapper wraps a PodLifecycleHandler to give it async-like pod status notification behavior.
+// syncProviderWrapper wraps a PodUIDLifecycleHandler to give it async-like pod status notification behavior.
 type syncProviderWrapper struct {
-	PodLifecycleHandler
+	PodUIDLifecycleHandler
 	notify func(*corev1.Pod)
 	l      corev1listers.PodLister
 
@@ -40,27 +39,24 @@ type syncProviderWrapper struct {
 
 // This is used to clean up keys for deleted pods after they have been fully deleted in the API server.
 type syncWrapper interface {
-	_deletePodKey(context.Context, string)
+	_deletePodKey(context.Context, podUIDKey)
 }
 
 func (p *syncProviderWrapper) NotifyPods(ctx context.Context, f func(*corev1.Pod)) {
 	p.notify = f
 }
 
-func (p *syncProviderWrapper) _deletePodKey(ctx context.Context, key string) {
+func (p *syncProviderWrapper) _deletePodKey(ctx context.Context, key podUIDKey) {
 	log.G(ctx).WithField("key", key).Debug("Cleaning up pod from deletion cache")
 	p.deletedPods.Delete(key)
 }
 
 func (p *syncProviderWrapper) DeletePod(ctx context.Context, pod *corev1.Pod) error {
 	log.G(ctx).Debug("syncProviderWrappper.DeletePod")
-	key, err := cache.MetaNamespaceKeyFunc(pod)
-	if err != nil {
-		return err
-	}
+	key := newPodUIDKey(pod)
 
 	p.deletedPods.Store(key, pod)
-	if err := p.PodLifecycleHandler.DeletePod(ctx, pod.DeepCopy()); err != nil {
+	if err := p.PodUIDLifecycleHandler.DeletePod(ctx, pod.DeepCopy()); err != nil {
 		log.G(ctx).WithField("key", key).WithError(err).Debug("Removed key from deleted pods cache")
 		// We aren't going to actually delete the pod from the provider since there is an error so delete it from our cache,
 		// otherwise we could end up leaking pods in our deletion cache.
@@ -158,7 +154,7 @@ func (p *syncProviderWrapper) updatePodStatus(ctx context.Context, podFromKubern
 	ctx = addPodAttributes(ctx, span, podFromKubernetes)
 
 	var statusErr error
-	podStatus, err := p.PodLifecycleHandler.GetPodStatus(ctx, podFromKubernetes.Namespace, podFromKubernetes.Name)
+	podStatus, err := p.PodUIDLifecycleHandler.GetPodStatusByUID(ctx, podFromKubernetes.Namespace, podFromKubernetes.Name, podFromKubernetes.UID)
 	if err != nil {
 		if !errdefs.IsNotFound(err) {
 			span.SetStatus(err)
@@ -173,12 +169,7 @@ func (p *syncProviderWrapper) updatePodStatus(ctx context.Context, podFromKubern
 		return nil
 	}
 
-	key, err := cache.MetaNamespaceKeyFunc(podFromKubernetes)
-	if err != nil {
-		span.SetStatus(err)
-		return err
-	}
-
+	key := newPodUIDKey(podFromKubernetes)
 	if _, exists := p.deletedPods.Load(key); exists {
 		log.G(ctx).Debug("pod is in known deleted state, ignoring")
 		return nil

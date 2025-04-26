@@ -17,9 +17,9 @@ package node
 import (
 	"context"
 	"fmt"
-	"strings"
 	"time"
 
+	"github.com/virtual-kubelet/virtual-kubelet/errdefs"
 	"github.com/virtual-kubelet/virtual-kubelet/internal/queue"
 
 	"github.com/google/go-cmp/cmp"
@@ -30,6 +30,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/tools/cache"
 )
@@ -56,6 +57,19 @@ func addPodAttributes(ctx context.Context, span trace.Span, pod *corev1.Pod) con
 		"phase":     string(pod.Status.Phase),
 		"reason":    pod.Status.Reason,
 	})
+}
+
+func (pc *PodController) getPodByUID(ctx context.Context, namespace, name string, uid types.UID) (*corev1.Pod, error) {
+	pod, err := pc.podsLister.Pods(namespace).Get(name)
+	switch {
+	case errors.IsNotFound(err):
+		return nil, errdefs.NotFoundf("pod %q not found: %w", objectName(namespace, name), err)
+	case err != nil:
+		return nil, err
+	case pod.UID != uid:
+		return nil, errdefs.NotFoundf("pod %q UID does not match (expected %q, got %q)", objectName(namespace, name), uid, pod.UID)
+	}
+	return pod, nil
 }
 
 func (pc *PodController) createOrUpdatePod(ctx context.Context, pod *corev1.Pod) error {
@@ -85,7 +99,7 @@ func (pc *PodController) createOrUpdatePod(ctx context.Context, pod *corev1.Pod)
 	// Check if the pod is already known by the provider.
 	// NOTE: Some providers return a non-nil error in their GetPod implementation when the pod is not found while some other don't.
 	// Hence, we ignore the error and just act upon the pod if it is non-nil (meaning that the provider still knows about the pod).
-	if podFromProvider, _ := pc.provider.GetPod(ctx, pod.Namespace, pod.Name); podFromProvider != nil {
+	if podFromProvider, _ := pc.provider.GetPodByUID(ctx, pod.Namespace, pod.Name, pod.UID); podFromProvider != nil {
 		if !podsEqual(podFromProvider, podForProvider) {
 			log.G(ctx).Debugf("Pod %s exists, updating pod in provider", podFromProvider.Name)
 			if origErr := pc.provider.UpdatePod(ctx, podForProvider); origErr != nil {
@@ -202,7 +216,7 @@ func shouldSkipPodStatusUpdate(pod *corev1.Pod) bool {
 		pod.Status.Phase == corev1.PodFailed
 }
 
-func (pc *PodController) updatePodStatus(ctx context.Context, podFromKubernetes *corev1.Pod, key string) error {
+func (pc *PodController) updatePodStatus(ctx context.Context, podFromKubernetes *corev1.Pod, key podUIDKey) error {
 	if shouldSkipPodStatusUpdate(podFromKubernetes) {
 		return nil
 	}
@@ -271,16 +285,11 @@ func (pc *PodController) enqueuePodStatusUpdate(ctx context.Context, pod *corev1
 
 	// TODO (Sargun): Make this asynchronousish. Right now, if we are not cache synced, and we receive notifications
 	// from the provider for pods that do not exist yet in our known pods map, we can get into an awkward situation.
-	key, err := cache.MetaNamespaceKeyFunc(pod)
-	if err != nil {
-		log.G(ctx).WithError(err).Error("Error getting pod meta namespace key")
-		span.SetStatus(err)
-		return
-	}
+	key := newPodUIDKey(pod)
 	ctx = span.WithField(ctx, "key", key)
 
 	var obj interface{}
-	err = wait.PollUntilContextCancel(ctx, notificationRetryPeriod, true, func(ctx context.Context) (bool, error) {
+	err := wait.PollUntilContextCancel(ctx, notificationRetryPeriod, true, func(ctx context.Context) (bool, error) {
 		var ok bool
 		obj, ok = pc.knownPods.Load(key)
 		if ok {
@@ -297,7 +306,7 @@ func (pc *PodController) enqueuePodStatusUpdate(ctx context.Context, pod *corev1
 		// should happen, and the pod *actually* exists is the above -- where we haven't been able to finish sync
 		// before context times out.
 		// The other class of errors is non-transient
-		_, err = pc.podsLister.Pods(pod.Namespace).Get(pod.Name)
+		_, err := pc.getPodByUID(ctx, pod.Namespace, pod.Name, pod.UID)
 		if err != nil {
 			return false, err
 		}
@@ -309,7 +318,7 @@ func (pc *PodController) enqueuePodStatusUpdate(ctx context.Context, pod *corev1
 	})
 
 	if err != nil {
-		if errors.IsNotFound(err) {
+		if errdefs.IsNotFound(err) {
 			err = fmt.Errorf("Pod %q not found in pod lister: %w", key, err)
 			log.G(ctx).WithError(err).Debug("Not enqueuing pod status update")
 		} else {
@@ -332,7 +341,7 @@ func (pc *PodController) enqueuePodStatusUpdate(ctx context.Context, pod *corev1
 	pc.syncPodStatusFromProvider.Enqueue(ctx, key)
 }
 
-func (pc *PodController) syncPodStatusFromProviderHandler(ctx context.Context, key string) (retErr error) {
+func (pc *PodController) syncPodStatusFromProviderHandler(ctx context.Context, key podUIDKey) (retErr error) {
 	ctx, span := trace.StartSpan(ctx, "syncPodStatusFromProviderHandler")
 	defer span.End()
 
@@ -345,14 +354,13 @@ func (pc *PodController) syncPodStatusFromProviderHandler(ctx context.Context, k
 		}
 	}()
 
-	namespace, name, err := cache.SplitMetaNamespaceKey(key)
-	if err != nil {
-		return pkgerrors.Wrap(err, "error splitting cache key")
-	}
+	namespace := key.Namespace
+	name := key.Name
+	uid := key.UID
 
-	pod, err := pc.podsLister.Pods(namespace).Get(name)
+	pod, err := pc.getPodByUID(ctx, namespace, name, uid)
 	if err != nil {
-		if errors.IsNotFound(err) {
+		if errdefs.IsNotFound(err) {
 			log.G(ctx).WithError(err).Debug("Skipping pod status update for pod missing in Kubernetes")
 			return nil
 		}
@@ -362,23 +370,18 @@ func (pc *PodController) syncPodStatusFromProviderHandler(ctx context.Context, k
 	return pc.updatePodStatus(ctx, pod, key)
 }
 
-func (pc *PodController) deletePodsFromKubernetesHandler(ctx context.Context, key string) (retErr error) {
+func (pc *PodController) deletePodsFromKubernetesHandler(ctx context.Context, key podUIDKey) (retErr error) {
 	ctx, span := trace.StartSpan(ctx, "deletePodsFromKubernetesHandler")
 	defer span.End()
 
-	uid, metaKey := getUIDAndMetaNamespaceKey(key)
-	namespace, name, err := cache.SplitMetaNamespaceKey(metaKey)
+	namespace := key.Namespace
+	name := key.Name
+	uid := key.UID
+
 	ctx = span.WithFields(ctx, log.Fields{
 		"namespace": namespace,
 		"name":      name,
 	})
-
-	if err != nil {
-		// Log the error as a warning, but do not requeue the key as it is invalid.
-		log.G(ctx).Warn(pkgerrors.Wrapf(err, "invalid resource key: %q", key))
-		span.SetStatus(err)
-		return nil
-	}
 
 	defer func() {
 		if retErr == nil {
@@ -389,17 +392,13 @@ func (pc *PodController) deletePodsFromKubernetesHandler(ctx context.Context, ke
 	}()
 
 	// If the pod has been deleted from API server, we don't need to do anything.
-	k8sPod, err := pc.podsLister.Pods(namespace).Get(name)
-	if errors.IsNotFound(err) {
+	k8sPod, err := pc.getPodByUID(ctx, namespace, name, uid)
+	if errdefs.IsNotFound(err) {
 		return nil
 	}
 	if err != nil {
 		span.SetStatus(err)
 		return err
-	}
-	if string(k8sPod.UID) != uid {
-		log.G(ctx).WithField("k8sPodUID", k8sPod.UID).WithField("uid", uid).Warn("Not deleting pod because remote pod has different UID")
-		return nil
 	}
 	if running(&k8sPod.Status) {
 		log.G(ctx).Error("Force deleting pod in running state")
@@ -408,7 +407,7 @@ func (pc *PodController) deletePodsFromKubernetesHandler(ctx context.Context, ke
 	// We don't check with the provider before doing this delete. At this point, even if an outstanding pod status update
 	// was in progress,
 	deleteOptions := metav1.NewDeleteOptions(0)
-	deleteOptions.Preconditions = metav1.NewUIDPreconditions(uid)
+	deleteOptions.Preconditions = &metav1.Preconditions{UID: &uid}
 	err = pc.client.Pods(namespace).Delete(ctx, name, *deleteOptions)
 	if errors.IsNotFound(err) {
 		log.G(ctx).Warnf("Not deleting pod because %v", err)
@@ -423,11 +422,4 @@ func (pc *PodController) deletePodsFromKubernetesHandler(ctx context.Context, ke
 		return err
 	}
 	return nil
-}
-
-func getUIDAndMetaNamespaceKey(key string) (string, string) {
-	idx := strings.LastIndex(key, "/")
-	uid := key[idx+1:]
-	metaKey := key[:idx]
-	return uid, metaKey
 }

@@ -28,7 +28,7 @@ import (
 	"github.com/virtual-kubelet/virtual-kubelet/log"
 	"github.com/virtual-kubelet/virtual-kubelet/trace"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
 	corev1informers "k8s.io/client-go/informers/core/v1"
 	corev1client "k8s.io/client-go/kubernetes/typed/core/v1"
@@ -38,13 +38,7 @@ import (
 	"k8s.io/client-go/util/workqueue"
 )
 
-// PodLifecycleHandler defines the interface used by the PodController to react
-// to new and changed pods scheduled to the node that is being managed.
-//
-// Errors produced by these methods should implement an interface from
-// github.com/virtual-kubelet/virtual-kubelet/errdefs package in order for the
-// core logic to be able to understand the type of failure.
-type PodLifecycleHandler interface {
+type podLifecycleHandler interface {
 	// CreatePod takes a Kubernetes Pod and deploys it within the provider.
 	CreatePod(ctx context.Context, pod *corev1.Pod) error
 
@@ -55,6 +49,22 @@ type PodLifecycleHandler interface {
 	// expected to call the NotifyPods callback with a terminal pod status where all the containers are in a terminal
 	// state, as well as the pod. DeletePod may be called multiple times for the same pod.
 	DeletePod(ctx context.Context, pod *corev1.Pod) error
+
+	// GetPods retrieves a list of all pods running on the provider (can be cached).
+	// The Pods returned are expected to be immutable, and may be accessed
+	// concurrently outside of the calling goroutine. Therefore it is recommended
+	// to return a version after DeepCopy.
+	GetPods(context.Context) ([]*corev1.Pod, error)
+}
+
+// PodLifecycleHandler defines the interface used by the PodController to react
+// to new and changed pods scheduled to the node that is being managed.
+//
+// Errors produced by these methods should implement an interface from
+// github.com/virtual-kubelet/virtual-kubelet/errdefs package in order for the
+// core logic to be able to understand the type of failure.
+type PodLifecycleHandler interface {
+	podLifecycleHandler
 
 	// GetPod retrieves a pod by name from the provider (can be cached).
 	// The Pod returned is expected to be immutable, and may be accessed
@@ -67,12 +77,22 @@ type PodLifecycleHandler interface {
 	// concurrently outside of the calling goroutine. Therefore it is recommended
 	// to return a version after DeepCopy.
 	GetPodStatus(ctx context.Context, namespace, name string) (*corev1.PodStatus, error)
+}
 
-	// GetPods retrieves a list of all pods running on the provider (can be cached).
-	// The Pods returned are expected to be immutable, and may be accessed
+type PodUIDLifecycleHandler interface {
+	podLifecycleHandler
+
+	// GetPodByUID retrieves a pod by name and UID from the provider (can be cached).
+	// The Pod returned is expected to be immutable, and may be accessed
 	// concurrently outside of the calling goroutine. Therefore it is recommended
 	// to return a version after DeepCopy.
-	GetPods(context.Context) ([]*corev1.Pod, error)
+	GetPodByUID(ctx context.Context, namespace, name string, uid types.UID) (*corev1.Pod, error)
+
+	// GetPodStatusByUID retrieves the status of a pod by name and UID from the provider.
+	// The PodStatus returned is expected to be immutable, and may be accessed
+	// concurrently outside of the calling goroutine. Therefore it is recommended
+	// to return a version after DeepCopy.
+	GetPodStatusByUID(ctx context.Context, namespace, name string, uid types.UID) (*corev1.PodStatus, error)
 }
 
 // PodNotifier is used as an extension to PodLifecycleHandler to support async updates of pod statuses.
@@ -97,7 +117,7 @@ type PodEventFilterFunc func(context.Context, *corev1.Pod) bool
 
 // PodController is the controller implementation for Pod resources.
 type PodController struct {
-	provider PodLifecycleHandler
+	provider PodUIDLifecycleHandler
 
 	// podsInformer is an informer for Pod resources.
 	podsInformer corev1informers.PodInformer
@@ -111,13 +131,13 @@ type PodController struct {
 
 	resourceManager *manager.ResourceManager
 
-	syncPodsFromKubernetes *queue.Queue
+	syncPodsFromKubernetes *queue.Queue[podUIDKey]
 
 	// deletePodsFromKubernetes is a queue on which pods are reconciled, and we check if pods are in API server after
 	// the grace period
-	deletePodsFromKubernetes *queue.Queue
+	deletePodsFromKubernetes *queue.Queue[podUIDKey]
 
-	syncPodStatusFromProvider *queue.Queue
+	syncPodStatusFromProvider *queue.Queue[podUIDKey]
 
 	// From the time of creation, to termination the knownPods map will contain the pods key
 	// (derived from Kubernetes' cache library) -> a *knownPod struct.
@@ -208,6 +228,15 @@ type PodControllerConfig struct {
 	SkipDownwardAPIResolution bool
 }
 
+func shouldRetryWrapper(retryFunc ShouldRetryFunc) queue.ShouldRetryFunc[podUIDKey] {
+	if retryFunc == nil {
+		retryFunc = DefaultRetryFunc
+	}
+	return func(ctx context.Context, key podUIDKey, timesTried int, originallyAdded time.Time, err error) (*time.Duration, error) {
+		return retryFunc(ctx, key.ObjectName(), timesTried, originallyAdded, err)
+	}
+}
+
 // NewPodController creates a new pod controller with the provided config.
 func NewPodController(cfg PodControllerConfig) (*PodController, error) {
 	if cfg.PodClient == nil {
@@ -245,11 +274,18 @@ func NewPodController(cfg PodControllerConfig) (*PodController, error) {
 		return nil, pkgerrors.Wrap(err, "could not create resource manager")
 	}
 
+	var provider PodUIDLifecycleHandler
+	if p, ok := cfg.Provider.(PodUIDLifecycleHandler); ok {
+		provider = p
+	} else {
+		provider = &uidProviderWrapper{PodLifecycleHandler: cfg.Provider}
+	}
+
 	pc := &PodController{
 		client:                    cfg.PodClient,
 		podsInformer:              cfg.PodInformer,
 		podsLister:                cfg.PodInformer.Lister(),
-		provider:                  cfg.Provider,
+		provider:                  provider,
 		resourceManager:           rm,
 		ready:                     make(chan struct{}),
 		done:                      make(chan struct{}),
@@ -258,15 +294,15 @@ func NewPodController(cfg PodControllerConfig) (*PodController, error) {
 		skipDownwardAPIResolution: cfg.SkipDownwardAPIResolution,
 	}
 
-	pc.syncPodsFromKubernetes = queue.New(cfg.SyncPodsFromKubernetesRateLimiter, "syncPodsFromKubernetes", pc.syncPodFromKubernetesHandler, cfg.SyncPodsFromKubernetesShouldRetryFunc)
-	pc.deletePodsFromKubernetes = queue.New(cfg.DeletePodsFromKubernetesRateLimiter, "deletePodsFromKubernetes", pc.deletePodsFromKubernetesHandler, cfg.DeletePodsFromKubernetesShouldRetryFunc)
-	pc.syncPodStatusFromProvider = queue.New(cfg.SyncPodStatusFromProviderRateLimiter, "syncPodStatusFromProvider", pc.syncPodStatusFromProviderHandler, cfg.SyncPodStatusFromProviderShouldRetryFunc)
+	pc.syncPodsFromKubernetes = queue.New(cfg.SyncPodsFromKubernetesRateLimiter, "syncPodsFromKubernetes", pc.syncPodFromKubernetesHandler, shouldRetryWrapper(cfg.SyncPodsFromKubernetesShouldRetryFunc))
+	pc.deletePodsFromKubernetes = queue.New(cfg.DeletePodsFromKubernetesRateLimiter, "deletePodsFromKubernetes", pc.deletePodsFromKubernetesHandler, shouldRetryWrapper(cfg.DeletePodsFromKubernetesShouldRetryFunc))
+	pc.syncPodStatusFromProvider = queue.New(cfg.SyncPodStatusFromProviderRateLimiter, "syncPodStatusFromProvider", pc.syncPodStatusFromProviderHandler, shouldRetryWrapper(cfg.SyncPodStatusFromProviderShouldRetryFunc))
 
 	return pc, nil
 }
 
 type asyncProvider interface {
-	PodLifecycleHandler
+	PodUIDLifecycleHandler
 	PodNotifier
 }
 
@@ -296,7 +332,7 @@ func (pc *PodController) Run(ctx context.Context, podSyncWorkers int) (retErr er
 	if p, ok := pc.provider.(asyncProvider); ok {
 		provider = p
 	} else {
-		wrapped := &syncProviderWrapper{PodLifecycleHandler: pc.provider, l: pc.podsLister}
+		wrapped := &syncProviderWrapper{PodUIDLifecycleHandler: pc.provider, l: pc.podsLister}
 		runProvider = wrapped.run
 		provider = wrapped
 		log.G(ctx).Debug("Wrapped non-async provider with async")
@@ -319,15 +355,16 @@ func (pc *PodController) Run(ctx context.Context, podSyncWorkers int) (retErr er
 	// syncing.
 
 	var eventHandler cache.ResourceEventHandler = cache.ResourceEventHandlerFuncs{
-		AddFunc: func(pod interface{}) {
+		AddFunc: func(obj interface{}) {
 			ctx, cancel := context.WithCancel(ctx)
 			defer cancel()
 			ctx, span := trace.StartSpan(ctx, "AddFunc")
 			defer span.End()
 
-			if key, err := cache.MetaNamespaceKeyFunc(pod); err != nil {
-				log.G(ctx).Error(err)
-			} else {
+			pod := obj.(*corev1.Pod)
+
+			key := newPodUIDKey(pod)
+			{
 				ctx = span.WithField(ctx, "key", key)
 				pc.knownPods.Store(key, &knownPod{})
 				pc.syncPodsFromKubernetes.Enqueue(ctx, key)
@@ -344,9 +381,8 @@ func (pc *PodController) Run(ctx context.Context, podSyncWorkers int) (retErr er
 			newPod := newObj.(*corev1.Pod)
 
 			// At this point we know that something in .metadata or .spec has changed, so we must proceed to sync the pod.
-			if key, err := cache.MetaNamespaceKeyFunc(newPod); err != nil {
-				log.G(ctx).Error(err)
-			} else {
+			key := newPodUIDKey(newPod)
+			{
 				ctx = span.WithField(ctx, "key", key)
 				obj, ok := pc.knownPods.Load(key)
 				if !ok {
@@ -377,24 +413,23 @@ func (pc *PodController) Run(ctx context.Context, podSyncWorkers int) (retErr er
 				}
 			}
 		},
-		DeleteFunc: func(pod interface{}) {
+		DeleteFunc: func(obj interface{}) {
 			ctx, cancel := context.WithCancel(ctx)
 			defer cancel()
 			ctx, span := trace.StartSpan(ctx, "DeleteFunc")
 			defer span.End()
 
-			if key, err := cache.DeletionHandlingMetaNamespaceKeyFunc(pod); err != nil {
-				log.G(ctx).Error(err)
-			} else {
-				k8sPod, ok := pod.(*corev1.Pod)
-				if !ok {
-					return
-				}
+			pod, ok := obj.(*corev1.Pod)
+			if !ok {
+				return
+			}
+
+			key := newPodUIDKey(pod)
+			{
 				ctx = span.WithField(ctx, "key", key)
 				pc.knownPods.Delete(key)
 				pc.syncPodsFromKubernetes.Enqueue(ctx, key)
 				// If this pod was in the deletion queue, forget about it
-				key = fmt.Sprintf("%v/%v", key, k8sPod.UID)
 				pc.deletePodsFromKubernetes.Forget(ctx, key)
 			}
 		},
@@ -510,7 +545,7 @@ func (pc *PodController) SyncPodStatusFromProviderQueueItemsBeingProcessedLen() 
 }
 
 // syncPodFromKubernetesHandler compares the actual state with the desired, and attempts to converge the two.
-func (pc *PodController) syncPodFromKubernetesHandler(ctx context.Context, key string) error {
+func (pc *PodController) syncPodFromKubernetesHandler(ctx context.Context, key podUIDKey) error {
 	ctx, span := trace.StartSpan(ctx, "syncPodFromKubernetesHandler")
 	defer span.End()
 
@@ -518,18 +553,14 @@ func (pc *PodController) syncPodFromKubernetesHandler(ctx context.Context, key s
 	ctx = span.WithField(ctx, "key", key)
 	log.G(ctx).WithField("key", key).Debug("sync handled")
 
-	// Convert the namespace/name string into a distinct namespace and name.
-	namespace, name, err := cache.SplitMetaNamespaceKey(key)
-	if err != nil {
-		// Log the error as a warning, but do not requeue the key as it is invalid.
-		log.G(ctx).Warn(pkgerrors.Wrapf(err, "invalid resource key: %q", key))
-		return nil
-	}
+	namespace := key.Namespace
+	name := key.Name
+	uid := key.UID
 
-	// Get the Pod resource with this namespace/name.
-	pod, err := pc.podsLister.Pods(namespace).Get(name)
+	// Get the Pod resource with this namespace/name and UID.
+	pod, err := pc.getPodByUID(ctx, namespace, name, uid)
 	if err != nil {
-		if !errors.IsNotFound(err) {
+		if !errdefs.IsNotFound(err) {
 			// We've failed to fetch the pod from the lister, but the error is not a 404.
 			// Hence, we add the key back to the work queue so we can retry processing it later.
 			err := pkgerrors.Wrapf(err, "failed to fetch pod with key %q from lister", key)
@@ -537,7 +568,7 @@ func (pc *PodController) syncPodFromKubernetesHandler(ctx context.Context, key s
 			return err
 		}
 
-		pod, err = pc.provider.GetPod(ctx, namespace, name)
+		pod, err = pc.provider.GetPodByUID(ctx, namespace, name, uid)
 		if err != nil && !errdefs.IsNotFound(err) {
 			err = pkgerrors.Wrapf(err, "failed to fetch pod with key %q from provider", key)
 			span.SetStatus(err)
@@ -564,7 +595,7 @@ func (pc *PodController) syncPodFromKubernetesHandler(ctx context.Context, key s
 }
 
 // syncPodInProvider tries and reconciles the state of a pod by comparing its Kubernetes representation and the provider's representation.
-func (pc *PodController) syncPodInProvider(ctx context.Context, pod *corev1.Pod, key string) (retErr error) {
+func (pc *PodController) syncPodInProvider(ctx context.Context, pod *corev1.Pod, key podUIDKey) (retErr error) {
 	ctx, span := trace.StartSpan(ctx, "syncPodInProvider")
 	defer span.End()
 
@@ -575,7 +606,6 @@ func (pc *PodController) syncPodInProvider(ctx context.Context, pod *corev1.Pod,
 	// more context is here: https://github.com/virtual-kubelet/virtual-kubelet/pull/760
 	if pod.DeletionTimestamp != nil && !running(&pod.Status) {
 		log.G(ctx).Debug("Force deleting pod from API Server as it is no longer running")
-		key = fmt.Sprintf("%v/%v", key, pod.UID)
 		pc.deletePodsFromKubernetes.EnqueueWithoutRateLimit(ctx, key)
 		return nil
 	}
@@ -612,7 +642,6 @@ func (pc *PodController) syncPodInProvider(ctx context.Context, pod *corev1.Pod,
 			return err
 		}
 
-		key = fmt.Sprintf("%v/%v", key, pod.UID)
 		pc.deletePodsFromKubernetes.EnqueueWithoutRateLimitWithDelay(ctx, key, time.Second*time.Duration(*pod.DeletionGracePeriodSeconds))
 		return nil
 	}
@@ -652,8 +681,8 @@ func (pc *PodController) deleteDanglingPods(ctx context.Context, threadiness int
 	// Iterate over the pods known to the provider, marking for deletion those that don't exist in Kubernetes.
 	// Take on this opportunity to populate the list of key that correspond to pods known to the provider.
 	for _, pp := range pps {
-		if _, err := pc.podsLister.Pods(pp.Namespace).Get(pp.Name); err != nil {
-			if errors.IsNotFound(err) {
+		if _, err := pc.getPodByUID(ctx, pp.Namespace, pp.Name, pp.UID); err != nil {
+			if errdefs.IsNotFound(err) {
 				// The current pod does not exist in Kubernetes, so we mark it for deletion.
 				ptd = append(ptd, pp)
 				continue

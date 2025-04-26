@@ -318,7 +318,7 @@ func TestPodStatusDelete(t *testing.T) {
 	podCopy := pod.DeepCopy()
 	deleteTime := v1.Time{Time: time.Now().Add(30 * time.Second)}
 	podCopy.DeletionTimestamp = &deleteTime
-	key := fmt.Sprintf("%s/%s", pod.Namespace, pod.Name)
+	key := newPodUIDKey(pod)
 	c.knownPods.Store(key, &knownPod{lastPodStatusReceivedFromProvider: podCopy})
 
 	// test pod in provider delete
@@ -386,7 +386,7 @@ func TestReCreatePodRace(t *testing.T) {
 	fk8s := &fake.Clientset{}
 	c.client = fk8s
 	c.PodController.client = fk8s.CoreV1()
-	key := fmt.Sprintf("%s/%s/%s", pod.Namespace, pod.Name, pod.UID)
+	key := newPodUIDKey(pod)
 	c.knownPods.Store(key, &knownPod{lastPodStatusReceivedFromProvider: podCopy})
 	c.deletePodsFromKubernetes.Enqueue(ctx, key)
 	if err := c.podsInformer.Informer().GetStore().Add(pod); err != nil {
