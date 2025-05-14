@@ -124,6 +124,7 @@ func podsEqual(pod1, pod2 *corev1.Pod) bool {
 
 	return cmp.Equal(pod1.Spec.Containers, pod2.Spec.Containers) &&
 		cmp.Equal(pod1.Spec.InitContainers, pod2.Spec.InitContainers) &&
+		cmp.Equal(pod1.Spec.EphemeralContainers, pod2.Spec.EphemeralContainers) &&
 		cmp.Equal(pod1.Spec.ActiveDeadlineSeconds, pod2.Spec.ActiveDeadlineSeconds) &&
 		cmp.Equal(pod1.Spec.Tolerations, pod2.Spec.Tolerations) &&
 		cmp.Equal(pod1.Labels, pod2.Labels) &&
