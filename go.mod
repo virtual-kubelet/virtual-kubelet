@@ -1,6 +1,6 @@
 module github.com/alec-rabold/virtual-kubelet
 
-go 1.23
+go 1.22.9
 
 toolchain go1.23.4
 
