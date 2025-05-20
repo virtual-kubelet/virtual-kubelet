@@ -9,7 +9,7 @@ import (
 
 // WithTLSConfig returns a NodeOpt which creates a base TLSConfig with the default cipher suites and tls min verions.
 // The tls config can be modified through functional options.
-func WithTLSConfig(opts ...func(*tls.Config) error) NodeOpt {
+func WithTLSConfig(opts ...func(*tls.Config) error) NodeConfigOpt {
 	return func(cfg *NodeConfig) error {
 		tlsCfg := &tls.Config{
 			MinVersion:               tls.VersionTLS12,
