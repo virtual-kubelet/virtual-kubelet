@@ -210,7 +210,12 @@ func (n *Node) Err() error {
 }
 
 // NodeOpt is used as functional options when configuring a new node in NewNodeFromClient
-type NodeOpt func(c *NodeConfig) error
+type NodeOpt func(c *NodeOptions) error
+
+type NodeOptions struct {
+	NodeConfigOpts          []func(c *NodeConfig) error
+	PodControllerConfigOpts []func(c *node.PodControllerConfig) error
+}
 
 // NodeConfig is used to hold configuration items for a Node.
 // It gets used in conjection with NodeOpt in NewNodeFromClient
@@ -264,16 +269,32 @@ type NodeConfig struct {
 
 // WithNodeConfig returns a NodeOpt which replaces the NodeConfig with the passed in value.
 func WithNodeConfig(c NodeConfig) NodeOpt {
-	return func(orig *NodeConfig) error {
-		*orig = c
+	return func(opts *NodeOptions) error {
+		opts.NodeConfigOpts = append(opts.NodeConfigOpts, func(orig *NodeConfig) error {
+			*orig = c
+			return nil
+		})
 		return nil
 	}
 }
 
 // WithClient return a NodeOpt that sets the client that will be used to create/manage the node.
 func WithClient(c kubernetes.Interface) NodeOpt {
-	return func(cfg *NodeConfig) error {
-		cfg.Client = c
+	return func(opts *NodeOptions) error {
+		opts.NodeConfigOpts = append(opts.NodeConfigOpts, func(orig *NodeConfig) error {
+			orig.Client = c
+			return nil
+		})
+		return nil
+	}
+}
+
+func WithPodControllerConfigOverrides(mutateFn func(*node.PodControllerConfig)) NodeOpt {
+	return func(opts *NodeOptions) error {
+		opts.PodControllerConfigOpts = append(opts.PodControllerConfigOpts, func(orig *node.PodControllerConfig) error {
+			mutateFn(orig)
+			return nil
+		})
 		return nil
 	}
 }
@@ -316,7 +337,14 @@ func NewNode(name string, newProvider NewProviderFunc, opts ...NodeOpt) (*Node, 
 
 	cfg.Client = defaultClientFromEnv(cfg.KubeconfigPath)
 
+	var options NodeOptions
 	for _, o := range opts {
+		if err := o(&options); err != nil {
+			return nil, err
+		}
+	}
+
+	for _, o := range options.NodeConfigOpts {
 		if err := o(&cfg); err != nil {
 			return nil, err
 		}
@@ -397,7 +425,7 @@ func NewNode(name string, newProvider NewProviderFunc, opts ...NodeOpt) (*Node, 
 		cfg.EventRecorder = eb.NewRecorder(scheme.Scheme, v1.EventSource{Component: path.Join(name, "pod-controller")})
 	}
 
-	pc, err := node.NewPodController(node.PodControllerConfig{
+	podControllerConfig := node.PodControllerConfig{
 		PodClient:                 cfg.Client.CoreV1(),
 		EventRecorder:             cfg.EventRecorder,
 		Provider:                  p,
@@ -406,7 +434,14 @@ func NewNode(name string, newProvider NewProviderFunc, opts ...NodeOpt) (*Node, 
 		ConfigMapInformer:         configMapInformer,
 		ServiceInformer:           serviceInformer,
 		SkipDownwardAPIResolution: cfg.SkipDownwardAPIResolution,
-	})
+	}
+	for _, o := range options.PodControllerConfigOpts {
+		if err := o(&podControllerConfig); err != nil {
+			return nil, err
+		}
+	}
+
+	pc, err := node.NewPodController(podControllerConfig)
 	if err != nil {
 		return nil, errors.Wrap(err, "error creating pod controller")
 	}
