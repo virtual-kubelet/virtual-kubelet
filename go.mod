@@ -2,8 +2,6 @@ module github.com/alec-rabold/virtual-kubelet
 
 go 1.22.9
 
-toolchain go1.23.4
-
 require (
 	contrib.go.opencensus.io/exporter/jaeger v0.2.1
 	contrib.go.opencensus.io/exporter/ocagent v0.7.0
