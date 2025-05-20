@@ -22,7 +22,7 @@ import (
 	"fmt"
 	"log/slog"
 
-	"github.com/virtual-kubelet/virtual-kubelet/log"
+	"github.com/alec-rabold/virtual-kubelet/log"
 )
 
 // Ensure log.Logger is fully implemented during compile time.

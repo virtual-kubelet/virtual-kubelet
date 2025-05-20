@@ -11,9 +11,9 @@ import (
 	"runtime"
 	"time"
 
+	"github.com/alec-rabold/virtual-kubelet/log"
+	"github.com/alec-rabold/virtual-kubelet/node"
 	"github.com/pkg/errors"
-	"github.com/virtual-kubelet/virtual-kubelet/log"
-	"github.com/virtual-kubelet/virtual-kubelet/node"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/informers"

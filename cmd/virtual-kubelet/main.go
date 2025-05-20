@@ -22,17 +22,17 @@ import (
 	"strings"
 	"syscall"
 
+	"github.com/alec-rabold/virtual-kubelet/cmd/virtual-kubelet/internal/commands/providers"
+	"github.com/alec-rabold/virtual-kubelet/cmd/virtual-kubelet/internal/commands/root"
+	"github.com/alec-rabold/virtual-kubelet/cmd/virtual-kubelet/internal/commands/version"
+	"github.com/alec-rabold/virtual-kubelet/cmd/virtual-kubelet/internal/provider"
+	"github.com/alec-rabold/virtual-kubelet/log"
+	logruslogger "github.com/alec-rabold/virtual-kubelet/log/logrus"
+	"github.com/alec-rabold/virtual-kubelet/trace"
+	"github.com/alec-rabold/virtual-kubelet/trace/opencensus"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-	"github.com/virtual-kubelet/virtual-kubelet/cmd/virtual-kubelet/internal/commands/providers"
-	"github.com/virtual-kubelet/virtual-kubelet/cmd/virtual-kubelet/internal/commands/root"
-	"github.com/virtual-kubelet/virtual-kubelet/cmd/virtual-kubelet/internal/commands/version"
-	"github.com/virtual-kubelet/virtual-kubelet/cmd/virtual-kubelet/internal/provider"
-	"github.com/virtual-kubelet/virtual-kubelet/log"
-	logruslogger "github.com/virtual-kubelet/virtual-kubelet/log/logrus"
-	"github.com/virtual-kubelet/virtual-kubelet/trace"
-	"github.com/virtual-kubelet/virtual-kubelet/trace/opencensus"
 )
 
 var (

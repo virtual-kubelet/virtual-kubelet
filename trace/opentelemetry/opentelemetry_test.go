@@ -23,8 +23,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/alec-rabold/virtual-kubelet/log"
 	"github.com/pkg/errors"
-	"github.com/virtual-kubelet/virtual-kubelet/log"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"

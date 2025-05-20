@@ -21,11 +21,11 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/alec-rabold/virtual-kubelet/node/api"
 	"github.com/pkg/errors"
 	dto "github.com/prometheus/client_model/go"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/virtual-kubelet/virtual-kubelet/node/api"
 	"google.golang.org/protobuf/proto"
 )
 

@@ -1,7 +1,7 @@
 package node
 
 import (
-	"github.com/virtual-kubelet/virtual-kubelet/internal/queue"
+	"github.com/alec-rabold/virtual-kubelet/internal/queue"
 )
 
 // These are exportable definitions of the queue package:

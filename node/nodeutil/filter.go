@@ -3,7 +3,7 @@ package nodeutil
 import (
 	"context"
 
-	"github.com/virtual-kubelet/virtual-kubelet/node"
+	"github.com/alec-rabold/virtual-kubelet/node"
 	v1 "k8s.io/api/core/v1"
 )
 

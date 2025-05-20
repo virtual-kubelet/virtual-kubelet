@@ -3,7 +3,7 @@ package provider
 import (
 	"context"
 
-	"github.com/virtual-kubelet/virtual-kubelet/node/nodeutil"
+	"github.com/alec-rabold/virtual-kubelet/node/nodeutil"
 	v1 "k8s.io/api/core/v1"
 )
 

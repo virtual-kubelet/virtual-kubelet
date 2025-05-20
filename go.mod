@@ -1,4 +1,4 @@
-module github.com/virtual-kubelet/virtual-kubelet
+module github.com/alec-rabold/virtual-kubelet
 
 go 1.23
 
