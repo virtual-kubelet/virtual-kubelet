@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package opentelemetry implements a github.com/virtual-kubelet/virtual-kubelet/trace.Tracer
+// Package opentelemetry implements a github.com/alec-rabold/virtual-kubelet/trace.Tracer
 // using openTelemetry as a backend.
 //
 // Use this by setting `trace.T = Adapter{}`
@@ -31,8 +31,8 @@ import (
 
 	"go.opentelemetry.io/otel/codes"
 
-	"github.com/virtual-kubelet/virtual-kubelet/log"
-	"github.com/virtual-kubelet/virtual-kubelet/trace"
+	"github.com/alec-rabold/virtual-kubelet/log"
+	"github.com/alec-rabold/virtual-kubelet/trace"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	ot "go.opentelemetry.io/otel/trace"

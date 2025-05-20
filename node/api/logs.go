@@ -22,10 +22,10 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/alec-rabold/virtual-kubelet/errdefs"
+	"github.com/alec-rabold/virtual-kubelet/log"
 	"github.com/gorilla/mux"
 	"github.com/pkg/errors"
-	"github.com/virtual-kubelet/virtual-kubelet/errdefs"
-	"github.com/virtual-kubelet/virtual-kubelet/log"
 )
 
 // ContainerLogsHandlerFunc is used in place of backend implementations for getting container logs

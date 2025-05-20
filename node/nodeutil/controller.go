@@ -11,12 +11,13 @@ import (
 	"runtime"
 	"time"
 
+	"github.com/alec-rabold/virtual-kubelet/log"
+	"github.com/alec-rabold/virtual-kubelet/node"
 	"github.com/pkg/errors"
-	"github.com/virtual-kubelet/virtual-kubelet/log"
-	"github.com/virtual-kubelet/virtual-kubelet/node"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/informers"
+	corev1informers "k8s.io/client-go/informers/core/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme"
 	corev1client "k8s.io/client-go/kubernetes/typed/core/v1"
@@ -342,17 +343,25 @@ func NewNode(name string, newProvider NewProviderFunc, opts ...NodeOpt) (*Node, 
 	)
 
 	podInformer := podInformerFactory.Core().V1().Pods()
-	secretInformer := scmInformerFactory.Core().V1().Secrets()
-	configMapInformer := scmInformerFactory.Core().V1().ConfigMaps()
 	serviceInformer := scmInformerFactory.Core().V1().Services()
 
-	p, np, err := newProvider(ProviderConfig{
-		Pods:       podInformer.Lister(),
-		ConfigMaps: configMapInformer.Lister(),
-		Secrets:    secretInformer.Lister(),
-		Services:   serviceInformer.Lister(),
-		Node:       &cfg.NodeSpec,
-	})
+	var configMapInformer corev1informers.ConfigMapInformer
+	var secretInformer corev1informers.SecretInformer
+	if !cfg.SkipDownwardAPIResolution {
+		configMapInformer = scmInformerFactory.Core().V1().ConfigMaps()
+		secretInformer = scmInformerFactory.Core().V1().Secrets()
+	}
+
+	providerConfig := ProviderConfig{
+		Pods:     podInformer.Lister(),
+		Services: serviceInformer.Lister(),
+		Node:     &cfg.NodeSpec,
+	}
+	if !cfg.SkipDownwardAPIResolution {
+		providerConfig.ConfigMaps = configMapInformer.Lister()
+		providerConfig.Secrets = secretInformer.Lister()
+	}
+	p, np, err := newProvider(providerConfig)
 	if err != nil {
 		return nil, errors.Wrap(err, "error creating provider")
 	}

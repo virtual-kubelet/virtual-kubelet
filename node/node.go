@@ -21,9 +21,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/alec-rabold/virtual-kubelet/log"
+	"github.com/alec-rabold/virtual-kubelet/trace"
 	pkgerrors "github.com/pkg/errors"
-	"github.com/virtual-kubelet/virtual-kubelet/log"
-	"github.com/virtual-kubelet/virtual-kubelet/trace"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"

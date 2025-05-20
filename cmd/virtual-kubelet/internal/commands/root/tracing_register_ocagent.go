@@ -21,7 +21,7 @@ import (
 	"os"
 
 	"contrib.go.opencensus.io/exporter/ocagent"
-	"github.com/virtual-kubelet/virtual-kubelet/errdefs"
+	"github.com/alec-rabold/virtual-kubelet/errdefs"
 	"go.opencensus.io/trace"
 )
 

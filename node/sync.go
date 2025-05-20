@@ -5,10 +5,10 @@ import (
 	"sync"
 	"time"
 
+	"github.com/alec-rabold/virtual-kubelet/errdefs"
+	"github.com/alec-rabold/virtual-kubelet/log"
+	"github.com/alec-rabold/virtual-kubelet/trace"
 	"github.com/pkg/errors"
-	"github.com/virtual-kubelet/virtual-kubelet/errdefs"
-	"github.com/virtual-kubelet/virtual-kubelet/log"
-	"github.com/virtual-kubelet/virtual-kubelet/trace"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"

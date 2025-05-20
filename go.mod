@@ -1,8 +1,6 @@
-module github.com/virtual-kubelet/virtual-kubelet
+module github.com/alec-rabold/virtual-kubelet
 
-go 1.23
-
-toolchain go1.23.4
+go 1.22.9
 
 require (
 	contrib.go.opencensus.io/exporter/jaeger v0.2.1

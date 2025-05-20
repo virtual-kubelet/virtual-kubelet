@@ -21,9 +21,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/alec-rabold/virtual-kubelet/errdefs"
+	"github.com/alec-rabold/virtual-kubelet/internal/kubernetes/remotecommand"
 	"github.com/gorilla/mux"
-	"github.com/virtual-kubelet/virtual-kubelet/errdefs"
-	"github.com/virtual-kubelet/virtual-kubelet/internal/kubernetes/remotecommand"
 	"k8s.io/apimachinery/pkg/types"
 	remoteutils "k8s.io/client-go/tools/remotecommand"
 )

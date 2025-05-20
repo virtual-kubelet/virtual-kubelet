@@ -4,9 +4,9 @@ import (
 	"context"
 	"io"
 
+	"github.com/alec-rabold/virtual-kubelet/node"
+	"github.com/alec-rabold/virtual-kubelet/node/api"
 	dto "github.com/prometheus/client_model/go"
-	"github.com/virtual-kubelet/virtual-kubelet/node"
-	"github.com/virtual-kubelet/virtual-kubelet/node/api"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	corev1listers "k8s.io/client-go/listers/core/v1"
@@ -16,7 +16,7 @@ import (
 // Provider contains the methods required to implement a virtual-kubelet provider.
 //
 // Errors produced by these methods should implement an interface from
-// github.com/virtual-kubelet/virtual-kubelet/errdefs package in order for the
+// github.com/alec-rabold/virtual-kubelet/errdefs package in order for the
 // core logic to be able to understand the type of failure
 type Provider interface {
 	node.PodLifecycleHandler

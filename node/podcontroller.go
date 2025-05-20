@@ -20,13 +20,13 @@ import (
 	"sync"
 	"time"
 
+	"github.com/alec-rabold/virtual-kubelet/errdefs"
+	"github.com/alec-rabold/virtual-kubelet/internal/manager"
+	"github.com/alec-rabold/virtual-kubelet/internal/queue"
+	"github.com/alec-rabold/virtual-kubelet/log"
+	"github.com/alec-rabold/virtual-kubelet/trace"
 	"github.com/google/go-cmp/cmp"
 	pkgerrors "github.com/pkg/errors"
-	"github.com/virtual-kubelet/virtual-kubelet/errdefs"
-	"github.com/virtual-kubelet/virtual-kubelet/internal/manager"
-	"github.com/virtual-kubelet/virtual-kubelet/internal/queue"
-	"github.com/virtual-kubelet/virtual-kubelet/log"
-	"github.com/virtual-kubelet/virtual-kubelet/trace"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -42,7 +42,7 @@ import (
 // to new and changed pods scheduled to the node that is being managed.
 //
 // Errors produced by these methods should implement an interface from
-// github.com/virtual-kubelet/virtual-kubelet/errdefs package in order for the
+// github.com/alec-rabold/virtual-kubelet/errdefs package in order for the
 // core logic to be able to understand the type of failure.
 type PodLifecycleHandler interface {
 	// CreatePod takes a Kubernetes Pod and deploys it within the provider.
@@ -219,10 +219,10 @@ func NewPodController(cfg PodControllerConfig) (*PodController, error) {
 	if cfg.PodInformer == nil {
 		return nil, errdefs.InvalidInput("missing pod informer")
 	}
-	if cfg.ConfigMapInformer == nil {
+	if cfg.ConfigMapInformer == nil && !cfg.SkipDownwardAPIResolution {
 		return nil, errdefs.InvalidInput("missing config map informer")
 	}
-	if cfg.SecretInformer == nil {
+	if cfg.SecretInformer == nil && !cfg.SkipDownwardAPIResolution {
 		return nil, errdefs.InvalidInput("missing secret informer")
 	}
 	if cfg.ServiceInformer == nil {
@@ -240,7 +240,11 @@ func NewPodController(cfg PodControllerConfig) (*PodController, error) {
 	if cfg.SyncPodStatusFromProviderRateLimiter == nil {
 		cfg.SyncPodStatusFromProviderRateLimiter = workqueue.DefaultTypedControllerRateLimiter[any]()
 	}
-	rm, err := manager.NewResourceManager(cfg.PodInformer.Lister(), cfg.SecretInformer.Lister(), cfg.ConfigMapInformer.Lister(), cfg.ServiceInformer.Lister())
+	var opts []manager.ResourceManagerOption
+	if !cfg.SkipDownwardAPIResolution {
+		opts = append(opts, manager.WithConfigMapLister(cfg.ConfigMapInformer.Lister()), manager.WithSecretLister(cfg.SecretInformer.Lister()))
+	}
+	rm, err := manager.NewResourceManager(cfg.PodInformer.Lister(), cfg.ServiceInformer.Lister(), opts...)
 	if err != nil {
 		return nil, pkgerrors.Wrap(err, "could not create resource manager")
 	}
@@ -572,7 +576,7 @@ func (pc *PodController) syncPodInProvider(ctx context.Context, pod *corev1.Pod,
 	ctx = addPodAttributes(ctx, span, pod)
 
 	// If the pod('s containers) is no longer in a running state then we force-delete the pod from API server
-	// more context is here: https://github.com/virtual-kubelet/virtual-kubelet/pull/760
+	// more context is here: https://github.com/alec-rabold/virtual-kubelet/pull/760
 	if pod.DeletionTimestamp != nil && !running(&pod.Status) {
 		log.G(ctx).Debug("Force deleting pod from API Server as it is no longer running")
 		key = fmt.Sprintf("%v/%v", key, pod.UID)

@@ -7,8 +7,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/alec-rabold/virtual-kubelet/internal/podutils"
 	"github.com/prometheus/common/expfmt"
-	"github.com/virtual-kubelet/virtual-kubelet/internal/podutils"
 	"gotest.tools/assert"
 	v1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"

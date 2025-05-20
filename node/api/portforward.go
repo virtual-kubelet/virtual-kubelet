@@ -21,8 +21,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/alec-rabold/virtual-kubelet/internal/kubernetes/portforward"
 	"github.com/gorilla/mux"
-	"github.com/virtual-kubelet/virtual-kubelet/internal/kubernetes/portforward"
 	"k8s.io/apimachinery/pkg/types"
 )
 

@@ -15,11 +15,13 @@
 package manager
 
 import (
+	"fmt"
+
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	corev1listers "k8s.io/client-go/listers/core/v1"
 
-	"github.com/virtual-kubelet/virtual-kubelet/log"
+	"github.com/alec-rabold/virtual-kubelet/log"
 )
 
 // ResourceManager acts as a passthrough to a cache (lister) for pods assigned to the current node.
@@ -31,15 +33,30 @@ type ResourceManager struct {
 	serviceLister   corev1listers.ServiceLister
 }
 
+type ResourceManagerOption func(*ResourceManager)
+
 // NewResourceManager returns a ResourceManager with the internal maps initialized.
-func NewResourceManager(podLister corev1listers.PodLister, secretLister corev1listers.SecretLister, configMapLister corev1listers.ConfigMapLister, serviceLister corev1listers.ServiceLister) (*ResourceManager, error) {
+func NewResourceManager(podLister corev1listers.PodLister, serviceLister corev1listers.ServiceLister, opts ...ResourceManagerOption) (*ResourceManager, error) {
 	rm := ResourceManager{
-		podLister:       podLister,
-		secretLister:    secretLister,
-		configMapLister: configMapLister,
-		serviceLister:   serviceLister,
+		podLister:     podLister,
+		serviceLister: serviceLister,
+	}
+	for _, opt := range opts {
+		opt(&rm)
 	}
 	return &rm, nil
+}
+
+func WithSecretLister(secretLister corev1listers.SecretLister) ResourceManagerOption {
+	return func(rm *ResourceManager) {
+		rm.secretLister = secretLister
+	}
+}
+
+func WithConfigMapLister(configMapLister corev1listers.ConfigMapLister) ResourceManagerOption {
+	return func(rm *ResourceManager) {
+		rm.configMapLister = configMapLister
+	}
 }
 
 // GetPods returns a list of all known pods assigned to this virtual node.
@@ -54,11 +71,17 @@ func (rm *ResourceManager) GetPods() []*v1.Pod {
 
 // GetConfigMap retrieves the specified config map from the cache.
 func (rm *ResourceManager) GetConfigMap(name, namespace string) (*v1.ConfigMap, error) {
+	if rm.configMapLister == nil {
+		return nil, fmt.Errorf("configmap lister is not enabled")
+	}
 	return rm.configMapLister.ConfigMaps(namespace).Get(name)
 }
 
 // GetSecret retrieves the specified secret from Kubernetes.
 func (rm *ResourceManager) GetSecret(name, namespace string) (*v1.Secret, error) {
+	if rm.secretLister == nil {
+		return nil, fmt.Errorf("secret lister is not enabled")
+	}
 	return rm.secretLister.Secrets(namespace).Get(name)
 }
 

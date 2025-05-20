@@ -23,9 +23,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/alec-rabold/virtual-kubelet/errdefs"
+	"github.com/alec-rabold/virtual-kubelet/log"
 	"github.com/pkg/errors"
-	"github.com/virtual-kubelet/virtual-kubelet/errdefs"
-	"github.com/virtual-kubelet/virtual-kubelet/log"
 	octrace "go.opencensus.io/trace"
 	"go.opencensus.io/zpages"
 )
