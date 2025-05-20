@@ -219,13 +219,13 @@ func NewPodController(cfg PodControllerConfig) (*PodController, error) {
 	if cfg.PodInformer == nil {
 		return nil, errdefs.InvalidInput("missing pod informer")
 	}
-	if cfg.ConfigMapInformer == nil {
+	if cfg.ConfigMapInformer == nil && !cfg.SkipDownwardAPIResolution {
 		return nil, errdefs.InvalidInput("missing config map informer")
 	}
-	if cfg.SecretInformer == nil {
+	if cfg.SecretInformer == nil && !cfg.SkipDownwardAPIResolution {
 		return nil, errdefs.InvalidInput("missing secret informer")
 	}
-	if cfg.ServiceInformer == nil {
+	if cfg.ServiceInformer == nil && !cfg.SkipDownwardAPIResolution {
 		return nil, errdefs.InvalidInput("missing service informer")
 	}
 	if cfg.Provider == nil {
@@ -240,7 +240,15 @@ func NewPodController(cfg PodControllerConfig) (*PodController, error) {
 	if cfg.SyncPodStatusFromProviderRateLimiter == nil {
 		cfg.SyncPodStatusFromProviderRateLimiter = workqueue.DefaultTypedControllerRateLimiter[any]()
 	}
-	rm, err := manager.NewResourceManager(cfg.PodInformer.Lister(), cfg.SecretInformer.Lister(), cfg.ConfigMapInformer.Lister(), cfg.ServiceInformer.Lister())
+	var opts []manager.ResourceManagerOption
+	if !cfg.SkipDownwardAPIResolution {
+		opts = append(opts,
+			manager.WithServiceLister(cfg.ServiceInformer.Lister()),
+			manager.WithConfigMapLister(cfg.ConfigMapInformer.Lister()),
+			manager.WithSecretLister(cfg.SecretInformer.Lister()),
+		)
+	}
+	rm, err := manager.NewResourceManager(cfg.PodInformer.Lister(), opts...)
 	if err != nil {
 		return nil, pkgerrors.Wrap(err, "could not create resource manager")
 	}
