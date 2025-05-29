@@ -243,15 +243,15 @@ func buildKeyFromNames(namespace string, name string) (string, error) {
 
 // buildKey is a helper for building the "key" for the providers pod store.
 func buildKey(pod *v1.Pod) (string, error) {
-	if pod.ObjectMeta.Namespace == "" {
+	if pod.Namespace == "" {
 		return "", fmt.Errorf("pod namespace not found")
 	}
 
-	if pod.ObjectMeta.Name == "" {
+	if pod.Name == "" {
 		return "", fmt.Errorf("pod name not found")
 	}
 
-	return buildKeyFromNames(pod.ObjectMeta.Namespace, pod.ObjectMeta.Name)
+	return buildKeyFromNames(pod.Namespace, pod.Name)
 }
 
 type mockProviderAsync struct {

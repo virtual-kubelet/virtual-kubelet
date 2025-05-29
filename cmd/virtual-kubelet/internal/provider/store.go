@@ -13,7 +13,7 @@ type Store struct {
 	ls map[string]InitFunc
 }
 
-func NewStore() *Store { //nolint:golint
+func NewStore() *Store {
 	return &Store{
 		ls: make(map[string]InitFunc),
 	}
@@ -71,4 +71,4 @@ type InitConfig struct {
 	ResourceManager   *manager.ResourceManager
 }
 
-type InitFunc func(InitConfig) (Provider, error) //nolint:golint
+type InitFunc func(InitConfig) (Provider, error)

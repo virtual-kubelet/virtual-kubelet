@@ -1,0 +1,34 @@
+issues:
+  exclude-use-default: false
+  exclude:
+    # EXC0001 errcheck: Almost all programs ignore errors on these functions and in most cases it's ok
+    - Error return value of .((os\.)?std(out|err)\..*|.*Close|.*Flush|os\.Remove(All)?|.*print(f|ln)?|os\.(Un)?Setenv). (is not checked|Errors unhandled)
+
+  exclude-dirs:
+    # This directory contains copy code from upstream kubernetes/kubernetes, skip it.
+    - internal/kubernetes
+    # This is mostly copied from upstream, rather than fixing that code here just ignore the errors.
+    - internal/podutils
+
+linters:
+  enable:
+    - errcheck
+    - staticcheck
+    - unconvert
+    - gofmt
+    - goimports
+    - ineffassign
+    - govet
+    - unused
+    - misspell
+    - gosec
+    - copyloopvar # Checks for pointers to enclosing loop variables
+    - tenv # Detects using os.Setenv instead of t.Setenv since Go 1.17
+    - lll
+
+linters-settings:
+  gosec:
+    excludes:
+      - G304 # Potential file inclusion via variable
+  lll:
+    line-length: 200

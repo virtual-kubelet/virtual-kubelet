@@ -118,7 +118,7 @@ func IsPodReady(pod *corev1.Pod) bool {
 func (f *Framework) WaitUntilPodDeleted(namespace, name string) (*corev1.Pod, error) {
 	return f.WaitUntilPodCondition(namespace, name, func(event watchapi.Event) (bool, error) {
 		pod := event.Object.(*corev1.Pod)
-		return event.Type == watchapi.Deleted || pod.ObjectMeta.DeletionTimestamp != nil, nil
+		return event.Type == watchapi.Deleted || pod.DeletionTimestamp != nil, nil
 	})
 }
 

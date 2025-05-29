@@ -126,8 +126,8 @@ func podsEqual(pod1, pod2 *corev1.Pod) bool {
 		cmp.Equal(pod1.Spec.InitContainers, pod2.Spec.InitContainers) &&
 		cmp.Equal(pod1.Spec.ActiveDeadlineSeconds, pod2.Spec.ActiveDeadlineSeconds) &&
 		cmp.Equal(pod1.Spec.Tolerations, pod2.Spec.Tolerations) &&
-		cmp.Equal(pod1.ObjectMeta.Labels, pod2.Labels) &&
-		cmp.Equal(pod1.ObjectMeta.Annotations, pod2.Annotations)
+		cmp.Equal(pod1.Labels, pod2.Labels) &&
+		cmp.Equal(pod1.Annotations, pod2.Annotations)
 
 }
 
@@ -310,10 +310,10 @@ func (pc *PodController) enqueuePodStatusUpdate(ctx context.Context, pod *corev1
 
 	if err != nil {
 		if errors.IsNotFound(err) {
-			err = fmt.Errorf("Pod %q not found in pod lister: %w", key, err)
-			log.G(ctx).WithError(err).Debug("Not enqueuing pod status update")
+			err = fmt.Errorf("pod %q not found in pod lister: %w", key, err)
+			log.G(ctx).WithError(err).Debug("not enqueuing pod status update")
 		} else {
-			log.G(ctx).WithError(err).Warn("Not enqueuing pod status update due to error from pod lister")
+			log.G(ctx).WithError(err).Warn("not enqueuing pod status update due to error from pod lister")
 		}
 		span.SetStatus(err)
 		return

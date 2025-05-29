@@ -146,7 +146,7 @@ func WithNodeEnableLeaseV1WithRenewInterval(client coordclientset.LeaseInterface
 			n,
 		)
 		if err != nil {
-			return fmt.Errorf("Unable to configure lease controller: %w", err)
+			return fmt.Errorf("unable to configure lease controller: %w", err)
 		}
 
 		n.leaseController = leaseController
@@ -327,9 +327,9 @@ func (n *NodeController) ensureNode(ctx context.Context, providerNode *corev1.No
 	n.serverNodeLock.Unlock()
 	// Bad things will happen if the node is deleted in k8s and recreated by someone else
 	// we rely on this persisting
-	providerNode.ObjectMeta.Name = node.Name
-	providerNode.ObjectMeta.Namespace = node.Namespace
-	providerNode.ObjectMeta.UID = node.UID
+	providerNode.Name = node.Name
+	providerNode.Namespace = node.Namespace
+	providerNode.UID = node.UID
 
 	return nil
 }
@@ -346,7 +346,9 @@ func (n *NodeController) controlLoop(ctx context.Context, providerNode *corev1.N
 
 	var sleepInterval time.Duration
 	if n.leaseController == nil {
-		log.G(ctx).WithField("pingInterval", n.pingInterval).Debug("lease controller is not enabled, updating node status in Kube API server at Ping Time Interval")
+		log.G(ctx).
+			WithField("pingInterval", n.pingInterval).
+			Debug("lease controller is not enabled, updating node status in Kube API server at Ping Time Interval")
 		sleepInterval = n.pingInterval
 	} else {
 		log.G(ctx).WithField("statusInterval", n.statusInterval).Debug("lease controller in use, updating at statusInterval")
@@ -369,8 +371,8 @@ func (n *NodeController) controlLoop(ctx context.Context, providerNode *corev1.N
 			log.G(ctx).Debug("Received node status update")
 
 			providerNode.Status = updated.Status
-			providerNode.ObjectMeta.Annotations = updated.Annotations
-			providerNode.ObjectMeta.Labels = updated.Labels
+			providerNode.Annotations = updated.Annotations
+			providerNode.Labels = updated.Labels
 			if err := n.updateStatus(ctx, providerNode, false); err != nil {
 				log.G(ctx).WithError(err).Error("Error handling node status update")
 			}
@@ -401,7 +403,7 @@ func (n *NodeController) updateStatus(ctx context.Context, providerNode *corev1.
 	if result, err := n.nodePingController.getResult(ctx); err != nil {
 		return err
 	} else if result.error != nil {
-		return fmt.Errorf("Not updating node status because node ping failed: %w", result.error)
+		return fmt.Errorf("not updating node status because node ping failed: %w", result.error)
 	}
 
 	updateNodeStatusHeartbeat(providerNode)
@@ -429,7 +431,7 @@ func (n *NodeController) updateStatus(ctx context.Context, providerNode *corev1.
 }
 
 // Returns a copy of the server node object
-func (n *NodeController) getServerNode(ctx context.Context) (*corev1.Node, error) {
+func (n *NodeController) getServerNode(_ context.Context) (*corev1.Node, error) {
 	n.serverNodeLock.Lock()
 	defer n.serverNodeLock.Unlock()
 	if n.serverNode == nil {
