@@ -212,8 +212,8 @@ func TestPodCreateNewPod(t *testing.T) {
 	svr := newTestController()
 
 	pod := &corev1.Pod{}
-	pod.ObjectMeta.Namespace = "default" //nolint:goconst
-	pod.ObjectMeta.Name = "nginx"        //nolint:goconst
+	pod.Namespace = "default" //nolint:goconst
+	pod.Name = "nginx"        //nolint:goconst
 	pod.Spec = newPodSpec()
 
 	err := svr.createOrUpdatePod(context.Background(), pod.DeepCopy())
@@ -229,8 +229,8 @@ func TestPodCreateNewPodWithNoDownwardAPIResolution(t *testing.T) {
 	svr.skipDownwardAPIResolution = true
 
 	pod := &corev1.Pod{}
-	pod.ObjectMeta.Namespace = "default" //nolint:goconst
-	pod.ObjectMeta.Name = "nginx"        //nolint:goconst
+	pod.Namespace = "default" //nolint:goconst
+	pod.Name = "nginx"        //nolint:goconst
 	pod.Spec = newPodSpec()
 	pod.Spec.Containers[0].Env = []corev1.EnvVar{
 		{
@@ -264,8 +264,8 @@ func TestPodUpdateExisting(t *testing.T) {
 	svr := newTestController()
 
 	pod := &corev1.Pod{}
-	pod.ObjectMeta.Namespace = "default"
-	pod.ObjectMeta.Name = "nginx"
+	pod.Namespace = "default"
+	pod.Name = "nginx"
 	pod.Spec = newPodSpec()
 
 	err := svr.createOrUpdatePod(context.Background(), pod.DeepCopy())
@@ -288,8 +288,8 @@ func TestPodNoSpecChange(t *testing.T) {
 	svr := newTestController()
 
 	pod := &corev1.Pod{}
-	pod.ObjectMeta.Namespace = "default"
-	pod.ObjectMeta.Name = "nginx"
+	pod.Namespace = "default"
+	pod.Name = "nginx"
 	pod.Spec = newPodSpec()
 
 	err := svr.createOrUpdatePod(context.Background(), pod.DeepCopy())
@@ -309,8 +309,8 @@ func TestPodStatusDelete(t *testing.T) {
 	ctx := context.Background()
 	c := newTestController()
 	pod := &corev1.Pod{}
-	pod.ObjectMeta.Namespace = "default"
-	pod.ObjectMeta.Name = "nginx"
+	pod.Namespace = "default"
+	pod.Name = "nginx"
 	pod.Spec = newPodSpec()
 	fk8s := fake.NewSimpleClientset(pod)
 	c.client = fk8s
@@ -375,8 +375,8 @@ func TestReCreatePodRace(t *testing.T) {
 	ctx := context.Background()
 	c := newTestController()
 	pod := &corev1.Pod{}
-	pod.ObjectMeta.Namespace = "default"
-	pod.ObjectMeta.Name = "nginx"
+	pod.Namespace = "default"
+	pod.Name = "nginx"
 	pod.Spec = newPodSpec()
 	pod.UID = "aaaaa"
 	podCopy := pod.DeepCopy()

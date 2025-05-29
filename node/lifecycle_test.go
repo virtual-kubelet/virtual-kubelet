@@ -441,7 +441,7 @@ func testCreateStartDeleteScenario(ctx context.Context, t *testing.T, s *system,
 			// TODO(Sargun): Make this "smarter" about the status the pod is in.
 			func(ev watch.Event) (bool, error) {
 				pod := ev.Object.(*corev1.Pod)
-				return pod.Name == p.ObjectMeta.Name, nil
+				return pod.Name == p.Name, nil
 			})
 
 		sendErr(ctx, watchErrCh, watchErr)
@@ -628,7 +628,7 @@ func benchmarkCreatePods(ctx context.Context, b *testing.B, s *system) {
 type podModifier func(*corev1.Pod)
 
 func randomizeUID(pod *corev1.Pod) {
-	pod.ObjectMeta.UID = uuid.NewUUID()
+	pod.UID = uuid.NewUUID()
 }
 
 func randomizeName(pod *corev1.Pod) {
@@ -638,7 +638,7 @@ func randomizeName(pod *corev1.Pod) {
 
 func forRealAPIServer(pod *corev1.Pod) {
 	pod.ResourceVersion = ""
-	pod.ObjectMeta.UID = ""
+	pod.UID = ""
 }
 
 func nameBasedOnTest(t *testing.T) podModifier {

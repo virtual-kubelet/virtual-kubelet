@@ -251,8 +251,8 @@ func (ts *EndToEndTestSuite) TestPodLifecycleGracefulDelete(t *testing.T) {
 
 	// Make sure we saw the delete event, and the delete event was graceful
 	assert.Assert(t, podLast != nil)
-	assert.Assert(t, podLast.ObjectMeta.GetDeletionGracePeriodSeconds() != nil)
-	assert.Assert(t, *podLast.ObjectMeta.GetDeletionGracePeriodSeconds() > 0)
+	assert.Assert(t, podLast.GetDeletionGracePeriodSeconds() != nil)
+	assert.Assert(t, *podLast.GetDeletionGracePeriodSeconds() > 0)
 }
 
 // TestPodLifecycleForceDelete creates one podsand verifies that the provider has created them

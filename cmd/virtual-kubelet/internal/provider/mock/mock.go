@@ -43,7 +43,7 @@ var (
 */
 
 // MockProvider implements the virtual-kubelet provider interface and stores pods in memory.
-type MockProvider struct { //nolint:golint
+type MockProvider struct {
 	nodeName           string
 	operatingSystem    string
 	internalIP         string
@@ -55,7 +55,7 @@ type MockProvider struct { //nolint:golint
 }
 
 // MockConfig contains a mock virtual-kubelet's configurable parameters.
-type MockConfig struct { //nolint:golint
+type MockConfig struct {
 	CPU        string            `json:"cpu,omitempty"`
 	Memory     string            `json:"memory,omitempty"`
 	Pods       string            `json:"pods,omitempty"`
@@ -123,17 +123,17 @@ func loadConfig(providerConfig, nodeName string) (config MockConfig, err error) 
 	}
 
 	if _, err = resource.ParseQuantity(config.CPU); err != nil {
-		return config, fmt.Errorf("Invalid CPU value %v", config.CPU)
+		return config, fmt.Errorf("invalid CPU value %v", config.CPU)
 	}
 	if _, err = resource.ParseQuantity(config.Memory); err != nil {
-		return config, fmt.Errorf("Invalid memory value %v", config.Memory)
+		return config, fmt.Errorf("invalid memory value %v", config.Memory)
 	}
 	if _, err = resource.ParseQuantity(config.Pods); err != nil {
-		return config, fmt.Errorf("Invalid pods value %v", config.Pods)
+		return config, fmt.Errorf("invalid pods value %v", config.Pods)
 	}
 	for _, v := range config.Others {
 		if _, err = resource.ParseQuantity(v); err != nil {
-			return config, fmt.Errorf("Invalid other value %v", v)
+			return config, fmt.Errorf("invalid other value %v", v)
 		}
 	}
 	return config, nil
@@ -349,7 +349,7 @@ func (p *MockProvider) GetPods(ctx context.Context) ([]*v1.Pod, error) {
 	return pods, nil
 }
 
-func (p *MockProvider) ConfigureNode(ctx context.Context, n *v1.Node) { //nolint:golint
+func (p *MockProvider) ConfigureNode(ctx context.Context, n *v1.Node) {
 	ctx, span := trace.StartSpan(ctx, "mock.ConfigureNode") //nolint:staticcheck,ineffassign
 	defer span.End()
 
@@ -367,8 +367,8 @@ func (p *MockProvider) ConfigureNode(ctx context.Context, n *v1.Node) { //nolint
 	}
 	n.Status.NodeInfo.OperatingSystem = os
 	n.Status.NodeInfo.Architecture = "amd64"
-	n.ObjectMeta.Labels["alpha.service-controller.kubernetes.io/exclude-balancer"] = "true"
-	n.ObjectMeta.Labels["node.kubernetes.io/exclude-from-external-load-balancers"] = "true"
+	n.Labels["alpha.service-controller.kubernetes.io/exclude-balancer"] = "true"
+	n.Labels["node.kubernetes.io/exclude-from-external-load-balancers"] = "true"
 }
 
 // Capacity returns a resource list containing the capacity limits.
@@ -671,15 +671,15 @@ func buildKeyFromNames(namespace string, name string) (string, error) {
 
 // buildKey is a helper for building the "key" for the providers pod store.
 func buildKey(pod *v1.Pod) (string, error) {
-	if pod.ObjectMeta.Namespace == "" {
+	if pod.Namespace == "" {
 		return "", fmt.Errorf("pod namespace not found")
 	}
 
-	if pod.ObjectMeta.Name == "" {
+	if pod.Name == "" {
 		return "", fmt.Errorf("pod name not found")
 	}
 
-	return buildKeyFromNames(pod.ObjectMeta.Namespace, pod.ObjectMeta.Name)
+	return buildKeyFromNames(pod.Namespace, pod.Name)
 }
 
 // addAttributes adds the specified attributes to the provided span.

@@ -78,15 +78,15 @@ func newLeaseControllerWithRenewInterval(
 	nodeController *NodeController) (*leaseController, error) {
 
 	if leaseDurationSeconds <= 0 {
-		return nil, fmt.Errorf("Lease duration seconds %d is invalid, it must be > 0", leaseDurationSeconds)
+		return nil, fmt.Errorf("lease duration seconds %d is invalid, it must be > 0", leaseDurationSeconds)
 	}
 
 	if renewInterval == 0 {
-		return nil, fmt.Errorf("Lease renew interval %s is invalid, it must be > 0", renewInterval.String())
+		return nil, fmt.Errorf("lease renew interval %s is invalid, it must be > 0", renewInterval.String())
 	}
 
 	if float64(leaseDurationSeconds) <= renewInterval.Seconds() {
-		return nil, fmt.Errorf("Lease renew interval %s is invalid, it must be less than lease duration seconds %d", renewInterval.String(), leaseDurationSeconds)
+		return nil, fmt.Errorf("lease renew interval %s is invalid, it must be less than lease duration seconds %d", renewInterval.String(), leaseDurationSeconds)
 	}
 
 	return &leaseController{
@@ -128,7 +128,7 @@ func (c *leaseController) sync(ctx context.Context) {
 		return
 	}
 	if node == nil {
-		err = errors.New("Servernode is null")
+		err = errors.New("server node is null")
 		log.G(ctx).WithError(err).Error("servernode is null")
 		span.SetStatus(err)
 		return

@@ -7,7 +7,7 @@ const (
 	OperatingSystemWindows = "windows"
 )
 
-type OperatingSystems map[string]bool //nolint:golint
+type OperatingSystems map[string]bool
 
 var (
 	// ValidOperatingSystems defines the group of operating systems
@@ -18,7 +18,7 @@ var (
 	}
 )
 
-func (o OperatingSystems) Names() []string { //nolint:golint
+func (o OperatingSystems) Names() []string {
 	keys := make([]string, 0, len(o))
 	for k := range o {
 		keys = append(keys, k)

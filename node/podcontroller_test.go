@@ -123,8 +123,8 @@ func TestPodEventFilter(t *testing.T) {
 	}
 
 	pod := &corev1.Pod{}
-	pod.ObjectMeta.Namespace = "default"
-	pod.ObjectMeta.Name = "nginx"
+	pod.Namespace = "default"
+	pod.Name = "nginx"
 	pod.Spec = newPodSpec()
 
 	podC := tc.client.CoreV1().Pods(testNamespace)
