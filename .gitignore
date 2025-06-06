@@ -30,6 +30,9 @@ credentials.json
 # Test loganalytics file
 loganalytics.json
 
+# Envtest
+.envtest/
+
 # VS Code files
 .vscode/
 
