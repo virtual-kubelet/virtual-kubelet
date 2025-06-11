@@ -24,7 +24,7 @@ func ClientsetFromEnv(kubeConfigPath string) (*kubernetes.Clientset, error) {
 	)
 
 	if kubeConfigPath != "" {
-		config, err = clientsetFromEnvKubeConfigPath(kubeConfigPath)
+		config, err = RestConfigFromEnv(kubeConfigPath)
 	} else {
 		config, err = rest.InClusterConfig()
 	}
@@ -36,7 +36,8 @@ func ClientsetFromEnv(kubeConfigPath string) (*kubernetes.Clientset, error) {
 	return kubernetes.NewForConfig(config)
 }
 
-func clientsetFromEnvKubeConfigPath(kubeConfigPath string) (*rest.Config, error) {
+// RestConfigFromEnv is like ClientsetFromEnv except it returns a rest config instead of a full client.
+func RestConfigFromEnv(kubeConfigPath string) (*rest.Config, error) {
 	_, err := os.Stat(kubeConfigPath)
 	if os.IsNotExist(err) {
 		return rest.InClusterConfig()

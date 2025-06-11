@@ -48,6 +48,7 @@ func HandlePodStatsSummary(h PodStatsSummaryHandlerFunc) http.HandlerFunc {
 		if _, err := w.Write(b); err != nil {
 			return errors.Wrap(err, "could not write to client")
 		}
+		_, _ = w.Write([]byte("\n"))
 		return nil
 	})
 }
