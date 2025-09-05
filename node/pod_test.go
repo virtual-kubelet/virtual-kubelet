@@ -488,6 +488,41 @@ func TestReCreatePodRace(t *testing.T) {
 	t.Log("pod uid conflict test success")
 }
 
+func TestUpdatePodStatusWithNilProviderStatus(t *testing.T) {
+	ctx := context.Background()
+	c := newTestController()
+	pod := &corev1.Pod{}
+	pod.Namespace = "default"
+	pod.Name = "nginx"
+	pod.Spec = newPodSpec()
+
+	fk8s := fake.NewSimpleClientset(pod)
+	c.client = fk8s
+	c.PodController.client = fk8s.CoreV1()
+
+	key := fmt.Sprintf("%s/%s", pod.Namespace, pod.Name)
+
+	// Store a known pod with default values
+	// This simulates the case where a known pod exists but hasn't been fully hydrated from the provider
+	c.knownPods.Store(key, &knownPod{})
+
+	err := c.updatePodStatus(ctx, pod, key)
+	if err != nil {
+		t.Fatalf("Expected updatePodStatus to return nil when lastPodStatusReceivedFromProvider is nil, got error: %v", err)
+	}
+
+	// Verify that the pod still exists in the client (no deletion occurred)
+	existingPod, err := c.client.CoreV1().Pods(pod.Namespace).Get(ctx, pod.Name, v1.GetOptions{})
+	if err != nil {
+		t.Fatalf("Expected pod to still exist, got error: %v", err)
+	}
+	if existingPod == nil {
+		t.Fatal("Expected pod to still exist, but it was nil")
+	}
+
+	t.Log("Successfully handled nil lastPodStatusReceivedFromProvider case")
+}
+
 func newPodSpec() corev1.PodSpec {
 	return corev1.PodSpec{
 		Containers: []corev1.Container{
