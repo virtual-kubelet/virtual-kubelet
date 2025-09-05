@@ -221,6 +221,11 @@ func (pc *PodController) updatePodStatus(ctx context.Context, podFromKubernetes 
 	kPod.Lock()
 	podFromProvider := kPod.lastPodStatusReceivedFromProvider.DeepCopy()
 	kPod.Unlock()
+	if podFromProvider == nil {
+		// there is a small period of time between when we have a known pod initialized but it hasn't
+		// been fully hydrated from the provider.
+		return nil
+	}
 	// Pod deleted by provider due some reasons. e.g. a K8s provider, pod created by deployment would be evicted when node is not ready.
 	// If we do not delete pod in K8s, deployment would not create a new one.
 	if podFromProvider.DeletionTimestamp != nil && podFromKubernetes.DeletionTimestamp == nil {
