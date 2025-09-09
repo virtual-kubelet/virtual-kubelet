@@ -13,35 +13,35 @@ permissions:
   contents: read
 
 env:
-  GO_VERSION: "1.23"
+  GO_VERSION: "1.24"
 
 jobs:
   lint:
     name: Lint
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
       - name: Checkout repository
         uses: actions/checkout@v5
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v6
         with:
           go-version: ${{ env.GO_VERSION }}
           cache: false
       - uses: actions/checkout@v5
       - uses: golangci/golangci-lint-action@v8
         with:
-          version: v2.1
+          version: v2.4
           args: --timeout=15m --config=.golangci.yml
           skip-cache: true
 
   unit-tests:
     name: Unit Tests
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
       - name: Checkout repository
         uses: actions/checkout@v5
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v6
         with:
           go-version: ${{ env.GO_VERSION }}
       - uses: actions/checkout@v5
@@ -50,12 +50,12 @@ jobs:
 
   env-tests:
     name: Envtest Tests
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
       - name: Checkout repository
         uses: actions/checkout@v5
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v6
         with:
           go-version: ${{ env.GO_VERSION }}
       - uses: actions/checkout@v5
@@ -64,20 +64,20 @@ jobs:
 
   e2e:
     name: E2E
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
       CHANGE_MINIKUBE_NONE_USER: true
-      KUBERNETES_VERSION: v1.31
+      KUBERNETES_VERSION: v1.33
       MINIKUBE_HOME: /home/runner
-      MINIKUBE_VERSION: v1.34.0
+      MINIKUBE_VERSION: v1.36.0
       MINIKUBE_WANTUPDATENOTIFICATION: false
       MINIKUBE_WANTREPORTERRORPROMPT: false
       SKAFFOLD_VERSION: v2.13.2
       GO111MODULE: "on"
 
     steps:
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v6
         with:
           go-version: ${{ env.GO_VERSION }}
       - name: Checkout repository
