@@ -153,6 +153,9 @@ func podShouldEnqueue(oldPod, newPod *corev1.Pod) bool {
 	if !oldPod.DeletionTimestamp.Equal(newPod.DeletionTimestamp) {
 		return true
 	}
+	if newPod.DeletionTimestamp != nil && !running(&newPod.Status) {
+		return true
+	}
 	return false
 }
 
