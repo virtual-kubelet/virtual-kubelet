@@ -116,7 +116,7 @@ func tlsFromRestConfig(r *rest.Config) func(*tls.Config) error {
 		}
 
 		caData := r.CAData
-		if certData == nil && r.CAFile != "" {
+		if caData == nil && r.CAFile != "" {
 			caData, err = os.ReadFile(r.CAFile)
 			if err != nil {
 				return fmt.Errorf("error reading ca file from clientset: %w", err)

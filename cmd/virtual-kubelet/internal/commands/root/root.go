@@ -117,7 +117,18 @@ func runRootCommand(ctx context.Context, s *provider.Store, c Opts) error {
 
 		return nil
 	},
-		nodeutil.WithBootstrapFromRestConfig(),
+		func() nodeutil.NodeOpt {
+			crtPath := os.Getenv("APISERVER_CERT_LOCATION")
+			keyPath := os.Getenv("APISERVER_KEY_LOCATION")
+			caPath := os.Getenv("APISERVER_CA_LOCATION")
+			if crtPath != "" && keyPath != "" {
+				nodeutil.WithKeyPairFromPath(crtPath, keyPath)
+			}
+			if caPath != "" {
+				nodeutil.WithCAFromPath(caPath)
+			}
+			return nodeutil.WithBootstrapFromRestConfig()
+		}(),
 	)
 	if err != nil {
 		return err
