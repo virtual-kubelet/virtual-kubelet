@@ -20,11 +20,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/virtual-kubelet/virtual-kubelet/internal/queue"
-
 	"github.com/google/go-cmp/cmp"
 	pkgerrors "github.com/pkg/errors"
 	"github.com/virtual-kubelet/virtual-kubelet/internal/podutils"
+	"github.com/virtual-kubelet/virtual-kubelet/internal/queue"
 	"github.com/virtual-kubelet/virtual-kubelet/log"
 	"github.com/virtual-kubelet/virtual-kubelet/trace"
 	corev1 "k8s.io/api/core/v1"
@@ -162,7 +161,7 @@ func (pc *PodController) handleProviderError(ctx context.Context, span trace.Spa
 		podPhase = corev1.PodFailed
 	}
 
-	pod.ResourceVersion = "" // Blank out resource version to prevent object has been modified error
+	oldStatus := pod.Status.DeepCopy()
 	pod.Status.Phase = podPhase
 	pod.Status.Reason = podStatusReasonProviderFailed
 	pod.Status.Message = origErr.Error()
@@ -172,7 +171,7 @@ func (pc *PodController) handleProviderError(ctx context.Context, span trace.Spa
 		"reason":   pod.Status.Reason,
 	})
 
-	_, err := pc.client.Pods(pod.Namespace).UpdateStatus(ctx, pod, metav1.UpdateOptions{})
+	_, _, err := podutils.PatchPodStatus(pc.client, pod.Namespace, pod.Name, *oldStatus, pod.Status)
 	if err != nil {
 		logger.WithError(err).Warn("Failed to update pod status")
 	} else {
@@ -245,12 +244,9 @@ func (pc *PodController) updatePodStatus(ctx context.Context, podFromKubernetes 
 			}
 		}
 	}
-
-	// We need to do this because the other parts of the pod can be updated elsewhere. Since we're only updating
-	// the pod status, and we should be the sole writers of the pod status, we can blind overwrite it. Therefore
-	// we need to copy the pod and set ResourceVersion to 0.
-	podFromProvider.ResourceVersion = "0"
-	if _, err := pc.client.Pods(podFromKubernetes.Namespace).UpdateStatus(ctx, podFromProvider, metav1.UpdateOptions{}); err != nil && !errors.IsNotFound(err) {
+	oldStatus := podFromKubernetes.Status.DeepCopy()
+	newStatus := podFromProvider.Status.DeepCopy()
+	if _, _, err := podutils.PatchPodStatus(pc.client, podFromKubernetes.Namespace, podFromKubernetes.Name, *oldStatus, *newStatus); err != nil && !errors.IsNotFound(err) {
 		span.SetStatus(err)
 		return pkgerrors.Wrap(err, "error while updating pod status in kubernetes")
 	}
