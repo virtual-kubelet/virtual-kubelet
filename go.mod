@@ -25,7 +25,7 @@ require (
 	google.golang.org/protobuf v1.36.8
 	gotest.tools v2.2.0+incompatible
 	k8s.io/api v0.34.0
-	k8s.io/apimachinery v0.34.0
+	k8s.io/apimachinery v0.34.1
 	k8s.io/apiserver v0.34.0
 	k8s.io/client-go v0.34.0
 	k8s.io/klog/v2 v2.130.1
