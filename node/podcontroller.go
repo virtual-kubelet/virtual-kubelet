@@ -274,6 +274,12 @@ func NewPodController(cfg PodControllerConfig) (*PodController, error) {
 		return nil, pkgerrors.Wrap(err, "could not create resource manager")
 	}
 
+	// Under the hood, we expect the provider to implement PodUIDLifecycleHandler.
+	// However, PodControllerConfig accepts PodLifecycleHandler, which might not
+	// implement this. For backwards compatibility, we haven't changed the type
+	// in PodControllerConfig, but if the provider doesn't implement PodUIDLifecycleHandler
+	// we wrap it in uidProviderWrapper. In the future, we will require asyncProvider
+	// to be implemented directly (PodUIDLifecycleHandler + PodNotifier).
 	var provider PodUIDLifecycleHandler
 	if p, ok := cfg.Provider.(PodUIDLifecycleHandler); ok {
 		provider = p
@@ -329,6 +335,12 @@ func (pc *PodController) Run(ctx context.Context, podSyncWorkers int) (retErr er
 	var provider asyncProvider
 	runProvider := func(context.Context) {}
 
+	// Under the hood, we expect the provider to implement PodNotifier.
+	// However, PodControllerConfig accepts PodLifecycleHandler, which might not
+	// implement this. For backwards compatibility, we haven't changed the type
+	// in PodControllerConfig, but if the provider doesn't implement PodNotifier
+	// we wrap it in syncProviderWrapper. In the future, we will require asyncProvider
+	// to be implemented directly (PodUIDLifecycleHandler + PodNotifier).
 	if p, ok := pc.provider.(asyncProvider); ok {
 		provider = p
 	} else {

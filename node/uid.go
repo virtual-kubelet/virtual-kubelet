@@ -36,6 +36,8 @@ func (k *podUIDKey) String() string {
 	return k.ObjectName() + "/" + string(k.UID)
 }
 
+// uidProviderWrapper wraps a legacy PodLifecycleHandler to handle GetPodByUID/GetPodStatusByUID,
+// by ignoring the pod UID and using only the pod namespace/name.
 type uidProviderWrapper struct {
 	PodLifecycleHandler
 }
