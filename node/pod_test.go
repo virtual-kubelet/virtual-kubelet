@@ -54,7 +54,7 @@ func newTestController() *TestController {
 		PodClient:         fk8s.CoreV1(),
 		PodInformer:       iFactory.Core().V1().Pods(),
 		EventRecorder:     testutil.FakeEventRecorder(5),
-		Provider:          p,
+		Provider:          UIDBasedProvider(p),
 		ConfigMapInformer: iFactory.Core().V1().ConfigMaps(),
 		SecretInformer:    iFactory.Core().V1().Secrets(),
 		ServiceInformer:   iFactory.Core().V1().Services(),

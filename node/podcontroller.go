@@ -38,6 +38,9 @@ import (
 	"k8s.io/client-go/util/workqueue"
 )
 
+// podLifecycleHandler contains the methods shared between PodUIDLifecycleHandler and the legacy
+// PodLifecycleHandler. In the future, when PodLifecycleHandler is replaced with PodUIDLifecycleHandler,
+// this common interface can be incorporated directly into PodUIDLifecycleHandler.
 type podLifecycleHandler interface {
 	// CreatePod takes a Kubernetes Pod and deploys it within the provider.
 	CreatePod(ctx context.Context, pod *corev1.Pod) error

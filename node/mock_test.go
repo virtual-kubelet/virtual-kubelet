@@ -18,7 +18,6 @@ const (
 )
 
 var (
-	_ PodLifecycleHandler    = (*mockProvider)(nil)
 	_ PodUIDLifecycleHandler = (*mockProvider)(nil)
 )
 
@@ -177,10 +176,6 @@ func (p *mockProvider) DeletePod(ctx context.Context, pod *v1.Pod) (err error) {
 	return nil
 }
 
-func (p *mockProvider) GetPod(ctx context.Context, namespace, name string) (pod *v1.Pod, err error) {
-	panic("GetPod not called when GetPodByUID implemented")
-}
-
 // GetPodByUID returns a pod by name that is stored in memory.
 func (p *mockProvider) GetPodByUID(ctx context.Context, namespace, name string, uid types.UID) (pod *v1.Pod, err error) {
 	log.G(ctx).Infof("receive GetPodByUID %q", name)
@@ -194,10 +189,6 @@ func (p *mockProvider) GetPodByUID(ctx context.Context, namespace, name string, 
 		return pod.(*v1.Pod).DeepCopy(), nil
 	}
 	return nil, errdefs.NotFoundf("pod \"%s/%s\" is not known to the provider", namespace, name)
-}
-
-func (p *mockProvider) GetPodStatus(ctx context.Context, namespace, name string) (pod *v1.PodStatus, err error) {
-	panic("GetPodStatus not called when GetPodStatusByUID implemented")
 }
 
 // GetPodStatusByUID returns the status of a pod by name that is "running".
@@ -279,7 +270,7 @@ func (p *mockProviderAsync) NotifyPods(ctx context.Context, notifier func(*v1.Po
 }
 
 type testingProvider interface {
-	PodLifecycleHandler
+	PodUIDLifecycleHandler
 	setErrorOnDelete(error)
 	getAttemptedDeletes() *waitableInt
 	getDeletes() *waitableInt
