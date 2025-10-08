@@ -405,6 +405,7 @@ func (q *Queue) getNextItem(ctx context.Context) (*queueItem, error) {
 func (q *Queue) handleQueueItem(ctx context.Context) bool {
 	ctx, span := trace.StartSpan(ctx, "handleQueueItem")
 	defer span.End()
+	ctx = log.WithLogger(ctx, log.G(ctx).WithField("queue", q.name))
 
 	qi, err := q.getNextItem(ctx)
 	if err != nil {
@@ -417,6 +418,7 @@ func (q *Queue) handleQueueItem(ctx context.Context) bool {
 	// We do this as the delayed nature of the work Queue means the items in the informer cache may actually be more u
 	// to date that when the item was initially put onto the workqueue.
 	ctx = span.WithField(ctx, "key", qi.key)
+	ctx = log.WithLogger(ctx, log.G(ctx).WithField("key", qi.key))
 	log.G(ctx).Debug("Got Queue object")
 
 	err = q.handleQueueItemObject(ctx, qi)

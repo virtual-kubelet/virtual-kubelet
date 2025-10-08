@@ -613,6 +613,7 @@ func (pc *PodController) syncPodInProvider(ctx context.Context, pod *corev1.Pod,
 		}
 
 		key = fmt.Sprintf("%v/%v", key, pod.UID)
+		log.G(ctx).WithField("seconds", *pod.DeletionGracePeriodSeconds).Debug("Enqueued pod for deletion in Kubernetes")
 		pc.deletePodsFromKubernetes.EnqueueWithoutRateLimitWithDelay(ctx, key, time.Second*time.Duration(*pod.DeletionGracePeriodSeconds))
 		return nil
 	}
