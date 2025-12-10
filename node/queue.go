@@ -24,11 +24,11 @@ import (
 //
 // If the delay is negative, the item will be scheduled "earlier" than now. This will result in the item being executed
 // earlier than other items in the FIFO work order.
-type ShouldRetryFunc = queue.ShouldRetryFunc
+type ShouldRetryFunc = queue.ShouldRetryFunc[string]
 
 // DefaultRetryFunc is the default function used for retries by the queue subsystem. Its only policy is that it gives up
 // after MaxRetries, and falls back to the rate limiter for all other retries.
-var DefaultRetryFunc = queue.DefaultRetryFunc
+var DefaultRetryFunc = queue.DefaultRetryFunc[string]
 
 // MaxRetries is the number of times we try to process a given key before permanently forgetting it.
 var MaxRetries = queue.MaxRetries

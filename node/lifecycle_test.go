@@ -242,7 +242,7 @@ func (s *system) start(ctx context.Context) error {
 	return s.pc.Err()
 }
 
-func wireUpSystem(ctx context.Context, provider PodLifecycleHandler, f testFunction) error {
+func wireUpSystem(ctx context.Context, provider PodUIDLifecycleHandler, f testFunction) error {
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
@@ -266,7 +266,7 @@ func wireUpSystem(ctx context.Context, provider PodLifecycleHandler, f testFunct
 	return wireUpSystemWithClient(ctx, provider, client, f)
 }
 
-func wireUpSystemWithClient(ctx context.Context, provider PodLifecycleHandler, client kubernetes.Interface, f testFunction) error {
+func wireUpSystemWithClient(ctx context.Context, provider PodUIDLifecycleHandler, client kubernetes.Interface, f testFunction) error {
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
@@ -293,7 +293,7 @@ func wireUpSystemWithClient(ctx context.Context, provider PodLifecycleHandler, c
 			PodClient:         client.CoreV1(),
 			PodInformer:       podInformer,
 			EventRecorder:     fakeRecorder,
-			Provider:          provider,
+			Provider:          UIDBasedProvider(provider),
 			ConfigMapInformer: configMapInformer,
 			SecretInformer:    secretInformer,
 			ServiceInformer:   serviceInformer,

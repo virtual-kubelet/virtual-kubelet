@@ -29,6 +29,7 @@ import (
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/util/uuid"
 	kubeinformers "k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes/fake"
 	core "k8s.io/client-go/testing"
@@ -53,7 +54,7 @@ func newTestController() *TestController {
 		PodClient:         fk8s.CoreV1(),
 		PodInformer:       iFactory.Core().V1().Pods(),
 		EventRecorder:     testutil.FakeEventRecorder(5),
-		Provider:          p,
+		Provider:          UIDBasedProvider(p),
 		ConfigMapInformer: iFactory.Core().V1().ConfigMaps(),
 		SecretInformer:    iFactory.Core().V1().Secrets(),
 		ServiceInformer:   iFactory.Core().V1().Services(),
@@ -215,6 +216,7 @@ func TestPodCreateNewPod(t *testing.T) {
 	pod.Namespace = "default" //nolint:goconst
 	pod.Name = "nginx"        //nolint:goconst
 	pod.Spec = newPodSpec()
+	pod.UID = uuid.NewUUID()
 
 	err := svr.createOrUpdatePod(context.Background(), pod.DeepCopy())
 
@@ -242,6 +244,7 @@ func TestPodCreateNewPodWithNoDownwardAPIResolution(t *testing.T) {
 			},
 		},
 	}
+	pod.UID = uuid.NewUUID()
 
 	err := svr.createOrUpdatePod(context.Background(), pod.DeepCopy())
 	assert.Check(t, is.Nil(err))
@@ -267,6 +270,7 @@ func TestPodUpdateExisting(t *testing.T) {
 	pod.Namespace = "default"
 	pod.Name = "nginx"
 	pod.Spec = newPodSpec()
+	pod.UID = uuid.NewUUID()
 
 	err := svr.createOrUpdatePod(context.Background(), pod.DeepCopy())
 	assert.Check(t, is.Nil(err))
@@ -291,6 +295,7 @@ func TestPodNoSpecChange(t *testing.T) {
 	pod.Namespace = "default"
 	pod.Name = "nginx"
 	pod.Spec = newPodSpec()
+	pod.UID = uuid.NewUUID()
 
 	err := svr.createOrUpdatePod(context.Background(), pod.DeepCopy())
 	assert.Check(t, is.Nil(err))
@@ -311,6 +316,7 @@ func TestPodStatusDelete(t *testing.T) {
 	pod := &corev1.Pod{}
 	pod.Namespace = "default"
 	pod.Name = "nginx"
+	pod.UID = uuid.NewUUID()
 	pod.Spec = newPodSpec()
 	fk8s := fake.NewSimpleClientset(pod)
 	c.client = fk8s
@@ -318,7 +324,7 @@ func TestPodStatusDelete(t *testing.T) {
 	podCopy := pod.DeepCopy()
 	deleteTime := v1.Time{Time: time.Now().Add(30 * time.Second)}
 	podCopy.DeletionTimestamp = &deleteTime
-	key := fmt.Sprintf("%s/%s", pod.Namespace, pod.Name)
+	key := newPodUIDKey(pod)
 	c.knownPods.Store(key, &knownPod{lastPodStatusReceivedFromProvider: podCopy})
 
 	// test pod in provider delete
@@ -386,7 +392,7 @@ func TestReCreatePodRace(t *testing.T) {
 	fk8s := &fake.Clientset{}
 	c.client = fk8s
 	c.PodController.client = fk8s.CoreV1()
-	key := fmt.Sprintf("%s/%s/%s", pod.Namespace, pod.Name, pod.UID)
+	key := newPodUIDKey(pod)
 	c.knownPods.Store(key, &knownPod{lastPodStatusReceivedFromProvider: podCopy})
 	c.deletePodsFromKubernetes.Enqueue(ctx, key)
 	if err := c.podsInformer.Informer().GetStore().Add(pod); err != nil {
@@ -495,12 +501,13 @@ func TestUpdatePodStatusWithNilProviderStatus(t *testing.T) {
 	pod.Namespace = "default"
 	pod.Name = "nginx"
 	pod.Spec = newPodSpec()
+	pod.UID = uuid.NewUUID()
 
 	fk8s := fake.NewSimpleClientset(pod)
 	c.client = fk8s
 	c.PodController.client = fk8s.CoreV1()
 
-	key := fmt.Sprintf("%s/%s", pod.Namespace, pod.Name)
+	key := newPodUIDKey(pod)
 
 	// Store a known pod with default values
 	// This simulates the case where a known pod exists but hasn't been fully hydrated from the provider

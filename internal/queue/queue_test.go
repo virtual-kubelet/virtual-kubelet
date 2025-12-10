@@ -229,7 +229,7 @@ func TestQueueRedirty(t *testing.T) {
 	defer cancel()
 
 	var times int64
-	var q *Queue
+	var q *Queue[string]
 	q = New(workqueue.DefaultTypedItemBasedRateLimiter[any](), t.Name(), func(ctx context.Context, key string) error {
 		assert.Assert(t, is.Equal(key, "foo"))
 		if atomic.AddInt64(&times, 1) == 1 {
@@ -279,13 +279,13 @@ func TestHeapConcurrency(t *testing.T) {
 	assert.Assert(t, time.Since(start) < 5*time.Second)
 }
 
-func checkConsistency(t *testing.T, q *Queue) {
+func checkConsistency(t *testing.T, q *Queue[string]) {
 	q.lock.Lock()
 	defer q.lock.Unlock()
 
 	for next := q.items.Front(); next != nil && next.Next() != nil; next = next.Next() {
-		qi := next.Value.(*queueItem)
-		qiNext := next.Next().Value.(*queueItem)
+		qi := next.Value.(*queueItem[string])
+		qiNext := next.Next().Value.(*queueItem[string])
 		assert.Assert(t, qi.plannedToStartWorkAt.Before(qiNext.plannedToStartWorkAt) || qi.plannedToStartWorkAt.Equal(qiNext.plannedToStartWorkAt))
 	}
 }
@@ -420,7 +420,7 @@ func TestQueueForgetInProgress(t *testing.T) {
 	defer cancel()
 
 	var times int64
-	var q *Queue
+	var q *Queue[string]
 	q = New(workqueue.DefaultTypedItemBasedRateLimiter[any](), t.Name(), func(ctx context.Context, key string) error {
 		assert.Assert(t, is.Equal(key, "foo"))
 		atomic.AddInt64(&times, 1)
