@@ -43,7 +43,7 @@ func TestGetPods(t *testing.T) {
 	podLister := corev1listers.NewPodLister(indexer)
 
 	// Create a new instance of the resource manager based on the pod lister.
-	rm, err := manager.NewResourceManager(podLister, nil, nil, nil)
+	rm, err := manager.NewResourceManager(podLister)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -72,7 +72,7 @@ func TestGetSecret(t *testing.T) {
 	secretLister := corev1listers.NewSecretLister(indexer)
 
 	// Create a new instance of the resource manager based on the secret lister.
-	rm, err := manager.NewResourceManager(nil, secretLister, nil, nil)
+	rm, err := manager.NewResourceManager(nil, manager.WithSecretLister(secretLister))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -111,7 +111,7 @@ func TestGetConfigMap(t *testing.T) {
 	configMapLister := corev1listers.NewConfigMapLister(indexer)
 
 	// Create a new instance of the resource manager based on the config map lister.
-	rm, err := manager.NewResourceManager(nil, nil, configMapLister, nil)
+	rm, err := manager.NewResourceManager(nil, manager.WithConfigMapLister(configMapLister))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -150,7 +150,7 @@ func TestListServices(t *testing.T) {
 	serviceLister := corev1listers.NewServiceLister(indexer)
 
 	// Create a new instance of the resource manager based on the pod lister.
-	rm, err := manager.NewResourceManager(nil, nil, nil, serviceLister)
+	rm, err := manager.NewResourceManager(nil, manager.WithServiceLister(serviceLister))
 	if err != nil {
 		t.Fatal(err)
 	}
