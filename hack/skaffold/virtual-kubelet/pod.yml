@@ -5,7 +5,7 @@ metadata:
 spec:
   containers:
   - name: jaeger-tracing
-    image: jaegertracing/all-in-one:1.22
+    image: jaegertracing/all-in-one:1.76.0
   - name: vkubelet-mock-0
     image: virtual-kubelet
     # "IfNotPresent" is used to prevent Minikube from trying to pull from the registry (and failing) in the first place.
