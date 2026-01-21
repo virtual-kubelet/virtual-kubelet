@@ -247,7 +247,7 @@ func wireUpSystem(ctx context.Context, provider PodLifecycleHandler, f testFunct
 	defer cancel()
 
 	// Create the fake client.
-	client := fake.NewSimpleClientset() //nolint:staticcheck // SA1019: NewSimpleClientset is deprecated but NewClientset requires code generation
+	client := fake.NewClientset()
 
 	client.PrependReactor("update", "pods", func(action ktesting.Action) (handled bool, ret runtime.Object, err error) {
 		var pod *corev1.Pod
