@@ -351,6 +351,9 @@ func testTerminalStatePodScenario(ctx context.Context, t *testing.T, s *system, 
 	assert.NilError(t, err)
 
 	// Make sure the pods have not changed
+	// Fake clientsets populate ManagedFields, which should not affect pod equality in this test.
+	p1.ManagedFields = nil
+	p2.ManagedFields = nil
 	assert.DeepEqual(t, p1, p2)
 }
 
