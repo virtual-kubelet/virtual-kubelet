@@ -44,7 +44,7 @@ type TestController struct {
 }
 
 func newTestController() *TestController {
-	fk8s := fake.NewSimpleClientset()
+	fk8s := fake.NewSimpleClientset() //nolint:staticcheck // SA1019: NewSimpleClientset is deprecated but NewClientset requires code generation
 
 	rm := testutil.FakeResourceManager()
 	p := newMockProvider()
@@ -312,7 +312,7 @@ func TestPodStatusDelete(t *testing.T) {
 	pod.Namespace = "default"
 	pod.Name = "nginx"
 	pod.Spec = newPodSpec()
-	fk8s := fake.NewSimpleClientset(pod)
+	fk8s := fake.NewSimpleClientset(pod) //nolint:staticcheck // SA1019: NewSimpleClientset is deprecated but NewClientset requires code generation
 	c.client = fk8s
 	c.PodController.client = fk8s.CoreV1()
 	podCopy := pod.DeepCopy()
@@ -496,7 +496,7 @@ func TestUpdatePodStatusWithNilProviderStatus(t *testing.T) {
 	pod.Name = "nginx"
 	pod.Spec = newPodSpec()
 
-	fk8s := fake.NewSimpleClientset(pod)
+	fk8s := fake.NewSimpleClientset(pod) //nolint:staticcheck // SA1019: NewSimpleClientset is deprecated but NewClientset requires code generation
 	c.client = fk8s
 	c.PodController.client = fk8s.CoreV1()
 
