@@ -16,7 +16,7 @@ import (
 // Objects can be any valid Kubernetes object (corev1.Pod, corev1.ConfigMap, corev1.Secret, ...).
 func FakeResourceManager(objects ...runtime.Object) *manager.ResourceManager {
 	// Create a fake Kubernetes client that will list the specified objects.
-	kubeClient := fake.NewSimpleClientset(objects...)
+	kubeClient := fake.NewSimpleClientset(objects...) //nolint:staticcheck // SA1019: NewSimpleClientset is deprecated but NewClientset requires code generation
 	// Create a shared informer factory from where we can grab informers and listers for pods, configmaps, secrets and services.
 	kubeInformerFactory := informers.NewSharedInformerFactory(kubeClient, 30*time.Second)
 	// Grab informers for pods, configmaps and secrets.
