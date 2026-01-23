@@ -90,7 +90,7 @@ func testNodeRun(t *testing.T, enableLease bool) {
 	)
 
 	timeout := time.After(30 * time.Second)
-	for i := 0; i < iters; i++ {
+	for range iters {
 		var l *coordinationv1.Lease
 
 		select {
@@ -685,7 +685,7 @@ func makeWatch(ctx context.Context, t *testing.T, wc watchGetter, name string) w
 func atLeast(x, atLeast int) cmp.Comparison {
 	return func() cmp.Result {
 		if x < atLeast {
-			return cmp.ResultFailureTemplate(failTemplate("<"), map[string]interface{}{"x": x, "y": atLeast})
+			return cmp.ResultFailureTemplate(failTemplate("<"), map[string]any{"x": x, "y": atLeast})
 		}
 		return cmp.ResultSuccess
 	}
@@ -696,7 +696,7 @@ func before(x, y time.Time) cmp.Comparison {
 		if x.Before(y) {
 			return cmp.ResultSuccess
 		}
-		return cmp.ResultFailureTemplate(failTemplate(">="), map[string]interface{}{"x": x, "y": y})
+		return cmp.ResultFailureTemplate(failTemplate(">="), map[string]any{"x": x, "y": y})
 	}
 }
 

@@ -43,24 +43,24 @@ type (
 // virtual-kubelet will access the logger via context using `GetLogger` (or its alias, `G`)
 // You can set the default logger to use by setting the `L` variable.
 type Logger interface {
-	Debug(...interface{})
-	Debugf(string, ...interface{})
-	Info(...interface{})
-	Infof(string, ...interface{})
-	Warn(...interface{})
-	Warnf(string, ...interface{})
-	Error(...interface{})
-	Errorf(string, ...interface{})
-	Fatal(...interface{})
-	Fatalf(string, ...interface{})
+	Debug(...any)
+	Debugf(string, ...any)
+	Info(...any)
+	Infof(string, ...any)
+	Warn(...any)
+	Warnf(string, ...any)
+	Error(...any)
+	Errorf(string, ...any)
+	Fatal(...any)
+	Fatalf(string, ...any)
 
-	WithField(string, interface{}) Logger
+	WithField(string, any) Logger
 	WithFields(Fields) Logger
 	WithError(error) Logger
 }
 
 // Fields allows setting multiple fields on a logger at one time.
-type Fields map[string]interface{}
+type Fields map[string]any
 
 // WithLogger returns a new context with the provided logger. Use in
 // combination with logger.WithField(s) for great effect.

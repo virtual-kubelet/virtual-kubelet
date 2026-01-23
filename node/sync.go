@@ -144,7 +144,7 @@ func (p *syncProviderWrapper) syncPodStatuses(ctx context.Context) {
 		}
 
 		if err := p.updatePodStatus(ctx, pod); err != nil {
-			log.G(ctx).WithFields(map[string]interface{}{
+			log.G(ctx).WithFields(map[string]any{
 				"name":      pod.Name,
 				"namespace": pod.Namespace,
 			}).WithError(err).Error("Could not fetch pod status")

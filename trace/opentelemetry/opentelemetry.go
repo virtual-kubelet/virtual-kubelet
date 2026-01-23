@@ -84,7 +84,7 @@ func (s *span) SetStatus(err error) {
 	}
 }
 
-func (s *span) WithField(ctx context.Context, key string, val interface{}) context.Context {
+func (s *span) WithField(ctx context.Context, key string, val any) context.Context {
 	s.mu.Lock()
 	s.l = s.l.WithField(key, val)
 	ctx = log.WithLogger(ctx, &logger{s: s.s, l: s.l})
@@ -123,47 +123,47 @@ type logger struct {
 	a []attribute.KeyValue
 }
 
-func (l *logger) Debug(args ...interface{}) {
+func (l *logger) Debug(args ...any) {
 	l.logEvent(lDebug, args...)
 }
 
-func (l *logger) Debugf(f string, args ...interface{}) {
+func (l *logger) Debugf(f string, args ...any) {
 	l.logEventf(lDebug, f, args...)
 }
 
-func (l *logger) Info(args ...interface{}) {
+func (l *logger) Info(args ...any) {
 	l.logEvent(lInfo, args...)
 }
 
-func (l *logger) Infof(f string, args ...interface{}) {
+func (l *logger) Infof(f string, args ...any) {
 	l.logEventf(lInfo, f, args...)
 }
 
-func (l *logger) Warn(args ...interface{}) {
+func (l *logger) Warn(args ...any) {
 	l.logEvent(lWarn, args...)
 }
 
-func (l *logger) Warnf(f string, args ...interface{}) {
+func (l *logger) Warnf(f string, args ...any) {
 	l.logEventf(lWarn, f, args...)
 }
 
-func (l *logger) Error(args ...interface{}) {
+func (l *logger) Error(args ...any) {
 	l.logEvent(lErr, args...)
 }
 
-func (l *logger) Errorf(f string, args ...interface{}) {
+func (l *logger) Errorf(f string, args ...any) {
 	l.logEventf(lErr, f, args...)
 }
 
-func (l *logger) Fatal(args ...interface{}) {
+func (l *logger) Fatal(args ...any) {
 	l.logEvent(lFatal, args...)
 }
 
-func (l *logger) Fatalf(f string, args ...interface{}) {
+func (l *logger) Fatalf(f string, args ...any) {
 	l.logEventf(lFatal, f, args...)
 }
 
-func (l *logger) logEvent(ll logLevel, args ...interface{}) {
+func (l *logger) logEvent(ll logLevel, args ...any) {
 	msg := fmt.Sprint(args...)
 	switch ll {
 	case lDebug:
@@ -184,7 +184,7 @@ func (l *logger) logEvent(ll logLevel, args ...interface{}) {
 	l.s.AddEvent(msg, ot.WithTimestamp(time.Now()))
 }
 
-func (l *logger) logEventf(ll logLevel, f string, args ...interface{}) {
+func (l *logger) logEventf(ll logLevel, f string, args ...any) {
 	switch ll {
 	case lDebug:
 		l.l.Debugf(f, args...)
@@ -209,7 +209,7 @@ func (l *logger) WithError(err error) log.Logger {
 	return l.WithField("err", err)
 }
 
-func (l *logger) WithField(k string, value interface{}) log.Logger {
+func (l *logger) WithField(k string, value any) log.Logger {
 	var attrs []attribute.KeyValue
 	if l.s.IsRecording() {
 		attrs = make([]attribute.KeyValue, len(l.a)+1)
@@ -231,7 +231,7 @@ func (l *logger) WithFields(fields log.Fields) log.Logger {
 	return &logger{s: l.s, a: attrs, l: l.l.WithFields(fields)}
 }
 
-func makeAttribute(key string, val interface{}) (attr attribute.KeyValue) {
+func makeAttribute(key string, val any) (attr attribute.KeyValue) {
 	switch v := val.(type) {
 	case string:
 		return attribute.String(key, v)
