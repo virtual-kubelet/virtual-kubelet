@@ -37,12 +37,12 @@ func TestFieldMap_String(t *testing.T) {
 		},
 		{
 			desc:     "fieldMap with single field",
-			fields:   &fieldMap{Fields: map[string]interface{}{"one": 1}},
+			fields:   &fieldMap{Fields: map[string]any{"one": 1}},
 			expected: " [one=1]",
 		},
 		{
 			desc:     "fieldMap with two fields",
-			fields:   &fieldMap{Fields: map[string]interface{}{"one": 1, "two": 2}},
+			fields:   &fieldMap{Fields: map[string]any{"one": 1, "two": 2}},
 			expected: " [one=1 two=2]",
 		},
 	}

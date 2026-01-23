@@ -285,7 +285,7 @@ func (pc *PodController) enqueuePodStatusUpdate(ctx context.Context, pod *corev1
 	}
 	ctx = span.WithField(ctx, "key", key)
 
-	var obj interface{}
+	var obj any
 	err = wait.PollUntilContextCancel(ctx, notificationRetryPeriod, true, func(ctx context.Context) (bool, error) {
 		var ok bool
 		obj, ok = pc.knownPods.Load(key)

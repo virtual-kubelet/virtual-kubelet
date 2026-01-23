@@ -36,7 +36,7 @@ func FromLogrus(entry *logrus.Entry) log.Logger {
 }
 
 // WithField adds a field to the log entry.
-func (l *adapter) WithField(key string, val interface{}) log.Logger {
+func (l *adapter) WithField(key string, val any) log.Logger {
 	return FromLogrus(l.Entry.WithField(key, val))
 }
 

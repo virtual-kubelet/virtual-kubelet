@@ -61,16 +61,16 @@ func (r *fakeDiscardingRecorder) Event(object runtime.Object, eventType, reason,
 	r.Eventf(object, eventType, reason, "%s", message)
 }
 
-func (r *fakeDiscardingRecorder) Eventf(object runtime.Object, eventType, reason, messageFmt string, args ...interface{}) {
-	r.logger.WithFields(map[string]interface{}{
+func (r *fakeDiscardingRecorder) Eventf(object runtime.Object, eventType, reason, messageFmt string, args ...any) {
+	r.logger.WithFields(map[string]any{
 		"object":    object,
 		"eventType": eventType,
 		"message":   fmt.Sprintf(messageFmt, args...),
 	}).Infof("Received event")
 }
 
-func (r *fakeDiscardingRecorder) PastEventf(object runtime.Object, timestamp metav1.Time, eventType, reason, messageFmt string, args ...interface{}) {
-	r.logger.WithFields(map[string]interface{}{
+func (r *fakeDiscardingRecorder) PastEventf(object runtime.Object, timestamp metav1.Time, eventType, reason, messageFmt string, args ...any) {
+	r.logger.WithFields(map[string]any{
 		"timestamp": timestamp.String(),
 		"object":    object,
 		"eventType": eventType,
@@ -78,8 +78,8 @@ func (r *fakeDiscardingRecorder) PastEventf(object runtime.Object, timestamp met
 	}).Infof("Received past event")
 }
 
-func (r *fakeDiscardingRecorder) AnnotatedEventf(object runtime.Object, annotations map[string]string, eventType, reason, messageFmt string, args ...interface{}) {
-	r.logger.WithFields(map[string]interface{}{
+func (r *fakeDiscardingRecorder) AnnotatedEventf(object runtime.Object, annotations map[string]string, eventType, reason, messageFmt string, args ...any) {
+	r.logger.WithFields(map[string]any{
 		"object":      object,
 		"annotations": annotations,
 		"eventType":   eventType,

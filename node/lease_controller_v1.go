@@ -235,7 +235,7 @@ func (c *leaseController) retryUpdateLease(ctx context.Context, node *corev1.Nod
 	ctx, span := trace.StartSpan(ctx, "controller.retryUpdateLease")
 	defer span.End()
 
-	for i := 0; i < maxUpdateRetries; i++ {
+	for i := range maxUpdateRetries {
 		lease, err := c.leaseClient.Update(ctx, c.newLease(ctx, node, base), metav1.UpdateOptions{})
 		if err == nil {
 			log.G(ctx).WithField("retries", i).Debug("Successfully updated lease")
@@ -299,7 +299,7 @@ func (c *leaseController) newLease(ctx context.Context, node *corev1.Node, base 
 		}
 	}
 
-	ctx = span.WithFields(ctx, map[string]interface{}{
+	ctx = span.WithFields(ctx, map[string]any{
 		"lease": lease,
 	})
 	log.G(ctx).Debug("Generated lease")
@@ -333,7 +333,7 @@ func (e *nodeNotReadyError) Is(target error) bool {
 	return ok
 }
 
-func (e *nodeNotReadyError) As(target interface{}) bool {
+func (e *nodeNotReadyError) As(target any) bool {
 	val, ok := target.(*nodeNotReadyError)
 	if ok {
 		*val = *e

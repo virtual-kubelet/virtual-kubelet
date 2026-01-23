@@ -3,6 +3,7 @@ package framework
 import (
 	"context"
 	"fmt"
+	"slices"
 	"strings"
 
 	corev1 "k8s.io/api/core/v1"
@@ -126,12 +127,7 @@ func (f *Framework) WaitUntilPodDeleted(namespace, name string) (*corev1.Pod, er
 func (f *Framework) WaitUntilPodInPhase(namespace, name string, phases ...corev1.PodPhase) (*corev1.Pod, error) {
 	return f.WaitUntilPodCondition(namespace, name, func(event watchapi.Event) (bool, error) {
 		pod := event.Object.(*corev1.Pod)
-		for _, p := range phases {
-			if pod.Status.Phase == p {
-				return true, nil
-			}
-		}
-		return false, nil
+		return slices.Contains(phases, pod.Status.Phase), nil
 	})
 }
 

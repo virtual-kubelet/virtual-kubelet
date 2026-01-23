@@ -83,7 +83,7 @@ func TestMonitorMultipleVersions(t *testing.T) {
 		}
 	}()
 
-	for i := 0; i < 10; i++ {
+	for i := range 10 {
 		mv.Set(i)
 		// Wait for the trigger to occur
 		<-ch
@@ -99,7 +99,7 @@ func TestMonitorMultipleVersions(t *testing.T) {
 func TestMonitorMultipleSubscribers(t *testing.T) {
 	group := &errgroup.Group{}
 	mv := NewMonitorVariable()
-	for i := 0; i < 10; i++ {
+	for range 10 {
 		sub := mv.Subscribe()
 		group.Go(func() error {
 			<-sub.NewValueReady()
