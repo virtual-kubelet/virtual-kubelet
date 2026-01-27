@@ -61,6 +61,7 @@ type MockConfig struct {
 	Pods       string            `json:"pods,omitempty"`
 	Others     map[string]string `json:"others,omitempty"`
 	ProviderID string            `json:"providerID,omitempty"`
+	Labels     map[string]string `json:"labels,omitempty"`
 }
 
 // NewMockProviderMockConfig creates a new MockV0Provider. Mock legacy provider does not implement the new asynchronous podnotifier interface
@@ -369,6 +370,9 @@ func (p *MockProvider) ConfigureNode(ctx context.Context, n *v1.Node) {
 	n.Status.NodeInfo.Architecture = "amd64"
 	n.Labels["alpha.service-controller.kubernetes.io/exclude-balancer"] = "true"
 	n.Labels["node.kubernetes.io/exclude-from-external-load-balancers"] = "true"
+	for key,value:= range p.config.Labels {
+		n.ObjectMeta.Labels[key]=value
+	}
 }
 
 // Capacity returns a resource list containing the capacity limits.
@@ -420,6 +424,14 @@ func (p *MockProvider) nodeConditions() []v1.NodeCondition {
 			LastTransitionTime: metav1.Now(),
 			Reason:             "KubeletHasNoDiskPressure",
 			Message:            "kubelet has no disk pressure",
+		},
+		{
+			Type:               "PIDPressure",
+			Status:             v1.ConditionFalse,
+			LastHeartbeatTime:  metav1.Now(),
+			LastTransitionTime: metav1.Now(),
+			Reason:             "KubeletHasSufficientPID",
+			Message:            "kubelet has sufficient PID available",
 		},
 		{
 			Type:               "NetworkUnavailable",
