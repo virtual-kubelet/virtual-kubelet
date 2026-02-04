@@ -112,7 +112,9 @@ The config file is in TOML format, and an example lives in `providers/azure/exam
 
 ### Cisco Virtual Kubelet
 
-[Cisco Virtual Kubelet](https://github.com/cisco-open/cisco-virtual-kubelet) is a Virtual Kubelet provider that enables Kubernetes clusters to seamlessly extend workloads to Cisco infrastructure.
+[Cisco Virtual Kubelet](https://github.com/cisco-open/cisco-virtual-kubelet) is a Virtual Kubelet provider that enables Kubernetes clusters to run workloads to Cisco infrastructure devices.
+
+The use of this provider interacts with the Application Hosting functionality supported on Cisco devices, to allow for the provisioning and lifecycle management of containers. The Virtual Kubelet provider, uses RESTCONF to perform provisioning on the device. The use of the provider introduces a simplified entrypoint for application owners to deploy containers at the Edge.
 
 For detailed instructions, follow the guide [here](https://github.com/cisco-open/cisco-virtual-kubelet/blob/main/README.md).
 
