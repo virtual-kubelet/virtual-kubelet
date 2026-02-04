@@ -22,6 +22,7 @@ The best description is "Kubernetes API on top, programmable back."
     + [Alibaba Cloud ECI Provider](#alibaba-cloud-eci-provider)
     + [Azure Container Instances Provider](#azure-container-instances-provider)
 	+ [Azure Batch GPU Provider](https://github.com/virtual-kubelet/azure-batch/blob/master/README.md)
+    + [Cisco Virtual Kubelet](#cisco-virtual-kubelet)
     + [AWS Fargate Provider](#aws-fargate-provider)
     + [Elotl Kip](#elotl-kip)
 	+ [HashiCorp Nomad](#hashicorp-nomad-provider)
@@ -108,6 +109,12 @@ You can find detailed instructions on how to set it up and how to test it in the
 
 The Azure connector can use a configuration file specified by the `--provider-config` flag.
 The config file is in TOML format, and an example lives in `providers/azure/example.toml`.
+
+### Cisco Virtual Kubelet
+
+[Cisco Virtual Kubelet](https://github.com/cisco-open/cisco-virtual-kubelet) is a Virtual Kubelet provider that enables Kubernetes clusters to seamlessly extend workloads to Cisco infrastructure.
+
+For detailed instructions, follow the guide [here](https://github.com/cisco-open/cisco-virtual-kubelet/blob/main/README.md).
 
 ### AWS Fargate Provider
 
