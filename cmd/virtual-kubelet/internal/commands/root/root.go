@@ -114,34 +114,37 @@ func runRootCommand(ctx context.Context, s *provider.Store, c Opts) error {
 		return err
 	}
 
-	cm, err := nodeutil.NewNode(c.NodeName, newProvider, func(cfg *nodeutil.NodeConfig) error {
-		cfg.KubeconfigPath = c.KubeConfigPath
-		cfg.Handler = mux
-		cfg.InformerResyncPeriod = c.InformerResyncPeriod
+	cm, err := nodeutil.NewNode(c.NodeName, newProvider, func(o *nodeutil.NodeOptions) {
+		o.NodeConfigOpts = append(o.NodeConfigOpts,
+			func(cfg *nodeutil.NodeConfig) error {
+				cfg.KubeconfigPath = c.KubeConfigPath
+				cfg.Handler = mux
+				cfg.InformerResyncPeriod = c.InformerResyncPeriod
 
-		if taint != nil {
-			cfg.NodeSpec.Spec.Taints = append(cfg.NodeSpec.Spec.Taints, *taint)
-		}
-		cfg.NodeSpec.Status.NodeInfo.Architecture = runtime.GOARCH
-		cfg.NodeSpec.Status.NodeInfo.OperatingSystem = c.OperatingSystem
+				if taint != nil {
+					cfg.NodeSpec.Spec.Taints = append(cfg.NodeSpec.Spec.Taints, *taint)
+				}
+				cfg.NodeSpec.Status.NodeInfo.Architecture = runtime.GOARCH
+				cfg.NodeSpec.Status.NodeInfo.OperatingSystem = c.OperatingSystem
 
-		cfg.HTTPListenAddr = apiConfig.Addr
-		cfg.StreamCreationTimeout = apiConfig.StreamCreationTimeout
-		cfg.StreamIdleTimeout = apiConfig.StreamIdleTimeout
-		cfg.DebugHTTP = true
+				cfg.HTTPListenAddr = apiConfig.Addr
+				cfg.StreamCreationTimeout = apiConfig.StreamCreationTimeout
+				cfg.StreamIdleTimeout = apiConfig.StreamIdleTimeout
+				cfg.DebugHTTP = true
 
-		cfg.NumWorkers = c.PodSyncWorkers
+				cfg.NumWorkers = c.PodSyncWorkers
 
-		return nil
-	},
-		nodeutil.WithClient(clientSet),
-		setAuth(c.NodeName, apiConfig),
-		nodeutil.WithTLSConfig(
-			nodeutil.WithKeyPairFromPath(apiConfig.CertPath, apiConfig.KeyPath),
-			maybeCA(apiConfig.CACertPath),
-		),
-		nodeutil.AttachProviderRoutes(mux),
-	)
+				return nil
+			},
+			nodeutil.WithClient(clientSet),
+			setAuth(c.NodeName, apiConfig),
+			nodeutil.WithTLSConfig(
+				nodeutil.WithKeyPairFromPath(apiConfig.CertPath, apiConfig.KeyPath),
+				maybeCA(apiConfig.CACertPath),
+			),
+			nodeutil.AttachProviderRoutes(mux),
+		)
+	})
 	if err != nil {
 		return err
 	}
@@ -180,7 +183,7 @@ func runRootCommand(ctx context.Context, s *provider.Store, c Opts) error {
 	return nil
 }
 
-func setAuth(node string, apiCfg *apiServerConfig) nodeutil.NodeOpt {
+func setAuth(node string, apiCfg *apiServerConfig) nodeutil.NodeConfigOpt {
 	if apiCfg.CACertPath == "" {
 		return func(cfg *nodeutil.NodeConfig) error {
 			cfg.Handler = api.InstrumentHandler(nodeutil.WithAuth(nodeutil.NoAuth(), cfg.Handler))
