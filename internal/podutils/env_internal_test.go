@@ -1132,3 +1132,278 @@ func TestEmptyEnvVar(t *testing.T) {
 	// Make sure that no events have been recorded.
 	assert.Check(t, is.Len(er.Events, 0))
 }
+
+// TestPopulatePodWithEphemeralContainersUsingEnv populates the environment of a pod that includes ephemeral containers using ".env".
+// Then, it checks that the resulting environment for each ephemeral container contains the expected environment variables.
+func TestPopulatePodWithEphemeralContainersUsingEnv(t *testing.T) {
+	rm := testutil.FakeResourceManager(configMap1, configMap2, secret1, secret2)
+	er := testutil.FakeEventRecorder(defaultEventRecorderBufferSize)
+
+	pod := &corev1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: namespace,
+			Name:      "pod-0",
+		},
+		Spec: corev1.PodSpec{
+			Containers: []corev1.Container{
+				{
+					Env: []corev1.EnvVar{
+						{
+							Name:  envVarName1,
+							Value: envVarValue1,
+						},
+					},
+				},
+			},
+			EphemeralContainers: []corev1.EphemeralContainer{
+				{
+					EphemeralContainerCommon: corev1.EphemeralContainerCommon{
+						Env: []corev1.EnvVar{
+							{
+								Name:  envVarName1,
+								Value: envVarValue1,
+							},
+							{
+								Name: envVarName2,
+								ValueFrom: &corev1.EnvVarSource{
+									ConfigMapKeyRef: &corev1.ConfigMapKeySelector{
+										LocalObjectReference: corev1.LocalObjectReference{
+											Name: configMap1.Name,
+										},
+										Key:      keyFoo,
+										Optional: nil,
+									},
+								},
+							},
+						},
+					},
+				},
+				{
+					EphemeralContainerCommon: corev1.EphemeralContainerCommon{
+						Env: []corev1.EnvVar{
+							{
+								Name:  envVarName1,
+								Value: envVarValue1,
+							},
+							{
+								Name: envVarName2,
+								ValueFrom: &corev1.EnvVarSource{
+									SecretKeyRef: &corev1.SecretKeySelector{
+										LocalObjectReference: corev1.LocalObjectReference{
+											Name: secret1.Name,
+										},
+										Key:      keyBaz,
+										Optional: &bFalse,
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			EnableServiceLinks: &bFalse,
+		},
+	}
+
+	// Populate the pod's environment.
+	err := PopulateEnvironmentVariables(context.Background(), pod, rm, er)
+	assert.Check(t, err)
+
+	// Make sure the regular container's environment is populated.
+	assert.Check(t, is.DeepEqual(pod.Spec.Containers[0].Env, []corev1.EnvVar{
+		{
+			Name:  envVarName1,
+			Value: envVarValue1,
+		},
+	}, sortOpt))
+
+	// Make sure the first ephemeral container's environment is populated from the configmap.
+	assert.Check(t, is.DeepEqual(pod.Spec.EphemeralContainers[0].Env, []corev1.EnvVar{
+		{
+			Name:  envVarName1,
+			Value: envVarValue1,
+		},
+		{
+			Name:  envVarName2,
+			Value: configMap1.Data[keyFoo],
+		},
+	}, sortOpt))
+
+	// Make sure the second ephemeral container's environment is populated from the secret.
+	assert.Check(t, is.DeepEqual(pod.Spec.EphemeralContainers[1].Env, []corev1.EnvVar{
+		{
+			Name:  envVarName1,
+			Value: envVarValue1,
+		},
+		{
+			Name:  envVarName2,
+			Value: string(secret1.Data[keyBaz]),
+		},
+	}, sortOpt))
+}
+
+// TestPopulatePodWithEphemeralContainersUsingEnvFrom populates the environment of a pod that includes ephemeral containers using ".envFrom".
+// Then, it checks that the resulting environment for each ephemeral container contains the expected environment variables.
+func TestPopulatePodWithEphemeralContainersUsingEnvFrom(t *testing.T) {
+	rm := testutil.FakeResourceManager(configMap1, configMap2, secret1, secret2)
+	er := testutil.FakeEventRecorder(defaultEventRecorderBufferSize)
+
+	pod := &corev1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: namespace,
+			Name:      "pod-0",
+		},
+		Spec: corev1.PodSpec{
+			Containers: []corev1.Container{
+				{
+					Env: []corev1.EnvVar{
+						{
+							Name:  envVarName1,
+							Value: envVarValue1,
+						},
+					},
+				},
+			},
+			EphemeralContainers: []corev1.EphemeralContainer{
+				{
+					EphemeralContainerCommon: corev1.EphemeralContainerCommon{
+						EnvFrom: []corev1.EnvFromSource{
+							{
+								Prefix: prefixConfigMap1,
+								ConfigMapRef: &corev1.ConfigMapEnvSource{
+									LocalObjectReference: corev1.LocalObjectReference{
+										Name: configMap1.Name,
+									},
+								},
+							},
+						},
+					},
+				},
+				{
+					EphemeralContainerCommon: corev1.EphemeralContainerCommon{
+						EnvFrom: []corev1.EnvFromSource{
+							{
+								Prefix: prefixSecret1,
+								SecretRef: &corev1.SecretEnvSource{
+									LocalObjectReference: corev1.LocalObjectReference{
+										Name: secret1.Name,
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			EnableServiceLinks: &bFalse,
+		},
+	}
+
+	// Populate the pod's environment.
+	err := PopulateEnvironmentVariables(context.Background(), pod, rm, er)
+	assert.Check(t, err)
+
+	// Make sure the first ephemeral container's environment is populated from the configmap.
+	assert.Check(t, is.DeepEqual(pod.Spec.EphemeralContainers[0].Env, []corev1.EnvVar{
+		{
+			Name:  prefixConfigMap1 + keyFoo,
+			Value: configMap1.Data[keyFoo],
+		},
+	}, sortOpt))
+
+	// Make sure the second ephemeral container's environment is populated from the secret.
+	assert.Check(t, is.DeepEqual(pod.Spec.EphemeralContainers[1].Env, []corev1.EnvVar{
+		{
+			Name:  prefixSecret1 + keyBaz,
+			Value: string(secret1.Data[keyBaz]),
+		},
+	}, sortOpt))
+}
+
+// TestPopulatePodWithEphemeralContainersUsingFieldRef populates the environment of a pod that includes
+// ephemeral containers using downward API field references.
+func TestPopulatePodWithEphemeralContainersUsingFieldRef(t *testing.T) {
+	rm := testutil.FakeResourceManager(configMap1, configMap2, secret1, secret2)
+	er := testutil.FakeEventRecorder(defaultEventRecorderBufferSize)
+
+	pod := &corev1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: namespace,
+			Name:      "pod-0",
+			Labels: map[string]string{
+				"zone":    "us-est-coast",
+				"cluster": "test-cluster1",
+				"rack":    "rack-22",
+			},
+		},
+		Spec: corev1.PodSpec{
+			NodeName:           "namenode",
+			ServiceAccountName: "serviceaccount",
+			Containers: []corev1.Container{
+				{
+					Env: []corev1.EnvVar{
+						{
+							Name:  envVarName1,
+							Value: envVarValue1,
+						},
+					},
+				},
+			},
+			EphemeralContainers: []corev1.EphemeralContainer{
+				{
+					EphemeralContainerCommon: corev1.EphemeralContainerCommon{
+						Env: []corev1.EnvVar{
+							{
+								Name: envVarName1,
+								ValueFrom: &corev1.EnvVarSource{
+									FieldRef: &corev1.ObjectFieldSelector{
+										APIVersion: "v1",
+										FieldPath:  "spec.nodeName",
+									},
+								},
+							},
+							{
+								Name: envVarName2,
+								ValueFrom: &corev1.EnvVarSource{
+									FieldRef: &corev1.ObjectFieldSelector{
+										APIVersion: "v1",
+										FieldPath:  "metadata.labels",
+									},
+								},
+							},
+							{
+								Name: envVarName4,
+								ValueFrom: &corev1.EnvVarSource{
+									FieldRef: &corev1.ObjectFieldSelector{
+										APIVersion: "v1",
+										FieldPath:  "spec.serviceAccountName",
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			EnableServiceLinks: &bFalse,
+		},
+	}
+
+	// Populate the pod's environment.
+	err := PopulateEnvironmentVariables(context.Background(), pod, rm, er)
+	assert.NilError(t, err)
+
+	// Make sure the ephemeral container's environment is populated from the downward API.
+	assert.Check(t, is.DeepEqual(pod.Spec.EphemeralContainers[0].Env, []corev1.EnvVar{
+		{
+			Name:  envVarName1,
+			Value: "namenode",
+		},
+		{
+			Name:  envVarName2,
+			Value: "cluster=\"test-cluster1\"\nrack=\"rack-22\"\nzone=\"us-est-coast\"",
+		},
+		{
+			Name:  envVarName4,
+			Value: "serviceaccount",
+		},
+	}, sortOpt))
+}
