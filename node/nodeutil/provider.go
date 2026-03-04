@@ -61,7 +61,7 @@ type NewProviderFunc func(ProviderConfig) (Provider, node.NodeProvider, error)
 // AttachProviderRoutes returns a NodeOpt which uses api.PodHandler to attach the routes to the provider functions.
 //
 // Note this only attaches routes, you'll need to ensure to set the handler in the node config.
-func AttachProviderRoutes(mux api.ServeMux) NodeOpt {
+func AttachProviderRoutes(mux api.ServeMux) NodeConfigOpt {
 	return func(cfg *NodeConfig) error {
 		cfg.routeAttacher = func(p Provider, cfg NodeConfig, pods corev1listers.PodLister) {
 			mux.Handle("/", api.PodHandler(api.PodHandlerConfig{
