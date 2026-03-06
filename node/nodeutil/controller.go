@@ -289,7 +289,7 @@ func WithClient(c kubernetes.Interface) NodeOpt {
 func NewNode(name string, newProvider NewProviderFunc, opts ...NodeOpt) (*Node, error) {
 	cfg := NodeConfig{
 		NumWorkers:           runtime.NumCPU(),
-		InformerResyncPeriod: time.Minute,
+		InformerResyncPeriod: 30 * time.Minute,
 		KubeconfigPath:       os.Getenv("KUBECONFIG"),
 		HTTPListenAddr:       ":10250",
 		NodeSpec: v1.Node{
