@@ -4,7 +4,7 @@ description: Run a Virtual Kubelet either on or external to a Kubernetes cluster
 weight: 2
 ---
 
-You can Virtual Kubelet either [on](#on-k8s) or [external](#external-k8s) to a Kubernetes cluster using the [`virtual-kubelet`](#virtual-kubelet-cli) command-line tool.
+You can run Virtual Kubelet either [on](#on-k8s) or [external](#external-k8s) to a Kubernetes cluster using the [`virtual-kubelet`](#virtual-kubelet-cli) command-line tool.
 
 > For `virtual-kubelet` installation instructions, see the [Setup](../setup) guide.
 
@@ -46,7 +46,7 @@ make skaffold
 
 By default, this will run Skaffold in [development mode](https://github.com/GoogleContainerTools/skaffold#a-glance-at-skaffold-workflow-and-architecture), which will make Skaffold watch [`hack/skaffold/virtual-kubelet/Dockerfile`](https://github.com/virtual-kubelet/virtual-kubelet/blob/master/hack/skaffold/virtual-kubelet/Dockerfile) and its dependencies for changes and re-deploy the Virtual Kubelet when changes happen. It will also make Skaffold stream logs from the Virtual Kubelet Pod.
 
-Alternative, you can run Skaffold outside of development mode—if you aren't concerned about continuous deployment and log streaming—by running:
+Alternatively, you can run Skaffold outside of development mode—if you aren't concerned about continuous deployment and log streaming—by running:
 
 ```bash
 make skaffold MODE=run
