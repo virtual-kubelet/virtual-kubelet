@@ -523,6 +523,26 @@ func TestUpdatePodStatusWithNilProviderStatus(t *testing.T) {
 	t.Log("Successfully handled nil lastPodStatusReceivedFromProvider case")
 }
 
+// TestDeletedPodsMapCleansUpOnSyncProvider is a test for #1045:
+// the deletedPods map in syncProviderWrapper leaked one entry per pod deletion.
+func TestDeletedPodsMapCleansUpOnSyncProvider(t *testing.T) {
+	ctx := context.Background()
+
+	lister := kubeinformers.NewSharedInformerFactory(fake.NewClientset(), 0).Core().V1().Pods().Lister()
+	wrapper := &syncProviderWrapper{}
+	pc := &PodController{provider: wrapper, podsLister: lister}
+
+	const metaKey = "default/any-pod"
+	wrapper.deletedPods.Store(metaKey, struct{}{})
+
+	if err := pc.deletePodsFromKubernetesHandler(ctx, metaKey+"/any-uid"); err != nil {
+		t.Fatal(err)
+	}
+
+	_, stillExists := wrapper.deletedPods.Load(metaKey)
+	assert.Assert(t, !stillExists)
+}
+
 func newPodSpec() corev1.PodSpec {
 	return corev1.PodSpec{
 		Containers: []corev1.Container{
