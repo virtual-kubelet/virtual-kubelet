@@ -389,7 +389,7 @@ func (pc *PodController) deletePodsFromKubernetesHandler(ctx context.Context, ke
 	defer func() {
 		if retErr == nil {
 			if w, ok := pc.provider.(syncWrapper); ok {
-				w._deletePodKey(ctx, key)
+				w._deletePodKey(ctx, metaKey)
 			}
 		}
 	}()
