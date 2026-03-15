@@ -371,6 +371,49 @@ func TestPodStatusDelete(t *testing.T) {
 	t.Logf("pod updated, container status: %+v, pod delete Time: %v", newPod.Status.ContainerStatuses[0].State.Terminated, newPod.DeletionTimestamp)
 }
 
+func TestUpdatePodStatusUsesKubernetesResourceVersion(t *testing.T) {
+	ctx := context.Background()
+	c := newTestController()
+
+	k8sPod := &corev1.Pod{}
+	k8sPod.Namespace = "default"
+	k8sPod.Name = "nginx"
+	k8sPod.ResourceVersion = "123"
+	k8sPod.Spec = newPodSpec()
+
+	fk8s := fake.NewClientset(k8sPod)
+	c.client = fk8s
+	c.PodController.client = fk8s.CoreV1()
+
+	podFromKubernetes := k8sPod.DeepCopy()
+	podFromKubernetes.ResourceVersion = "123"
+
+	podFromProvider := k8sPod.DeepCopy()
+	podFromProvider.ResourceVersion = "provider-rv"
+	podFromProvider.Status.Phase = corev1.PodRunning
+
+	key := fmt.Sprintf("%s/%s", k8sPod.Namespace, k8sPod.Name)
+	c.knownPods.Store(key, &knownPod{lastPodStatusReceivedFromProvider: podFromProvider})
+
+	var gotResourceVersion string
+	c.client.PrependReactor("update", "pods", func(action core.Action) (handled bool, ret runtime.Object, err error) {
+		update, ok := action.(core.UpdateAction)
+		if !ok {
+			return false, nil, nil
+		}
+		updatedPod, ok := update.GetObject().(*corev1.Pod)
+		if !ok {
+			t.Fatalf("expected pod object, got %T", update.GetObject())
+		}
+		gotResourceVersion = updatedPod.ResourceVersion
+		return false, nil, nil
+	})
+
+	err := c.updatePodStatus(ctx, podFromKubernetes, key)
+	assert.Check(t, is.Nil(err))
+	assert.Check(t, is.Equal(gotResourceVersion, podFromKubernetes.ResourceVersion))
+}
+
 func TestReCreatePodRace(t *testing.T) {
 	ctx := context.Background()
 	c := newTestController()
