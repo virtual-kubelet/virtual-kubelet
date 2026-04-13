@@ -29,6 +29,7 @@ import (
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/util/validation/field"
 	kubeinformers "k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes/fake"
 	core "k8s.io/client-go/testing"
@@ -369,6 +370,116 @@ func TestPodStatusDelete(t *testing.T) {
 		t.Fatalf("Pod status %v update failed", key)
 	}
 	t.Logf("pod updated, container status: %+v, pod delete Time: %v", newPod.Status.ContainerStatuses[0].State.Terminated, newPod.DeletionTimestamp)
+}
+
+func TestUpdatePodStatusUsesKubernetesResourceVersion(t *testing.T) {
+	ctx := context.Background()
+	c := newTestController()
+
+	k8sPod := &corev1.Pod{}
+	k8sPod.Namespace = "default"
+	k8sPod.Name = "nginx"
+	k8sPod.ResourceVersion = "123"
+	k8sPod.Spec = newPodSpec()
+
+	fk8s := fake.NewClientset(k8sPod)
+	c.client = fk8s
+	c.PodController.client = fk8s.CoreV1()
+
+	podFromKubernetes := k8sPod.DeepCopy()
+	podFromKubernetes.ResourceVersion = "123"
+
+	podFromProvider := k8sPod.DeepCopy()
+	podFromProvider.ResourceVersion = "provider-rv"
+	podFromProvider.Status.Phase = corev1.PodRunning
+
+	key := fmt.Sprintf("%s/%s", k8sPod.Namespace, k8sPod.Name)
+	c.knownPods.Store(key, &knownPod{lastPodStatusReceivedFromProvider: podFromProvider})
+
+	var gotResourceVersion string
+	c.client.PrependReactor("update", "pods", func(action core.Action) (handled bool, ret runtime.Object, err error) {
+		update, ok := action.(core.UpdateAction)
+		if !ok {
+			return false, nil, nil
+		}
+		updatedPod, ok := update.GetObject().(*corev1.Pod)
+		if !ok {
+			t.Fatalf("expected pod object, got %T", update.GetObject())
+		}
+		gotResourceVersion = updatedPod.ResourceVersion
+		return false, nil, nil
+	})
+
+	err := c.updatePodStatus(ctx, podFromKubernetes, key)
+	assert.Check(t, is.Nil(err))
+	assert.Check(t, is.Equal(gotResourceVersion, podFromKubernetes.ResourceVersion))
+}
+
+// TestUpdatePodStatusRejectsZeroResourceVersion replicates the apiserver error:
+//
+//	metadata.resourceVersion: Invalid value: 0: must be specified for an update
+//
+// This validation has existed since Kubernetes 1.3 — the generic registry Store.Update rejects
+// resourceVersion="0" (integer 0 after parsing) for any update, including UpdateStatus.
+// The reactor simulates that validation. With the fix at node/pod.go:252 the test passes
+// because the Kubernetes ResourceVersion ("123") is copied onto the provider pod before the
+// UpdateStatus call. To observe the error locally, temporarily comment out line 252 and re-run
+// this test — it will fail with the simulated validation error.
+func TestUpdatePodStatusRejectsZeroResourceVersion(t *testing.T) {
+	ctx := context.Background()
+	c := newTestController()
+
+	k8sPod := &corev1.Pod{}
+	k8sPod.Namespace = "default"
+	k8sPod.Name = "nginx"
+	k8sPod.ResourceVersion = "123"
+	k8sPod.Spec = newPodSpec()
+
+	fk8s := fake.NewClientset(k8sPod)
+	c.client = fk8s
+	c.PodController.client = fk8s.CoreV1()
+
+	podFromKubernetes := k8sPod.DeepCopy()
+
+	// Simulate what the provider returns: ResourceVersion "0" (the pre-fix state that
+	// triggered the 1.34 apiserver rejection).
+	podFromProvider := k8sPod.DeepCopy()
+	podFromProvider.ResourceVersion = "0"
+	podFromProvider.Status.Phase = corev1.PodRunning
+
+	key := fmt.Sprintf("%s/%s", k8sPod.Namespace, k8sPod.Name)
+	c.knownPods.Store(key, &knownPod{lastPodStatusReceivedFromProvider: podFromProvider})
+
+	// Reactor that mirrors the 1.34 apiserver: reject any UpdateStatus where
+	// metadata.resourceVersion is "0" or empty.
+	c.client.PrependReactor("update", "pods", func(action core.Action) (handled bool, ret runtime.Object, err error) {
+		update, ok := action.(core.UpdateAction)
+		if !ok {
+			return false, nil, nil
+		}
+		updatedPod, ok := update.GetObject().(*corev1.Pod)
+		if !ok {
+			return false, nil, nil
+		}
+		rv := updatedPod.ResourceVersion
+		if rv == "0" || rv == "" {
+			return true, nil, errors.NewInvalid(
+				schema.GroupKind{Group: "", Kind: "Pod"},
+				updatedPod.Name,
+				field.ErrorList{
+					field.Invalid(
+						field.NewPath("metadata").Child("resourceVersion"),
+						rv,
+						"must be specified for an update",
+					),
+				},
+			)
+		}
+		return false, nil, nil
+	})
+
+	err := c.updatePodStatus(ctx, podFromKubernetes, key)
+	assert.Check(t, is.Nil(err), "expected no error: fix at node/pod.go:252 should copy the Kubernetes ResourceVersion onto the provider pod before UpdateStatus")
 }
 
 func TestReCreatePodRace(t *testing.T) {
