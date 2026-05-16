@@ -6,8 +6,8 @@ Virtual Kubelet (VK) provides an importable end-to-end (E2E) test suite containi
 
 To run the E2E test suite, three things are required:
 
-- A local Kubernetes cluster (we have tested with [Docker for Mac](https://docs.docker.com/docker-for-mac/install/) and [Minikube](https://kubernetes.io/docs/tasks/tools/install-minikube/));
-- Your _kubeconfig_ default context points to the local Kubernetes cluster;
+- A Kubernetes cluster (we have tested with [Docker for Mac](https://docs.docker.com/docker-for-mac/install/), [Minikube](https://kubernetes.io/docs/tasks/tools/install-minikube/), [kind](https://kind.sigs.k8s.io/), and other Kubernetes distributions);
+- Your _kubeconfig_ default context points to the Kubernetes cluster;
 - [skaffold](https://skaffold.dev/docs/getting-started/#installing-skaffold)
 
 > The test suite is based on [VK 1.0](https://github.com/virtual-kubelet/virtual-kubelet/releases/tag/v1.0.0). If your VK implementation is based on legacy VK library (< v1.0.0), you will have to upgrade it to VK 1.0 using [virtual-kubelet/node-cli](https://github.com/virtual-kubelet/node-cli).
@@ -150,6 +150,10 @@ func TestEndToEnd(t *testing.T) {
 
 ## Running the Test Suite
 
+The E2E test suite can run against any Kubernetes cluster. By default, it accepts any kubectl context. Below are examples using different Kubernetes distributions.
+
+### Using Minikube
+
 Since our CI uses Minikube, we describe below how to run E2E on top of it.
 
 To create a Minikube cluster, run the following command after [installing Minikube](https://github.com/kubernetes/minikube#installation):
@@ -158,10 +162,36 @@ To create a Minikube cluster, run the following command after [installing Miniku
 minikube start
 ```
 
+### Using kind
+
+To run with [kind](https://kind.sigs.k8s.io/):
+
+```bash
+kind create cluster
+```
+
+### Using other clusters
+
+The test suite works with any Kubernetes cluster. Make sure your kubeconfig context points to the target cluster.
+
+### Running the tests
+
 To run the E2E test suite, you can run the following command:
 
 ```bash
 make e2e
+```
+
+#### Context validation options
+
+By default, any kubectl context is accepted. You can customize this behavior:
+
+```bash
+# Restrict to specific contexts (comma-separated, supports wildcards)
+ALLOWED_CONTEXTS=minikube,kind-* make e2e
+
+# Skip context validation entirely
+SKIP_CONTEXT_CHECK=1 make e2e
 ```
 
 You can see from the console output whether the tests in the test suite pass or not.
