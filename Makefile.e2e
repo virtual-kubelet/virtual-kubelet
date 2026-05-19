@@ -1,38 +1,30 @@
 
 # skaffold checks for kubectl context
-# By default, accepts any kubectl context. Set ALLOWED_CONTEXTS to restrict to specific contexts.
-# Set SKIP_CONTEXT_CHECK=1 to bypass context validation entirely.
+# For minikube, docker-for-desktop and docker-desktop the context matches above names
+# If one wants to use kind, kind gives context names based on the cluster-name
+# But as of now they match the following syntax: kind-*
+# The first check verifies that this is a kind kubernetes context
+# Second check verifies the other ones
 #
-# Examples:
-#   make e2e                                    # uses current context (any context allowed)
-#   ALLOWED_CONTEXTS=minikube,kind-* make e2e   # only allow minikube or kind clusters
-#   SKIP_CONTEXT_CHECK=1 make e2e               # skip context check entirely
+# Set VK_E2E_ALLOW_ANY_CONTEXT=1 to skip this guard (non-standard local/dev contexts only).
 .PHONY: skaffold.validate
 skaffold.validate: kubectl_context := $(shell kubectl config current-context)
-skaffold.validate: ALLOWED_CONTEXTS ?=
-skaffold.validate: SKIP_CONTEXT_CHECK ?=
+skaffold.validate: VK_E2E_ALLOW_ANY_CONTEXT ?=
 skaffold.validate:
-	@if [ -n "$(SKIP_CONTEXT_CHECK)" ]; then \
-		echo "Skipping context check (SKIP_CONTEXT_CHECK is set)"; \
-	elif [ -z "$(ALLOWED_CONTEXTS)" ]; then \
-		echo "Using kubectl context: $(kubectl_context)"; \
-	else \
-		allowed=false; \
-		for pattern in $$(echo "$(ALLOWED_CONTEXTS)" | tr ',' ' '); do \
-			if [[ "$(kubectl_context)" == $$pattern ]] || [[ "$(kubectl_context)" =~ ^$${pattern//\*/.*}$$ ]]; then \
-				allowed=true; \
-				break; \
-			fi; \
-		done; \
-		if [ "$$allowed" = "false" ]; then \
-			echo "Error: current-context [$(kubectl_context)] is not in ALLOWED_CONTEXTS [$(ALLOWED_CONTEXTS)]"; \
-			echo "Set SKIP_CONTEXT_CHECK=1 to bypass this check or update ALLOWED_CONTEXTS"; \
-			exit 1; \
-		fi; \
+
+	@if [ -n "$(VK_E2E_ALLOW_ANY_CONTEXT)" ]; then \
+		echo "VK_E2E_ALLOW_ANY_CONTEXT is set; skipping kubectl context allowlist (current-context: $(kubectl_context))"; \
+	elif [[ "$(kubectl_context)" =~ .*"kind".* ]]; then \
+		true; \
+	elif [[ ! "minikube,docker-for-desktop,docker-desktop" =~ .*"$(kubectl_context)".* ]]; then \
+		echo current-context is [$(kubectl_context)]. Must be one of [minikube,docker-for-desktop,docker-desktop] or a kind-* context; \
+		echo "Set VK_E2E_ALLOW_ANY_CONTEXT=1 only for trusted non-production clusters to skip this check."; \
+		false; \
 	fi
 
 # skaffold deploys the virtual-kubelet to the Kubernetes cluster targeted by the current kubeconfig using skaffold.
-# By default, any kubectl context is accepted. Set ALLOWED_CONTEXTS to restrict to specific clusters.
+# The current context (as indicated by "kubectl config current-context") must be allowed by skaffold.validate
+# unless VK_E2E_ALLOW_ANY_CONTEXT=1 is set.
 # MODE must be set to one of "dev" (default), "delete" or "run", and is used as the skaffold command to be run.
 .PHONY: skaffold
 skaffold: MODE ?= dev

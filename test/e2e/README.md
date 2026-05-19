@@ -150,7 +150,9 @@ func TestEndToEnd(t *testing.T) {
 
 ## Running the Test Suite
 
-The E2E test suite can run against any Kubernetes cluster. By default, it accepts any kubectl context. Below are examples using different Kubernetes distributions.
+The E2E test suite targets a Kubernetes cluster whose name appears in your kubeconfig.
+`Makefile.e2e` keeps the historical guard: the current kubectl context must be `minikube`, `docker-for-desktop`, `docker-desktop`, or a `kind-*` context, unless you opt out (see below).
+Below are examples using common distributions.
 
 ### Using Minikube
 
@@ -172,7 +174,8 @@ kind create cluster
 
 ### Using other clusters
 
-The test suite works with any Kubernetes cluster. Make sure your kubeconfig context points to the target cluster.
+For clusters that are not Minikube, Docker Desktop, or kind, set `VK_E2E_ALLOW_ANY_CONTEXT=1` when running `make e2e` so the Makefile skips the allowlist.
+Only do this for clusters you trust (avoid production).
 
 ### Running the tests
 
@@ -182,16 +185,10 @@ To run the E2E test suite, you can run the following command:
 make e2e
 ```
 
-#### Context validation options
-
-By default, any kubectl context is accepted. You can customize this behavior:
+#### Opt out of context allowlist
 
 ```bash
-# Restrict to specific contexts (comma-separated, supports wildcards)
-ALLOWED_CONTEXTS=minikube,kind-* make e2e
-
-# Skip context validation entirely
-SKIP_CONTEXT_CHECK=1 make e2e
+VK_E2E_ALLOW_ANY_CONTEXT=1 make e2e
 ```
 
 You can see from the console output whether the tests in the test suite pass or not.
