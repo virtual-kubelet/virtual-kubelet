@@ -4,6 +4,7 @@ linters:
     - copyloopvar
     - gosec
     - lll
+    - modernize
     - misspell
     - unconvert
   settings:

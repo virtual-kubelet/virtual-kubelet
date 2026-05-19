@@ -596,9 +596,18 @@ func updateNodeStatus(ctx context.Context, nodes v1.NodeInterface, nodeFromProvi
 	if err != nil {
 		return nil, err
 	}
-	log.G(ctx).WithField("node.resourceVersion", updatedNode.ResourceVersion).
-		WithField("node.Status.Conditions", updatedNode.Status.Conditions).
-		Debug("updated node status in api server")
+
+	// if ctx exceeded, RetryOnConflict returns nil error and can cause panic.
+	if ctx.Err() != nil {
+		return nil, ctx.Err()
+	}
+
+	if updatedNode != nil {
+		log.G(ctx).WithField("node.resourceVersion", updatedNode.ResourceVersion).
+			WithField("node.Status.Conditions", updatedNode.Status.Conditions).
+			Debug("updated node status in api server")
+	}
+
 	return updatedNode, nil
 }
 

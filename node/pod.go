@@ -247,9 +247,9 @@ func (pc *PodController) updatePodStatus(ctx context.Context, podFromKubernetes 
 	}
 
 	// We need to do this because the other parts of the pod can be updated elsewhere. Since we're only updating
-	// the pod status, and we should be the sole writers of the pod status, we can blind overwrite it. Therefore
-	// we need to copy the pod and set ResourceVersion to 0.
-	podFromProvider.ResourceVersion = "0"
+	// the pod status, and we should be the sole writers of the pod status, set the current ResourceVersion to
+	// satisfy optimistic concurrency requirements.
+	podFromProvider.ResourceVersion = podFromKubernetes.ResourceVersion
 	if _, err := pc.client.Pods(podFromKubernetes.Namespace).UpdateStatus(ctx, podFromProvider, metav1.UpdateOptions{}); err != nil && !errors.IsNotFound(err) {
 		span.SetStatus(err)
 		return pkgerrors.Wrap(err, "error while updating pod status in kubernetes")
@@ -285,7 +285,7 @@ func (pc *PodController) enqueuePodStatusUpdate(ctx context.Context, pod *corev1
 	}
 	ctx = span.WithField(ctx, "key", key)
 
-	var obj interface{}
+	var obj any
 	err = wait.PollUntilContextCancel(ctx, notificationRetryPeriod, true, func(ctx context.Context) (bool, error) {
 		var ok bool
 		obj, ok = pc.knownPods.Load(key)
@@ -389,7 +389,7 @@ func (pc *PodController) deletePodsFromKubernetesHandler(ctx context.Context, ke
 	defer func() {
 		if retErr == nil {
 			if w, ok := pc.provider.(syncWrapper); ok {
-				w._deletePodKey(ctx, key)
+				w._deletePodKey(ctx, metaKey)
 			}
 		}
 	}()

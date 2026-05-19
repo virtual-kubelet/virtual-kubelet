@@ -319,7 +319,7 @@ func (pc *PodController) Run(ctx context.Context, podSyncWorkers int) (retErr er
 	// syncing.
 
 	var eventHandler cache.ResourceEventHandler = cache.ResourceEventHandlerFuncs{
-		AddFunc: func(pod interface{}) {
+		AddFunc: func(pod any) {
 			ctx, cancel := context.WithCancel(ctx)
 			defer cancel()
 			ctx, span := trace.StartSpan(ctx, "AddFunc")
@@ -333,7 +333,7 @@ func (pc *PodController) Run(ctx context.Context, podSyncWorkers int) (retErr er
 				pc.syncPodsFromKubernetes.Enqueue(ctx, key)
 			}
 		},
-		UpdateFunc: func(oldObj, newObj interface{}) {
+		UpdateFunc: func(oldObj, newObj any) {
 			ctx, cancel := context.WithCancel(ctx)
 			defer cancel()
 			ctx, span := trace.StartSpan(ctx, "UpdateFunc")
@@ -377,7 +377,7 @@ func (pc *PodController) Run(ctx context.Context, podSyncWorkers int) (retErr er
 				}
 			}
 		},
-		DeleteFunc: func(pod interface{}) {
+		DeleteFunc: func(pod any) {
 			ctx, cancel := context.WithCancel(ctx)
 			defer cancel()
 			ctx, span := trace.StartSpan(ctx, "DeleteFunc")
@@ -402,7 +402,7 @@ func (pc *PodController) Run(ctx context.Context, podSyncWorkers int) (retErr er
 
 	if pc.podEventFilterFunc != nil {
 		eventHandler = cache.FilteringResourceEventHandler{
-			FilterFunc: func(obj interface{}) bool {
+			FilterFunc: func(obj any) bool {
 				p, ok := obj.(*corev1.Pod)
 				if !ok {
 					return false

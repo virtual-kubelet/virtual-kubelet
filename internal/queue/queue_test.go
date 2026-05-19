@@ -24,8 +24,7 @@ func durationPtr(d time.Duration) *time.Duration {
 }
 
 func TestQueueMaxRetries(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx := t.Context()
 	logger := logrus.New()
 	logger.SetLevel(logrus.DebugLevel)
 	ctx = log.WithLogger(ctx, logruslogger.FromLogrus(logrus.NewEntry(logger)))
@@ -51,8 +50,7 @@ func TestQueueMaxRetries(t *testing.T) {
 }
 
 func TestQueueCustomRetries(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx := t.Context()
 	logger := logrus.New()
 	logger.SetLevel(logrus.DebugLevel)
 	ctx = log.WithLogger(ctx, logruslogger.FromLogrus(logrus.NewEntry(logger)))
@@ -82,7 +80,7 @@ func TestQueueCustomRetries(t *testing.T) {
 	timeTaken := func(key string) time.Duration {
 		start := time.Now()
 		wq.Enqueue(context.TODO(), key)
-		for i := 0; i < MaxRetries; i++ {
+		for range MaxRetries {
 			assert.Assert(t, wq.handleQueueItem(ctx))
 		}
 		return time.Since(start)
@@ -261,7 +259,7 @@ func TestHeapConcurrency(t *testing.T) {
 		time.Sleep(time.Second)
 		return nil
 	}, nil)
-	for i := 0; i < 20; i++ {
+	for i := range 20 {
 		q.EnqueueWithoutRateLimit(context.TODO(), strconv.Itoa(i))
 	}
 
@@ -272,7 +270,7 @@ func TestHeapConcurrency(t *testing.T) {
 		time.Sleep(100 * time.Millisecond)
 	}
 
-	for i := 0; i < 20; i++ {
+	for i := range 20 {
 		_, ok := seen.Load(strconv.Itoa(i))
 		assert.Assert(t, ok, "Did not observe: %d", i)
 	}
@@ -320,7 +318,7 @@ type rateLimitWrapper struct {
 	rl           workqueue.TypedRateLimiter[any]
 }
 
-func (r *rateLimitWrapper) When(item interface{}) time.Duration {
+func (r *rateLimitWrapper) When(item any) time.Duration {
 	if _, ok := r.forgottenMap.Load(item); ok {
 		r.forgottenMap.Delete(item)
 		// Reset the added map
@@ -335,12 +333,12 @@ func (r *rateLimitWrapper) When(item interface{}) time.Duration {
 	return r.rl.When(item)
 }
 
-func (r *rateLimitWrapper) Forget(item interface{}) {
+func (r *rateLimitWrapper) Forget(item any) {
 	r.forgottenMap.Store(item, struct{}{})
 	r.rl.Forget(item)
 }
 
-func (r *rateLimitWrapper) NumRequeues(item interface{}) int {
+func (r *rateLimitWrapper) NumRequeues(item any) int {
 	return r.rl.NumRequeues(item)
 }
 
@@ -369,7 +367,7 @@ func TestRateLimiter(t *testing.T) {
 	}, nil)
 
 	enqueued := 0
-	syncMap.Range(func(key, value interface{}) bool {
+	syncMap.Range(func(key, value any) bool {
 		enqueued++
 		q.Enqueue(context.TODO(), key.(string))
 		return true
@@ -383,7 +381,7 @@ func TestRateLimiter(t *testing.T) {
 		time.Sleep(10 * time.Millisecond)
 		incomplete = false
 		// Wait for all items to finish processing.
-		syncMap.Range(func(key, value interface{}) bool {
+		syncMap.Range(func(key, value any) bool {
 			if value.(int) < 10 {
 				incomplete = true
 			}
@@ -397,7 +395,7 @@ func TestRateLimiter(t *testing.T) {
 	assert.Assert(t, time.Since(start) < 2*9*100*time.Millisecond)
 
 	// Make sure each item was seen. And Forgotten.
-	syncMap.Range(func(key, value interface{}) bool {
+	syncMap.Range(func(key, value any) bool {
 		_, ok := ratelimiter.forgottenMap.Load(key)
 		assert.Assert(t, ok, "%s in forgotten map", key)
 		val, ok := ratelimiter.addedMap.Load(key)
@@ -416,8 +414,7 @@ func TestRateLimiter(t *testing.T) {
 
 func TestQueueForgetInProgress(t *testing.T) {
 	t.Parallel()
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx := t.Context()
 
 	var times int64
 	var q *Queue
@@ -438,8 +435,7 @@ func TestQueueForgetInProgress(t *testing.T) {
 
 func TestQueueForgetBeforeStart(t *testing.T) {
 	t.Parallel()
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx := t.Context()
 
 	q := New(workqueue.DefaultTypedItemBasedRateLimiter[any](), t.Name(), func(ctx context.Context, key string) error {
 		panic("shouldn't be called")
@@ -456,8 +452,7 @@ func TestQueueForgetBeforeStart(t *testing.T) {
 func TestQueueMoveItem(t *testing.T) {
 	t.Parallel()
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx := t.Context()
 	q := New(workqueue.DefaultTypedItemBasedRateLimiter[any](), t.Name(), func(ctx context.Context, key string) error {
 		panic("shouldn't be called")
 	}, nil)

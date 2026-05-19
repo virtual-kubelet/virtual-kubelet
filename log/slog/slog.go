@@ -42,57 +42,57 @@ func FromSlog(logger *slog.Logger) log.Logger {
 	return &adapter{inner: logger}
 }
 
-func (l *adapter) Debug(args ...interface{}) {
+func (l *adapter) Debug(args ...any) {
 	msg := args[0].(string)
 	l.inner.Debug(msg)
 }
 
-func (l *adapter) Debugf(format string, args ...interface{}) {
+func (l *adapter) Debugf(format string, args ...any) {
 	formattedArgs := fmt.Sprintf(format, args...)
 	l.inner.Debug(formattedArgs)
 }
 
-func (l *adapter) Info(args ...interface{}) {
+func (l *adapter) Info(args ...any) {
 	msg := args[0].(string)
 	l.inner.Info(msg)
 }
 
-func (l *adapter) Infof(format string, args ...interface{}) {
+func (l *adapter) Infof(format string, args ...any) {
 	formattedArgs := fmt.Sprintf(format, args...)
 	l.inner.Info(formattedArgs)
 }
 
-func (l *adapter) Warn(args ...interface{}) {
+func (l *adapter) Warn(args ...any) {
 	msg := args[0].(string)
 	l.inner.Warn(msg)
 }
 
-func (l *adapter) Warnf(format string, args ...interface{}) {
+func (l *adapter) Warnf(format string, args ...any) {
 	formattedArgs := fmt.Sprintf(format, args...)
 	l.inner.Warn(formattedArgs)
 }
 
-func (l *adapter) Error(args ...interface{}) {
+func (l *adapter) Error(args ...any) {
 	msg := args[0].(string)
 	l.inner.Error(msg)
 }
 
-func (l *adapter) Errorf(format string, args ...interface{}) {
+func (l *adapter) Errorf(format string, args ...any) {
 	formattedArgs := fmt.Sprintf(format, args...)
 	l.inner.Error(formattedArgs)
 }
 
-func (l *adapter) Fatal(args ...interface{}) {
+func (l *adapter) Fatal(args ...any) {
 	msg := args[0].(string)
 	l.inner.Log(context.Background(), LevelFatal, msg)
 }
 
-func (l *adapter) Fatalf(format string, args ...interface{}) {
+func (l *adapter) Fatalf(format string, args ...any) {
 	formattedArgs := fmt.Sprintf(format, args...)
 	l.inner.Log(context.Background(), LevelFatal, formattedArgs)
 }
 
-func (l *adapter) WithField(key string, val interface{}) log.Logger {
+func (l *adapter) WithField(key string, val any) log.Logger {
 	return &adapter{inner: l.inner.With(key, val)}
 }
 

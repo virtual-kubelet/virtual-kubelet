@@ -70,7 +70,7 @@ func (npc *nodePingController) Run(ctx context.Context) {
 		defer cancel()
 		ctx, span := trace.StartSpan(ctx, "node.pingLoop")
 		defer span.End()
-		doChan := sf.DoChan(key, func() (interface{}, error) {
+		doChan := sf.DoChan(key, func() (any, error) {
 			now := time.Now()
 			ctx, span := trace.StartSpan(ctx, "node.pingNode")
 			defer span.End()

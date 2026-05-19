@@ -101,8 +101,7 @@ func TestPodEventFilter(t *testing.T) {
 		return true
 	}
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx := t.Context()
 
 	errCh := make(chan error)
 	go func() {
@@ -141,7 +140,7 @@ func TestPodEventFilter(t *testing.T) {
 
 	ctxT, cancelT = context.WithTimeout(ctx, 30*time.Second)
 	defer cancelT()
-	for i := 0; i < 3; i++ {
+	for range 3 {
 		// check that the event filter fires
 		select {
 		case <-ctxT.Done():

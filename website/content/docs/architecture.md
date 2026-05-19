@@ -12,7 +12,7 @@ Ordinarily, Kubernetes [kubelets](https://kubernetes.io/docs/reference/command-l
 
 ## How Virtual Kubelet works {#virtual-kubelet}
 
-From the standpoint of the Kubernetes API server, Virtual Kubelets *seem* like normal kubelets, but with the crucial difference that they scheduler containers elsewhere, for example in a cloud serverless API, and not on the Node.
+From the standpoint of the Kubernetes API server, Virtual Kubelets *seem* like normal kubelets, but with the crucial difference that they schedule containers elsewhere, for example in a cloud serverless API, and not on the Node.
 
 [Figure 1](#figure-1) below shows a Kubernetes cluster with a series of standard kubelets and one Virtual Kubelet:
 

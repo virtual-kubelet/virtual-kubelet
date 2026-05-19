@@ -99,7 +99,7 @@ func TestSetStatus(t *testing.T) {
 func TestWithField(t *testing.T) {
 	type field struct {
 		key   string
-		value interface{}
+		value any
 	}
 
 	testCases := []struct {
@@ -293,7 +293,7 @@ func TestLogf(t *testing.T) {
 		logLevel           logLevel
 		msg                string
 		fields             log.Fields
-		args               []interface{}
+		args               []any
 		expectedEvents     []sdktrace.Event
 		expectedAttributes []attribute.KeyValue
 	}{
@@ -302,8 +302,8 @@ func TestLogf(t *testing.T) {
 			spanName:       "test",
 			logLevel:       lDebug,
 			msg:            "k1: %s, k2: %v, k3: %d, k4: %v",
-			fields:         map[string]interface{}{"k1": "test", "k2": []string{"test"}, "k3": 1, "k4": []int{1}},
-			args:           []interface{}{"test", []string{"test"}, int(1), []int{1}},
+			fields:         map[string]any{"k1": "test", "k2": []string{"test"}, "k3": 1, "k4": []int{1}},
+			args:           []any{"test", []string{"test"}, int(1), []int{1}},
 			expectedEvents: []sdktrace.Event{{Name: "k1: test, k2: [test], k3: 1, k4: [1]"}},
 			expectedAttributes: []attribute.KeyValue{
 				attribute.String("k1", "test"),
@@ -316,8 +316,8 @@ func TestLogf(t *testing.T) {
 			spanName:       "test",
 			logLevel:       lInfo,
 			msg:            "k1: %d, k2: %v, k3: %f, k4: %v",
-			fields:         map[string]interface{}{"k1": int64(3), "k2": []int64{4}, "k3": float64(2), "k4": []float64{4}},
-			args:           []interface{}{int64(3), []int64{4}, float64(2), []float64{4}},
+			fields:         map[string]any{"k1": int64(3), "k2": []int64{4}, "k3": float64(2), "k4": []float64{4}},
+			args:           []any{int64(3), []int64{4}, float64(2), []float64{4}},
 			expectedEvents: []sdktrace.Event{{Name: "k1: 3, k2: [4], k3: 2.000000, k4: [4]"}},
 			expectedAttributes: []attribute.KeyValue{
 				attribute.Int64("k1", 1),
@@ -330,8 +330,8 @@ func TestLogf(t *testing.T) {
 			spanName:       "test",
 			logLevel:       lWarn,
 			msg:            "k1: %v, k2: %v",
-			fields:         map[string]interface{}{"k1": map[int]int{1: 1}, "k2": num(1)},
-			args:           []interface{}{map[int]int{1: 1}, num(1)},
+			fields:         map[string]any{"k1": map[int]int{1: 1}, "k2": num(1)},
+			args:           []any{map[int]int{1: 1}, num(1)},
 			expectedEvents: []sdktrace.Event{{Name: "k1: map[1:1], k2: 1"}},
 			expectedAttributes: []attribute.KeyValue{
 				attribute.String("k1", "{1:1}"),
@@ -342,8 +342,8 @@ func TestLogf(t *testing.T) {
 			spanName:       "test",
 			logLevel:       lErr,
 			msg:            "k1: %t, k2: %v, k3: %s",
-			fields:         map[string]interface{}{"k1": true, "k2": []bool{true}, "k3": errors.New("fake")},
-			args:           []interface{}{true, []bool{true}, errors.New("fake")},
+			fields:         map[string]any{"k1": true, "k2": []bool{true}, "k3": errors.New("fake")},
+			args:           []any{true, []bool{true}, errors.New("fake")},
 			expectedEvents: []sdktrace.Event{{Name: "k1: true, k2: [true], k3: fake"}},
 			expectedAttributes: []attribute.KeyValue{
 				attribute.Bool("k1", true),
@@ -415,7 +415,7 @@ func TestLogf(t *testing.T) {
 func TestLogWithField(t *testing.T) {
 	type field struct {
 		key   string
-		value interface{}
+		value any
 	}
 
 	testCases := []struct {
@@ -618,18 +618,18 @@ type fakeLogger struct {
 	a []attribute.KeyValue
 }
 
-func (*fakeLogger) Debug(...interface{})          {}
-func (*fakeLogger) Debugf(string, ...interface{}) {}
-func (*fakeLogger) Info(...interface{})           {}
-func (*fakeLogger) Infof(string, ...interface{})  {}
-func (*fakeLogger) Warn(...interface{})           {}
-func (*fakeLogger) Warnf(string, ...interface{})  {}
-func (*fakeLogger) Error(...interface{})          {}
-func (*fakeLogger) Errorf(string, ...interface{}) {}
-func (*fakeLogger) Fatal(...interface{})          {}
-func (*fakeLogger) Fatalf(string, ...interface{}) {}
+func (*fakeLogger) Debug(...any)          {}
+func (*fakeLogger) Debugf(string, ...any) {}
+func (*fakeLogger) Info(...any)           {}
+func (*fakeLogger) Infof(string, ...any)  {}
+func (*fakeLogger) Warn(...any)           {}
+func (*fakeLogger) Warnf(string, ...any)  {}
+func (*fakeLogger) Error(...any)          {}
+func (*fakeLogger) Errorf(string, ...any) {}
+func (*fakeLogger) Fatal(...any)          {}
+func (*fakeLogger) Fatalf(string, ...any) {}
 
-func (l *fakeLogger) WithField(k string, v interface{}) log.Logger {
+func (l *fakeLogger) WithField(k string, v any) log.Logger {
 	l.a = append(l.a, makeAttribute(k, v))
 	return l
 }

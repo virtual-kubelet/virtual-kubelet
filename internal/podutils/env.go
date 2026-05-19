@@ -67,7 +67,7 @@ const (
 
 var masterServices = sets.NewString("kubernetes")
 
-// PopulateEnvironmentVariables populates the environment of each container (and init container) in the specified pod.
+// PopulateEnvironmentVariables populates the environment of each init container, container, and ephemeral container in the specified pod.
 func PopulateEnvironmentVariables(ctx context.Context, pod *corev1.Pod, rm *manager.ResourceManager, recorder record.EventRecorder) error {
 
 	// Populate each init container's environment.
@@ -82,19 +82,57 @@ func PopulateEnvironmentVariables(ctx context.Context, pod *corev1.Pod, rm *mana
 			return err
 		}
 	}
+	// Populate each ephemeral container's environment.
+	for idx := range pod.Spec.EphemeralContainers {
+		if err := populateEphemeralContainerEnvironment(ctx, pod, &pod.Spec.EphemeralContainers[idx], rm, recorder); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
 // populateContainerEnvironment populates the environment of a single container in the specified pod.
 func populateContainerEnvironment(ctx context.Context, pod *corev1.Pod, container *corev1.Container, rm *manager.ResourceManager, recorder record.EventRecorder) error {
 	// Create an "environment map" based on the value of the specified container's ".envFrom" field.
-	tmpEnv, err := makeEnvironmentMapBasedOnEnvFrom(ctx, pod, container, rm, recorder)
+	tmpEnv, err := makeEnvironmentMapBasedOnEnvFrom(ctx, pod, container.EnvFrom, rm, recorder)
 	if err != nil {
 		return err
 	}
 	// Create the final "environment map" for the container using the ".env" and ".envFrom" field
 	// and service environment variables.
-	err = makeEnvironmentMap(ctx, pod, container, rm, recorder, tmpEnv)
+	err = makeEnvironmentMap(ctx, pod, container.Env, rm, recorder, tmpEnv)
+	if err != nil {
+		return err
+	}
+	// Empty the container's ".envFrom" field and replace its ".env" field with the final, merged environment.
+	// Values in "env" (sourced from ".env") will override any values with the same key defined in "envFrom" (sourced from ".envFrom").
+	// This is in accordance with what the Kubelet itself does.
+	// https://github.com/kubernetes/kubernetes/blob/v1.13.1/pkg/kubelet/kubelet_pods.go#L557-L558
+	container.EnvFrom = []corev1.EnvFromSource{}
+
+	res := make([]corev1.EnvVar, 0, len(tmpEnv))
+
+	for key, val := range tmpEnv {
+		res = append(res, corev1.EnvVar{
+			Name:  key,
+			Value: val,
+		})
+	}
+	container.Env = res
+
+	return nil
+}
+
+// populateEphemeralContainerEnvironment populates the environment of a single ephemeral container in the specified pod.
+func populateEphemeralContainerEnvironment(ctx context.Context, pod *corev1.Pod, container *corev1.EphemeralContainer, rm *manager.ResourceManager, recorder record.EventRecorder) error {
+	// Create an "environment map" based on the value of the specified container's ".envFrom" field.
+	tmpEnv, err := makeEnvironmentMapBasedOnEnvFrom(ctx, pod, container.EnvFrom, rm, recorder)
+	if err != nil {
+		return err
+	}
+	// Create the final "environment map" for the container using the ".env" and ".envFrom" field
+	// and service environment variables.
+	err = makeEnvironmentMap(ctx, pod, container.Env, rm, recorder, tmpEnv)
 	if err != nil {
 		return err
 	}
@@ -165,12 +203,12 @@ func getServiceEnvVarMap(rm *manager.ResourceManager, ns string, enableServiceLi
 }
 
 // makeEnvironmentMapBasedOnEnvFrom returns a map representing the resolved environment of the specified container after being populated from the entries in the ".envFrom" field.
-func makeEnvironmentMapBasedOnEnvFrom(ctx context.Context, pod *corev1.Pod, container *corev1.Container, rm *manager.ResourceManager, recorder record.EventRecorder) (map[string]string, error) {
+func makeEnvironmentMapBasedOnEnvFrom(ctx context.Context, pod *corev1.Pod, envFromSources []corev1.EnvFromSource, rm *manager.ResourceManager, recorder record.EventRecorder) (map[string]string, error) {
 	// Create a map to hold the resulting environment.
 	res := make(map[string]string)
 	// Iterate over "envFrom" references in order to populate the environment.
 loop:
-	for _, envFrom := range container.EnvFrom {
+	for _, envFrom := range envFromSources {
 		switch {
 		// Handle population from a configmap.
 		case envFrom.ConfigMapRef != nil:
@@ -287,7 +325,7 @@ loop:
 }
 
 // makeEnvironmentMap returns a map representing the resolved environment of the specified container after being populated from the entries in the ".env" and ".envFrom" field.
-func makeEnvironmentMap(ctx context.Context, pod *corev1.Pod, container *corev1.Container, rm *manager.ResourceManager, recorder record.EventRecorder, res map[string]string) error {
+func makeEnvironmentMap(ctx context.Context, pod *corev1.Pod, envVars []corev1.EnvVar, rm *manager.ResourceManager, recorder record.EventRecorder, res map[string]string) error {
 	// TODO If pod.Spec.EnableServiceLinks is nil then fail as per 1.14 kubelet.
 	enableServiceLinks := corev1.DefaultEnableServiceLinks
 	if pod.Spec.EnableServiceLinks != nil {
@@ -309,8 +347,8 @@ func makeEnvironmentMap(ctx context.Context, pod *corev1.Pod, container *corev1.
 	mappingFunc := expansion.MappingFuncFor(res, svcEnv)
 
 	// Iterate over environment variables in order to populate the map.
-	for _, env := range container.Env {
-		val, err := getEnvironmentVariableValue(ctx, &env, mappingFunc, pod, container, rm, recorder)
+	for _, env := range envVars {
+		val, err := getEnvironmentVariableValue(ctx, &env, mappingFunc, pod, rm, recorder)
 		if err != nil {
 			return err
 		}
@@ -329,28 +367,28 @@ func makeEnvironmentMap(ctx context.Context, pod *corev1.Pod, container *corev1.
 	return nil
 }
 
-func getEnvironmentVariableValue(ctx context.Context, env *corev1.EnvVar, mappingFunc func(string) string, pod *corev1.Pod, container *corev1.Container, rm *manager.ResourceManager, recorder record.EventRecorder) (*string, error) {
+func getEnvironmentVariableValue(ctx context.Context, env *corev1.EnvVar, mappingFunc func(string) string, pod *corev1.Pod, rm *manager.ResourceManager, recorder record.EventRecorder) (*string, error) {
 	if env.ValueFrom != nil {
-		return getEnvironmentVariableValueWithValueFrom(ctx, env, mappingFunc, pod, container, rm, recorder)
+		return getEnvironmentVariableValueWithValueFrom(ctx, env, mappingFunc, pod, rm, recorder)
 	}
 	// Handle values that have been directly provided after expanding variable references.
 	return ptr.To(expansion.Expand(env.Value, mappingFunc)), nil
 }
 
-func getEnvironmentVariableValueWithValueFrom(ctx context.Context, env *corev1.EnvVar, mappingFunc func(string) string, pod *corev1.Pod, container *corev1.Container, rm *manager.ResourceManager, recorder record.EventRecorder) (*string, error) {
+func getEnvironmentVariableValueWithValueFrom(ctx context.Context, env *corev1.EnvVar, mappingFunc func(string) string, pod *corev1.Pod, rm *manager.ResourceManager, recorder record.EventRecorder) (*string, error) {
 	// Handle population from a configmap key.
 	if env.ValueFrom.ConfigMapKeyRef != nil {
-		return getEnvironmentVariableValueWithValueFromConfigMapKeyRef(ctx, env, mappingFunc, pod, container, rm, recorder)
+		return getEnvironmentVariableValueWithValueFromConfigMapKeyRef(ctx, env, pod, rm, recorder)
 	}
 
 	// Handle population from a secret key.
 	if env.ValueFrom.SecretKeyRef != nil {
-		return getEnvironmentVariableValueWithValueFromSecretKeyRef(ctx, env, mappingFunc, pod, container, rm, recorder)
+		return getEnvironmentVariableValueWithValueFromSecretKeyRef(ctx, env, pod, rm, recorder)
 	}
 
 	// Handle population from a field (downward API).
 	if env.ValueFrom.FieldRef != nil {
-		return getEnvironmentVariableValueWithValueFromFieldRef(ctx, env, mappingFunc, pod, container, rm, recorder)
+		return getEnvironmentVariableValueWithValueFromFieldRef(env, pod)
 	}
 	if env.ValueFrom.ResourceFieldRef != nil {
 		// TODO Implement populating resource requests.
@@ -361,7 +399,7 @@ func getEnvironmentVariableValueWithValueFrom(ctx context.Context, env *corev1.E
 	return nil, nil
 }
 
-func getEnvironmentVariableValueWithValueFromConfigMapKeyRef(ctx context.Context, env *corev1.EnvVar, mappingFunc func(string) string, pod *corev1.Pod, container *corev1.Container, rm *manager.ResourceManager, recorder record.EventRecorder) (*string, error) {
+func getEnvironmentVariableValueWithValueFromConfigMapKeyRef(ctx context.Context, env *corev1.EnvVar, pod *corev1.Pod, rm *manager.ResourceManager, recorder record.EventRecorder) (*string, error) {
 	// The environment variable must be set from a configmap.
 	vf := env.ValueFrom.ConfigMapKeyRef
 	// Check whether the key reference is optional.
@@ -414,7 +452,7 @@ func getEnvironmentVariableValueWithValueFromConfigMapKeyRef(ctx context.Context
 	return ptr.To(keyValue), nil
 }
 
-func getEnvironmentVariableValueWithValueFromSecretKeyRef(ctx context.Context, env *corev1.EnvVar, mappingFunc func(string) string, pod *corev1.Pod, container *corev1.Container, rm *manager.ResourceManager, recorder record.EventRecorder) (*string, error) {
+func getEnvironmentVariableValueWithValueFromSecretKeyRef(ctx context.Context, env *corev1.EnvVar, pod *corev1.Pod, rm *manager.ResourceManager, recorder record.EventRecorder) (*string, error) {
 	vf := env.ValueFrom.SecretKeyRef
 	// Check whether the key reference is optional.
 	// This will control whether we fail when unable to read the requested key.
@@ -467,7 +505,7 @@ func getEnvironmentVariableValueWithValueFromSecretKeyRef(ctx context.Context, e
 }
 
 // Handle population from a field (downward API).
-func getEnvironmentVariableValueWithValueFromFieldRef(ctx context.Context, env *corev1.EnvVar, mappingFunc func(string) string, pod *corev1.Pod, container *corev1.Container, rm *manager.ResourceManager, recorder record.EventRecorder) (*string, error) {
+func getEnvironmentVariableValueWithValueFromFieldRef(env *corev1.EnvVar, pod *corev1.Pod) (*string, error) {
 	// https://github.com/virtual-kubelet/virtual-kubelet/issues/123
 	vf := env.ValueFrom.FieldRef
 

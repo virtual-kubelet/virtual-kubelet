@@ -67,13 +67,13 @@ func testAddField(t *testing.T, exporter *fakeExporter, l *logger, span *octrace
 	assert.Assert(t, l.s.IsRecordingEvents())
 	l.WithField("key", "value").
 		WithError(tmpErr).
-		WithFields(map[string]interface{}{"test1": "value1", "test2": "value2"}).
+		WithFields(map[string]any{"test1": "value1", "test2": "value2"}).
 		Info()
 	span.End()
 
 	assert.Assert(t,
 		is.DeepEqual(exporter.spans[0].Annotations[0].Attributes,
-			map[string]interface{}{
+			map[string]any{
 				"key":   "value",
 				"test1": "value1",
 				"test2": "value2",

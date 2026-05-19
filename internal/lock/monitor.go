@@ -15,7 +15,7 @@ func NewMonitorVariable() MonitorVariable {
 // MonitorVariable is a specific monitor variable which allows for channel-subscription to changes to
 // the internal value of the MonitorVariable.
 type MonitorVariable interface {
-	Set(value interface{})
+	Set(value any)
 	Subscribe() Subscription
 }
 
@@ -34,19 +34,19 @@ type Subscription interface {
 // Value contains the last set value from Set(). If the value is unset the version will be 0, and the value will be
 // nil.
 type Value struct {
-	Value   interface{}
+	Value   any
 	Version int64
 }
 
 type monitorVariable struct {
 	lock         sync.Mutex
-	currentValue interface{}
+	currentValue any
 	// 0 indicates uninitialized
 	currentVersion             int64
 	versionInvalidationChannel chan struct{}
 }
 
-func (m *monitorVariable) Set(newValue interface{}) {
+func (m *monitorVariable) Set(newValue any) {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 	m.currentValue = newValue

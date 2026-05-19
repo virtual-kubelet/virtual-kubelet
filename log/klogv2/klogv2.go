@@ -22,6 +22,7 @@ package klogv2
 
 import (
 	"fmt"
+	"maps"
 	"sort"
 	"strings"
 	"sync"
@@ -66,87 +67,83 @@ func New(fields log.Fields) log.Logger {
 	}
 }
 
-func (l *adapter) Debug(args ...interface{}) {
+func (l *adapter) Debug(args ...any) {
 	if klog.V(4).Enabled() {
 		l.Info(args...)
 	}
 }
 
-func (l *adapter) Debugf(format string, args ...interface{}) {
+func (l *adapter) Debugf(format string, args ...any) {
 	if klog.V(4).Enabled() {
 		l.Infof(format, args...)
 	}
 }
 
-func (l *adapter) Info(args ...interface{}) {
+func (l *adapter) Info(args ...any) {
 	args = append(args, l.fields.String())
 	klog.InfoDepth(1, args...)
 }
 
-func (l *adapter) Infof(format string, args ...interface{}) {
+func (l *adapter) Infof(format string, args ...any) {
 	formattedArgs := fmt.Sprintf(format, args...)
 	klog.InfoDepth(1, formattedArgs, l.fields.String())
 }
 
-func (l *adapter) Warn(args ...interface{}) {
+func (l *adapter) Warn(args ...any) {
 	args = append(args, l.fields.String())
 	klog.WarningDepth(1, args...)
 }
 
-func (l *adapter) Warnf(format string, args ...interface{}) {
+func (l *adapter) Warnf(format string, args ...any) {
 	formattedArgs := fmt.Sprintf(format, args...)
 	klog.WarningDepth(1, formattedArgs, l.fields.String())
 }
 
-func (l *adapter) Error(args ...interface{}) {
+func (l *adapter) Error(args ...any) {
 	args = append(args, l.fields.String())
 	klog.ErrorDepth(1, args...)
 }
 
-func (l *adapter) Errorf(format string, args ...interface{}) {
+func (l *adapter) Errorf(format string, args ...any) {
 	formattedArgs := fmt.Sprintf(format, args...)
 	klog.ErrorDepth(1, formattedArgs, l.fields.String())
 }
 
-func (l *adapter) Fatal(args ...interface{}) {
+func (l *adapter) Fatal(args ...any) {
 	args = append(args, l.fields.String())
 	klog.FatalDepth(1, args...)
 }
 
-func (l *adapter) Fatalf(format string, args ...interface{}) {
+func (l *adapter) Fatalf(format string, args ...any) {
 	formattedArgs := fmt.Sprintf(format, args...)
 	klog.FatalDepth(1, formattedArgs, l.fields.String())
 }
 
 // WithField adds a field to the log entry.
-func (l *adapter) WithField(key string, val interface{}) log.Logger {
-	return l.WithFields(map[string]interface{}{key: val})
+func (l *adapter) WithField(key string, val any) log.Logger {
+	return l.WithFields(map[string]any{key: val})
 }
 
 // WithFields adds multiple fields to a log entry.
 func (l *adapter) WithFields(fields log.Fields) log.Logger {
 	// Clone existing fields.
 	newFields := make(log.Fields)
-	for k, v := range l.fields.Fields {
-		newFields[k] = v
-	}
+	maps.Copy(newFields, l.fields.Fields)
 	// Append new fields.
 	// Existing keys will be overwritten.
-	for k, v := range fields {
-		newFields[k] = v
-	}
+	maps.Copy(newFields, fields)
 
 	return New(newFields)
 }
 
 // WithError adds an error to the log entry
 func (l *adapter) WithError(err error) log.Logger {
-	return l.WithFields(map[string]interface{}{"err": err})
+	return l.WithFields(map[string]any{"err": err})
 }
 
 // processFields prepares a string to be appended to every log call.
 // This is called once to avoid costly log operations.
-func processFields(fields map[string]interface{}) string {
+func processFields(fields map[string]any) string {
 	processedFields := make([]string, 0, len(fields))
 	for k, v := range fields {
 		processedFields = append(processedFields, fmt.Sprintf("%s=%+v", k, v))

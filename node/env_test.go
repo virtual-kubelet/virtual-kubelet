@@ -26,8 +26,7 @@ func TestEnvtest(t *testing.T) {
 	if !*enableEnvTest || os.Getenv("VK_ENVTEST") != "" {
 		t.Skip("test only runs when -envtest is passed or if VK_ENVTEST is set to a non-empty value")
 	}
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx := t.Context()
 
 	env := &envtest.Environment{}
 	_, err := env.Start()

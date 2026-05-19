@@ -41,7 +41,7 @@ func NotFound(msg string) error {
 }
 
 // NotFoundf makes an ErrNotFound from the provided error format and args
-func NotFoundf(format string, args ...interface{}) error {
+func NotFoundf(format string, args ...any) error {
 	return &notFoundError{fmt.Errorf(format, args...)}
 }
 

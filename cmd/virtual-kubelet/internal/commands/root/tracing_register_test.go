@@ -15,6 +15,7 @@
 package root
 
 import (
+	"slices"
 	"testing"
 
 	"github.com/virtual-kubelet/virtual-kubelet/errdefs"
@@ -48,10 +49,8 @@ func TestAvailableExporters(t *testing.T) {
 	}
 	RegisterTracingExporter("mock", mockExporterFn)
 
-	for _, e := range AvailableTraceExporters() {
-		if e == "mock" {
-			return
-		}
+	if slices.Contains(AvailableTraceExporters(), "mock") {
+		return
 	}
 
 	t.Fatal("could not find mock exporter in list of registered exporters")

@@ -77,7 +77,7 @@ type Span interface {
 	// This interface is a bit weird, but allows us to manage loggers in the context
 	// It is expected that implementations set `log.WithLogger` so the logger stored
 	// in the context is updated with the new fields.
-	WithField(context.Context, string, interface{}) context.Context
+	WithField(context.Context, string, any) context.Context
 	WithFields(context.Context, log.Fields) context.Context
 
 	// Logger is used to log individual entries.

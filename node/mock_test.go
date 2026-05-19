@@ -209,7 +209,7 @@ func (p *mockProvider) GetPods(ctx context.Context) ([]*v1.Pod, error) {
 
 	var pods []*v1.Pod
 
-	p.pods.Range(func(key, pod interface{}) bool {
+	p.pods.Range(func(key, pod any) bool {
 		pods = append(pods, pod.(*v1.Pod).DeepCopy())
 		return true
 	})

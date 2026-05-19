@@ -42,7 +42,7 @@ func testNodeRun(t *testing.T, enableLease bool) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	c := testclient.NewSimpleClientset()
+	c := testclient.NewClientset()
 
 	testP := &testNodeProvider{NodeProvider: &NaiveNodeProvider{}}
 
@@ -90,7 +90,7 @@ func testNodeRun(t *testing.T, enableLease bool) {
 	)
 
 	timeout := time.After(30 * time.Second)
-	for i := 0; i < iters; i++ {
+	for range iters {
 		var l *coordinationv1.Lease
 
 		select {
@@ -173,7 +173,7 @@ func testNodeRun(t *testing.T, enableLease bool) {
 }
 
 func TestNodeCustomUpdateStatusErrorHandler(t *testing.T) {
-	c := testclient.NewSimpleClientset()
+	c := testclient.NewClientset()
 	testP := &testNodeProvider{NodeProvider: &NaiveNodeProvider{}}
 	nodes := c.CoreV1().Nodes()
 
@@ -224,7 +224,7 @@ func TestUpdateNodeStatus(t *testing.T) {
 		LastHeartbeatTime: metav1.Now().Rfc3339Copy(),
 	})
 	n.Status.Phase = corev1.NodePending
-	nodes := testclient.NewSimpleClientset().CoreV1().Nodes()
+	nodes := testclient.NewClientset().CoreV1().Nodes()
 
 	ctx := context.Background()
 	_, err := updateNodeStatus(ctx, nodes, n.DeepCopy())
@@ -275,7 +275,7 @@ func TestPingAfterStatusUpdate(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	c := testclient.NewSimpleClientset()
+	c := testclient.NewClientset()
 	nodes := c.CoreV1().Nodes()
 
 	testP := &testNodeProviderPing{}
@@ -331,7 +331,7 @@ func TestBeforeAnnotationsPreserved(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	c := testclient.NewSimpleClientset()
+	c := testclient.NewClientset()
 
 	testP := &testNodeProvider{NodeProvider: &NaiveNodeProvider{}}
 
@@ -402,7 +402,7 @@ func TestManualConditionsPreserved(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	c := testclient.NewSimpleClientset()
+	c := testclient.NewClientset()
 
 	testP := &testNodeProvider{NodeProvider: &NaiveNodeProvider{}}
 
@@ -566,7 +566,7 @@ func TestNodePingSingleInflight(t *testing.T) {
 	defer cancel()
 
 	const pingTimeout = 100 * time.Millisecond
-	c := testclient.NewSimpleClientset()
+	c := testclient.NewClientset()
 	testP := &testNodeProviderPing{}
 
 	calls := newWaitableInt()
@@ -685,7 +685,7 @@ func makeWatch(ctx context.Context, t *testing.T, wc watchGetter, name string) w
 func atLeast(x, atLeast int) cmp.Comparison {
 	return func() cmp.Result {
 		if x < atLeast {
-			return cmp.ResultFailureTemplate(failTemplate("<"), map[string]interface{}{"x": x, "y": atLeast})
+			return cmp.ResultFailureTemplate(failTemplate("<"), map[string]any{"x": x, "y": atLeast})
 		}
 		return cmp.ResultSuccess
 	}
@@ -696,7 +696,7 @@ func before(x, y time.Time) cmp.Comparison {
 		if x.Before(y) {
 			return cmp.ResultSuccess
 		}
-		return cmp.ResultFailureTemplate(failTemplate(">="), map[string]interface{}{"x": x, "y": y})
+		return cmp.ResultFailureTemplate(failTemplate(">="), map[string]any{"x": x, "y": y})
 	}
 }
 

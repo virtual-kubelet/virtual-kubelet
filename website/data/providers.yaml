@@ -10,6 +10,9 @@
   tag: azure-batch
 - name: Azure Container Instances (**ACI**)
   tag: azure-aci
+- name: Cisco Virtual Kubelet
+  tag: cisco-virtual-kubelet
+  org: cisco-open
 - name: Elotl Kip
   tag: kip
   org: elotl

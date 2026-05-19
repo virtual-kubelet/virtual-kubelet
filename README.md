@@ -22,6 +22,7 @@ The best description is "Kubernetes API on top, programmable back."
     + [Alibaba Cloud ECI Provider](#alibaba-cloud-eci-provider)
     + [Azure Container Instances Provider](#azure-container-instances-provider)
 	+ [Azure Batch GPU Provider](https://github.com/virtual-kubelet/azure-batch/blob/master/README.md)
+    + [Cisco Virtual Kubelet](#cisco-virtual-kubelet)
     + [AWS Fargate Provider](#aws-fargate-provider)
     + [Elotl Kip](#elotl-kip)
 	+ [HashiCorp Nomad](#hashicorp-nomad-provider)
@@ -109,6 +110,14 @@ You can find detailed instructions on how to set it up and how to test it in the
 The Azure connector can use a configuration file specified by the `--provider-config` flag.
 The config file is in TOML format, and an example lives in `providers/azure/example.toml`.
 
+### Cisco Virtual Kubelet
+
+[Cisco Virtual Kubelet](https://github.com/cisco-open/cisco-virtual-kubelet) is a Virtual Kubelet provider that enables Kubernetes clusters to run workloads to Cisco infrastructure devices.
+
+The use of this provider interacts with the Application Hosting functionality supported on Cisco devices, to allow for the provisioning and lifecycle management of containers. The Virtual Kubelet provider, uses RESTCONF to perform provisioning on the device. The use of the provider introduces a simplified entrypoint for application owners to deploy containers at the Edge.
+
+For detailed instructions, follow the guide [here](https://github.com/cisco-open/cisco-virtual-kubelet/blob/main/README.md).
+
 ### AWS Fargate Provider
 
 [AWS Fargate](https://aws.amazon.com/fargate/) is a technology that allows you to run containers
@@ -140,7 +149,7 @@ For detailed instructions, follow the guide [here](https://github.com/virtual-ku
 
 ### Interlink Provider
 
-[interLink](https://intertwin-eu.github.io/interLink/) provides an abstraction for the execution of a Kubernetes pod on any remote resource that has the capability to manage a container's execution lifecycle. The use cases that drove the initial development of the tool are the Slurm-powered HPC centers, regardless the plugin based design is enabling several additional use cases to provide Kubernetes-API based access to infrastracture that cannot host a Kubelet processes. 
+[interLink](https://intertwin-eu.github.io/interLink/) provides an abstraction for the execution of a Kubernetes pod on any remote resource that has the capability to manage a container's execution lifecycle. The use cases that drove the initial development of the tool are the Slurm-powered HPC centers, regardless the plugin based design is enabling several additional use cases to provide Kubernetes-API based access to infrastructure that cannot host a Kubelet processes. 
 InterLink is a Virtual Kubelet provider that can manage container lifecycle through a well defined API specification, allowing for any resource provider to be integrated with a simple http server and a handful of methods.
 In other words, this is an attempt to streamline the process of creating custom Virtual Kubelet providers, avoiding the need for any resource provider to implement its own version of a Kubelet workflow, which would require having some domain expertise in the Kubernetes internals.
 
@@ -176,7 +185,7 @@ For detailed instructions, follow the guide [here](https://github.com/virtual-ku
 
 Providers consume this project as a library which implements the core logic of
 a Kubernetes node agent (Kubelet), and wire up their implementation for
-performing the neccessary actions.
+performing the necessary actions.
 
 There are 3 main interfaces:
 
@@ -273,7 +282,7 @@ managing the node object in Kubernetes.
 
 ```go
 	nc, _ := node.NewNodeController(nodeProvider, nodeSpec) // <-- instantiate a node controller from a node provider and a kubernetes node spec
-	nc.Run(ctx) // <-- creates the node in kubernetes and starts up he controller
+	nc.Run(ctx) // <-- creates the node in kubernetes and starts up the controller
 ```
 
 #### API endpoints

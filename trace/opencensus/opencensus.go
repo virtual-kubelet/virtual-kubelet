@@ -88,7 +88,7 @@ func (s *span) SetStatus(err error) {
 	s.s.SetStatus(status)
 }
 
-func (s *span) WithField(ctx context.Context, key string, val interface{}) context.Context {
+func (s *span) WithField(ctx context.Context, key string, val any) context.Context {
 	s.mu.Lock()
 	s.l = s.l.WithField(key, val)
 	ctx = log.WithLogger(ctx, &logger{s: s.s, l: s.l})
@@ -128,7 +128,7 @@ type logger struct {
 	a []octrace.Attribute
 }
 
-func (l *logger) Debug(args ...interface{}) {
+func (l *logger) Debug(args ...any) {
 	if !l.s.IsRecordingEvents() {
 		l.l.Debug(args...)
 		return
@@ -139,12 +139,12 @@ func (l *logger) Debug(args ...interface{}) {
 	l.s.Annotate(withLevel(lDebug, l.a), msg)
 }
 
-func (l *logger) Debugf(f string, args ...interface{}) {
+func (l *logger) Debugf(f string, args ...any) {
 	l.l.Debugf(f, args...)
 	l.s.Annotatef(withLevel(lDebug, l.a), f, args...)
 }
 
-func (l *logger) Info(args ...interface{}) {
+func (l *logger) Info(args ...any) {
 	if !l.s.IsRecordingEvents() {
 		l.l.Info(args...)
 		return
@@ -155,12 +155,12 @@ func (l *logger) Info(args ...interface{}) {
 	l.s.Annotate(withLevel(lInfo, l.a), msg)
 }
 
-func (l *logger) Infof(f string, args ...interface{}) {
+func (l *logger) Infof(f string, args ...any) {
 	l.l.Infof(f, args...)
 	l.s.Annotatef(withLevel(lInfo, l.a), f, args...)
 }
 
-func (l *logger) Warn(args ...interface{}) {
+func (l *logger) Warn(args ...any) {
 	if !l.s.IsRecordingEvents() {
 		l.l.Warn(args...)
 		return
@@ -171,12 +171,12 @@ func (l *logger) Warn(args ...interface{}) {
 	l.s.Annotate(withLevel(lWarn, l.a), msg)
 }
 
-func (l *logger) Warnf(f string, args ...interface{}) {
+func (l *logger) Warnf(f string, args ...any) {
 	l.l.Warnf(f, args...)
 	l.s.Annotatef(withLevel(lWarn, l.a), f, args...)
 }
 
-func (l *logger) Error(args ...interface{}) {
+func (l *logger) Error(args ...any) {
 	if !l.s.IsRecordingEvents() {
 		l.l.Error(args...)
 		return
@@ -187,12 +187,12 @@ func (l *logger) Error(args ...interface{}) {
 	l.s.Annotate(withLevel(lErr, l.a), msg)
 }
 
-func (l *logger) Errorf(f string, args ...interface{}) {
+func (l *logger) Errorf(f string, args ...any) {
 	l.l.Errorf(f, args...)
 	l.s.Annotatef(withLevel(lErr, l.a), f, args...)
 }
 
-func (l *logger) Fatal(args ...interface{}) {
+func (l *logger) Fatal(args ...any) {
 	if !l.s.IsRecordingEvents() {
 		l.l.Fatal(args...)
 		return
@@ -203,7 +203,7 @@ func (l *logger) Fatal(args ...interface{}) {
 	l.l.Fatal(msg)
 }
 
-func (l *logger) Fatalf(f string, args ...interface{}) {
+func (l *logger) Fatalf(f string, args ...any) {
 	l.s.Annotatef(withLevel(lFatal, l.a), f, args...)
 	l.l.Fatalf(f, args...)
 }
@@ -221,7 +221,7 @@ func (l *logger) WithError(err error) log.Logger {
 	return &logger{s: l.s, l: log, a: a}
 }
 
-func (l *logger) WithField(k string, value interface{}) log.Logger {
+func (l *logger) WithField(k string, value any) log.Logger {
 	log := l.l.WithField(k, value)
 
 	var a []octrace.Attribute
@@ -250,7 +250,7 @@ func (l *logger) WithFields(fields log.Fields) log.Logger {
 	return &logger{s: l.s, a: a, l: log}
 }
 
-func makeAttribute(key string, val interface{}) octrace.Attribute {
+func makeAttribute(key string, val any) octrace.Attribute {
 	var attr octrace.Attribute
 
 	switch v := val.(type) {

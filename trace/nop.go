@@ -32,5 +32,5 @@ func (nopSpan) End()               {}
 func (nopSpan) SetStatus(error)    {}
 func (nopSpan) Logger() log.Logger { return nil }
 
-func (nopSpan) WithField(ctx context.Context, _ string, _ interface{}) context.Context { return ctx }
-func (nopSpan) WithFields(ctx context.Context, _ log.Fields) context.Context           { return ctx }
+func (nopSpan) WithField(ctx context.Context, _ string, _ any) context.Context { return ctx }
+func (nopSpan) WithFields(ctx context.Context, _ log.Fields) context.Context   { return ctx }

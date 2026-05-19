@@ -61,16 +61,16 @@ func (r *fakeDiscardingRecorder) Event(object runtime.Object, eventType, reason,
 	r.Eventf(object, eventType, reason, "%s", message)
 }
 
-func (r *fakeDiscardingRecorder) Eventf(object runtime.Object, eventType, reason, messageFmt string, args ...interface{}) {
-	r.logger.WithFields(map[string]interface{}{
+func (r *fakeDiscardingRecorder) Eventf(object runtime.Object, eventType, reason, messageFmt string, args ...any) {
+	r.logger.WithFields(map[string]any{
 		"object":    object,
 		"eventType": eventType,
 		"message":   fmt.Sprintf(messageFmt, args...),
 	}).Infof("Received event")
 }
 
-func (r *fakeDiscardingRecorder) PastEventf(object runtime.Object, timestamp metav1.Time, eventType, reason, messageFmt string, args ...interface{}) {
-	r.logger.WithFields(map[string]interface{}{
+func (r *fakeDiscardingRecorder) PastEventf(object runtime.Object, timestamp metav1.Time, eventType, reason, messageFmt string, args ...any) {
+	r.logger.WithFields(map[string]any{
 		"timestamp": timestamp.String(),
 		"object":    object,
 		"eventType": eventType,
@@ -78,8 +78,8 @@ func (r *fakeDiscardingRecorder) PastEventf(object runtime.Object, timestamp met
 	}).Infof("Received past event")
 }
 
-func (r *fakeDiscardingRecorder) AnnotatedEventf(object runtime.Object, annotations map[string]string, eventType, reason, messageFmt string, args ...interface{}) {
-	r.logger.WithFields(map[string]interface{}{
+func (r *fakeDiscardingRecorder) AnnotatedEventf(object runtime.Object, annotations map[string]string, eventType, reason, messageFmt string, args ...any) {
+	r.logger.WithFields(map[string]any{
 		"object":      object,
 		"annotations": annotations,
 		"eventType":   eventType,
@@ -247,7 +247,7 @@ func wireUpSystem(ctx context.Context, provider PodLifecycleHandler, f testFunct
 	defer cancel()
 
 	// Create the fake client.
-	client := fake.NewSimpleClientset()
+	client := fake.NewClientset()
 
 	client.PrependReactor("update", "pods", func(action ktesting.Action) (handled bool, ret runtime.Object, err error) {
 		var pod *corev1.Pod
@@ -351,6 +351,9 @@ func testTerminalStatePodScenario(ctx context.Context, t *testing.T, s *system, 
 	assert.NilError(t, err)
 
 	// Make sure the pods have not changed
+	// Fake clientsets populate ManagedFields, which should not affect pod equality in this test.
+	p1.ManagedFields = nil
+	p2.ManagedFields = nil
 	assert.DeepEqual(t, p1, p2)
 }
 

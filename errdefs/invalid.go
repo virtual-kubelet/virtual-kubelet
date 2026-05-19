@@ -41,7 +41,7 @@ func InvalidInput(msg string) error {
 }
 
 // InvalidInputf makes an ErrInvalidInput from the provided error format and args
-func InvalidInputf(format string, args ...interface{}) error {
+func InvalidInputf(format string, args ...any) error {
 	return &invalidInputError{fmt.Errorf(format, args...)}
 }
 
