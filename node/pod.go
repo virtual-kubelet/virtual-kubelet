@@ -17,6 +17,7 @@ package node
 import (
 	"context"
 	"fmt"
+	"sort"
 	"strings"
 	"time"
 
@@ -86,7 +87,11 @@ func (pc *PodController) createOrUpdatePod(ctx context.Context, pod *corev1.Pod)
 	// NOTE: Some providers return a non-nil error in their GetPod implementation when the pod is not found while some other don't.
 	// Hence, we ignore the error and just act upon the pod if it is non-nil (meaning that the provider still knows about the pod).
 	if podFromProvider, _ := pc.provider.GetPod(ctx, pod.Namespace, pod.Name); podFromProvider != nil {
-		if !podsEqual(podFromProvider, podForProvider) {
+		podsEqualForProvider := podsEqual
+		if !pc.skipDownwardAPIResolution {
+			podsEqualForProvider = podsEqualWithResolvedEnvs
+		}
+		if !podsEqualForProvider(podFromProvider, podForProvider) {
 			log.G(ctx).Debugf("Pod %s exists, updating pod in provider", podFromProvider.Name)
 			if origErr := pc.provider.UpdatePod(ctx, podForProvider); origErr != nil {
 				pc.handleProviderError(ctx, span, origErr, pod)
@@ -130,6 +135,41 @@ func podsEqual(pod1, pod2 *corev1.Pod) bool {
 		cmp.Equal(pod1.Labels, pod2.Labels) &&
 		cmp.Equal(pod1.Annotations, pod2.Annotations)
 
+}
+
+func podsEqualWithResolvedEnvs(pod1, pod2 *corev1.Pod) bool {
+	pod1 = pod1.DeepCopy()
+	pod2 = pod2.DeepCopy()
+
+	for i := range pod1.Spec.Containers {
+		sortResolvedEnvVars(pod1.Spec.Containers[i].Env)
+	}
+	for i := range pod2.Spec.Containers {
+		sortResolvedEnvVars(pod2.Spec.Containers[i].Env)
+	}
+	for i := range pod1.Spec.InitContainers {
+		sortResolvedEnvVars(pod1.Spec.InitContainers[i].Env)
+	}
+	for i := range pod2.Spec.InitContainers {
+		sortResolvedEnvVars(pod2.Spec.InitContainers[i].Env)
+	}
+	for i := range pod1.Spec.EphemeralContainers {
+		sortResolvedEnvVars(pod1.Spec.EphemeralContainers[i].Env)
+	}
+	for i := range pod2.Spec.EphemeralContainers {
+		sortResolvedEnvVars(pod2.Spec.EphemeralContainers[i].Env)
+	}
+
+	return podsEqual(pod1, pod2)
+}
+
+func sortResolvedEnvVars(envs []corev1.EnvVar) {
+	sort.Slice(envs, func(i, j int) bool {
+		if envs[i].Name != envs[j].Name {
+			return envs[i].Name < envs[j].Name
+		}
+		return envs[i].Value < envs[j].Value
+	})
 }
 
 func deleteGraceTimeEqual(old, new *int64) bool {

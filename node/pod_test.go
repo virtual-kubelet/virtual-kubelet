@@ -306,6 +306,48 @@ func TestPodNoSpecChange(t *testing.T) {
 	assert.Check(t, is.Equal(svr.mock.updates.read(), 0))
 }
 
+func TestPodNoSpecChangeWithResolvedEnvOrderDifference(t *testing.T) {
+	svr := newTestController()
+	svr.resourceManager = testutil.FakeResourceManager(testutil.FakeConfigMap("default", "pod-env", map[string]string{
+		"ALPHA": "1",
+		"BETA":  "2",
+	}))
+
+	pod := &corev1.Pod{}
+	pod.Namespace = "default"
+	pod.Name = "nginx"
+	pod.Spec = newPodSpec()
+	pod.Spec.EnableServiceLinks = boolPtr(false)
+	pod.Spec.Containers[0].EnvFrom = []corev1.EnvFromSource{{
+		ConfigMapRef: &corev1.ConfigMapEnvSource{
+			LocalObjectReference: corev1.LocalObjectReference{Name: "pod-env"},
+		},
+	}}
+
+	err := svr.createOrUpdatePod(context.Background(), pod.DeepCopy())
+	assert.Check(t, is.Nil(err))
+	assert.Check(t, is.Equal(svr.mock.creates.read(), 1))
+	assert.Check(t, is.Equal(svr.mock.updates.read(), 0))
+
+	key, err := buildKey(pod)
+	assert.Check(t, is.Nil(err))
+	createdPod, ok := svr.mock.pods.Load(key)
+	assert.Check(t, ok)
+
+	storedPod := createdPod.(*corev1.Pod).DeepCopy()
+	storedPod.Spec.Containers[0].Env = []corev1.EnvVar{
+		storedPod.Spec.Containers[0].Env[1],
+		storedPod.Spec.Containers[0].Env[0],
+	}
+	svr.mock.pods.Store(key, storedPod)
+
+	err = svr.createOrUpdatePod(context.Background(), pod.DeepCopy())
+	assert.Check(t, is.Nil(err))
+
+	assert.Check(t, is.Equal(svr.mock.creates.read(), 1))
+	assert.Check(t, is.Equal(svr.mock.updates.read(), 0))
+}
+
 func TestPodStatusDelete(t *testing.T) {
 	ctx := context.Background()
 	c := newTestController()
@@ -669,4 +711,8 @@ func newPodSpec() corev1.PodSpec {
 			},
 		},
 	}
+}
+
+func boolPtr(v bool) *bool {
+	return &v
 }
