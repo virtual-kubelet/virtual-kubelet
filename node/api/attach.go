@@ -74,6 +74,7 @@ func HandleContainerAttach(h ContainerAttachHandlerFunc, opts ...ContainerExecHa
 			w,
 			req,
 			attach,
+			cancel,
 			"",
 			"",
 			container,

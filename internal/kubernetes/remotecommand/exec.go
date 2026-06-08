@@ -41,13 +41,17 @@ type Executor interface {
 // ServeExec handles requests to execute a command in a container. After
 // creating/receiving the required streams, it delegates the actual execution
 // to the executor.
-func ServeExec(w http.ResponseWriter, req *http.Request, executor Executor, podName string, uid types.UID, container string, cmd []string, streamOpts *Options, idleTimeout, streamCreationTimeout time.Duration, supportedProtocols []string) {
+func ServeExec(w http.ResponseWriter, req *http.Request, executor Executor, cancel func(), podName string, uid types.UID, container string, cmd []string, streamOpts *Options, idleTimeout, streamCreationTimeout time.Duration, supportedProtocols []string) {
 	ctx, ok := createStreams(req, w, streamOpts, supportedProtocols, idleTimeout, streamCreationTimeout)
 	if !ok {
 		// error is handled by createStreams
 		return
 	}
 	defer ctx.conn.Close()
+
+	execDone := make(chan struct{})
+	defer close(execDone)
+	go watchClose(closeChan(ctx.conn), execDone, cancel)
 
 	err := executor.ExecInContainer(podName, uid, container, cmd, ctx.stdinStream, ctx.stdoutStream, ctx.stderrStream, ctx.tty, ctx.resizeChan, 0)
 	if err != nil {

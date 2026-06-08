@@ -112,8 +112,7 @@ func HandleContainerExec(h ContainerExecHandlerFunc, opts ...ContainerExecHandle
 			return errdefs.AsInvalidInput(err)
 		}
 
-		// TODO: Why aren't we using req.Context() here?
-		ctx, cancel := context.WithCancel(context.TODO())
+		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 
 		exec := &containerExecContext{ctx: ctx, h: h, pod: pod, namespace: namespace, container: container}
@@ -121,6 +120,7 @@ func HandleContainerExec(h ContainerExecHandlerFunc, opts ...ContainerExecHandle
 			w,
 			req,
 			exec,
+			cancel,
 			"",
 			"",
 			container,
