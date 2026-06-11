@@ -6,8 +6,8 @@ Virtual Kubelet (VK) provides an importable end-to-end (E2E) test suite containi
 
 To run the E2E test suite, three things are required:
 
-- A local Kubernetes cluster (we have tested with [Docker for Mac](https://docs.docker.com/docker-for-mac/install/) and [Minikube](https://kubernetes.io/docs/tasks/tools/install-minikube/));
-- Your _kubeconfig_ default context points to the local Kubernetes cluster;
+- A Kubernetes cluster (we have tested with [Docker for Mac](https://docs.docker.com/docker-for-mac/install/), [Minikube](https://kubernetes.io/docs/tasks/tools/install-minikube/), [kind](https://kind.sigs.k8s.io/), and other Kubernetes distributions);
+- Your _kubeconfig_ default context points to the Kubernetes cluster;
 - [skaffold](https://skaffold.dev/docs/getting-started/#installing-skaffold)
 
 > The test suite is based on [VK 1.0](https://github.com/virtual-kubelet/virtual-kubelet/releases/tag/v1.0.0). If your VK implementation is based on legacy VK library (< v1.0.0), you will have to upgrade it to VK 1.0 using [virtual-kubelet/node-cli](https://github.com/virtual-kubelet/node-cli).
@@ -150,6 +150,12 @@ func TestEndToEnd(t *testing.T) {
 
 ## Running the Test Suite
 
+The E2E test suite targets a Kubernetes cluster whose name appears in your kubeconfig.
+`Makefile.e2e` keeps the historical guard: the current kubectl context must be `minikube`, `docker-for-desktop`, `docker-desktop`, or a `kind-*` context, unless you opt out (see below).
+Below are examples using common distributions.
+
+### Using Minikube
+
 Since our CI uses Minikube, we describe below how to run E2E on top of it.
 
 To create a Minikube cluster, run the following command after [installing Minikube](https://github.com/kubernetes/minikube#installation):
@@ -158,10 +164,31 @@ To create a Minikube cluster, run the following command after [installing Miniku
 minikube start
 ```
 
+### Using kind
+
+To run with [kind](https://kind.sigs.k8s.io/):
+
+```bash
+kind create cluster
+```
+
+### Using other clusters
+
+For clusters that are not Minikube, Docker Desktop, or kind, set `VK_E2E_ALLOW_ANY_CONTEXT=1` when running `make e2e` so the Makefile skips the allowlist.
+Only do this for clusters you trust (avoid production).
+
+### Running the tests
+
 To run the E2E test suite, you can run the following command:
 
 ```bash
 make e2e
+```
+
+#### Opt out of context allowlist
+
+```bash
+VK_E2E_ALLOW_ANY_CONTEXT=1 make e2e
 ```
 
 You can see from the console output whether the tests in the test suite pass or not.
