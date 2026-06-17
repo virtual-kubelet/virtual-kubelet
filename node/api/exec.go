@@ -115,12 +115,11 @@ func HandleContainerExec(h ContainerExecHandlerFunc, opts ...ContainerExecHandle
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 
-		exec := &containerExecContext{ctx: ctx, h: h, pod: pod, namespace: namespace, container: container}
+		exec := &containerExecContext{ctx: ctx, cancel: cancel, h: h, pod: pod, namespace: namespace, container: container}
 		remotecommand.ServeExec(
 			w,
 			req,
 			exec,
-			cancel,
 			"",
 			"",
 			container,
@@ -167,7 +166,12 @@ type containerExecContext struct {
 	h                         ContainerExecHandlerFunc
 	namespace, pod, container string
 	ctx                       context.Context
+	cancel                    context.CancelFunc
 }
+
+// Cancel is the opt-in hook remotecommand.ServeExec type-asserts to cancel the
+// exec context on client disconnect.
+func (c *containerExecContext) Cancel() { c.cancel() }
 
 // ExecInContainer Implements remotecommand.Executor
 // This is called by remotecommand.ServeExec

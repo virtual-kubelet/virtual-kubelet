@@ -22,7 +22,7 @@ import "io"
 // close channel fires (a client disconnect or the stream idle-timeout), and
 // returns without cancelling when the exec/attach completes first (execDone).
 // A nil closeCh (e.g. the websocket transport, which has no CloseChan) is never
-// selected, so the watcher simply waits for execDone — never spuriously
+// selected, so the watcher simply waits for execDone - never spuriously
 // cancelling. The goroutine always terminates once either channel fires.
 func watchClose(closeCh <-chan bool, execDone <-chan struct{}, cancel func()) {
 	select {

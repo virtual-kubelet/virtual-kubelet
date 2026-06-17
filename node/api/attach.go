@@ -69,12 +69,11 @@ func HandleContainerAttach(h ContainerAttachHandlerFunc, opts ...ContainerExecHa
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 
-		attach := &containerAttachContext{ctx: ctx, h: h, pod: pod, namespace: namespace, container: container}
+		attach := &containerAttachContext{ctx: ctx, cancel: cancel, h: h, pod: pod, namespace: namespace, container: container}
 		remotecommand.ServeAttach(
 			w,
 			req,
 			attach,
-			cancel,
 			"",
 			"",
 			container,
@@ -92,7 +91,12 @@ type containerAttachContext struct {
 	h                         ContainerAttachHandlerFunc
 	namespace, pod, container string
 	ctx                       context.Context
+	cancel                    context.CancelFunc
 }
+
+// Cancel is the opt-in hook remotecommand.ServeAttach type-asserts to cancel the
+// attach context on client disconnect.
+func (c *containerAttachContext) Cancel() { c.cancel() }
 
 // AttachToContainer Implements remotecommand.Attacher
 // This is called by remotecommand.ServeAttach
