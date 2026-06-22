@@ -49,6 +49,15 @@ func ServeExec(w http.ResponseWriter, req *http.Request, executor Executor, podN
 	}
 	defer ctx.conn.Close()
 
+	// An executor may opt into client-disconnect cancellation by implementing
+	// Cancel; closeChan fires it on a SPDY CloseChan. Inert on transports without
+	// a CloseChan (websocket observes disconnect via stream closure).
+	if canceler, ok := executor.(interface{ Cancel() }); ok {
+		execDone := make(chan struct{})
+		defer close(execDone)
+		go watchClose(closeChan(ctx.conn), execDone, canceler.Cancel)
+	}
+
 	err := executor.ExecInContainer(podName, uid, container, cmd, ctx.stdinStream, ctx.stdoutStream, ctx.stderrStream, ctx.tty, ctx.resizeChan, 0)
 	if err != nil {
 		if exitErr, ok := err.(utilexec.ExitError); ok && exitErr.Exited() {

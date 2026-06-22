@@ -49,6 +49,15 @@ func ServeAttach(w http.ResponseWriter, req *http.Request, attacher Attacher, po
 	}
 	defer ctx.conn.Close()
 
+	// An attacher may opt into client-disconnect cancellation by implementing
+	// Cancel; closeChan fires it on a SPDY CloseChan. Inert on transports without
+	// a CloseChan (websocket observes disconnect via stream closure).
+	if canceler, ok := attacher.(interface{ Cancel() }); ok {
+		execDone := make(chan struct{})
+		defer close(execDone)
+		go watchClose(closeChan(ctx.conn), execDone, canceler.Cancel)
+	}
+
 	err := attacher.AttachToContainer(podName, uid, container, ctx.stdinStream, ctx.stdoutStream, ctx.stderrStream, ctx.tty, ctx.resizeChan, 0)
 	if err != nil {
 		if exitErr, ok := err.(utilexec.ExitError); ok && exitErr.Exited() {
