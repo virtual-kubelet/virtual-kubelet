@@ -26,7 +26,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/virtual-kubelet/virtual-kubelet/node/api"
-	"google.golang.org/protobuf/proto"
 )
 
 const (
@@ -45,14 +44,14 @@ func TestHandlePodMetricsResource(t *testing.T) {
 			handler: func(_ context.Context) ([]*dto.MetricFamily, error) {
 				// Create the expected metrics.
 				cpuUsageMetric := &dto.MetricFamily{
-					Name:   proto.String("container_cpu_usage_seconds_total"),
-					Help:   proto.String("[ALPHA] Cumulative cpu time consumed by the container in core-seconds"),
+					Name:   new("container_cpu_usage_seconds_total"),
+					Help:   new("[ALPHA] Cumulative cpu time consumed by the container in core-seconds"),
 					Type:   dto.MetricType_GAUGE.Enum(),
 					Metric: []*dto.Metric{},
 				}
 				memoryUsageMetric := &dto.MetricFamily{
-					Name:   proto.String("container_memory_working_set_bytes"),
-					Help:   proto.String("[ALPHA] Current working set of the container in bytes"),
+					Name:   new("container_memory_working_set_bytes"),
+					Help:   new("[ALPHA] Current working set of the container in bytes"),
 					Type:   dto.MetricType_GAUGE.Enum(),
 					Metric: []*dto.Metric{},
 				}
@@ -140,8 +139,8 @@ func createSampleMetric(labels map[string]string, value float64, timestamp int64
 	labelPairs := []*dto.LabelPair{}
 	for k, v := range labels {
 		labelPairs = append(labelPairs, &dto.LabelPair{
-			Name:  proto.String(k),
-			Value: proto.String(v),
+			Name:  new(k),
+			Value: new(v),
 		})
 	}
 
