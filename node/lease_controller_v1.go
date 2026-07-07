@@ -30,6 +30,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 	coordclientset "k8s.io/client-go/kubernetes/typed/coordination/v1"
 	"k8s.io/utils/clock"
+	"k8s.io/utils/ptr"
 )
 
 // Code heavily borrowed from: https://github.com/kubernetes/kubernetes/blob/v1.18.13/pkg/kubelet/nodelease/controller.go
@@ -274,8 +275,8 @@ func (c *leaseController) newLease(ctx context.Context, node *corev1.Node, base 
 				Namespace: corev1.NamespaceNodeLease,
 			},
 			Spec: coordinationv1.LeaseSpec{
-				HolderIdentity:       new(node.Name),
-				LeaseDurationSeconds: new(c.leaseDurationSeconds),
+				HolderIdentity:       ptr.To(node.Name),
+				LeaseDurationSeconds: ptr.To(c.leaseDurationSeconds),
 			},
 		}
 	} else {

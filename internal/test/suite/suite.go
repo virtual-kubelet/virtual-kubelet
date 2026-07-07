@@ -45,7 +45,8 @@ func Run(t *testing.T, ts TestSuite) {
 	// The implementation below is based on https://github.com/stretchr/testify
 	testFinder := reflect.TypeOf(ts)
 	tests := []testCase{}
-	for method := range testFinder.Methods() {
+	for i := 0; i < testFinder.NumMethod(); i++ {
+		method := testFinder.Method(i)
 		if !isValidTestFunc(method) {
 			continue
 		}

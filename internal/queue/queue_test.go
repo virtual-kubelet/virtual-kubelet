@@ -17,6 +17,7 @@ import (
 	is "gotest.tools/assert/cmp"
 	"k8s.io/client-go/util/workqueue"
 	"k8s.io/utils/clock"
+	"k8s.io/utils/ptr"
 )
 
 func TestQueueMaxRetries(t *testing.T) {
@@ -65,7 +66,7 @@ func TestQueueCustomRetries(t *testing.T) {
 		var sleepTime *time.Duration
 		if errors.Is(err, retryTestError) {
 			errorSeen++
-			sleepTime = new(10 * time.Millisecond)
+			sleepTime = ptr.To(10 * time.Millisecond)
 		}
 		_, retErr := DefaultRetryFunc(ctx, key, timesTried, originallyAdded, err)
 		return sleepTime, retErr
@@ -135,8 +136,8 @@ func TestQueueItemNoSleep(t *testing.T) {
 	}, nil)
 
 	q.lock.Lock()
-	q.insert(ctx, "foo", false, new(-1*time.Hour))
-	q.insert(ctx, "bar", false, new(-1*time.Hour))
+	q.insert(ctx, "foo", false, ptr.To(-1*time.Hour))
+	q.insert(ctx, "bar", false, ptr.To(-1*time.Hour))
 	q.lock.Unlock()
 
 	item, err := q.getNextItem(ctx)
@@ -158,8 +159,8 @@ func TestQueueItemSleep(t *testing.T) {
 		return nil
 	}, nil)
 	q.lock.Lock()
-	q.insert(ctx, "foo", false, new(100*time.Millisecond))
-	q.insert(ctx, "bar", false, new(100*time.Millisecond))
+	q.insert(ctx, "foo", false, ptr.To(100*time.Millisecond))
+	q.insert(ctx, "bar", false, ptr.To(100*time.Millisecond))
 	q.lock.Unlock()
 
 	item, err := q.getNextItem(ctx)
@@ -200,7 +201,7 @@ func TestQueueBackgroundAdvance(t *testing.T) {
 	}, nil)
 	start := time.Now()
 	q.lock.Lock()
-	q.insert(ctx, "foo", false, new(10*time.Second))
+	q.insert(ctx, "foo", false, ptr.To(10*time.Second))
 	q.lock.Unlock()
 
 	time.AfterFunc(200*time.Millisecond, func() {
@@ -454,21 +455,21 @@ func TestQueueMoveItem(t *testing.T) {
 	}, nil)
 	q.clock = nonmovingClock{}
 
-	q.insert(ctx, "foo", false, new(time.Duration(3000)))
-	q.insert(ctx, "bar", false, new(time.Duration(2000)))
-	q.insert(ctx, "baz", false, new(time.Duration(1000)))
+	q.insert(ctx, "foo", false, ptr.To(time.Duration(3000)))
+	q.insert(ctx, "bar", false, ptr.To(time.Duration(2000)))
+	q.insert(ctx, "baz", false, ptr.To(time.Duration(1000)))
 	checkConsistency(t, q)
 	t.Log(q)
 
-	q.insert(ctx, "foo", false, new(time.Duration(2000)))
+	q.insert(ctx, "foo", false, ptr.To(time.Duration(2000)))
 	checkConsistency(t, q)
 	t.Log(q)
 
-	q.insert(ctx, "foo", false, new(time.Duration(1999)))
+	q.insert(ctx, "foo", false, ptr.To(time.Duration(1999)))
 	checkConsistency(t, q)
 	t.Log(q)
 
-	q.insert(ctx, "foo", false, new(time.Duration(999)))
+	q.insert(ctx, "foo", false, ptr.To(time.Duration(999)))
 	checkConsistency(t, q)
 	t.Log(q)
 }
