@@ -70,7 +70,7 @@ func ConvertDownwardAPIFieldLabel(version, label, value string) (string, string,
 // ExtractFieldPathAsString extracts the field from the given object
 // and returns it as a string.  The object must be a pointer to an
 // API type.
-func ExtractFieldPathAsString(obj interface{}, fieldPath string) (string, error) {
+func ExtractFieldPathAsString(obj any, fieldPath string) (string, error) {
 	accessor, err := meta.Accessor(obj)
 	if err != nil {
 		return "", err

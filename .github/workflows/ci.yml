@@ -12,9 +12,6 @@ on:
 permissions:
   contents: read
 
-env:
-  GO_VERSION: "1.25"
-
 jobs:
   lint:
     name: Lint
@@ -25,7 +22,7 @@ jobs:
         uses: actions/checkout@v7
       - uses: actions/setup-go@v6
         with:
-          go-version: ${{ env.GO_VERSION }}
+          go-version-file: go.mod
           cache: false
       - uses: actions/checkout@v7
       - uses: golangci/golangci-lint-action@v9
@@ -43,7 +40,7 @@ jobs:
         uses: actions/checkout@v7
       - uses: actions/setup-go@v6
         with:
-          go-version: ${{ env.GO_VERSION }}
+          go-version-file: go.mod
       - uses: actions/checkout@v7
       - name: Run Tests
         run: make test
@@ -57,7 +54,7 @@ jobs:
         uses: actions/checkout@v7
       - uses: actions/setup-go@v6
         with:
-          go-version: ${{ env.GO_VERSION }}
+          go-version-file: go.mod
       - uses: actions/checkout@v7
       - name: Run Tests
         run: make envtest
@@ -68,20 +65,20 @@ jobs:
     timeout-minutes: 20
     env:
       CHANGE_MINIKUBE_NONE_USER: true
-      KUBERNETES_VERSION: v1.34
+      KUBERNETES_VERSION: v1.35
       MINIKUBE_HOME: /home/runner
-      MINIKUBE_VERSION: v1.37.0
+      MINIKUBE_VERSION: v1.38.1
       MINIKUBE_WANTUPDATENOTIFICATION: false
       MINIKUBE_WANTREPORTERRORPROMPT: false
       SKAFFOLD_VERSION: v2.13.2
       GO111MODULE: "on"
 
     steps:
-      - uses: actions/setup-go@v6
-        with:
-          go-version: ${{ env.GO_VERSION }}
       - name: Checkout repository
         uses: actions/checkout@v7
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
       - name: Install Skaffold
         run: |
           curl -sLo skaffold https://storage.googleapis.com/skaffold/releases/${SKAFFOLD_VERSION}/skaffold-linux-amd64
