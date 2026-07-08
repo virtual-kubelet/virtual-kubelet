@@ -34,6 +34,7 @@ import (
 	"k8s.io/client-go/kubernetes/fake"
 	core "k8s.io/client-go/testing"
 	"k8s.io/client-go/util/workqueue"
+	"k8s.io/utils/ptr"
 
 	testutil "github.com/virtual-kubelet/virtual-kubelet/internal/test/util"
 )
@@ -317,7 +318,7 @@ func TestPodNoSpecChangeWithResolvedEnvOrderDifference(t *testing.T) {
 	pod.Namespace = "default"
 	pod.Name = "nginx"
 	pod.Spec = newPodSpec()
-	pod.Spec.EnableServiceLinks = boolPtr(false)
+	pod.Spec.EnableServiceLinks = ptr.To(false)
 	pod.Spec.Containers[0].EnvFrom = []corev1.EnvFromSource{{
 		ConfigMapRef: &corev1.ConfigMapEnvSource{
 			LocalObjectReference: corev1.LocalObjectReference{Name: "pod-env"},
@@ -711,8 +712,4 @@ func newPodSpec() corev1.PodSpec {
 			},
 		},
 	}
-}
-
-func boolPtr(v bool) *bool {
-	return &v
 }
