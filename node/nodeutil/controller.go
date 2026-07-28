@@ -340,25 +340,22 @@ func NewNode(name string, newProvider NewProviderFunc, opts ...NodeOpt) (*Node, 
 		cfg.Client,
 		cfg.InformerResyncPeriod,
 	)
-
-	podInformer := podInformerFactory.Core().V1().Pods()
-	secretInformer := scmInformerFactory.Core().V1().Secrets()
-	configMapInformer := scmInformerFactory.Core().V1().ConfigMaps()
-	serviceInformer := scmInformerFactory.Core().V1().Services()
-
-	p, np, err := newProvider(ProviderConfig{
-		Pods:       podInformer.Lister(),
-		ConfigMaps: configMapInformer.Lister(),
-		Secrets:    secretInformer.Lister(),
-		Services:   serviceInformer.Lister(),
-		Node:       &cfg.NodeSpec,
-	})
+	providerConfig := ProviderConfig{
+		Pods: podInformerFactory.Core().V1().Pods().Lister(),
+		Node: &cfg.NodeSpec,
+	}
+	if !cfg.SkipDownwardAPIResolution {
+		providerConfig.ConfigMaps = scmInformerFactory.Core().V1().ConfigMaps().Lister()
+		providerConfig.Secrets = scmInformerFactory.Core().V1().Secrets().Lister()
+		providerConfig.Services = scmInformerFactory.Core().V1().Services().Lister()
+	}
+	p, np, err := newProvider(providerConfig)
 	if err != nil {
 		return nil, errors.Wrap(err, "error creating provider")
 	}
 
 	if cfg.routeAttacher != nil {
-		cfg.routeAttacher(p, cfg, podInformer.Lister())
+		cfg.routeAttacher(p, cfg, podInformerFactory.Core().V1().Pods().Lister())
 	}
 
 	var readyCb func(context.Context) error
@@ -397,16 +394,19 @@ func NewNode(name string, newProvider NewProviderFunc, opts ...NodeOpt) (*Node, 
 		cfg.EventRecorder = eb.NewRecorder(scheme.Scheme, v1.EventSource{Component: path.Join(name, "pod-controller")})
 	}
 
-	pc, err := node.NewPodController(node.PodControllerConfig{
+	podControllerConfig := node.PodControllerConfig{
 		PodClient:                 cfg.Client.CoreV1(),
 		EventRecorder:             cfg.EventRecorder,
 		Provider:                  p,
-		PodInformer:               podInformer,
-		SecretInformer:            secretInformer,
-		ConfigMapInformer:         configMapInformer,
-		ServiceInformer:           serviceInformer,
+		PodInformer:               podInformerFactory.Core().V1().Pods(),
 		SkipDownwardAPIResolution: cfg.SkipDownwardAPIResolution,
-	})
+	}
+	if !cfg.SkipDownwardAPIResolution {
+		podControllerConfig.ConfigMapInformer = scmInformerFactory.Core().V1().ConfigMaps()
+		podControllerConfig.SecretInformer = scmInformerFactory.Core().V1().Secrets()
+		podControllerConfig.ServiceInformer = scmInformerFactory.Core().V1().Services()
+	}
+	pc, err := node.NewPodController(podControllerConfig)
 	if err != nil {
 		return nil, errors.Wrap(err, "error creating pod controller")
 	}

@@ -34,7 +34,11 @@ func FakeResourceManager(objects ...runtime.Object) *manager.ResourceManager {
 		panic("failed to wait for caches to be synced")
 	}
 	// Create a new instance of the resource manager using the listers for pods, configmaps and secrets.
-	r, err := manager.NewResourceManager(pInformer.Lister(), sInformer.Lister(), mInformer.Lister(), svcInformer.Lister())
+	r, err := manager.NewResourceManager(pInformer.Lister(),
+		manager.WithServiceLister(svcInformer.Lister()),
+		manager.WithSecretLister(sInformer.Lister()),
+		manager.WithConfigMapLister(mInformer.Lister()),
+	)
 	if err != nil {
 		panic(err)
 	}
