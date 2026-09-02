@@ -364,6 +364,14 @@ func TestBeforeAnnotationsPreserved(t *testing.T) {
 
 	go node.Run(ctx) //nolint:errcheck
 
+	select {
+	case <-node.Ready():
+	case <-node.Done():
+		t.Fatalf("node.Run returned before becoming ready: %v", node.Err())
+	case <-time.After(10 * time.Second):
+		t.Fatal("timeout waiting for node to be ready")
+	}
+
 	nw := makeWatch(ctx, t, nodes, testNodeCopy.Name)
 	defer nw.Stop()
 	nr := nw.ResultChan()
@@ -427,6 +435,14 @@ func TestManualConditionsPreserved(t *testing.T) {
 	}()
 
 	go node.Run(ctx) //nolint:errcheck
+
+	select {
+	case <-node.Ready():
+	case <-node.Done():
+		t.Fatalf("node.Run returned before becoming ready: %v", node.Err())
+	case <-time.After(10 * time.Second):
+		t.Fatal("timeout waiting for node to be ready")
+	}
 
 	nw := makeWatch(ctx, t, nodes, testNodeCopy.Name)
 	defer nw.Stop()

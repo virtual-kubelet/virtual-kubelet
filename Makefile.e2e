@@ -36,8 +36,11 @@ skaffold/run skaffold/dev: bin/e2e/virtual-kubelet
 bin/e2e:
 	@mkdir -p bin/e2e
 
+E2E_GOOS ?= linux
+E2E_GOARCH ?= $(shell go env GOARCH)
+
 bin/e2e/virtual-kubelet: bin/e2e
-	GOOS=linux GOARCH=amd64 $(MAKE) OUTPUT_DIR=$(@D) build
+	GOOS=$(E2E_GOOS) GOARCH=$(E2E_GOARCH) $(MAKE) OUTPUT_DIR=$(@D) build
 
 # e2e runs the end-to-end test suite against the Kubernetes cluster targeted by the current kubeconfig.
 # It automatically deploys the virtual-kubelet with the mock provider by running "make skaffold MODE=run".

@@ -24,10 +24,9 @@ jobs:
         with:
           go-version-file: go.mod
           cache: false
-      - uses: actions/checkout@v7
       - uses: golangci/golangci-lint-action@v9
         with:
-          version: v2.8.0
+          version: v2.13.2
           args: --timeout=15m --config=.golangci.yml
           skip-cache: true
 
@@ -41,7 +40,6 @@ jobs:
       - uses: actions/setup-go@v7
         with:
           go-version-file: go.mod
-      - uses: actions/checkout@v7
       - name: Run Tests
         run: make test
 
@@ -55,7 +53,6 @@ jobs:
       - uses: actions/setup-go@v7
         with:
           go-version-file: go.mod
-      - uses: actions/checkout@v7
       - name: Run Tests
         run: make envtest
 
@@ -64,13 +61,12 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
-      CHANGE_MINIKUBE_NONE_USER: true
-      KUBERNETES_VERSION: v1.35
-      MINIKUBE_HOME: /home/runner
-      MINIKUBE_VERSION: v1.38.1
-      MINIKUBE_WANTUPDATENOTIFICATION: false
-      MINIKUBE_WANTREPORTERRORPROMPT: false
-      SKAFFOLD_VERSION: v2.13.2
+      KIND_CLUSTER_NAME: virtual-kubelet
+      KIND_NODE_IMAGE: kindest/node:v1.37.0@sha256:a1ed56cfb0e7b93589bdf97c8cd566405a265939e3620fc4f5de89adff580ae5
+      KIND_VERSION: v0.33.0
+      KUBERNETES_VERSION: v1.37.0
+      SKAFFOLD_SHA256: 702344081860a587c57937cd55dfa2e70f124c05d6fb845319832ee23fd144a8
+      SKAFFOLD_VERSION: v2.24.0
       GO111MODULE: "on"
 
     steps:
@@ -81,32 +77,30 @@ jobs:
           go-version-file: go.mod
       - name: Install Skaffold
         run: |
-          curl -sLo skaffold https://storage.googleapis.com/skaffold/releases/${SKAFFOLD_VERSION}/skaffold-linux-amd64
-          chmod +x skaffold
-          sudo mv skaffold /usr/local/bin/
+          curl -fsSLo skaffold https://storage.googleapis.com/skaffold/releases/${SKAFFOLD_VERSION}/skaffold-linux-amd64
+          echo "${SKAFFOLD_SHA256}  skaffold" | sha256sum --check
+          sudo install -m 0755 skaffold /usr/local/bin/skaffold
           echo /usr/local/bin >> $GITHUB_PATH
-      - name: Install Minikube dependencies
+      - name: Install kubectl
         run: |
-          sudo apt-get update && sudo apt-get install -y apt-transport-https curl
-          echo "deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/${KUBERNETES_VERSION}/deb/ /" | sudo tee /etc/apt/sources.list.d/kubernetes.list
-          curl -fsSL https://pkgs.k8s.io/core:/stable:/${KUBERNETES_VERSION}/deb/Release.key | sudo gpg --no-tty --yes --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
-          sudo apt-get update
-          sudo apt-get remove -y containerd.io containerd
-          sudo apt-get install -y kubectl docker.io
-      - name: Install Minikube
+          curl -fsSLo kubectl https://dl.k8s.io/release/${KUBERNETES_VERSION}/bin/linux/amd64/kubectl
+          curl -fsSLo kubectl.sha256 https://dl.k8s.io/release/${KUBERNETES_VERSION}/bin/linux/amd64/kubectl.sha256
+          echo "$(cat kubectl.sha256)  kubectl" | sha256sum --check
+          sudo install -m 0755 kubectl /usr/local/bin/kubectl
+      - name: Install kind
         run: |
-          curl -sLo minikube https://storage.googleapis.com/minikube/releases/${MINIKUBE_VERSION}/minikube-linux-amd64
-          chmod +x minikube
-          sudo mv minikube /usr/local/bin/
-      - name: Start Minikube
+          curl -fsSLo kind-linux-amd64 https://kind.sigs.k8s.io/dl/${KIND_VERSION}/kind-linux-amd64
+          curl -fsSLo kind.sha256sum https://kind.sigs.k8s.io/dl/${KIND_VERSION}/kind-linux-amd64.sha256sum
+          sha256sum --check kind.sha256sum
+          sudo install -m 0755 kind-linux-amd64 /usr/local/bin/kind
+      - name: Start kind
         run: |
-          sudo usermod -aG docker $USER && newgrp docker
-          minikube start --vm-driver=docker --cpus 2 --memory 2048 --kubernetes-version=${KUBERNETES_VERSION}
-      - name: Wait for Minikube
-        run: |
-          JSONPATH='{range .items[*]}{@.metadata.name}:{range @.status.conditions[*]}{@.type}={@.status};{end}{end}';
-          until kubectl get nodes -o jsonpath="$JSONPATH" 2>&1 | grep -q "Ready=True"; do
-            sleep 1;
-          done
+          kind create cluster \
+            --name "${KIND_CLUSTER_NAME}" \
+            --image "${KIND_NODE_IMAGE}" \
+            --wait 120s
       - name: Run Tests
         run: make e2e
+      - name: Delete kind cluster
+        if: always()
+        run: kind delete cluster --name "${KIND_CLUSTER_NAME}"

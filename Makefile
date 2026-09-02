@@ -165,8 +165,8 @@ authors:
 	rm -f NEWAUTHORS
 	rm -f GITAUTHORS
 
-SETUP_ENVTEST_VERSION ?= v0.0.0-20250604165838-d6126d850224
-ENVTEST_K8S_VERSION := 1.31.x
+SETUP_ENVTEST_VERSION ?= v0.24.1
+ENVTEST_K8S_VERSION := 1.36.x
 
 ENVTEST ?= go run sigs.k8s.io/controller-runtime/tools/setup-envtest@$(SETUP_ENVTEST_VERSION)
 ENVTEST_DIR ?= $(shell pwd)/.envtest
@@ -183,7 +183,7 @@ fmt:
 	goimports -w $(shell go list -f '{{.Dir}}' ./...)
 
 
-export GOLANG_CI_LINT_VERSION ?= v2.8.0
+export GOLANG_CI_LINT_VERSION ?= v2.13.2
 DOCKER_BUILD ?= docker buildx build
 
 .PHONY: lint

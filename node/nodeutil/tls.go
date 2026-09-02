@@ -12,10 +12,9 @@ import (
 func WithTLSConfig(opts ...func(*tls.Config) error) NodeOpt {
 	return func(cfg *NodeConfig) error {
 		tlsCfg := &tls.Config{
-			MinVersion:               tls.VersionTLS12,
-			PreferServerCipherSuites: true,
-			CipherSuites:             DefaultServerCiphers(),
-			ClientAuth:               tls.RequestClientCert,
+			MinVersion:   tls.VersionTLS12,
+			CipherSuites: DefaultServerCiphers(),
+			ClientAuth:   tls.RequestClientCert,
 		}
 		for _, o := range opts {
 			if err := o(tlsCfg); err != nil {

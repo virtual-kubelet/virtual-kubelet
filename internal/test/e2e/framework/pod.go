@@ -77,11 +77,11 @@ func (f *Framework) WaitUntilPodCondition(namespace, name string, fn watch.Condi
 	fs := fields.ParseSelectorOrDie(fmt.Sprintf("metadata.namespace==%s,metadata.name==%s", namespace, name))
 	// Create a ListWatch so we can receive events for the matched Pod resource.
 	lw := &cache.ListWatch{
-		ListFunc: func(options metav1.ListOptions) (runtime.Object, error) {
+		ListWithContextFunc: func(ctx context.Context, options metav1.ListOptions) (runtime.Object, error) {
 			options.FieldSelector = fs.String()
 			return f.KubeClient.CoreV1().Pods(namespace).List(ctx, options)
 		},
-		WatchFunc: func(options metav1.ListOptions) (watchapi.Interface, error) {
+		WatchFuncWithContext: func(ctx context.Context, options metav1.ListOptions) (watchapi.Interface, error) {
 			options.FieldSelector = fs.String()
 			return f.KubeClient.CoreV1().Pods(namespace).Watch(ctx, options)
 		},
@@ -142,11 +142,11 @@ func (f *Framework) WaitUntilPodEventWithReason(pod *corev1.Pod, reason string) 
 	fs := fields.ParseSelectorOrDie(fmt.Sprintf("involvedObject.kind==Pod,involvedObject.uid==%s", pod.UID))
 	// Create a ListWatch so we can receive events for the matched Event resource.
 	lw := &cache.ListWatch{
-		ListFunc: func(options metav1.ListOptions) (runtime.Object, error) {
+		ListWithContextFunc: func(ctx context.Context, options metav1.ListOptions) (runtime.Object, error) {
 			options.FieldSelector = fs.String()
 			return f.KubeClient.CoreV1().Events(pod.Namespace).List(ctx, options)
 		},
-		WatchFunc: func(options metav1.ListOptions) (watchapi.Interface, error) {
+		WatchFuncWithContext: func(ctx context.Context, options metav1.ListOptions) (watchapi.Interface, error) {
 			options.FieldSelector = fs.String()
 			return f.KubeClient.CoreV1().Events(pod.Namespace).Watch(ctx, options)
 		},
