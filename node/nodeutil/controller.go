@@ -210,16 +210,7 @@ func (n *Node) Err() error {
 }
 
 // NodeOpt is used as functional options when configuring a new node in NewNodeFromClient
-type NodeOpt func(c *NodeOptions)
-
-type NodeOptions struct {
-	NodeConfigOpts          []NodeConfigOpt
-	PodControllerConfigOpts []PodControllerConfigOpt
-}
-
-type NodeConfigOpt func(c *NodeConfig) error
-
-type PodControllerConfigOpt func(c *node.PodControllerConfig) error
+type NodeOpt func(c *NodeConfig) error
 
 // NodeConfig is used to hold configuration items for a Node.
 // It gets used in conjection with NodeOpt in NewNodeFromClient
@@ -268,11 +259,16 @@ type NodeConfig struct {
 	// Providers need this if they need to do their own custom resolving
 	SkipDownwardAPIResolution bool
 
+	// PodControllerConfigOpts holds functions which mutate the node.PodControllerConfig
+	// just before the pod controller is created. They are applied in order and may return
+	// an error to abort node creation. Use WithPodControllerConfigOverrides to set these.
+	PodControllerConfigOpts []func(*node.PodControllerConfig) error
+
 	routeAttacher func(Provider, NodeConfig, corev1listers.PodLister)
 }
 
 // WithNodeConfig returns a NodeOpt which replaces the NodeConfig with the passed in value.
-func WithNodeConfig(c NodeConfig) NodeConfigOpt {
+func WithNodeConfig(c NodeConfig) NodeOpt {
 	return func(orig *NodeConfig) error {
 		*orig = c
 		return nil
@@ -280,19 +276,22 @@ func WithNodeConfig(c NodeConfig) NodeConfigOpt {
 }
 
 // WithClient return a NodeOpt that sets the client that will be used to create/manage the node.
-func WithClient(c kubernetes.Interface) NodeConfigOpt {
+func WithClient(c kubernetes.Interface) NodeOpt {
 	return func(cfg *NodeConfig) error {
 		cfg.Client = c
 		return nil
 	}
 }
 
-func WithPodControllerConfigOverrides(mutateFn func(*node.PodControllerConfig)) NodeOpt {
-	return func(opts *NodeOptions) {
-		opts.PodControllerConfigOpts = append(opts.PodControllerConfigOpts, func(orig *node.PodControllerConfig) error {
-			mutateFn(orig)
-			return nil
-		})
+// WithPodControllerConfigOverrides returns a NodeOpt that registers functions to mutate the
+// node.PodControllerConfig just before the pod controller is created. This exposes lower-level
+// pod controller settings (for example the SyncPodsFromKubernetes rate limiter and retry policy)
+// without having to drop down to node.NewPodController directly. Overrides are applied in order
+// and may return an error to abort node creation.
+func WithPodControllerConfigOverrides(opts ...func(*node.PodControllerConfig) error) NodeOpt {
+	return func(cfg *NodeConfig) error {
+		cfg.PodControllerConfigOpts = append(cfg.PodControllerConfigOpts, opts...)
+		return nil
 	}
 }
 
@@ -334,12 +333,7 @@ func NewNode(name string, newProvider NewProviderFunc, opts ...NodeOpt) (*Node, 
 
 	cfg.Client = defaultClientFromEnv(cfg.KubeconfigPath)
 
-	var options NodeOptions
 	for _, o := range opts {
-		o(&options)
-	}
-
-	for _, o := range options.NodeConfigOpts {
 		if err := o(&cfg); err != nil {
 			return nil, err
 		}
@@ -430,7 +424,7 @@ func NewNode(name string, newProvider NewProviderFunc, opts ...NodeOpt) (*Node, 
 		ServiceInformer:           serviceInformer,
 		SkipDownwardAPIResolution: cfg.SkipDownwardAPIResolution,
 	}
-	for _, o := range options.PodControllerConfigOpts {
+	for _, o := range cfg.PodControllerConfigOpts {
 		if err := o(&podControllerConfig); err != nil {
 			return nil, err
 		}
