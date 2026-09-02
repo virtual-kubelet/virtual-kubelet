@@ -24,11 +24,11 @@ func (f *Framework) WaitUntilNodeCondition(fn watch.ConditionFunc) error {
 	fs := fields.OneTermEqualSelector("metadata.name", f.NodeName).String()
 	// Create a ListWatch so we can receive events for the matched Pod resource.
 	lw := &cache.ListWatch{
-		ListFunc: func(options metav1.ListOptions) (runtime.Object, error) {
+		ListWithContextFunc: func(ctx context.Context, options metav1.ListOptions) (runtime.Object, error) {
 			options.FieldSelector = fs
 			return f.KubeClient.CoreV1().Nodes().List(ctx, options)
 		},
-		WatchFunc: func(options metav1.ListOptions) (watchapi.Interface, error) {
+		WatchFuncWithContext: func(ctx context.Context, options metav1.ListOptions) (watchapi.Interface, error) {
 			options.FieldSelector = fs
 			return f.KubeClient.CoreV1().Nodes().Watch(ctx, options)
 		},

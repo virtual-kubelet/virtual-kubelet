@@ -223,11 +223,11 @@ func TestQueueRedirty(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5000*time.Millisecond)
 	defer cancel()
 
-	var times int64
+	var times atomic.Int64
 	var q *Queue
 	q = New(workqueue.DefaultTypedItemBasedRateLimiter[any](), t.Name(), func(ctx context.Context, key string) error {
 		assert.Assert(t, is.Equal(key, "foo"))
-		if atomic.AddInt64(&times, 1) == 1 {
+		if times.Add(1) == 1 {
 			q.EnqueueWithoutRateLimit(context.TODO(), "foo")
 		} else {
 			cancel()
@@ -240,7 +240,7 @@ func TestQueueRedirty(t *testing.T) {
 	for !q.Empty() {
 		time.Sleep(100 * time.Millisecond)
 	}
-	assert.Assert(t, is.Equal(atomic.LoadInt64(&times), int64(2)))
+	assert.Assert(t, is.Equal(times.Load(), int64(2)))
 }
 
 func TestHeapConcurrency(t *testing.T) {
@@ -413,11 +413,11 @@ func TestQueueForgetInProgress(t *testing.T) {
 	t.Parallel()
 	ctx := t.Context()
 
-	var times int64
+	var times atomic.Int64
 	var q *Queue
 	q = New(workqueue.DefaultTypedItemBasedRateLimiter[any](), t.Name(), func(ctx context.Context, key string) error {
 		assert.Assert(t, is.Equal(key, "foo"))
-		atomic.AddInt64(&times, 1)
+		times.Add(1)
 		q.Forget(context.TODO(), key)
 		return errors.New("test")
 	}, nil)
@@ -427,7 +427,7 @@ func TestQueueForgetInProgress(t *testing.T) {
 	for !q.Empty() {
 		time.Sleep(100 * time.Millisecond)
 	}
-	assert.Assert(t, is.Equal(atomic.LoadInt64(&times), int64(1)))
+	assert.Assert(t, is.Equal(times.Load(), int64(1)))
 }
 
 func TestQueueForgetBeforeStart(t *testing.T) {

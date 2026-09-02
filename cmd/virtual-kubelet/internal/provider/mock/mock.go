@@ -690,8 +690,9 @@ func addAttributes(ctx context.Context, span trace.Span, attrs ...string) contex
 	if len(attrs)%2 == 1 {
 		return ctx
 	}
-	for i := 0; i < len(attrs); i += 2 {
-		ctx = span.WithField(ctx, attrs[i], attrs[i+1])
+	for len(attrs) >= 2 {
+		ctx = span.WithField(ctx, attrs[0], attrs[1])
+		attrs = attrs[2:]
 	}
 	return ctx
 }
