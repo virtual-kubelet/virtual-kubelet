@@ -735,3 +735,47 @@ func failTemplate(op string) string {
 				{{- printf "%T" .Data.y -}}
 			)`
 }
+
+func TestNewNodeControllerRequiresNamedNode(t *testing.T) {
+	nodes := testclient.NewSimpleClientset().CoreV1().Nodes()
+	testP := &testNodeProvider{NodeProvider: &NaiveNodeProvider{}}
+
+	_, err := NewNodeController(testP, nil, nodes)
+	assert.Error(t, err, "node must not be nil")
+
+	_, err = NewNodeController(testP, &corev1.Node{}, nodes)
+	assert.Error(t, err, "node name must not be empty")
+}
+
+// An API server response that is missing the node name must not replace the
+// cached node: the cache is the only source of the name used to address the
+// requests that would repair it, so caching an unnamed node is unrecoverable.
+func TestSetServerNodeRejectsUnusableNode(t *testing.T) {
+	ctx := context.Background()
+	n := &NodeController{serverNode: testNode(t)}
+	wantName := n.serverNode.Name
+
+	assert.Error(t, n.setServerNode(nil), "cannot cache a nil server node")
+	assert.Error(t, n.setServerNode(&corev1.Node{}), "cannot cache a server node with an empty name")
+
+	// The last known good node is still cached, so the next attempt is addressable.
+	got, err := n.getServerNode(ctx)
+	assert.NilError(t, err)
+	assert.Equal(t, got.Name, wantName)
+
+	// ...and a well-formed response still updates the cache.
+	updated := testNode(t)
+	updated.Status.Phase = corev1.NodeRunning
+	assert.NilError(t, n.setServerNode(updated))
+
+	got, err = n.getServerNode(ctx)
+	assert.NilError(t, err)
+	assert.Equal(t, got.Name, wantName)
+	assert.Equal(t, got.Status.Phase, corev1.NodeRunning)
+}
+
+func TestGetServerNodeRejectsUnnamedCachedNode(t *testing.T) {
+	n := &NodeController{serverNode: &corev1.Node{}}
+	_, err := n.getServerNode(context.Background())
+	assert.Error(t, err, "server node has an empty name")
+}
