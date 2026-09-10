@@ -79,6 +79,14 @@ type NodeProvider interface { //nolint:revive
 // Note: When if there are multiple NodeControllerOpts which apply against the same
 // underlying options, the last NodeControllerOpt will win.
 func NewNodeController(p NodeProvider, node *corev1.Node, nodes v1.NodeInterface, opts ...NodeControllerOpt) (*NodeController, error) {
+	if node == nil {
+		return nil, pkgerrors.New("node must not be nil")
+	}
+	if node.Name == "" {
+		// The name is this controller's identity: it addresses every node and
+		// lease request the controller makes, and no later step can supply it.
+		return nil, pkgerrors.New("node name must not be empty")
+	}
 	n := &NodeController{
 		p:          p,
 		serverNode: node,
@@ -322,9 +330,9 @@ func (n *NodeController) ensureNode(ctx context.Context, providerNode *corev1.No
 		return pkgerrors.Wrap(err, "error registering node with kubernetes")
 	}
 
-	n.serverNodeLock.Lock()
-	n.serverNode = node
-	n.serverNodeLock.Unlock()
+	if err := n.setServerNode(node); err != nil {
+		return pkgerrors.Wrap(err, "error caching registered node")
+	}
 	// Bad things will happen if the node is deleted in k8s and recreated by someone else
 	// we rely on this persisting
 	providerNode.Name = node.Name
@@ -424,9 +432,30 @@ func (n *NodeController) updateStatus(ctx context.Context, providerNode *corev1.
 		}
 	}
 
+	return n.setServerNode(node)
+}
+
+// setServerNode replaces the cached view of the node as it exists in the API
+// server.
+//
+// The cached node supplies the name for every node and lease request the
+// controller subsequently makes, and it is also the input from which the next
+// status update is built, so it can only be repaired by a request that is
+// itself addressed by it. An object that is nil or has no name is therefore
+// rejected rather than cached: the caller reports the error and retries against
+// the last known good node, instead of permanently addressing requests that
+// cannot be built.
+func (n *NodeController) setServerNode(node *corev1.Node) error {
+	if node == nil {
+		return pkgerrors.New("cannot cache a nil server node")
+	}
+	if node.Name == "" {
+		return pkgerrors.New("cannot cache a server node with an empty name")
+	}
+
 	n.serverNodeLock.Lock()
+	defer n.serverNodeLock.Unlock()
 	n.serverNode = node
-	n.serverNodeLock.Unlock()
 	return nil
 }
 
@@ -436,6 +465,12 @@ func (n *NodeController) getServerNode(_ context.Context) (*corev1.Node, error) 
 	defer n.serverNodeLock.Unlock()
 	if n.serverNode == nil {
 		return nil, pkgerrors.New("Server node does not yet exist")
+	}
+	if n.serverNode.Name == "" {
+		// Defends the lease controller, which would otherwise issue a request
+		// with an empty name: that fails client-side, is not a NotFound, and so
+		// never reaches the branch that would recreate the lease.
+		return nil, pkgerrors.New("server node has an empty name")
 	}
 	return n.serverNode.DeepCopy(), nil
 }
