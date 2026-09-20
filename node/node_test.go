@@ -634,9 +634,12 @@ func TestNodePingSingleInflight(t *testing.T) {
 
 }
 
+// Subtest names contain a "/", which a node name cannot: the API server
+// requires a DNS subdomain. The fake clientset does not enforce that, so
+// flatten the separator to keep these names representative of real ones.
 func testNode(t *testing.T) *corev1.Node {
 	n := &corev1.Node{}
-	n.Name = strings.ToLower(t.Name())
+	n.Name = strings.ReplaceAll(strings.ToLower(t.Name()), "/", "-")
 	return n
 }
 
@@ -757,10 +760,14 @@ func TestNewNodeControllerRequiresNamedNode(t *testing.T) {
 	testP := &testNodeProvider{NodeProvider: &NaiveNodeProvider{}}
 
 	_, err := NewNodeController(testP, nil, nodes)
-	assert.Error(t, err, "node must not be nil")
+	assert.Error(t, err, "cannot create a node controller: node must not be nil")
 
-	_, err = NewNodeController(testP, &corev1.Node{}, nodes)
-	assert.Error(t, err, "node name must not be empty")
+	// Empty and otherwise malformed names are both rejected: the API server
+	// validates node names as DNS subdomains, so neither could address a request.
+	for _, name := range []string{"", "Not_A_Subdomain", strings.Repeat("a", 254)} {
+		_, err = NewNodeController(testP, &corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: name}}, nodes)
+		assert.ErrorContains(t, err, "cannot create a node controller: invalid node name")
+	}
 }
 
 // An API server response that is missing the node name must not replace the
@@ -771,8 +778,10 @@ func TestSetServerNodeRejectsUnusableNode(t *testing.T) {
 	n := &NodeController{serverNode: testNode(t)}
 	wantName := n.serverNode.Name
 
-	assert.Error(t, n.setServerNode(nil), "cannot cache a nil server node")
-	assert.Error(t, n.setServerNode(&corev1.Node{}), "cannot cache a server node with an empty name")
+	assert.Error(t, n.setServerNode(nil), "cannot cache the node returned by the API server: node must not be nil")
+	assert.ErrorContains(t, n.setServerNode(&corev1.Node{}), "cannot cache the node returned by the API server: invalid node name")
+	assert.ErrorContains(t, n.setServerNode(&corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: "Not_A_Subdomain"}}),
+		"cannot cache the node returned by the API server: invalid node name")
 
 	// The last known good node is still cached, so the next attempt is addressable.
 	got, err := n.getServerNode(ctx)
@@ -793,5 +802,5 @@ func TestSetServerNodeRejectsUnusableNode(t *testing.T) {
 func TestGetServerNodeRejectsUnnamedCachedNode(t *testing.T) {
 	n := &NodeController{serverNode: &corev1.Node{}}
 	_, err := n.getServerNode(context.Background())
-	assert.Error(t, err, "server node has an empty name")
+	assert.ErrorContains(t, err, "cached server node is unusable: invalid node name")
 }
