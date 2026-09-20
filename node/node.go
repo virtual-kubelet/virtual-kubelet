@@ -18,6 +18,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"sync"
 	"time"
 
@@ -29,6 +30,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/strategicpatch"
+	utilvalidation "k8s.io/apimachinery/pkg/util/validation"
 	"k8s.io/apimachinery/pkg/util/wait"
 	coordclientset "k8s.io/client-go/kubernetes/typed/coordination/v1"
 	v1 "k8s.io/client-go/kubernetes/typed/core/v1"
@@ -79,13 +81,10 @@ type NodeProvider interface { //nolint:revive
 // Note: When if there are multiple NodeControllerOpts which apply against the same
 // underlying options, the last NodeControllerOpt will win.
 func NewNodeController(p NodeProvider, node *corev1.Node, nodes v1.NodeInterface, opts ...NodeControllerOpt) (*NodeController, error) {
-	if node == nil {
-		return nil, pkgerrors.New("node must not be nil")
-	}
-	if node.Name == "" {
-		// The name is this controller's identity: it addresses every node and
-		// lease request the controller makes, and no later step can supply it.
-		return nil, pkgerrors.New("node name must not be empty")
+	// The name is this controller's identity: it addresses every node and lease
+	// request the controller makes, and no later step can supply it.
+	if err := validateNodeName(node, "cannot create a node controller"); err != nil {
+		return nil, err
 	}
 	n := &NodeController{
 		p:          p,
@@ -446,11 +445,8 @@ func (n *NodeController) updateStatus(ctx context.Context, providerNode *corev1.
 // the last known good node, instead of permanently addressing requests that
 // cannot be built.
 func (n *NodeController) setServerNode(node *corev1.Node) error {
-	if node == nil {
-		return pkgerrors.New("cannot cache a nil server node")
-	}
-	if node.Name == "" {
-		return pkgerrors.New("cannot cache a server node with an empty name")
+	if err := validateNodeName(node, "cannot cache the node returned by the API server"); err != nil {
+		return err
 	}
 
 	n.serverNodeLock.Lock()
@@ -466,13 +462,30 @@ func (n *NodeController) getServerNode(_ context.Context) (*corev1.Node, error) 
 	if n.serverNode == nil {
 		return nil, pkgerrors.New("Server node does not yet exist")
 	}
-	if n.serverNode.Name == "" {
-		// Defends the lease controller, which would otherwise issue a request
-		// with an empty name: that fails client-side, is not a NotFound, and so
-		// never reaches the branch that would recreate the lease.
-		return nil, pkgerrors.New("server node has an empty name")
+	// Defends the lease controller, which would otherwise issue a request it
+	// cannot build: that fails client-side, is not a NotFound, and so never
+	// reaches the branch that would recreate the lease.
+	if err := validateNodeName(n.serverNode, "cached server node is unusable"); err != nil {
+		return nil, err
 	}
 	return n.serverNode.DeepCopy(), nil
+}
+
+// validateNodeName rejects a node that cannot be used to address API requests.
+//
+// Kubernetes names nodes with a DNS subdomain and the API server validates them
+// with this same check, so a name rejected here is one that no request could
+// have been built for, empty names included. The constraint is enforced on
+// caller input, on what the API server returns, and on the cached node, so
+// errorMsg identifies which of those was rejected.
+func validateNodeName(node *corev1.Node, errorMsg string) error {
+	if node == nil {
+		return pkgerrors.Errorf("%s: node must not be nil", errorMsg)
+	}
+	if errs := utilvalidation.IsDNS1123Subdomain(node.Name); len(errs) > 0 {
+		return pkgerrors.Errorf("%s: invalid node name %q: %s", errorMsg, node.Name, strings.Join(errs, "; "))
+	}
+	return nil
 }
 
 // just so we don't have to allocate this on every get request
