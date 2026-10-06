@@ -524,6 +524,48 @@ func TestUpdatePodStatusRejectsZeroResourceVersion(t *testing.T) {
 	assert.Check(t, is.Nil(err), "expected no error: fix at node/pod.go:252 should copy the Kubernetes ResourceVersion onto the provider pod before UpdateStatus")
 }
 
+// TestUpdatePodStatusFromSyncProviderKeepsMetadata covers a provider that implements only
+// GetPodStatus. syncProviderWrapper puts the status it reports on a copy of the pod taken from the
+// informer before it asked, so by the time updatePodStatus writes, the pod in Kubernetes can carry
+// labels and annotations that copy lacks. The pods/status subresource keeps the labels and
+// annotations of the pod it is sent, so writing the copy would revert them.
+func TestUpdatePodStatusFromSyncProviderKeepsMetadata(t *testing.T) {
+	ctx := context.Background()
+	c := newTestController()
+	c.provider = &syncProviderWrapper{PodLifecycleHandler: newSyncMockProvider()}
+
+	k8sPod := &corev1.Pod{}
+	k8sPod.Namespace = "default"
+	k8sPod.Name = "nginx"
+	k8sPod.ResourceVersion = "124"
+	k8sPod.Labels = map[string]string{"app": "nginx", "role": "leader"}
+	k8sPod.Annotations = map[string]string{"controller.kubernetes.io/pod-deletion-cost": "1000"}
+	k8sPod.Spec = newPodSpec()
+
+	fk8s := fake.NewClientset(k8sPod)
+	c.client = fk8s
+	c.PodController.client = fk8s.CoreV1()
+
+	// The copy syncProviderWrapper took before the label was added and the annotation changed.
+	podFromProvider := k8sPod.DeepCopy()
+	podFromProvider.ResourceVersion = "123"
+	podFromProvider.Labels = map[string]string{"app": "nginx"}
+	podFromProvider.Annotations = map[string]string{"controller.kubernetes.io/pod-deletion-cost": "201"}
+	podFromProvider.Status.Phase = corev1.PodRunning
+
+	key := fmt.Sprintf("%s/%s", k8sPod.Namespace, k8sPod.Name)
+	c.knownPods.Store(key, &knownPod{lastPodStatusReceivedFromProvider: podFromProvider})
+
+	err := c.updatePodStatus(ctx, k8sPod.DeepCopy(), key)
+	assert.NilError(t, err)
+
+	got, err := c.client.CoreV1().Pods(k8sPod.Namespace).Get(ctx, k8sPod.Name, v1.GetOptions{})
+	assert.NilError(t, err)
+	assert.Check(t, is.Equal(got.Status.Phase, corev1.PodRunning))
+	assert.Check(t, is.DeepEqual(got.Labels, k8sPod.Labels))
+	assert.Check(t, is.DeepEqual(got.Annotations, k8sPod.Annotations))
+}
+
 func TestReCreatePodRace(t *testing.T) {
 	ctx := context.Background()
 	c := newTestController()
