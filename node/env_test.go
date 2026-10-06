@@ -17,6 +17,8 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
@@ -44,6 +46,7 @@ func TestEnvtest(t *testing.T) {
 	}))
 
 	t.Run("E2EPodStatusUpdate", wrapE2ETest(ctx, env, testPodStatusUpdate))
+	t.Run("E2EPodStatusUpdateFromSyncProviderKeepsMetadata", wrapE2ETest(ctx, env, testSyncProviderPodStatusUpdateKeepsMetadata))
 }
 
 func kubernetesNameForTest(t *testing.T) string {
@@ -130,6 +133,73 @@ func testPodStatusUpdate(ctx context.Context, t *testing.T, env *envtest.Environ
 				if annotations != nil && annotations["testannotation"] == "testvalue" {
 					return
 				}
+			}
+		}
+	}))
+}
+
+// testSyncProviderPodStatusUpdateKeepsMetadata labels and annotates a pod whose status, reported by a provider that
+// implements only GetPodStatus, has settled, and checks that the pod controller's status writes leave both in place.
+//
+// Once a pod's status stops changing, enqueuePodStatusUpdate skips the provider's reports, and the next change to the
+// pod's labels or annotations makes the UpdateFunc handler in Run write the last report again. That report carries a
+// copy of the pod syncProviderWrapper took before the change, and the pods/status subresource keeps the labels and
+// annotations of the pod it is sent.
+func testSyncProviderPodStatusUpdateKeepsMetadata(ctx context.Context, t *testing.T, env *envtest.Environment) {
+	provider := newSyncMockProvider()
+
+	clientset, err := kubernetes.NewForConfig(env.Config)
+	assert.NilError(t, err)
+	pods := clientset.CoreV1().Pods(testNamespace)
+
+	assert.NilError(t, wireUpSystemWithClient(ctx, provider, clientset, func(ctx context.Context, s *system) {
+		p := newPod(forRealAPIServer, nameBasedOnTest(t))
+		_, err := pods.Create(ctx, p, metav1.CreateOptions{})
+		assert.NilError(t, err)
+		assert.NilError(t, s.start(ctx))
+
+		// syncProviderWrapper reports every 5 seconds, so a pod whose resourceVersion has not moved for 15 seconds is
+		// one whose status the pod controller has stopped writing.
+		resourceVersion, unchangedSince := "", time.Now()
+		err = wait.PollUntilContextTimeout(ctx, 500*time.Millisecond, 2*time.Minute, true, func(ctx context.Context) (bool, error) {
+			pod, err := pods.Get(ctx, p.Name, metav1.GetOptions{})
+			if err != nil {
+				return false, err
+			}
+			if pod.ResourceVersion != resourceVersion {
+				resourceVersion, unchangedSince = pod.ResourceVersion, time.Now()
+			}
+			return pod.Status.Phase == corev1.PodRunning && time.Since(unchangedSince) >= 15*time.Second, nil
+		})
+		assert.NilError(t, err, "the pod never ran with a settled status")
+
+		patched, err := pods.Patch(ctx, p.Name, types.MergePatchType,
+			[]byte(`{"metadata":{"labels":{"added-while-running":"true"},"annotations":{"added-while-running":"true"}}}`),
+			metav1.PatchOptions{})
+		assert.NilError(t, err)
+
+		watcher, err := pods.Watch(ctx, metav1.ListOptions{
+			FieldSelector:   fields.OneTermEqualSelector("metadata.name", p.Name).String(),
+			ResourceVersion: patched.ResourceVersion,
+		})
+		assert.NilError(t, err)
+		defer watcher.Stop()
+		// Two more reports from syncProviderWrapper.
+		deadline := time.After(10 * time.Second)
+		for {
+			select {
+			case <-ctx.Done():
+				t.Fatalf("Context ended early: %s", ctx.Err().Error())
+			case <-deadline:
+				return
+			case ev, ok := <-watcher.ResultChan():
+				assert.Assert(t, ok, "the pod watch closed early")
+				pod, isPod := ev.Object.(*corev1.Pod)
+				if !isPod {
+					continue
+				}
+				assert.Assert(t, is.Equal(pod.Labels["added-while-running"], "true"), "a status write removed a label added while the pod ran")
+				assert.Assert(t, is.Equal(pod.Annotations["added-while-running"], "true"), "a status write removed an annotation added while the pod ran")
 			}
 		}
 	}))

@@ -290,11 +290,22 @@ func (pc *PodController) updatePodStatus(ctx context.Context, podFromKubernetes 
 		}
 	}
 
+	podToUpdate := podFromProvider
+	if _, ok := pc.provider.(syncWrapper); ok {
+		// A provider that implements only GetPodStatus reports a status and nothing else. The rest of podFromProvider
+		// is the copy of the pod syncProviderWrapper took from the informer before asking for that status, which can be
+		// older than podFromKubernetes. The pods/status subresource keeps the labels, annotations and finalizers of the
+		// pod it is sent, so sending that copy would revert any change made to them since. Put the reported status on
+		// the pod as the informer has it now instead.
+		podToUpdate = podFromKubernetes.DeepCopy()
+		podToUpdate.Status = podFromProvider.Status
+	}
+
 	// We need to do this because the other parts of the pod can be updated elsewhere. Since we're only updating
 	// the pod status, and we should be the sole writers of the pod status, set the current ResourceVersion to
 	// satisfy optimistic concurrency requirements.
-	podFromProvider.ResourceVersion = podFromKubernetes.ResourceVersion
-	if _, err := pc.client.Pods(podFromKubernetes.Namespace).UpdateStatus(ctx, podFromProvider, metav1.UpdateOptions{}); err != nil && !errors.IsNotFound(err) {
+	podToUpdate.ResourceVersion = podFromKubernetes.ResourceVersion
+	if _, err := pc.client.Pods(podFromKubernetes.Namespace).UpdateStatus(ctx, podToUpdate, metav1.UpdateOptions{}); err != nil && !errors.IsNotFound(err) {
 		span.SetStatus(err)
 		return pkgerrors.Wrap(err, "error while updating pod status in kubernetes")
 	}
