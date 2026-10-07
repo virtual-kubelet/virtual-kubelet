@@ -1407,3 +1407,100 @@ func TestPopulatePodWithEphemeralContainersUsingFieldRef(t *testing.T) {
 		},
 	}, sortOpt))
 }
+
+func TestPopulatePodWithStatusFieldRef(t *testing.T) {
+	rm := testutil.FakeResourceManager()
+	er := testutil.FakeEventRecorder(defaultEventRecorderBufferSize)
+
+	pod := &corev1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: namespace,
+			Name:      "pod-0",
+		},
+		Spec: corev1.PodSpec{
+			NodeName:           "namenode",
+			ServiceAccountName: "serviceaccount",
+			RestartPolicy:      corev1.RestartPolicyAlways,
+			SchedulerName:      "default-scheduler",
+			Containers: []corev1.Container{
+				{
+					Env: []corev1.EnvVar{
+						{
+							Name: "POD_IP",
+							ValueFrom: &corev1.EnvVarSource{
+								FieldRef: &corev1.ObjectFieldSelector{
+									APIVersion: "v1",
+									FieldPath:  "status.podIP",
+								},
+							},
+						},
+						{
+							Name: "POD_IPS",
+							ValueFrom: &corev1.EnvVarSource{
+								FieldRef: &corev1.ObjectFieldSelector{
+									APIVersion: "v1",
+									FieldPath:  "status.podIPs",
+								},
+							},
+						},
+						{
+							Name: "HOST_IP",
+							ValueFrom: &corev1.EnvVarSource{
+								FieldRef: &corev1.ObjectFieldSelector{
+									APIVersion: "v1",
+									FieldPath:  "status.hostIP",
+								},
+							},
+						},
+						{
+							Name: "POD_PHASE",
+							ValueFrom: &corev1.EnvVarSource{
+								FieldRef: &corev1.ObjectFieldSelector{
+									APIVersion: "v1",
+									FieldPath:  "status.phase",
+								},
+							},
+						},
+						{
+							Name: "RESTART_POLICY",
+							ValueFrom: &corev1.EnvVarSource{
+								FieldRef: &corev1.ObjectFieldSelector{
+									APIVersion: "v1",
+									FieldPath:  "spec.restartPolicy",
+								},
+							},
+						},
+						{
+							Name: "SCHEDULER_NAME",
+							ValueFrom: &corev1.EnvVarSource{
+								FieldRef: &corev1.ObjectFieldSelector{
+									APIVersion: "v1",
+									FieldPath:  "spec.schedulerName",
+								},
+							},
+						},
+					},
+				},
+			},
+			EnableServiceLinks: &bFalse,
+		},
+		Status: corev1.PodStatus{
+			PodIP:  "10.0.0.1",
+			PodIPs: []corev1.PodIP{{IP: "10.0.0.1"}, {IP: "fd00::1"}},
+			HostIP: "192.168.1.1",
+			Phase:  corev1.PodRunning,
+		},
+	}
+
+	err := PopulateEnvironmentVariables(context.Background(), pod, rm, er)
+	assert.NilError(t, err)
+
+	assert.Check(t, is.DeepEqual(pod.Spec.Containers[0].Env, []corev1.EnvVar{
+		{Name: "HOST_IP", Value: "192.168.1.1"},
+		{Name: "POD_IP", Value: "10.0.0.1"},
+		{Name: "POD_IPS", Value: "10.0.0.1,fd00::1"},
+		{Name: "POD_PHASE", Value: "Running"},
+		{Name: "RESTART_POLICY", Value: "Always"},
+		{Name: "SCHEDULER_NAME", Value: "default-scheduler"},
+	}, sortOpt))
+}

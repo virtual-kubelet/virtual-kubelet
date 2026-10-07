@@ -529,7 +529,29 @@ func podFieldSelectorRuntimeValue(fs *corev1.ObjectFieldSelector, pod *corev1.Po
 		return pod.Spec.NodeName, nil
 	case "spec.serviceAccountName":
 		return pod.Spec.ServiceAccountName, nil
-
+	case "spec.restartPolicy":
+		return string(pod.Spec.RestartPolicy), nil
+	case "spec.schedulerName":
+		return pod.Spec.SchedulerName, nil
+	case "status.podIP":
+		return pod.Status.PodIP, nil
+	case "status.podIPs":
+		return flattenPodIPs(pod.Status.PodIPs), nil
+	case "status.hostIP":
+		return pod.Status.HostIP, nil
+	case "status.phase":
+		return string(pod.Status.Phase), nil
 	}
 	return ExtractFieldPathAsString(pod, internalFieldPath)
+}
+
+func flattenPodIPs(podIPs []corev1.PodIP) string {
+	if len(podIPs) == 0 {
+		return ""
+	}
+	ips := make([]string, 0, len(podIPs))
+	for _, podIP := range podIPs {
+		ips = append(ips, podIP.IP)
+	}
+	return strings.Join(ips, ",")
 }
