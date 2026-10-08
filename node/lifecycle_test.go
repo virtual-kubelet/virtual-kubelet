@@ -266,7 +266,7 @@ func wireUpSystem(ctx context.Context, provider PodLifecycleHandler, f testFunct
 	return wireUpSystemWithClient(ctx, provider, client, f)
 }
 
-func wireUpSystemWithClient(ctx context.Context, provider PodLifecycleHandler, client kubernetes.Interface, f testFunction) error {
+func wireUpSystemWithClient(ctx context.Context, provider PodLifecycleHandler, client kubernetes.Interface, f testFunction, opts ...func(*PodControllerConfig)) error {
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
@@ -298,6 +298,9 @@ func wireUpSystemWithClient(ctx context.Context, provider PodLifecycleHandler, c
 			SecretInformer:    secretInformer,
 			ServiceInformer:   serviceInformer,
 		},
+	}
+	for _, o := range opts {
+		o(&sys.podControllerConfig)
 	}
 
 	var err error
