@@ -151,9 +151,50 @@ func TestPodsEqualNilVersusEmptyFields(t *testing.T) {
 	p2.Labels = map[string]string{}
 	p2.Annotations = map[string]string{}
 	p2.Spec.Tolerations = []corev1.Toleration{}
+	p2.Spec.InitContainers = []corev1.Container{}
+	p2.Spec.EphemeralContainers = []corev1.EphemeralContainer{}
 	p2.Spec.Containers[0].Env = []corev1.EnvVar{}
 
 	assert.Assert(t, podsEqual(p1, p2))
+}
+
+func TestPodsDifferentNonEmptyVersusEmptyFields(t *testing.T) {
+	p1 := &corev1.Pod{
+		Spec: newPodSpec(),
+	}
+
+	// The nil versus empty relaxation must not hide actual changes.
+	testCases := []struct {
+		name   string
+		mutate func(pod *corev1.Pod)
+	}{
+		{
+			name:   "label added",
+			mutate: func(pod *corev1.Pod) { pod.Labels = map[string]string{"test": "test"} },
+		},
+		{
+			name:   "annotation added",
+			mutate: func(pod *corev1.Pod) { pod.Annotations = map[string]string{"test": "test"} },
+		},
+		{
+			name:   "toleration added",
+			mutate: func(pod *corev1.Pod) { pod.Spec.Tolerations = []corev1.Toleration{{Key: "test"}} },
+		},
+		{
+			name:   "env var added",
+			mutate: func(pod *corev1.Pod) { pod.Spec.Containers[0].Env = []corev1.EnvVar{{Name: "TEST", Value: "test"}} },
+		},
+		{
+			name:   "container removed",
+			mutate: func(pod *corev1.Pod) { pod.Spec.Containers = []corev1.Container{} },
+		},
+	}
+
+	for _, tc := range testCases {
+		p2 := p1.DeepCopy()
+		tc.mutate(p2)
+		assert.Assert(t, !podsEqual(p1, p2), tc.name)
+	}
 }
 
 func TestPodShouldEnqueueDifferentDeleteTimeStamp(t *testing.T) {
@@ -341,14 +382,15 @@ func TestPodNoSpecChangeWithNilVersusEmptyFields(t *testing.T) {
 	createdPod, ok := svr.mock.pods.Load(key)
 	assert.Check(t, ok)
 
-	// The provider reports the pod it stores with empty but non-nil maps and
-	// slices where the pod from Kubernetes has nil ones. The provider should
-	// not be updated for this.
+	// The pod resolved for the provider has empty but non-nil maps and
+	// slices, and some providers report nil for those instead. Both describe
+	// the same pod, so the provider should not be updated.
 	storedPod := createdPod.(*corev1.Pod).DeepCopy()
 	storedPod.Labels = map[string]string{}
 	storedPod.Annotations = map[string]string{}
 	storedPod.Spec.Tolerations = []corev1.Toleration{}
-	storedPod.Spec.Containers[0].Env = []corev1.EnvVar{}
+	storedPod.Spec.Containers[0].Env = nil
+	storedPod.Spec.Containers[0].EnvFrom = nil
 	svr.mock.pods.Store(key, storedPod)
 
 	err = svr.createOrUpdatePod(context.Background(), pod.DeepCopy())
