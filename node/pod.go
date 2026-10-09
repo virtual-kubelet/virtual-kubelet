@@ -29,6 +29,7 @@ import (
 	"github.com/virtual-kubelet/virtual-kubelet/log"
 	"github.com/virtual-kubelet/virtual-kubelet/trace"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -126,15 +127,18 @@ func podsEqual(pod1, pod2 *corev1.Pod) bool {
 	// - `objectmeta.labels`
 	// - `objectmeta.annotations`
 	// compare the values of the pods to see if the values actually changed
-
-	return cmp.Equal(pod1.Spec.Containers, pod2.Spec.Containers) &&
-		cmp.Equal(pod1.Spec.InitContainers, pod2.Spec.InitContainers) &&
-		cmp.Equal(pod1.Spec.EphemeralContainers, pod2.Spec.EphemeralContainers) &&
-		cmp.Equal(pod1.Spec.ActiveDeadlineSeconds, pod2.Spec.ActiveDeadlineSeconds) &&
-		cmp.Equal(pod1.Spec.Tolerations, pod2.Spec.Tolerations) &&
-		cmp.Equal(pod1.Labels, pod2.Labels) &&
-		cmp.Equal(pod1.Annotations, pod2.Annotations)
-
+	//
+	// equality.Semantic is used here because providers may return empty but
+	// non-nil maps and slices where the pod received from Kubernetes has nil
+	// ones. Those are semantically the same, but comparing them with go-cmp
+	// reports a difference and triggers a needless UpdatePod call.
+	return equality.Semantic.DeepEqual(pod1.Spec.Containers, pod2.Spec.Containers) &&
+		equality.Semantic.DeepEqual(pod1.Spec.InitContainers, pod2.Spec.InitContainers) &&
+		equality.Semantic.DeepEqual(pod1.Spec.EphemeralContainers, pod2.Spec.EphemeralContainers) &&
+		equality.Semantic.DeepEqual(pod1.Spec.ActiveDeadlineSeconds, pod2.Spec.ActiveDeadlineSeconds) &&
+		equality.Semantic.DeepEqual(pod1.Spec.Tolerations, pod2.Spec.Tolerations) &&
+		equality.Semantic.DeepEqual(pod1.Labels, pod2.Labels) &&
+		equality.Semantic.DeepEqual(pod1.Annotations, pod2.Annotations)
 }
 
 func podsEqualWithResolvedEnvs(pod1, pod2 *corev1.Pod) bool {
