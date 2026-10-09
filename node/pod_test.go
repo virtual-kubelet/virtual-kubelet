@@ -139,6 +139,23 @@ func TestPodsDifferentIgnoreValue(t *testing.T) {
 	assert.Assert(t, podsEqual(p1, p2))
 }
 
+func TestPodsEqualNilVersusEmptyFields(t *testing.T) {
+	p1 := &corev1.Pod{
+		Spec: newPodSpec(),
+	}
+
+	// Providers may return empty but non-nil maps and slices where the pod
+	// received from Kubernetes has nil ones. Both mean the same thing and
+	// must not be reported as a spec change.
+	p2 := p1.DeepCopy()
+	p2.Labels = map[string]string{}
+	p2.Annotations = map[string]string{}
+	p2.Spec.Tolerations = []corev1.Toleration{}
+	p2.Spec.Containers[0].Env = []corev1.EnvVar{}
+
+	assert.Assert(t, podsEqual(p1, p2))
+}
+
 func TestPodShouldEnqueueDifferentDeleteTimeStamp(t *testing.T) {
 	p1 := &corev1.Pod{
 		Spec: newPodSpec(),
@@ -297,6 +314,42 @@ func TestPodNoSpecChange(t *testing.T) {
 	assert.Check(t, is.Nil(err))
 	assert.Check(t, is.Equal(svr.mock.creates.read(), 1))
 	assert.Check(t, is.Equal(svr.mock.updates.read(), 0))
+
+	err = svr.createOrUpdatePod(context.Background(), pod.DeepCopy())
+	assert.Check(t, is.Nil(err))
+
+	// createOrUpdate didn't call CreatePod or UpdatePod, spec didn't change
+	assert.Check(t, is.Equal(svr.mock.creates.read(), 1))
+	assert.Check(t, is.Equal(svr.mock.updates.read(), 0))
+}
+
+func TestPodNoSpecChangeWithNilVersusEmptyFields(t *testing.T) {
+	svr := newTestController()
+
+	pod := &corev1.Pod{}
+	pod.Namespace = "default"
+	pod.Name = "nginx"
+	pod.Spec = newPodSpec()
+
+	err := svr.createOrUpdatePod(context.Background(), pod.DeepCopy())
+	assert.Check(t, is.Nil(err))
+	assert.Check(t, is.Equal(svr.mock.creates.read(), 1))
+	assert.Check(t, is.Equal(svr.mock.updates.read(), 0))
+
+	key, err := buildKey(pod)
+	assert.Check(t, is.Nil(err))
+	createdPod, ok := svr.mock.pods.Load(key)
+	assert.Check(t, ok)
+
+	// The provider reports the pod it stores with empty but non-nil maps and
+	// slices where the pod from Kubernetes has nil ones. The provider should
+	// not be updated for this.
+	storedPod := createdPod.(*corev1.Pod).DeepCopy()
+	storedPod.Labels = map[string]string{}
+	storedPod.Annotations = map[string]string{}
+	storedPod.Spec.Tolerations = []corev1.Toleration{}
+	storedPod.Spec.Containers[0].Env = []corev1.EnvVar{}
+	svr.mock.pods.Store(key, storedPod)
 
 	err = svr.createOrUpdatePod(context.Background(), pod.DeepCopy())
 	assert.Check(t, is.Nil(err))
