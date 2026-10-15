@@ -145,6 +145,9 @@ type PodController struct {
 	// in pods before calling CreatePod on the provider.
 	// Providers need this if they need to do their own custom resolving
 	skipDownwardAPIResolution bool
+
+	// podStatusFieldManager, if set, is the field manager pod status is written with by server-side apply.
+	podStatusFieldManager string
 }
 
 type knownPod struct {
@@ -206,6 +209,18 @@ type PodControllerConfig struct {
 	// in pods before calling CreatePod on the provider.
 	// Providers need this if they need to do their own custom resolving
 	SkipDownwardAPIResolution bool
+
+	// PodStatusFieldManager, if set, makes the pod controller write pod status with server-side apply under this
+	// field manager, rather than replace the pod's whole status with the provider's. Only the status the provider
+	// reports is sent, so status other controllers write, such as their own conditions or
+	// status.resourceClaimStatuses, is kept, and a condition the provider stops reporting is removed. Labels and
+	// annotations on the pod a PodNotifier provider hands over are not written.
+	//
+	// Applying needs the patch verb on pods/status, where an update needs only the update verb.
+	//
+	// On a pod whose status was written by update before this was set, that update still owns the fields it
+	// wrote, so a condition the provider stops reporting stays on that pod.
+	PodStatusFieldManager string
 }
 
 // NewPodController creates a new pod controller with the provided config.
@@ -256,6 +271,7 @@ func NewPodController(cfg PodControllerConfig) (*PodController, error) {
 		recorder:                  cfg.EventRecorder,
 		podEventFilterFunc:        cfg.PodEventFilterFunc,
 		skipDownwardAPIResolution: cfg.SkipDownwardAPIResolution,
+		podStatusFieldManager:     cfg.PodStatusFieldManager,
 	}
 
 	pc.syncPodsFromKubernetes = queue.New(cfg.SyncPodsFromKubernetesRateLimiter, "syncPodsFromKubernetes", pc.syncPodFromKubernetesHandler, cfg.SyncPodsFromKubernetesShouldRetryFunc)
