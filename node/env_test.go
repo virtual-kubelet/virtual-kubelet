@@ -19,6 +19,7 @@ import (
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
+	corev1apply "k8s.io/client-go/applyconfigurations/core/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
@@ -47,6 +48,7 @@ func TestEnvtest(t *testing.T) {
 
 	t.Run("E2EPodStatusUpdate", wrapE2ETest(ctx, env, testPodStatusUpdate))
 	t.Run("E2EPodStatusUpdateFromSyncProviderKeepsMetadata", wrapE2ETest(ctx, env, testSyncProviderPodStatusUpdateKeepsMetadata))
+	t.Run("E2EPodStatusApplyKeepsStatusOthersWrote", wrapE2ETest(ctx, env, testPodStatusApplyKeepsStatusOthersWrote))
 }
 
 func kubernetesNameForTest(t *testing.T) string {
@@ -284,4 +286,67 @@ lease_found:
 	cancel()
 	err = <-chErr
 	assert.NilError(t, err)
+}
+
+// testPodStatusApplyKeepsStatusOthersWrote runs a sync provider's pod with PodStatusFieldManager set.
+// Once the pod runs, another field manager applies a condition and status.resourceClaimStatuses, as
+// the resource claim controller in kube-controller-manager does, and then the provider reports a new
+// condition. The pod controller's write of that report must leave what the other field manager
+// applied in place; replacing the whole status, as UpdateStatus does, removes it.
+func testPodStatusApplyKeepsStatusOthersWrote(ctx context.Context, t *testing.T, env *envtest.Environment) {
+	provider := newSyncMockProvider()
+
+	clientset, err := kubernetes.NewForConfig(env.Config)
+	assert.NilError(t, err)
+	pods := clientset.CoreV1().Pods(testNamespace)
+
+	assert.NilError(t, wireUpSystemWithClient(ctx, provider, clientset, func(ctx context.Context, s *system) {
+		p := newPod(forRealAPIServer, nameBasedOnTest(t))
+		p.Spec.ResourceClaims = []corev1.PodResourceClaim{{Name: "gpu", ResourceClaimTemplateName: new("gpu")}}
+		_, err := pods.Create(ctx, p, metav1.CreateOptions{})
+		assert.NilError(t, err)
+		assert.NilError(t, s.start(ctx))
+
+		err = wait.PollUntilContextTimeout(ctx, 500*time.Millisecond, time.Minute, true, func(ctx context.Context) (bool, error) {
+			pod, err := pods.Get(ctx, p.Name, metav1.GetOptions{})
+			return err == nil && pod.Status.Phase == corev1.PodRunning, err
+		})
+		assert.NilError(t, err, "the pod never ran")
+
+		_, err = pods.ApplyStatus(ctx, corev1apply.Pod(p.Name, testNamespace).WithStatus(corev1apply.PodStatus().
+			WithConditions(corev1apply.PodCondition().WithType("example.com/Gate").WithStatus(corev1.ConditionTrue)).
+			WithResourceClaimStatuses(corev1apply.PodResourceClaimStatus().WithName("gpu").WithResourceClaimName(p.Name+"-gpu"))),
+			metav1.ApplyOptions{FieldManager: "other-controller"})
+		assert.NilError(t, err)
+
+		key, err := buildKey(p)
+		assert.NilError(t, err)
+		stored, ok := provider.pods.Load(key)
+		assert.Assert(t, ok, "the provider does not know the pod")
+		reported := stored.(*corev1.Pod).DeepCopy()
+		reported.Status.Conditions = append(reported.Status.Conditions,
+			corev1.PodCondition{Type: "example.com/Reported", Status: corev1.ConditionTrue})
+		provider.pods.Store(key, reported)
+
+		// syncProviderWrapper asks the provider for its status every 5 seconds.
+		var got *corev1.Pod
+		err = wait.PollUntilContextTimeout(ctx, 500*time.Millisecond, 30*time.Second, true, func(ctx context.Context) (bool, error) {
+			got, err = pods.Get(ctx, p.Name, metav1.GetOptions{})
+			if err != nil {
+				return false, err
+			}
+			for _, c := range got.Status.Conditions {
+				if c.Type == "example.com/Reported" {
+					return true, nil
+				}
+			}
+			return false, nil
+		})
+		assert.NilError(t, err, "the pod controller never wrote the provider's new condition")
+		assert.Check(t, is.Equal(conditionStatuses(got)["example.com/Gate"], corev1.ConditionTrue),
+			"the pod controller's status write removed another field manager's condition")
+		assert.Check(t, is.DeepEqual(got.Status.ResourceClaimStatuses, []corev1.PodResourceClaimStatus{
+			{Name: "gpu", ResourceClaimName: new(p.Name + "-gpu")},
+		}), "the pod controller's status write removed status.resourceClaimStatuses")
+	}, withPodStatusFieldManager))
 }

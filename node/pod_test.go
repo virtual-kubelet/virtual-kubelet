@@ -44,13 +44,13 @@ type TestController struct {
 	client *fake.Clientset
 }
 
-func newTestController() *TestController {
+func newTestController(opts ...func(*PodControllerConfig)) *TestController {
 	fk8s := fake.NewClientset()
 
 	rm := testutil.FakeResourceManager()
 	p := newMockProvider()
 	iFactory := kubeinformers.NewSharedInformerFactoryWithOptions(fk8s, 10*time.Minute)
-	podController, err := NewPodController(PodControllerConfig{
+	cfg := PodControllerConfig{
 		PodClient:         fk8s.CoreV1(),
 		PodInformer:       iFactory.Core().V1().Pods(),
 		EventRecorder:     testutil.FakeEventRecorder(5),
@@ -73,7 +73,11 @@ func newTestController() *TestController {
 			workqueue.NewTypedItemExponentialFailureRateLimiter[any](5*time.Millisecond, 10*time.Millisecond),
 			&workqueue.TypedBucketRateLimiter[any]{Limiter: rate.NewLimiter(rate.Limit(10), 100)},
 		),
-	})
+	}
+	for _, o := range opts {
+		o(&cfg)
+	}
+	podController, err := NewPodController(cfg)
 
 	if err != nil {
 		panic(err)
