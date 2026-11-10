@@ -16,6 +16,7 @@ package node
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"sort"
 	"strings"
@@ -33,6 +34,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
+	corev1apply "k8s.io/client-go/applyconfigurations/core/v1"
 	"k8s.io/client-go/tools/cache"
 )
 
@@ -206,17 +208,30 @@ func (pc *PodController) handleProviderError(ctx context.Context, span trace.Spa
 		podPhase = corev1.PodFailed
 	}
 
-	pod.ResourceVersion = "" // Blank out resource version to prevent object has been modified error
-	pod.Status.Phase = podPhase
-	pod.Status.Reason = podStatusReasonProviderFailed
-	pod.Status.Message = origErr.Error()
-
 	logger := log.G(ctx).WithFields(log.Fields{
 		"podPhase": podPhase,
-		"reason":   pod.Status.Reason,
+		"reason":   podStatusReasonProviderFailed,
 	})
 
-	_, err := pc.client.Pods(pod.Namespace).UpdateStatus(ctx, pod, metav1.UpdateOptions{})
+	var err error
+	if pc.podStatusFieldManager != "" {
+		// Applying removes what the field manager applied before and leaves out now, so start from the provider's
+		// last report rather than drop its container statuses and conditions.
+		var status corev1.PodStatus
+		if last := pc.lastPodStatusFromProvider(pod); last != nil {
+			status = *last
+		}
+		status.Phase = podPhase
+		status.Reason = podStatusReasonProviderFailed
+		status.Message = origErr.Error()
+		err = pc.applyPodStatus(ctx, pod.Namespace, pod.Name, &status)
+	} else {
+		pod.ResourceVersion = "" // Blank out resource version to prevent object has been modified error
+		pod.Status.Phase = podPhase
+		pod.Status.Reason = podStatusReasonProviderFailed
+		pod.Status.Message = origErr.Error()
+		_, err = pc.client.Pods(pod.Namespace).UpdateStatus(ctx, pod, metav1.UpdateOptions{})
+	}
 	if err != nil {
 		logger.WithError(err).Warn("Failed to update pod status")
 	} else {
@@ -290,22 +305,28 @@ func (pc *PodController) updatePodStatus(ctx context.Context, podFromKubernetes 
 		}
 	}
 
-	podToUpdate := podFromProvider
-	if _, ok := pc.provider.(syncWrapper); ok {
-		// A provider that implements only GetPodStatus reports a status and nothing else. The rest of podFromProvider
-		// is the copy of the pod syncProviderWrapper took from the informer before asking for that status, which can be
-		// older than podFromKubernetes. The pods/status subresource keeps the labels, annotations and finalizers of the
-		// pod it is sent, so sending that copy would revert any change made to them since. Put the reported status on
-		// the pod as the informer has it now instead.
-		podToUpdate = podFromKubernetes.DeepCopy()
-		podToUpdate.Status = podFromProvider.Status
-	}
+	var err error
+	if pc.podStatusFieldManager != "" {
+		err = pc.applyPodStatus(ctx, podFromKubernetes.Namespace, podFromKubernetes.Name, &podFromProvider.Status)
+	} else {
+		podToUpdate := podFromProvider
+		if _, ok := pc.provider.(syncWrapper); ok {
+			// A provider that implements only GetPodStatus reports a status and nothing else. The rest of podFromProvider
+			// is the copy of the pod syncProviderWrapper took from the informer before asking for that status, which can be
+			// older than podFromKubernetes. The pods/status subresource keeps the labels, annotations and finalizers of the
+			// pod it is sent, so sending that copy would revert any change made to them since. Put the reported status on
+			// the pod as the informer has it now instead.
+			podToUpdate = podFromKubernetes.DeepCopy()
+			podToUpdate.Status = podFromProvider.Status
+		}
 
-	// We need to do this because the other parts of the pod can be updated elsewhere. Since we're only updating
-	// the pod status, and we should be the sole writers of the pod status, set the current ResourceVersion to
-	// satisfy optimistic concurrency requirements.
-	podToUpdate.ResourceVersion = podFromKubernetes.ResourceVersion
-	if _, err := pc.client.Pods(podFromKubernetes.Namespace).UpdateStatus(ctx, podToUpdate, metav1.UpdateOptions{}); err != nil && !errors.IsNotFound(err) {
+		// We need to do this because the other parts of the pod can be updated elsewhere. Since we're only updating
+		// the pod status, and we should be the sole writers of the pod status, set the current ResourceVersion to
+		// satisfy optimistic concurrency requirements.
+		podToUpdate.ResourceVersion = podFromKubernetes.ResourceVersion
+		_, err = pc.client.Pods(podFromKubernetes.Namespace).UpdateStatus(ctx, podToUpdate, metav1.UpdateOptions{})
+	}
+	if err != nil && !errors.IsNotFound(err) {
 		span.SetStatus(err)
 		return pkgerrors.Wrap(err, "error while updating pod status in kubernetes")
 	}
@@ -318,6 +339,45 @@ func (pc *PodController) updatePodStatus(ctx context.Context, podFromKubernetes 
 	}).Debug("Updated pod status in kubernetes")
 
 	return nil
+}
+
+// lastPodStatusFromProvider returns a copy of the status the provider last reported for pod, or nil if it has not
+// reported one.
+func (pc *PodController) lastPodStatusFromProvider(pod *corev1.Pod) *corev1.PodStatus {
+	key, err := cache.MetaNamespaceKeyFunc(pod)
+	if err != nil {
+		return nil
+	}
+	obj, ok := pc.knownPods.Load(key)
+	if !ok {
+		return nil
+	}
+	kPod := obj.(*knownPod)
+	kPod.Lock()
+	defer kPod.Unlock()
+	if kPod.lastPodStatusReceivedFromProvider == nil {
+		return nil
+	}
+	return kPod.lastPodStatusReceivedFromProvider.Status.DeepCopy()
+}
+
+// applyPodStatus writes status as the pod's status with server-side apply, under the configured field manager, so
+// it leaves alone status that other field managers own.
+func (pc *PodController) applyPodStatus(ctx context.Context, namespace, name string, status *corev1.PodStatus) error {
+	// There is no generated conversion from a PodStatus to its apply configuration. A JSON round trip makes one that
+	// holds only the fields status sets: encoding leaves out empty optional fields, and a zero metav1.Time, which
+	// encodes as null, decodes to a nil pointer.
+	b, err := json.Marshal(status)
+	if err != nil {
+		return pkgerrors.Wrap(err, "error while encoding pod status")
+	}
+	statusApply := &corev1apply.PodStatusApplyConfiguration{}
+	if err := json.Unmarshal(b, statusApply); err != nil {
+		return pkgerrors.Wrap(err, "error while decoding pod status")
+	}
+	_, err = pc.client.Pods(namespace).ApplyStatus(ctx, corev1apply.Pod(name, namespace).WithStatus(statusApply),
+		metav1.ApplyOptions{FieldManager: pc.podStatusFieldManager, Force: true})
+	return err
 }
 
 // enqueuePodStatusUpdate updates our pod status map, and marks the pod as dirty in the workqueue. The pod must be DeepCopy'd
