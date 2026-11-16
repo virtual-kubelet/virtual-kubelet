@@ -24,10 +24,6 @@ flags:
   arg: string
   description: The log level, e.g. `trace` `debug`, `info`, `warn`, or `error`
   default: info
-- name: --metrics-addr
-  arg: string
-  description: The address to listen on for metrics and stats
-  default: ":10255"
 - name: --namespace
   arg: string
   description: The Kubernetes namespace

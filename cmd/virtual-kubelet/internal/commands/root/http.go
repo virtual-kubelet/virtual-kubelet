@@ -25,7 +25,6 @@ type apiServerConfig struct {
 	KeyPath               string
 	CACertPath            string
 	Addr                  string
-	MetricsAddr           string
 	StreamIdleTimeout     time.Duration
 	StreamCreationTimeout time.Duration
 }
@@ -38,7 +37,6 @@ func getAPIConfig(c Opts) (*apiServerConfig, error) {
 	}
 
 	config.Addr = fmt.Sprintf(":%d", c.ListenPort)
-	config.MetricsAddr = c.MetricsAddr
 	config.StreamIdleTimeout = c.StreamIdleTimeout
 	config.StreamCreationTimeout = c.StreamCreationTimeout
 
