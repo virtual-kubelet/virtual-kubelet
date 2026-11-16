@@ -72,6 +72,10 @@ func installFlags(flags *pflag.FlagSet, c *Opts) {
 	flags.StringVar(&c.Provider, "provider", c.Provider, "cloud provider")
 	flags.StringVar(&c.ProviderConfigPath, "provider-config", c.ProviderConfigPath, "cloud provider configuration file")
 	flags.StringVar(&c.MetricsAddr, "metrics-addr", c.MetricsAddr, "address to listen for metrics/stats requests")
+	/* #nosec */
+	flags.MarkDeprecated("metrics-addr", "metrics and stats are served on the main listener (--port), this flag has no effect") //nolint:errcheck
+	/* #nosec */
+	flags.MarkHidden("metrics-addr") //nolint:errcheck
 
 	flags.StringVar(&c.TaintKey, "taint", c.TaintKey, "Set node taint key")
 
