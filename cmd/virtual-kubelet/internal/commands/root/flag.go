@@ -93,6 +93,10 @@ func installFlags(flags *pflag.FlagSet, c *Opts) {
 
 	flags.StringSliceVar(&c.TraceExporters, "trace-exporter", c.TraceExporters, fmt.Sprintf("sets the tracing exporter to use, available exporters: %s", AvailableTraceExporters()))
 	flags.StringVar(&c.TraceConfig.ServiceName, "trace-service-name", c.TraceConfig.ServiceName, "sets the name of the service used to register with the trace exporter")
+	if c.TraceConfig.Tags == nil {
+		// mapVar writes into this map, so it has to exist before the flag is parsed.
+		c.TraceConfig.Tags = make(map[string]string)
+	}
 	flags.Var(mapVar(c.TraceConfig.Tags), "trace-tag", "add tags to include with traces in key=value form")
 	flags.StringVar(&c.TraceSampleRate, "trace-sample-rate", c.TraceSampleRate, "set probability of tracing samples")
 
