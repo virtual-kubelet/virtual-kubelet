@@ -165,8 +165,29 @@ type PodMetricsConfig struct {
 // Callers should take care to namespace the serve mux as they see fit, however
 // these routes get called by the Kubernetes API server.
 func AttachPodMetricsRoutes(p PodMetricsConfig, mux ServeMux) {
-	mux.Handle("/", InstrumentHandler(HandlePodStatsSummary(p.GetStatsSummary)))
-	mux.Handle("/", InstrumentHandler(HandlePodMetricsResource(p.GetMetricsResource)))
+	mux.Handle("/", InstrumentHandler(podMetricsHandler(p)))
+}
+
+// podMetricsHandler serves /stats/summary and /metrics/resource from a single
+// handler, since a ServeMux only accepts one handler per pattern.
+func podMetricsHandler(p PodMetricsConfig) http.Handler {
+	r := mux.NewRouter()
+	r.StrictSlash(true)
+
+	if p.GetStatsSummary != nil {
+		f := HandlePodStatsSummary(p.GetStatsSummary)
+		r.HandleFunc("/stats/summary", f).Methods("GET")
+		r.HandleFunc("/stats/summary/", f).Methods("GET")
+	}
+
+	if p.GetMetricsResource != nil {
+		f := HandlePodMetricsResource(p.GetMetricsResource)
+		r.HandleFunc(MetricsResourceRouteSuffix, f).Methods("GET")
+		r.HandleFunc(MetricsResourceRouteSuffix+"/", f).Methods("GET")
+	}
+
+	r.NotFoundHandler = http.HandlerFunc(NotFound)
+	return r
 }
 
 func instrumentRequest(r *http.Request) *http.Request {
