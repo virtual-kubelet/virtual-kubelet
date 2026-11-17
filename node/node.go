@@ -619,7 +619,7 @@ func prepareThreewayPatchBytesForNodeStatus(nodeFromProvider, apiServerNode *cor
 // mixing up addresses. This is the same workaround the kubelet uses, see
 // https://github.com/kubernetes/kubernetes/pull/79391.
 func fixupPatchForNodeStatusAddresses(patchBytes []byte, addresses []corev1.NodeAddress) ([]byte, error) {
-	var patchMap map[string]interface{}
+	var patchMap map[string]any
 	if err := json.Unmarshal(patchBytes, &patchMap); err != nil {
 		return nil, pkgerrors.Wrap(err, "Cannot unmarshal node status patch")
 	}
@@ -628,18 +628,18 @@ func fixupPatchForNodeStatusAddresses(patchBytes []byte, addresses []corev1.Node
 	if err != nil {
 		return nil, pkgerrors.Wrap(err, "Cannot marshal node addresses")
 	}
-	var addrArray []interface{}
+	var addrArray []any
 	if err := json.Unmarshal(addrBytes, &addrArray); err != nil {
 		return nil, pkgerrors.Wrap(err, "Cannot unmarshal node addresses")
 	}
-	addrArray = append(addrArray, map[string]interface{}{"$patch": "replace"})
+	addrArray = append(addrArray, map[string]any{"$patch": "replace"})
 
 	status, ok := patchMap["status"]
 	if !ok || status == nil {
-		status = map[string]interface{}{}
+		status = map[string]any{}
 		patchMap["status"] = status
 	}
-	statusMap, ok := status.(map[string]interface{})
+	statusMap, ok := status.(map[string]any)
 	if !ok {
 		return nil, pkgerrors.Errorf("unexpected type %T for status in node status patch", status)
 	}
