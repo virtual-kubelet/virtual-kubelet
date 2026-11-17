@@ -26,6 +26,7 @@ import (
 	"github.com/virtual-kubelet/virtual-kubelet/log"
 	"github.com/virtual-kubelet/virtual-kubelet/trace"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -601,7 +602,53 @@ func prepareThreewayPatchBytesForNodeStatus(nodeFromProvider, apiServerNode *cor
 	if err != nil {
 		return nil, pkgerrors.Wrap(err, "Cannot get patch schema from node")
 	}
-	return strategicpatch.CreateThreeWayMergePatch(oldNodeBytes, newNodeBytes, apiServerNodeBytes, schema, true)
+	patchBytes, err := strategicpatch.CreateThreeWayMergePatch(oldNodeBytes, newNodeBytes, apiServerNodeBytes, schema, true)
+	if err != nil {
+		return nil, err
+	}
+	if len(newNode.Status.Addresses) > 0 && !equality.Semantic.DeepEqual(apiServerNode.Status.Addresses, newNode.Status.Addresses) {
+		return fixupPatchForNodeStatusAddresses(patchBytes, newNode.Status.Addresses)
+	}
+	return patchBytes, nil
+}
+
+// fixupPatchForNodeStatusAddresses makes the patch replace status.addresses as a whole.
+//
+// Addresses are merged by "type", but a node can have more than one address of the same
+// type (dual-stack nodes, for example), so a regular strategic merge patch ends up dropping or
+// mixing up addresses. This is the same workaround the kubelet uses, see
+// https://github.com/kubernetes/kubernetes/pull/79391.
+func fixupPatchForNodeStatusAddresses(patchBytes []byte, addresses []corev1.NodeAddress) ([]byte, error) {
+	var patchMap map[string]interface{}
+	if err := json.Unmarshal(patchBytes, &patchMap); err != nil {
+		return nil, pkgerrors.Wrap(err, "Cannot unmarshal node status patch")
+	}
+
+	addrBytes, err := json.Marshal(addresses)
+	if err != nil {
+		return nil, pkgerrors.Wrap(err, "Cannot marshal node addresses")
+	}
+	var addrArray []interface{}
+	if err := json.Unmarshal(addrBytes, &addrArray); err != nil {
+		return nil, pkgerrors.Wrap(err, "Cannot unmarshal node addresses")
+	}
+	addrArray = append(addrArray, map[string]interface{}{"$patch": "replace"})
+
+	status, ok := patchMap["status"]
+	if !ok || status == nil {
+		status = map[string]interface{}{}
+		patchMap["status"] = status
+	}
+	statusMap, ok := status.(map[string]interface{})
+	if !ok {
+		return nil, pkgerrors.Errorf("unexpected type %T for status in node status patch", status)
+	}
+	statusMap["addresses"] = addrArray
+	// The three-way patch may also carry an element order directive for the old merge, which
+	// doesn't make sense next to a replace.
+	delete(statusMap, "$setElementOrder/addresses")
+
+	return json.Marshal(patchMap)
 }
 
 // updateNodeStatus triggers an update to the node status in Kubernetes.
