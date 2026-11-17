@@ -254,6 +254,39 @@ func TestUpdateNodeStatus(t *testing.T) {
 	assert.Equal(t, errors.IsNotFound(err), true, err)
 }
 
+// Addresses use "type" as their merge key, but a node can have several
+// addresses of the same type (dual-stack, for example). Changing one of them
+// must not drop or mix up the others.
+func TestUpdateNodeStatusAddressesSameType(t *testing.T) {
+	n := testNode(t)
+	n.Status.Addresses = []corev1.NodeAddress{
+		{Type: corev1.NodeExternalIP, Address: "192.0.2.1"},
+		{Type: corev1.NodeExternalIP, Address: "2001:db8::1"},
+		{Type: corev1.NodeHostName, Address: "vk"},
+	}
+	nodes := testclient.NewClientset().CoreV1().Nodes()
+	ctx := context.Background()
+
+	created := n.DeepCopy()
+	created.Status = corev1.NodeStatus{}
+	_, err := nodes.Create(ctx, created, metav1.CreateOptions{})
+	assert.NilError(t, err)
+
+	updated, err := updateNodeStatus(ctx, nodes, n.DeepCopy())
+	assert.NilError(t, err)
+	assert.Check(t, cmp.DeepEqual(n.Status.Addresses, updated.Status.Addresses))
+
+	n.Status.Addresses[1].Address = "2001:db8::2"
+	updated, err = updateNodeStatus(ctx, nodes, n.DeepCopy())
+	assert.NilError(t, err)
+	assert.Check(t, cmp.DeepEqual(n.Status.Addresses, updated.Status.Addresses))
+
+	n.Status.Addresses = n.Status.Addresses[1:]
+	updated, err = updateNodeStatus(ctx, nodes, n.DeepCopy())
+	assert.NilError(t, err)
+	assert.Check(t, cmp.DeepEqual(n.Status.Addresses, updated.Status.Addresses))
+}
+
 // TestPingAfterStatusUpdate checks that Ping continues to be called with the specified interval
 // after a node status update occurs, when leases are disabled.
 //
