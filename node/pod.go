@@ -233,9 +233,9 @@ func (pc *PodController) handleProviderError(ctx context.Context, span trace.Spa
 		_, err = pc.client.Pods(pod.Namespace).UpdateStatus(ctx, pod, metav1.UpdateOptions{})
 	}
 	if err != nil {
-		logger.WithError(err).Warn("Failed to update pod status")
+		logger.WithError(err).Warn("Failed to write pod status")
 	} else {
-		logger.Info("Updated k8s pod status")
+		logger.Info("Wrote pod status")
 	}
 	span.SetStatus(origErr)
 }
@@ -328,7 +328,7 @@ func (pc *PodController) updatePodStatus(ctx context.Context, podFromKubernetes 
 	}
 	if err != nil && !errors.IsNotFound(err) {
 		span.SetStatus(err)
-		return pkgerrors.Wrap(err, "error while updating pod status in kubernetes")
+		return pkgerrors.Wrap(err, "error while writing pod status in kubernetes")
 	}
 
 	log.G(ctx).WithFields(log.Fields{
@@ -336,7 +336,7 @@ func (pc *PodController) updatePodStatus(ctx context.Context, podFromKubernetes 
 		"new reason": podFromProvider.Status.Reason,
 		"old phase":  string(podFromKubernetes.Status.Phase),
 		"old reason": podFromKubernetes.Status.Reason,
-	}).Debug("Updated pod status in kubernetes")
+	}).Debug("Wrote pod status in kubernetes")
 
 	return nil
 }
