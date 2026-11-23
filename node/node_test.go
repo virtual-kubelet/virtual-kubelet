@@ -23,6 +23,8 @@ import (
 
 	coordinationv1 "k8s.io/api/coordination/v1"
 
+	gocmp "github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 	"gotest.tools/assert"
 	"gotest.tools/assert/cmp"
 	corev1 "k8s.io/api/core/v1"
@@ -257,34 +259,91 @@ func TestUpdateNodeStatus(t *testing.T) {
 // Addresses use "type" as their merge key, but a node can have several
 // addresses of the same type (dual-stack, for example). Changing one of them
 // must not drop or mix up the others.
-func TestUpdateNodeStatusAddressesSameType(t *testing.T) {
-	n := testNode(t)
-	n.Status.Addresses = []corev1.NodeAddress{
-		{Type: corev1.NodeExternalIP, Address: "192.0.2.1"},
-		{Type: corev1.NodeExternalIP, Address: "2001:db8::1"},
-		{Type: corev1.NodeHostName, Address: "vk"},
+func TestUpdateNodeStatusAddresses(t *testing.T) {
+	ext := func(a string) corev1.NodeAddress { return corev1.NodeAddress{Type: corev1.NodeExternalIP, Address: a} }
+	internal := func(a string) corev1.NodeAddress { return corev1.NodeAddress{Type: corev1.NodeInternalIP, Address: a} }
+	host := corev1.NodeAddress{Type: corev1.NodeHostName, Address: "vk"}
+
+	tests := []struct {
+		name string
+		from []corev1.NodeAddress
+		to   []corev1.NodeAddress
+		// the fake clientset applies the replace directive by type, so it can return
+		// addresses of different types in another order than the real API server does
+		unordered bool
+	}{
+		{
+			name: "one of two addresses of the same type changes",
+			from: []corev1.NodeAddress{ext("192.0.2.1"), ext("2001:db8::1"), host},
+			to:   []corev1.NodeAddress{ext("192.0.2.1"), ext("2001:db8::2"), host},
+		},
+		{
+			name: "the first of two addresses of the same type is dropped",
+			from: []corev1.NodeAddress{ext("192.0.2.1"), ext("2001:db8::1"), host},
+			to:   []corev1.NodeAddress{ext("2001:db8::1"), host},
+		},
+		{
+			name: "a second address of the same type is added",
+			from: []corev1.NodeAddress{ext("192.0.2.1"), host},
+			to:   []corev1.NodeAddress{ext("192.0.2.1"), ext("2001:db8::1"), host},
+		},
+		{
+			name: "addresses of the same type swap places",
+			from: []corev1.NodeAddress{ext("192.0.2.1"), ext("2001:db8::1")},
+			to:   []corev1.NodeAddress{ext("2001:db8::1"), ext("192.0.2.1")},
+		},
+		{
+			name: "internal addresses become external ones",
+			from: []corev1.NodeAddress{internal("10.0.0.1"), internal("fd00::1"), host},
+			to:   []corev1.NodeAddress{ext("192.0.2.1"), ext("2001:db8::1"), host},
+		},
+		{
+			name: "a mix of internal and external addresses changes in one of each type",
+			from: []corev1.NodeAddress{internal("10.0.0.1"), ext("192.0.2.1"), internal("fd00::1"), ext("2001:db8::1")},
+			to:   []corev1.NodeAddress{internal("10.0.0.2"), ext("192.0.2.1"), internal("fd00::1"), ext("2001:db8::2")},
+
+			unordered: true,
+		},
+		{
+			name: "all addresses are removed",
+			from: []corev1.NodeAddress{ext("192.0.2.1"), ext("2001:db8::1"), host},
+			to:   nil,
+		},
+		{
+			name: "nothing changes",
+			from: []corev1.NodeAddress{internal("10.0.0.1"), ext("192.0.2.1"), host},
+			to:   []corev1.NodeAddress{internal("10.0.0.1"), ext("192.0.2.1"), host},
+		},
 	}
-	nodes := testclient.NewClientset().CoreV1().Nodes()
-	ctx := context.Background()
 
-	created := n.DeepCopy()
-	created.Status = corev1.NodeStatus{}
-	_, err := nodes.Create(ctx, created, metav1.CreateOptions{})
-	assert.NilError(t, err)
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			n := testNode(t)
+			nodes := testclient.NewClientset().CoreV1().Nodes()
+			ctx := context.Background()
 
-	updated, err := updateNodeStatus(ctx, nodes, n.DeepCopy())
-	assert.NilError(t, err)
-	assert.Check(t, cmp.DeepEqual(n.Status.Addresses, updated.Status.Addresses))
+			created := n.DeepCopy()
+			created.Status = corev1.NodeStatus{}
+			_, err := nodes.Create(ctx, created, metav1.CreateOptions{})
+			assert.NilError(t, err)
 
-	n.Status.Addresses[1].Address = "2001:db8::2"
-	updated, err = updateNodeStatus(ctx, nodes, n.DeepCopy())
-	assert.NilError(t, err)
-	assert.Check(t, cmp.DeepEqual(n.Status.Addresses, updated.Status.Addresses))
+			n.Status.Addresses = tc.from
+			updated, err := updateNodeStatus(ctx, nodes, n.DeepCopy())
+			assert.NilError(t, err)
+			assert.Check(t, cmp.DeepEqual(tc.from, updated.Status.Addresses))
 
-	n.Status.Addresses = n.Status.Addresses[1:]
-	updated, err = updateNodeStatus(ctx, nodes, n.DeepCopy())
-	assert.NilError(t, err)
-	assert.Check(t, cmp.DeepEqual(n.Status.Addresses, updated.Status.Addresses))
+			n.Status.Addresses = tc.to
+			updated, err = updateNodeStatus(ctx, nodes, n.DeepCopy())
+			assert.NilError(t, err)
+			var opts []gocmp.Option
+			if tc.unordered {
+				opts = append(opts, cmpopts.SortSlices(func(a, b corev1.NodeAddress) bool {
+					return a.Type+corev1.NodeAddressType(a.Address) < b.Type+corev1.NodeAddressType(b.Address)
+				}))
+			}
+			assert.Check(t, cmp.DeepEqual(tc.to, updated.Status.Addresses, opts...))
+		})
+	}
 }
 
 // TestPingAfterStatusUpdate checks that Ping continues to be called with the specified interval
