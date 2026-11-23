@@ -271,6 +271,8 @@ func TestUpdateNodeStatusAddresses(t *testing.T) {
 		// the fake clientset applies the replace directive by type, so it can return
 		// addresses of different types in another order than the real API server does
 		unordered bool
+		// addresses that another writer adds to the node after the first update
+		others []corev1.NodeAddress
 	}{
 		{
 			name: "one of two addresses of the same type changes",
@@ -310,6 +312,22 @@ func TestUpdateNodeStatusAddresses(t *testing.T) {
 			to:   nil,
 		},
 		{
+			name:   "an address that another writer added is kept",
+			from:   []corev1.NodeAddress{ext("192.0.2.1"), ext("2001:db8::1"), host},
+			to:     []corev1.NodeAddress{ext("192.0.2.1"), ext("2001:db8::2"), host},
+			others: []corev1.NodeAddress{internal("10.0.0.9")},
+
+			unordered: true,
+		},
+		{
+			name:   "an address that another writer added survives when nothing else changes",
+			from:   []corev1.NodeAddress{ext("192.0.2.1"), host},
+			to:     []corev1.NodeAddress{ext("192.0.2.1"), host},
+			others: []corev1.NodeAddress{ext("2001:db8::9")},
+
+			unordered: true,
+		},
+		{
 			name: "nothing changes",
 			from: []corev1.NodeAddress{internal("10.0.0.1"), ext("192.0.2.1"), host},
 			to:   []corev1.NodeAddress{internal("10.0.0.1"), ext("192.0.2.1"), host},
@@ -332,6 +350,15 @@ func TestUpdateNodeStatusAddresses(t *testing.T) {
 			assert.NilError(t, err)
 			assert.Check(t, cmp.DeepEqual(tc.from, updated.Status.Addresses))
 
+			want := append(append([]corev1.NodeAddress(nil), tc.to...), tc.others...)
+			if len(tc.others) > 0 {
+				live, err := nodes.Get(ctx, n.Name, metav1.GetOptions{})
+				assert.NilError(t, err)
+				live.Status.Addresses = append(live.Status.Addresses, tc.others...)
+				_, err = nodes.UpdateStatus(ctx, live, metav1.UpdateOptions{})
+				assert.NilError(t, err)
+			}
+
 			n.Status.Addresses = tc.to
 			updated, err = updateNodeStatus(ctx, nodes, n.DeepCopy())
 			assert.NilError(t, err)
@@ -341,7 +368,7 @@ func TestUpdateNodeStatusAddresses(t *testing.T) {
 					return a.Type+corev1.NodeAddressType(a.Address) < b.Type+corev1.NodeAddressType(b.Address)
 				}))
 			}
-			assert.Check(t, cmp.DeepEqual(tc.to, updated.Status.Addresses, opts...))
+			assert.Check(t, cmp.DeepEqual(want, updated.Status.Addresses, opts...))
 		})
 	}
 }

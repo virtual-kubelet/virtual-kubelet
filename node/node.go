@@ -18,6 +18,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -606,10 +607,27 @@ func prepareThreewayPatchBytesForNodeStatus(nodeFromProvider, apiServerNode *cor
 	if err != nil {
 		return nil, err
 	}
-	if len(newNode.Status.Addresses) > 0 && !equality.Semantic.DeepEqual(apiServerNode.Status.Addresses, newNode.Status.Addresses) {
-		return fixupPatchForNodeStatusAddresses(patchBytes, newNode.Status.Addresses)
+	if len(newNode.Status.Addresses) > 0 {
+		addresses := mergeNodeStatusAddresses(newNode.Status.Addresses, oldNode.Status.Addresses, apiServerNode.Status.Addresses)
+		if !equality.Semantic.DeepEqual(apiServerNode.Status.Addresses, addresses) {
+			return fixupPatchForNodeStatusAddresses(patchBytes, addresses)
+		}
 	}
 	return patchBytes, nil
+}
+
+// mergeNodeStatusAddresses returns the addresses that the provider reports, followed by the
+// addresses on the API server that another writer added: those that the provider didn't report
+// the last time it applied its status.
+func mergeNodeStatusAddresses(provider, lastApplied, apiServer []corev1.NodeAddress) []corev1.NodeAddress {
+	merged := append([]corev1.NodeAddress(nil), provider...)
+	for _, addr := range apiServer {
+		if slices.Contains(provider, addr) || slices.Contains(lastApplied, addr) {
+			continue
+		}
+		merged = append(merged, addr)
+	}
+	return merged
 }
 
 // fixupPatchForNodeStatusAddresses makes the patch replace status.addresses as a whole.
