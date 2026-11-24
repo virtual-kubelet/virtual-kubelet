@@ -297,7 +297,13 @@ func (pc *PodController) updatePodStatus(ctx context.Context, podFromKubernetes 
 		}
 		// check status here to avoid pod re-created deleted incorrectly. e.g. delete a pod from K8s and re-create it(statefulSet and so on),
 		// pod in provider may not delete immediately. so deletionTimestamp is not nil. Then the re-created one would be deleted if we do not check pod status.
-		if cmp.Equal(podFromKubernetes.Status, podFromProvider.Status) {
+		//
+		// equality.Semantic is used here for the same reason as in podsEqual: a provider may report an
+		// empty but non-nil slice or map in the status where the pod Kubernetes serves has a nil one,
+		// because those fields are omitempty and do not survive a write to the API server. Comparing
+		// those with go-cmp reports a difference that never goes away, which would leave the pod in
+		// Kubernetes forever.
+		if equality.Semantic.DeepEqual(podFromKubernetes.Status, podFromProvider.Status) {
 			if err := pc.client.Pods(podFromKubernetes.Namespace).Delete(ctx, podFromKubernetes.Name, deleteOptions); err != nil && !errors.IsNotFound(err) {
 				span.SetStatus(err)
 				return pkgerrors.Wrap(err, "error while delete pod in kubernetes")
