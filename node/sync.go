@@ -79,14 +79,17 @@ func (p *syncProviderWrapper) DeletePod(ctx context.Context, pod *corev1.Pod) er
 	updated.Status.Phase = corev1.PodSucceeded
 	now := metav1.NewTime(time.Now())
 	for i, cs := range updated.Status.ContainerStatuses {
-		updated.Status.ContainerStatuses[i].State.Terminated = &corev1.ContainerStateTerminated{
+		terminated := &corev1.ContainerStateTerminated{
 			Reason:     statusTerminatedReason,
 			Message:    containerStatusTerminatedMessage,
 			FinishedAt: now,
 		}
 		if cs.State.Running != nil {
-			updated.Status.ContainerStatuses[i].State.Terminated.StartedAt = cs.State.Running.StartedAt
+			terminated.StartedAt = cs.State.Running.StartedAt
 		}
+		// ContainerState holds one state at a time, so replace it rather than
+		// adding Terminated beside a Running or Waiting state that no longer holds.
+		updated.Status.ContainerStatuses[i].State = corev1.ContainerState{Terminated: terminated}
 	}
 	updated.Status.Reason = statusTerminatedReason
 
