@@ -16,6 +16,7 @@ package node
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"reflect"
 	"testing"
@@ -33,6 +34,7 @@ import (
 	kubeinformers "k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes/fake"
 	core "k8s.io/client-go/testing"
+	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/workqueue"
 
 	testutil "github.com/virtual-kubelet/virtual-kubelet/internal/test/util"
@@ -852,4 +854,56 @@ func newPodSpec() corev1.PodSpec {
 			},
 		},
 	}
+}
+
+// A provider that reports an empty but non-nil slice in the pod status still describes the same status
+// as the pod Kubernetes serves, where that field reads back as nil, and a pod the provider has deleted
+// must still be deleted in Kubernetes.
+func TestPodStatusDeleteWithNilVersusEmptyStatusFields(t *testing.T) {
+	ctx := t.Context()
+
+	c := newTestController()
+
+	statusFromProvider := corev1.PodStatus{
+		Phase:             corev1.PodRunning,
+		ContainerStatuses: []corev1.ContainerStatus{},
+		Conditions:        []corev1.PodCondition{},
+	}
+
+	// Derive the status Kubernetes serves by putting the provider's status through the serialization the
+	// API server uses, rather than writing the nil fields out by hand: the fields are omitempty, so the
+	// empty arrays are dropped on the way in and are nil on the way out.
+	encoded, err := json.Marshal(&statusFromProvider)
+	assert.NilError(t, err)
+	var statusFromKubernetes corev1.PodStatus
+	assert.NilError(t, json.Unmarshal(encoded, &statusFromKubernetes))
+	assert.Assert(t, statusFromKubernetes.ContainerStatuses == nil)
+	assert.Assert(t, statusFromKubernetes.Conditions == nil)
+
+	pod := &corev1.Pod{}
+	pod.Namespace = "default"
+	pod.Name = "nginx"
+	pod.Spec = newPodSpec()
+	pod.Status = statusFromKubernetes
+	_, err = c.client.CoreV1().Pods(pod.Namespace).Create(ctx, pod, v1.CreateOptions{})
+	assert.NilError(t, err)
+
+	go c.podsInformer.Informer().Run(ctx.Done())
+	assert.Assert(t, cache.WaitForCacheSync(ctx.Done(), c.podsInformer.Informer().HasSynced))
+
+	// The provider has deleted the pod: it reports the status it has always reported, now with a
+	// deletion timestamp. Kubernetes does not have one yet.
+	podFromProvider := pod.DeepCopy()
+	podFromProvider.Status = statusFromProvider
+	deleteTime := v1.Time{Time: time.Now().Add(30 * time.Second)}
+	podFromProvider.DeletionTimestamp = &deleteTime
+
+	key, err := cache.MetaNamespaceKeyFunc(pod)
+	assert.NilError(t, err)
+	c.knownPods.Store(key, &knownPod{lastPodStatusReceivedFromProvider: podFromProvider})
+
+	assert.NilError(t, c.syncPodStatusFromProviderHandler(ctx, key))
+
+	_, err = c.client.CoreV1().Pods(pod.Namespace).Get(ctx, pod.Name, v1.GetOptions{})
+	assert.Assert(t, errors.IsNotFound(err), "pod %q was not deleted in Kubernetes after the provider deleted it: %v", key, err)
 }
